@@ -1,4 +1,13 @@
-export type Platform = "Meta" | "TikTok" | "Google";
+import type { AdAnalysis } from "./ad-intelligence";
+export type Platform =
+  | "Meta"
+  | "TikTok"
+  | "Google"
+  | "Instagram"
+  | "Facebook"
+  | "LinkedIn"
+  | "X"
+  | "YouTube";
 export type Category =
   | "Beauty & skincare"
   | "Fashion"
@@ -6,6 +15,7 @@ export type Category =
   | "Food & beverage";
 export type Page =
   | "overview"
+  | "formats"
   | "ads"
   | "competitors"
   | "audiences"
@@ -35,6 +45,21 @@ export interface Ad {
   angle: string;
   audience: string;
   format: string;
+  creativeFormats?: string[];
+  contentSource?: "paid" | "organic";
+  metricsAvailable?: boolean;
+  engagementRateBasis?: "impressions" | "views" | "followers" | "unavailable";
+  views?: number;
+  followers?: number;
+  deliveryStatus?: "active" | "inactive" | "unknown";
+  analysis?: AdAnalysis;
+  providerAdId?: string;
+  metricDate?: string;
+  observedAt?: string;
+  dateBasis?: "creative" | "report" | "observed";
+  engagementMetric?: string;
+  currency?: string;
+  conversionEvent?: string;
   image: string;
   color: string;
   active: boolean;
@@ -45,7 +70,7 @@ export interface Ad {
   conversions: number | null;
   revenue: number | null;
   owned: boolean;
-  source: "sample" | "import";
+  source: "sample" | "import" | "live" | "public";
   sourceUrl: string | null;
 }
 export interface Creator {
@@ -89,10 +114,14 @@ export interface Filters {
 }
 export interface Metrics {
   ads: number;
+  observations?: number;
   brands: number;
   impressions: number;
   engagements: number;
   engagementRate: number;
+  engagementRateAvailable?: boolean;
+  engagementRateBasis?: string;
+  engagementDenominator?: number;
   creators: number;
   conversions: number | null;
   spend: number | null;
@@ -133,6 +162,9 @@ export interface Dashboard {
   ads: Ad[];
   creators: Creator[];
   reviews: Review[];
+  liveObservations?: number;
+  lastObservedAt?: string | null;
+  sourceStatus?: { connected: boolean; lastSuccessfulSyncAt: string | null };
   updatedAt: string;
   mode: "demo" | "imported";
   sampleCount: number;

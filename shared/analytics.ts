@@ -1,3 +1,8 @@
+import {
+  uniqueCreatives,
+  coalesceObservations,
+  metricDate,
+} from "./ad-records";
 import type {
   Ad,
   Angle,
@@ -37,14 +42,14 @@ function performanceGroups(ads: Ad[], field: "angle" | "audience"): Angle[] {
       );
       return {
         name,
-        ads: rows.length,
+        ads: uniqueCreatives(rows),
         impressions: sum(rows, "impressions"),
         engagements: sum(rows, "engagements"),
         engagementRate: percent(
           sum(rows, "engagements"),
           sum(rows, "impressions"),
         ),
-        share: percent(rows.length, ads.length),
+        share: percent(uniqueCreatives(rows), uniqueCreatives(ads)),
         conversions,
         cpa: measuredConversions ? measuredSpend / measuredConversions : null,
       };
@@ -61,6 +66,27 @@ export function analyzeRecords(
 ): Dashboard {
   const impressions = sum(ads, "impressions");
   const engagements = sum(ads, "engagements");
+  const measurable = ads.filter(
+    (ad) =>
+      ad.metricsAvailable !== false &&
+      (ad.engagementRateBasis || "impressions") !== "unavailable",
+  );
+  const bases = [
+    ...new Set(measurable.map((ad) => ad.engagementRateBasis || "impressions")),
+  ];
+  const engagementDenominator = measurable.reduce(
+    (n, ad) =>
+      n +
+      (ad.engagementRateBasis === "views"
+        ? ad.views || 0
+        : ad.engagementRateBasis === "followers"
+          ? ad.followers || 0
+          : ad.impressions),
+    0,
+  );
+  const engagementRateAvailable =
+    bases.length === 1 && engagementDenominator > 0;
+
   const brandGroups = new Map<string, Ad[]>();
   for (const ad of ads) {
     const existing = brandGroups.get(ad.brand);
@@ -85,12 +111,12 @@ export function analyzeRecords(
         name,
         color: colors[i % 4],
         initials: name.slice(0, 1),
-        ads: rows.length,
+        ads: uniqueCreatives(rows),
         engagementRate: percent(
           sum(rows, "engagements"),
           sum(rows, "impressions"),
         ),
-        share: percent(rows.length, ads.length),
+        share: percent(uniqueCreatives(rows), uniqueCreatives(ads)),
         topAngle,
         owned: rows.some((a) => a.owned),
       };
@@ -103,7 +129,7 @@ export function analyzeRecords(
   const days = range;
   for (let i = days - 1; i >= 0; i--) {
     const date = new Date(Date.now() - i * 86400000).toISOString().slice(0, 10);
-    const rows = ads.filter((a) => a.publishedAt.startsWith(date));
+    const rows = ads.filter((a) => metricDate(a) === date);
     const own = rows.filter((a) => a.owned),
       other = rows.filter((a) => !a.owned);
     trend.push({
@@ -157,11 +183,17 @@ export function analyzeRecords(
   return {
     brand,
     metrics: {
-      ads: ads.length,
+      ads: uniqueCreatives(ads),
+      observations: ads.length,
       brands: brandGroups.size,
       impressions,
       engagements,
-      engagementRate: percent(engagements, impressions),
+      engagementRate: engagementRateAvailable
+        ? percent(sum(measurable, "engagements"), engagementDenominator)
+        : 0,
+      engagementRateAvailable,
+      engagementRateBasis: bases.length === 1 ? bases[0] : "unavailable",
+      engagementDenominator,
       creators: creators.length,
       conversions: ownedMeasured.length
         ? ownedMeasured.reduce((n, a) => n + a.conversions!, 0)
@@ -174,7 +206,7 @@ export function analyzeRecords(
     audiencePerformance,
     competitors,
     trend,
-    ads: [...ads]
+    ads: coalesceObservations(ads)
       .sort(
         (a, b) =>
           percent(b.engagements, b.impressions) -
@@ -183,6 +215,13 @@ export function analyzeRecords(
       .slice(0, 8),
     creators,
     reviews,
+    liveObservations: ads.filter((a) => a.source === "live").length,
+    lastObservedAt:
+      ads
+        .map((a) => a.observedAt)
+        .filter(Boolean)
+        .sort()
+        .at(-1) || null,
     updatedAt:
       ads
         .map((a) => a.publishedAt)
@@ -205,5 +244,5 @@ export function reportContent(data: Dashboard) {
     ownedAngle || ownedAudience
       ? `\n\n## Reported owned conversion evidence\n${ownedAngle ? `Lowest reported angle CPA: ${ownedAngle.name}, ${ownedAngle.cpa!.toFixed(2)} spend units per conversion.` : ""}\n${ownedAudience ? `Lowest reported audience CPA: ${ownedAudience.name}, ${ownedAudience.cpa!.toFixed(2)} spend units per conversion.` : ""}\nCPA uses only owned records with both spend and conversion counts. Currency and attribution definitions must be aligned before comparing performance. These observations are not predictions.`
       : "";
-  return `# ${data.brand.name} — Competitive intelligence brief\n\nGenerated: ${new Date().toISOString()}\nData mode: ${data.mode === "demo" ? "FICTIONAL SAMPLE DATA — not live intelligence" : "USER-IMPORTED DATA — not a live feed"}\n\n## Coverage\n${data.metrics.ads.toLocaleString("en-GB")} ads across ${data.metrics.brands} brands in the last 30 days.\n${data.metrics.impressions.toLocaleString("en-GB")} impressions; ${data.metrics.engagements.toLocaleString("en-GB")} engagements; ${data.metrics.engagementRate.toFixed(2)}% weighted engagement rate.\n\n## Leading angle\n${top ? `${top.name}: ${top.engagementRate.toFixed(2)}% engagement rate across ${top.ads} ads.` : "No ad records available."}\nThis is an engagement ranking, not a conversion ranking. Competitor conversion performance cannot be inferred from public engagement.\n\n${ownedSection}\n\n## Competitive landscape\n${data.competitors.map((c) => `- ${c.name}: ${c.ads} ads, ${c.engagementRate.toFixed(2)}% engagement rate, ${c.share.toFixed(1)}% of observed ads.`).join("\n") || "No competitor data available."}\n\n## Customer voice\n${data.reviews.length ? data.reviews.map((r) => `- ${r.theme}: “${r.text}” (${r.source})`).join("\n") : "No customer reviews connected. Ad data does not establish customer sentiment."}\n\n## Creator shortlist candidates\n${data.creators.map((c) => `- ${c.name} (${c.handle}): ${c.reason}`).join("\n") || "No verified creator profiles connected."}\n\n## Measurement and next steps\nConnect authorised Meta, TikTok and Google data before using this as live intelligence. Imports are supplied by the workspace user; source URLs are not independently verified. Owned conversion counts only: ${data.metrics.conversions ?? "unavailable"}. Treat this rule-based brief as a research aid. Validate hypotheses with measured first-party conversion tests.\n`;
+  return `# ${data.brand.name} — Competitive intelligence brief\n\nGenerated: ${new Date().toISOString()}\nData mode: ${data.mode === "demo" ? "FICTIONAL SAMPLE DATA — not live intelligence" : data.liveObservations ? "SAVED PROVIDER OBSERVATIONS — see last observation timestamp; not instantaneous" : "USER-IMPORTED DATA — not a live feed"}\n\n## Coverage\n${data.metrics.ads.toLocaleString("en-GB")} ads across ${data.metrics.brands} brands in the last 30 days.\n${data.metrics.impressions.toLocaleString("en-GB")} impressions; ${data.metrics.engagements.toLocaleString("en-GB")} engagements; ${data.metrics.engagementRateAvailable===false?"engagement rate unavailable":data.metrics.engagementRate.toFixed(2)+"% weighted engagement rate using "+(data.metrics.engagementRateBasis||"impressions")}.\n\n## Leading angle\n${top ? `${top.name}: ${top.engagementRate.toFixed(2)}% engagement rate across ${top.ads} ads.` : "No ad records available."}\nThis is an engagement ranking, not a conversion ranking. Competitor conversion performance cannot be inferred from public engagement.\n\n${ownedSection}\n\n## Competitive landscape\n${data.competitors.map((c) => `- ${c.name}: ${c.ads} ads, ${c.engagementRate.toFixed(2)}% engagement rate, ${c.share.toFixed(1)}% of observed ads.`).join("\n") || "No competitor data available."}\n\n## Customer voice\n${data.reviews.length ? data.reviews.map((r) => `- ${r.theme}: “${r.text}” (${r.source})`).join("\n") : "No customer reviews connected. Ad data does not establish customer sentiment."}\n\n## Creator shortlist candidates\n${data.creators.map((c) => `- ${c.name} (${c.handle}): ${c.reason}`).join("\n") || "No verified creator profiles connected."}\n\n## Measurement and next steps\nConnect authorised Meta, TikTok and Google data before using this as live intelligence. Imports are supplied by the workspace user; source URLs are not independently verified. Owned conversion counts only: ${data.metrics.conversions ?? "unavailable"}. Treat this rule-based brief as a research aid. Validate hypotheses with measured first-party conversion tests.\n`;
 }

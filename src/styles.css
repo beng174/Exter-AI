@@ -2549,3 +2549,13 @@ main {
     outline: 0;
   }
 }
+.creative-tags {
+  display: flex;
+  gap: 4px;
+  flex-wrap: wrap;
+}
+.creative-format-tag {
+  background: #eaf1e0;
+  border-color: #d9e6cc;
+  color: #6c8a56;
+}

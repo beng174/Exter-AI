@@ -1,3 +1,5 @@
+import { PublicMonitorPanel } from "./PublicMonitorPanel";
+import { ConnectionPanel } from "./ConnectionPanel";
 import { useEffect, useMemo, useRef, useState } from "react";
 import type { ReactNode } from "react";
 import {
@@ -840,6 +842,14 @@ export function SourcesView({
       brand: brand.name,
       platform: "Meta",
       title: "Your campaign creative",
+      format: "Video",
+      creativeFormats: ["UGC", "Reviews & testimonials"],
+      analysis: {
+        provenance: "provided",
+        topic: "Your product",
+        keyMessage: "Your verified product message",
+        inferredAudience: ["Your intended audience"],
+      },
       angle: "Product education",
       audience: "Skincare enthusiasts",
       impressions: 10000,
@@ -907,64 +917,18 @@ export function SourcesView({
   }
   return (
     <div className="rv-stack">
-      <div className="rv-source-status">
-        <span className="rv-status-icon">
-          <Globe size={21} />
-        </span>
-        <div>
-          <h3>
-            {brand.mode === "demo"
-              ? "You’re exploring a sample workspace"
-              : "Your workspace uses imported data"}
-          </h3>
-          <p>
-            Live data sources are not connected. No external platform is being
-            monitored in real time.
-          </p>
-        </div>
-        <span className="rv-pill">
-          {brand.mode === "demo" ? "Demo mode" : "Import mode"}
-        </span>
-      </div>
-      <div className="rv-source-grid">
-        {[
-          {
-            name: "Meta",
-            label: "Facebook & Instagram",
-            mark: "∞",
-            text: "Ad Library and owned ad-account reporting. Account access and API permissions required.",
-          },
-          {
-            name: "TikTok",
-            label: "TikTok for Business",
-            mark: "♪",
-            text: "Authorised ad-account reporting. Public creative access varies by region and permissions.",
-          },
-          {
-            name: "Google",
-            label: "Google Ads",
-            mark: "G",
-            text: "Owned campaign reporting via Google Ads API. Developer token and account approval required.",
-          },
-        ].map((source) => (
-          <section className="rv-card rv-source-card" key={source.name}>
-            <div className="rv-source-heading">
-              <span
-                className={`rv-platform-mark rv-platform-${source.name.toLowerCase()}`}
-              >
-                {source.mark}
-              </span>
-              <span className="rv-connection-status">Not connected</span>
-            </div>
-            <h3>{source.name}</h3>
-            <span className="rv-muted">{source.label}</span>
-            <p>{source.text}</p>
-            <div className="rv-source-next">
-              <Link2 size={15} /> Integration setup required
-            </div>
-          </section>
-        ))}
-      </div>
+      <PublicMonitorPanel brandId={brand.id} onUpdated={onImported} />
+      <ConnectionPanel brandId={brand.id} onSynced={onImported} mode="claude" />
+      <details className="optional-client-connections">
+        <summary>
+          Phase 2 (optional): connect client accounts after winning the account
+        </summary>
+        <ConnectionPanel
+          brandId={brand.id}
+          onSynced={onImported}
+          mode="accounts"
+        />
+      </details>
       <section className="rv-card">
         <div className="rv-section-head">
           <div>

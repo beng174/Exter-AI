@@ -1,0 +1,686 @@
+.adi-backdrop {
+  padding: 25px;
+}
+.adi-modal {
+  width: min(1050px, 100%);
+  max-height: 92dvh;
+  background: #fbfcf8;
+  border: 1px solid #e2e8d9;
+  border-radius: 15px;
+  box-shadow: 0 25px 110px #122d2645;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+.adi-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 20px;
+  padding: 24px 27px 21px;
+  border-bottom: 1px solid #e3eadb;
+  background: #fdfefa;
+}
+.adi-eyebrow {
+  font-size: 8px;
+  letter-spacing: 1.5px;
+  font-weight: 550;
+  color: #89a076;
+  display: flex;
+  align-items: center;
+  gap: 7px;
+}
+.adi-header h2 {
+  font-family: "Manrope", sans-serif;
+  font-size: 23px;
+  font-weight: 600;
+  letter-spacing: -0.7px;
+  margin: 12px 0 7px;
+  line-height: 1.4;
+}
+.adi-header p {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 10px;
+  color: #91a080;
+  margin: 0;
+}
+.adi-header p span {
+  color: #b5bea8;
+}
+.adi-close {
+  border: 1px solid #e2e9d9;
+  background: #f5f8ee;
+  border-radius: 6px;
+  color: #829770;
+  width: 31px;
+  height: 31px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+.adi-close:hover {
+  background: #e9f0dd;
+  color: #486f3b;
+}
+.adi-layout {
+  display: grid;
+  grid-template-columns: 300px minmax(0, 1fr);
+  min-height: 0;
+  flex: 1;
+  overflow: hidden;
+}
+.adi-context {
+  background: #f4f7ef;
+  border-right: 1px solid #e2ead7;
+  overflow: auto;
+}
+.adi-visual {
+  height: 235px;
+  position: relative;
+  background: #dbe4d0;
+  overflow: hidden;
+}
+.adi-visual > img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+.adi-visual-label {
+  position: absolute;
+  bottom: 12px;
+  left: 13px;
+  padding: 5px 7px;
+  border: 1px solid #ffffff70;
+  border-radius: 4px;
+  background: #ffffffdc;
+  font-size: 8px;
+  color: #738d60;
+  backdrop-filter: blur(3px);
+}
+.adi-no-image {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  background: linear-gradient(140deg, #e9efdf, #bfcea9);
+  color: #799861;
+}
+.adi-no-image p {
+  font-size: 10px;
+  margin: 0;
+}
+.adi-general {
+  padding: 21px;
+}
+.adi-general h3 {
+  font-size: 11px;
+  font-weight: 550;
+  color: #5c7650;
+  margin: 0 0 14px;
+}
+.adi-general dl {
+  margin: 0;
+}
+.adi-general dl > div {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 16px;
+  border-bottom: 1px solid #e3ead9;
+  padding: 10px 0;
+  font-size: 9px;
+  line-height: 1.7;
+}
+.adi-general dt {
+  color: #94a285;
+  max-width: 47%;
+  flex-shrink: 0;
+}
+.adi-general dd {
+  text-align: right;
+  margin: 0;
+  color: #718b60;
+  font-weight: 450;
+  word-break: break-word;
+}
+.adi-general dd.adi-active {
+  display: flex;
+  gap: 5px;
+  align-items: center;
+}
+.adi-active > i {
+  width: 4px;
+  height: 4px;
+  border-radius: 50%;
+  background: #88a66a;
+}
+.adi-source-link {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  border: 1px solid #dbe5cf;
+  background: #fbfdf7;
+  color: #708b5b;
+  border-radius: 6px;
+  font-size: 10px;
+  padding: 10px 11px;
+  margin-top: 16px;
+}
+.adi-source-link:hover {
+  background: #ebf2df;
+}
+.adi-source-unavailable {
+  display: flex;
+  align-items: flex-start;
+  gap: 7px;
+  color: #9aa78c;
+  font-size: 9px;
+  line-height: 1.7;
+  margin: 16px 0 0;
+}
+.adi-source-unavailable svg {
+  flex-shrink: 0;
+  margin-top: 1px;
+}
+.adi-small-note {
+  font-size: 8px;
+  color: #a0ad91;
+  line-height: 1.9;
+  margin: 14px 0 0;
+}
+.adi-research {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  min-height: 0;
+}
+.adi-provenance {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 7px;
+  padding: 17px 24px;
+  color: #9ca98c;
+  background: #f7f9f3;
+  border-bottom: 1px solid #e8edde;
+  font-size: 9px;
+}
+.adi-provenance > span:first-child {
+  width: 4px;
+  height: 4px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+.adi-provenance strong {
+  font-weight: 450;
+  flex: 1;
+}
+.adi-provenance > span:last-child {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 8px;
+}
+.adi-sample-dot {
+  background: #baa35e;
+}
+.adi-provided-dot {
+  background: #8ba672;
+}
+.adi-tabs {
+  display: flex;
+  align-items: stretch;
+  gap: 18px;
+  padding: 0 24px;
+  border-bottom: 1px solid #e4ebd9;
+}
+.adi-tabs > button {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  border: 0;
+  border-bottom: 2px solid transparent;
+  background: transparent;
+  color: #99a78a;
+  font-size: 10px;
+  padding: 16px 0 14px;
+  white-space: nowrap;
+}
+.adi-tabs > button.adi-tab-active {
+  color: #5b7f46;
+  border-bottom-color: #75975c;
+  font-weight: 500;
+}
+.adi-tabs > button:hover {
+  color: #66894f;
+}
+.adi-panel {
+  min-height: 340px;
+  padding: 24px;
+  overflow: auto;
+  flex: 1;
+  outline: none;
+}
+.adi-panel-intro {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 23px;
+}
+.adi-section-icon {
+  width: 36px;
+  height: 36px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 9px;
+  background: #edf3e3;
+  color: #8aa773;
+  flex-shrink: 0;
+}
+.adi-section-icon.adi-lilac {
+  background: #f0edf7;
+  color: #a297ba;
+}
+.adi-panel-intro h3 {
+  font-size: 13px;
+  font-weight: 550;
+  color: #648154;
+  margin: 0 0 6px;
+}
+.adi-panel-intro p {
+  font-size: 9px;
+  line-height: 1.8;
+  color: #9eab8e;
+  margin: 0;
+}
+.adi-concepts {
+  margin: 0;
+}
+.adi-datum {
+  display: grid;
+  grid-template-columns: 132px minmax(0, 1fr);
+  gap: 17px;
+  padding: 14px 0;
+  border-bottom: 1px solid #e9efdf;
+  font-size: 11px;
+  line-height: 1.8;
+}
+.adi-datum dt {
+  color: #91a07f;
+  font-size: 10px;
+}
+.adi-datum dt > span {
+  display: block;
+  font-size: 7px;
+  text-transform: uppercase;
+  letter-spacing: 0.7px;
+  color: #b4bba7;
+  line-height: 1.5;
+  margin-top: 4px;
+}
+.adi-datum dd {
+  margin: 0;
+  color: #6c8659;
+  overflow-wrap: anywhere;
+}
+.adi-missing dd {
+  color: #b3bca4;
+  font-style: italic;
+  font-size: 10px;
+}
+.adi-tags {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+.adi-tags > span {
+  font-size: 9px;
+  color: #82996b;
+  background: #f0f5e7;
+  border: 1px solid #e0ead1;
+  border-radius: 4px;
+  padding: 3px 7px;
+}
+.adi-copy {
+  border: 1px solid #e5ecd9;
+  border-radius: 7px;
+  background: #f6f9f0;
+  padding: 14px 16px;
+  margin-top: 22px;
+}
+.adi-copy h4 {
+  font-size: 9px;
+  letter-spacing: 0.2px;
+  color: #8fa479;
+  font-weight: 550;
+  margin: 0 0 9px;
+}
+.adi-copy p {
+  font-size: 10px;
+  line-height: 1.9;
+  color: #91a47e;
+  margin: 0;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+.adi-explainer {
+  display: flex;
+  align-items: flex-start;
+  gap: 9px;
+  background: #f3f7ec;
+  border: 1px solid #e5edd9;
+  border-radius: 7px;
+  padding: 14px 15px;
+  margin: 23px 0 0;
+  color: #93a77e;
+}
+.adi-explainer > svg {
+  flex-shrink: 0;
+  margin-top: 2px;
+}
+.adi-explainer p {
+  font-size: 9px;
+  line-height: 1.9;
+  margin: 0;
+  color: #98a98a;
+}
+.adi-attention-empty {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-direction: column;
+  gap: 14px;
+  border: 1px dashed #dce7ce;
+  border-radius: 8px;
+  min-height: 235px;
+  background: radial-gradient(circle at center, #f3f7eb, #f9fbf6);
+  padding: 30px;
+  color: #9eb28a;
+  text-align: center;
+}
+.adi-attention-empty h4 {
+  font-size: 13px;
+  font-weight: 500;
+  color: #809969;
+  margin: 0;
+}
+.adi-attention-empty p {
+  font-size: 10px;
+  line-height: 1.9;
+  color: #a0af90;
+  max-width: 350px;
+  margin: 0;
+}
+.adi-attention-figure {
+  margin: 0;
+  border: 1px solid #e2ead5;
+  border-radius: 8px;
+  background: #f7faf2;
+  overflow: hidden;
+}
+.adi-attention-figure > img {
+  width: 100%;
+  max-height: 370px;
+  object-fit: contain;
+  background: #e9eedf;
+}
+.adi-attention-figure figcaption {
+  padding: 13px 15px;
+  font-size: 9px;
+  line-height: 1.8;
+  color: #93a480;
+}
+.adi-method {
+  font-size: 9px;
+  line-height: 1.8;
+  color: #9bab89;
+  margin: 16px 0 0;
+}
+.adi-method strong {
+  font-weight: 550;
+  color: #7d9865;
+}
+.adi-footer {
+  display: flex;
+  align-items: flex-start;
+  gap: 7px;
+  padding: 13px 24px;
+  border-top: 1px solid #e4ebd8;
+  background: #f7f9f3;
+  font-size: 8px;
+  line-height: 1.8;
+  color: #a4b193;
+}
+.adi-footer > svg {
+  flex-shrink: 0;
+  margin-top: 1px;
+}
+.adi-footer > span:nth-child(2) {
+  flex: 1;
+}
+.adi-footer > span:last-child:not(:nth-child(2)) {
+  color: #a5ad93;
+  font-size: 7px;
+  max-width: 130px;
+}
+@media (max-width: 800px) {
+  .adi-backdrop {
+    padding: 15px;
+  }
+  .adi-modal {
+    max-height: 94dvh;
+  }
+  .adi-layout {
+    grid-template-columns: 245px minmax(0, 1fr);
+  }
+  .adi-visual {
+    height: 210px;
+  }
+  .adi-general {
+    padding: 17px;
+  }
+  .adi-general dl > div {
+    gap: 9px;
+    font-size: 8px;
+  }
+  .adi-tabs {
+    gap: 12px;
+    padding: 0 18px;
+  }
+  .adi-tabs > button {
+    font-size: 9px;
+    gap: 5px;
+  }
+  .adi-tabs > button > svg {
+    width: 12px;
+  }
+  .adi-provenance {
+    padding: 14px 18px;
+    font-size: 8px;
+  }
+  .adi-panel {
+    padding: 20px 18px;
+  }
+  .adi-datum {
+    grid-template-columns: 95px minmax(0, 1fr);
+    gap: 12px;
+    font-size: 10px;
+  }
+  .adi-datum dt {
+    font-size: 9px;
+  }
+  .adi-header h2 {
+    font-size: 20px;
+  }
+  .adi-panel-intro h3 {
+    font-size: 12px;
+  }
+  .adi-panel-intro p {
+    font-size: 8px;
+  }
+  .adi-panel-intro {
+    gap: 9px;
+  }
+  .adi-section-icon {
+    width: 31px;
+    height: 31px;
+  }
+  .adi-footer {
+    padding: 12px 18px;
+    font-size: 7px;
+  }
+}
+@media (max-width: 600px) {
+  .adi-backdrop {
+    padding: 10px;
+  }
+  .adi-modal {
+    max-height: 94dvh;
+    overflow: auto;
+    display: block;
+    border-radius: 11px;
+  }
+  .adi-header {
+    padding: 18px 17px;
+    position: relative;
+  }
+  .adi-header h2 {
+    font-size: 18px;
+    max-width: 260px;
+    margin-top: 10px;
+  }
+  .adi-header p {
+    font-size: 8px;
+    gap: 6px;
+    flex-wrap: wrap;
+  }
+  .adi-eyebrow {
+    font-size: 7px;
+    letter-spacing: 1.1px;
+  }
+  .adi-close {
+    width: 28px;
+    height: 28px;
+  }
+  .adi-layout {
+    display: flex;
+    flex-direction: column;
+    overflow: visible;
+  }
+  .adi-context {
+    border-right: 0;
+    border-bottom: 1px solid #dfe8d1;
+    overflow: visible;
+  }
+  .adi-visual {
+    height: 210px;
+  }
+  .adi-general {
+    padding: 18px;
+  }
+  .adi-general h3 {
+    font-size: 12px;
+  }
+  .adi-general dl {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    column-gap: 17px;
+  }
+  .adi-general dl > div {
+    flex-direction: column;
+    justify-content: flex-start;
+    gap: 3px;
+    padding: 9px 0;
+    font-size: 9px;
+  }
+  .adi-general dt {
+    max-width: 100%;
+    font-size: 8px;
+  }
+  .adi-general dd {
+    text-align: left;
+  }
+  .adi-source-link {
+    font-size: 10px;
+  }
+  .adi-small-note {
+    font-size: 9px;
+  }
+  .adi-research {
+    display: block;
+  }
+  .adi-provenance {
+    padding: 13px 17px;
+    font-size: 8px;
+  }
+  .adi-tabs {
+    padding: 0 17px;
+    gap: 17px;
+    justify-content: space-between;
+  }
+  .adi-tabs > button {
+    font-size: 8px;
+    gap: 4px;
+    white-space: normal;
+    text-align: left;
+    line-height: 1.6;
+    padding: 14px 0;
+  }
+  .adi-tabs > button > svg {
+    width: 12px;
+    flex-shrink: 0;
+  }
+  .adi-panel {
+    padding: 22px 17px;
+    min-height: 300px;
+    overflow: visible;
+  }
+  .adi-panel-intro h3 {
+    font-size: 13px;
+  }
+  .adi-panel-intro p {
+    font-size: 9px;
+  }
+  .adi-datum {
+    grid-template-columns: 104px minmax(0, 1fr);
+    gap: 13px;
+    font-size: 10px;
+    padding: 13px 0;
+  }
+  .adi-datum dt {
+    font-size: 9px;
+  }
+  .adi-tags > span {
+    font-size: 8px;
+  }
+  .adi-explainer p {
+    font-size: 9px;
+  }
+  .adi-footer {
+    padding: 14px 17px;
+    font-size: 8px;
+    flex-wrap: wrap;
+  }
+  .adi-footer > span:last-child:not(:nth-child(2)) {
+    max-width: none;
+    padding-left: 21px;
+    width: 100%;
+    font-size: 7px;
+  }
+  .adi-attention-empty {
+    padding: 25px 17px;
+  }
+  .adi-attention-empty p {
+    font-size: 9px;
+  }
+  .adi-copy p {
+    font-size: 10px;
+  }
+}

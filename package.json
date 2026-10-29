@@ -1,21 +1,26 @@
 {
   "name": "exter-ai",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "private": true,
   "type": "module",
   "scripts": {
-    "dev": "tsx watch server/index.ts",
+    "dev": "NODE_USE_ENV_PROXY=1 tsx watch server/index.ts",
     "build": "tsc --noEmit && vite build",
-    "start": "NODE_ENV=production tsx server/index.ts",
+    "start": "NODE_USE_ENV_PROXY=1 NODE_ENV=production tsx server/index.ts",
     "test": "tsx --test tests/*.test.ts",
     "check": "tsc --noEmit",
-    "build:preview": "tsx scripts/build-preview.ts"
+    "build:preview": "tsx scripts/build-preview.ts",
+    "mcp": "node --import tsx scripts/claude-mcp.ts",
+    "models:verify": "NODE_USE_ENV_PROXY=1 node --import tsx scripts/verify-brain.ts"
   },
   "dependencies": {
+    "@huggingface/transformers": "4.3.2",
+    "@modelcontextprotocol/sdk": "1.32.2",
     "express": "^5.1.0",
     "lucide-react": "^0.468.0",
     "react": "^19.1.0",
-    "react-dom": "^19.1.0"
+    "react-dom": "^19.1.0",
+    "zod": "4.6.7"
   },
   "devDependencies": {
     "@types/express": "^5.0.3",

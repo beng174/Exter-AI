@@ -7,9 +7,51 @@ import { randomUUID } from "node:crypto";
 import type { DatabaseSync } from "node:sqlite";
 import type { Ad, Brand, Creator, Report } from "../shared/types.js";
 import { openDatabase, readBrand, readJson } from "./db.js";
-import { CATEGORIES, PLATFORM_NAMES } from "./seed.js";
+import { CATEGORIES, PLATFORM_NAMES, CONTENT_PLATFORMS } from "./seed.js";
 import { dashboard, getAds, getCreators, reportContent } from "./analysis.js";
 
+import {
+  analyzeFormats,
+  formatReportSummary,
+  normalizeCreativeFormats,
+  classifyCreativeFormats,
+} from "../shared/formats.js";
+import { normalizeAdAnalysis } from "../shared/ad-intelligence.js";
+import { answerResearchQuestion } from "../shared/research.js";
+import { hydrateAd, coalesceObservations } from "../shared/ad-records.js";
+import { attachConnections, getConnectionStatuses } from "./connections.js";
+import { attachBrain } from "./brain.js";
+import { attachPublicMonitor } from "./public-monitor.js";
+import type { FormatMetric } from "../shared/format-types.js";
+
+function formatMetric(value: unknown): FormatMetric {
+  const metric = value ?? "engagement";
+  if (!["engagement", "cpa", "conversionRate"].includes(String(metric)))
+    throw new InputError("metric must be engagement, cpa or conversionRate.");
+  return metric as FormatMetric;
+}
+function questionPlatform(question: string, fallback: string) {
+  const named = [
+    /\b(meta|facebook|instagram)\b/i.test(question) ? "Meta" : null,
+    /\btik\s*tok\b/i.test(question) ? "TikTok" : null,
+    /\b(google|youtube)\b/i.test(question) ? "Google" : null,
+  ].filter(Boolean);
+  return named.length === 1 ? named[0]! : named.length > 1 ? "all" : fallback;
+}
+function sourceContext(db: DatabaseSync, brandId: string, platform = "all") {
+  const sources = getConnectionStatuses(db, brandId).filter(
+    (source) => platform === "all" || source.platform === platform,
+  );
+  return {
+    connected: sources.some((source) => source.status === "synced"),
+    lastSuccessfulSyncAt:
+      sources
+        .map((source) => source.lastSuccessfulSyncAt)
+        .filter(Boolean)
+        .sort()
+        .at(-1) || null,
+  };
+}
 class InputError extends Error {
   status = 400;
 }
@@ -57,7 +99,7 @@ function queryFilters(query: Record<string, unknown>) {
     query.platform === undefined ? "all" : String(query.platform);
   if (
     platform !== "all" &&
-    !PLATFORM_NAMES.includes(platform as (typeof PLATFORM_NAMES)[number])
+    !CONTENT_PLATFORMS.includes(platform as (typeof CONTENT_PLATFORMS)[number])
   )
     throw new InputError("platform must be all, Meta, TikTok or Google.");
   const range = Number(query.range ?? 30);
@@ -71,7 +113,7 @@ function parseImportRow(row: unknown, brand: Brand): Ad {
   const r = row as Record<string, unknown>;
   const advertiser = text(r.brand, "brand", 80);
   const platform = text(r.platform, "platform") as Ad["platform"];
-  if (!PLATFORM_NAMES.includes(platform))
+  if (!CONTENT_PLATFORMS.includes(platform))
     throw new InputError("Imported platform must be Meta, TikTok or Google.");
   if (r.owned !== undefined && typeof r.owned !== "boolean")
     throw new InputError("owned must be a boolean.");
@@ -116,7 +158,35 @@ function parseImportRow(row: unknown, brand: Brand): Ad {
         "sourceUrl must be an HTTP or HTTPS URL without credentials.",
       );
   }
+  let creativeFormats: string[];
+  let analysis: Ad["analysis"];
+  try {
+    creativeFormats = normalizeCreativeFormats(r.creativeFormats);
+    analysis = normalizeAdAnalysis(r.analysis);
+  } catch (error) {
+    throw new InputError((error as Error).message);
+  }
+  const currency = text(r.currency, "currency", 3, true).toUpperCase();
+  if (currency && !/^[A-Z]{3}$/.test(currency))
+    throw new InputError("currency must be an ISO three-letter code.");
   return {
+    creativeFormats,
+    analysis,
+    contentSource: r.contentSource === "organic" ? "organic" : "paid",
+    metricsAvailable: r.metricsAvailable !== false,
+    engagementRateBasis: ["views", "followers", "unavailable"].includes(
+      String(r.engagementRateBasis),
+    )
+      ? (r.engagementRateBasis as Ad["engagementRateBasis"])
+      : "impressions",
+    views: r.views === undefined ? undefined : nonnegative(r.views, "views")!,
+    followers:
+      r.followers === undefined
+        ? undefined
+        : nonnegative(r.followers, "followers")!,
+    currency: currency || undefined,
+    conversionEvent:
+      text(r.conversionEvent, "conversionEvent", 120, true) || undefined,
     id: `import-${randomUUID()}`,
     brandId: brand.id,
     brand: advertiser,
@@ -145,8 +215,17 @@ export function createApp(db: DatabaseSync = openDatabase()) {
   const app = express();
   app.disable("x-powered-by");
   app.use(express.json({ limit: "20mb" }));
+  attachConnections(app, db);
+  attachPublicMonitor(app, db);
+  attachBrain(app, db);
   app.get("/api/health", (_req, res) =>
-    res.json({ status: "ok", service: "exter-ai", liveFeeds: false }),
+    res.json({
+      status: "ok",
+      service: "exter-ai",
+      liveFeeds: false,
+      liveConnectorsImplemented: true,
+      connectionStatusEndpoint: "/api/connections?brandId=YOUR_WORKSPACE",
+    }),
   );
   app.get("/api/brands", (_req, res) =>
     res.json(
@@ -206,12 +285,60 @@ export function createApp(db: DatabaseSync = openDatabase()) {
   app.get("/api/dashboard", (req, res) => {
     const brand = getBrand(db, req.query.brandId);
     const { platform, range } = queryFilters(req.query);
-    res.json(dashboard(db, brand, platform, range));
+    res.json({
+      ...dashboard(
+        db,
+        brand,
+        platform,
+        range,
+        String(req.query.contentSource || "all"),
+      ),
+      sourceStatus: sourceContext(db, brand.id, platform),
+    });
+  });
+  app.get("/api/formats", (req, res) => {
+    const brand = getBrand(db, req.query.brandId);
+    const { platform, range } = queryFilters(req.query);
+    res.json(
+      analyzeFormats(brand, getAds(db, brand, "all", range), {
+        platform,
+        range,
+        metric: formatMetric(req.query.metric),
+        contentSource: String(req.query.contentSource || "all"),
+        sourceStatus: sourceContext(db, brand.id, platform),
+      }),
+    );
+  });
+  app.get("/api/ads/:id", (req, res) => {
+    const brand = getBrand(db, req.query.brandId);
+    const row = db
+      .prepare("SELECT data FROM ads WHERE id=? AND brand_id=?")
+      .get(req.params.id, brand.id) as { data: string } | undefined;
+    if (!row) {
+      res.status(404).json({ error: "Ad not found in this workspace." });
+      return;
+    }
+    const ad = hydrateAd(JSON.parse(row.data));
+    if ((brand.mode === "demo") !== (ad.source === "sample")) {
+      res
+        .status(404)
+        .json({ error: "Ad is not part of the active workspace dataset." });
+      return;
+    }
+    res.json(ad);
   });
   app.get("/api/ads", (req, res) => {
     const brand = getBrand(db, req.query.brandId),
       { platform, range } = queryFilters(req.query);
-    let ads = getAds(db, brand, platform, range);
+    let ads = coalesceObservations(getAds(db, brand, platform, range));
+    if (req.query.contentSource && req.query.contentSource !== "all")
+      ads = ads.filter(
+        (ad) => (ad.contentSource || "paid") === req.query.contentSource,
+      );
+    if (req.query.creativeFormat && req.query.creativeFormat !== "all")
+      ads = ads.filter((ad) =>
+        classifyCreativeFormats(ad).includes(String(req.query.creativeFormat)),
+      );
     const search = String(req.query.search || "")
       .toLowerCase()
       .slice(0, 200);
@@ -336,7 +463,7 @@ export function createApp(db: DatabaseSync = openDatabase()) {
       brandId: brand.id,
       title: `${brand.name} · Intelligence brief`,
       createdAt: new Date().toISOString(),
-      content: reportContent(dashboard(db, brand)),
+      content: reportContent(dashboard(db, brand))+formatReportSummary(analyzeFormats(brand,getAds(db,brand,"all",30),{range:30})),
       mode: brand.mode,
     };
     db.prepare("INSERT INTO reports VALUES (?, ?, ?, ?)").run(
@@ -370,30 +497,25 @@ export function createApp(db: DatabaseSync = openDatabase()) {
       range: req.body?.range,
     });
     const data = dashboard(db, brand, platform, range);
-    const context = `${brand.mode === "demo" ? "Sample-data answer" : "Imported-data answer"} · ${range} days · ${platform === "all" ? "all platforms" : platform}. `;
-    let answer: string;
-    if (!data.metrics.ads)
-      answer =
-        "This workspace has no ad records for the selected period. Import authorised campaign data to analyse angles and audiences. No live competitor discovery is connected.";
-    else if (/convert|conversion|roas|sales|purchase/i.test(question))
-      answer = `Competitor conversions are not available and cannot be inferred from engagement. ${data.metrics.conversions === null ? "No owned conversion records are available." : `Your owned records contain ${data.metrics.conversions} conversions${data.metrics.spend === null ? "" : ` against ${data.metrics.spend.toFixed(2)} in reported spend (currency not supplied)`}.`} The leading engagement angle is ${data.angles[0]?.name}; validate it with your own conversion tests.`;
-    else if (/creator|influencer|match/i.test(question))
-      answer = data.creators.length
-        ? `${data.creators[0].name} (${data.creators[0].handle}) is the highest sample category-and-tone match at ${data.creators[0].match}%. ${data.creators[0].reason}`
-        : "No verified creator profiles are connected. Creator matching requires audience and brand-voice evidence; ad records alone are not enough.";
-    else if (/review|sentiment|voice|customer/i.test(question))
-      answer = data.reviews.length
-        ? `The ${data.reviews.length} fictional sample reviews discuss ${[...new Set(data.reviews.map((r) => r.theme))].join(", ")}. ${brand.name}'s sample voice is ${brand.voice.join(", ").toLowerCase()}. These are illustrative, not collected customer opinions.`
-        : "No customer reviews or verified brand-voice analysis are connected to this workspace. Importing ads does not provide review sentiment.";
-    else if (/competitor|brand|share/i.test(question))
-      answer = `Observed ad volume: ${data.competitors.map((c) => `${c.name} ${c.ads} ads (${c.share.toFixed(1)}%)`).join("; ")}. This is share of the available records, not market share. Public conversion data is unavailable.`;
-    else
-      answer = `${data.angles[0]?.name} has the highest weighted engagement rate at ${data.angles[0]?.engagementRate.toFixed(2)}% across ${data.angles[0]?.ads} ads. The dataset contains ${data.metrics.ads} ads, ${data.metrics.impressions.toLocaleString("en-GB")} impressions and ${data.metrics.engagements.toLocaleString("en-GB")} engagements. This is an engagement finding, not evidence of conversion lift.`;
-    res.json({
-      answer: context + answer,
-      sources: data.ads.slice(0, 3).map((a) => a.id),
-      mode: "rule-based",
-    });
+    res.json(
+      answerResearchQuestion({
+        question,
+        brand,
+        ads: getAds(db, brand, "all", 90),
+        dashboard: data,
+        platform,
+        range,
+        metric:
+          req.body?.metric === undefined
+            ? undefined
+            : formatMetric(req.body.metric),
+        sourceStatus: sourceContext(
+          db,
+          brand.id,
+          questionPlatform(question, platform),
+        ),
+      }),
+    );
   });
   app.use("/api", (_req, res) =>
     res.status(404).json({ error: "API route not found." }),

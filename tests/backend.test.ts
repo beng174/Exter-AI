@@ -234,7 +234,7 @@ test("research answers use selected data, disclose rule-based grounding and avoi
   const answer = await response.json();
   assert.equal(answer.mode, "rule-based");
   assert.match(answer.answer, /Competitor conversions are not available/);
-  assert.match(answer.answer, /10 conversions/);
+  assert.match(answer.answer, /10 reported conversions/);
   assert.ok(answer.sources.length > 0);
   const filtered = await post("/api/ask", {
     brandId: importedBrand.id,

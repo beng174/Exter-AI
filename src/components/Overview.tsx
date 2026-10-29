@@ -165,15 +165,21 @@ export default function Overview({
     },
     {
       label: "Observed engagements",
-      value: number(m.engagements),
+      value:
+        m.engagementRateAvailable === false
+          ? "Unavailable"
+          : number(m.engagements),
       detail: `${number(m.impressions)} observed impressions`,
       icon: Heart,
       tone: "peach",
     },
     {
       label: "Engagement rate",
-      value: percent(m.engagementRate),
-      detail: "Engagements ÷ impressions",
+      value:
+        m.engagementRateAvailable === false
+          ? "Unavailable"
+          : percent(m.engagementRate),
+      detail: `Engagements ÷ ${m.engagementRateBasis || "impressions"}`,
       icon: MousePointer2,
       tone: "lavender",
     },

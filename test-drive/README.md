@@ -1,4 +1,4 @@
-# Test Exter AI
+# Test Exter AI — v0.2
 
 **[Download the test-drive ZIP](https://github.com/beng174/Exter-AI/raw/refs/heads/exter-test-drive/test-drive/Exter-AI-Test-Drive.zip)**
 
@@ -22,3 +22,6 @@ If the download button is blocked, open [the ZIP file page](https://github.com/b
 This is an offline interactive test drive. Starting ads, creators, reviews and performance figures are illustrative sample data. Live platform connections and an external AI model are not configured. Changes stay in this browser and are separate from the full app's server database.
 
 Organisation-managed browsers may block local HTML; use an ordinary desktop browser or an approved local HTTP server if required by your administrator. Direct file navigation could not be tested in the managed development browser; the standalone artifact passed browser tests served as a single static HTML file, with no API or external requests.
+
+
+The full platform now has its own local text/vision engine; Claude is an optional downstream reader. See [architecture and current coverage limits](../docs/ARCHITECTURE.md). This HTML test drive demonstrates the interface and stored-data comparisons; it does not run the server models or public collectors.

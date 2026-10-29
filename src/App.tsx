@@ -42,6 +42,7 @@ import type {
 } from "../shared/types";
 import { api } from "./lib/api";
 import Overview from "./components/Overview";
+import { FormatsView } from "./components/FormatsView";
 import { AdCard, AdDetail } from "./components/Creative";
 import {
   AudiencesView,
@@ -53,13 +54,19 @@ import {
 
 const navigation: { id: Page; label: string; icon: typeof Compass }[] = [
   { id: "overview", label: "Overview", icon: Compass },
-  { id: "ads", label: "Ad library", icon: Layers },
+  { id: "ads", label: "Content library", icon: Layers },
+  { id: "formats", label: "Creative formats", icon: Activity },
   { id: "competitors", label: "Competitors", icon: BarChart3 },
   { id: "audiences", label: "Audience & voice", icon: Target },
   { id: "creators", label: "Creator discovery", icon: UsersRound },
   { id: "reports", label: "Reports", icon: FileChartColumnIncreasing },
 ];
 const headings: Record<Page, { title: string; subtitle: string }> = {
+  formats: {
+    title: "The format behind the performance.",
+    subtitle:
+      "Compare UGC, influencer, static, reviews and native creative formats within each platform.",
+  },
   overview: {
     title: "A wider lens. A clearer advantage.",
     subtitle: "Your competitive landscape, brought into focus.",
@@ -236,7 +243,17 @@ function BrandModal({
   );
 }
 
-function AskPanel({ brand, onClose }: { brand: Brand; onClose: () => void }) {
+function AskPanel({
+  brand,
+  onClose,
+  platform,
+  range,
+}: {
+  brand: Brand;
+  onClose: () => void;
+  platform: string;
+  range: string;
+}) {
   const [question, setQuestion] = useState(""),
     [history, setHistory] = useState<
       { question: string; answer: string; sources: string[] }[]
@@ -256,6 +273,8 @@ function AskPanel({ brand, onClose }: { brand: Brand; onClose: () => void }) {
       const r = await api<{ answer: string; sources: string[] }>("/api/ask", {
         brandId: brand.id,
         question: text,
+        platform,
+        range: Number(range),
       });
       setHistory((h) => [...h, { question: text, ...r }]);
     } catch (e) {
@@ -301,7 +320,7 @@ function AskPanel({ brand, onClose }: { brand: Brand; onClose: () => void }) {
           </p>
           <div className="suggested-questions">
             {[
-              "Which ad angles earn the most engagement?",
+              "Which ad formats work best in my category on each platform?",
               "How do we compare with competitors?",
               "Which creators fit our brand voice?",
               "What are customers saying?",
@@ -385,11 +404,19 @@ function AdLibrary({
   const [result, setResult] = useState<AdResult | null>(null),
     [page, setPage] = useState(1),
     [angle, setAngle] = useState("all"),
+    [contentSource, setContentSource] = useState("all"),
     [error, setError] = useState(""),
     [loading, setLoading] = useState(false);
   useEffect(() => {
     setPage(1);
-  }, [brandId, filters.platform, filters.range, filters.search, angle]);
+  }, [
+    brandId,
+    filters.platform,
+    filters.range,
+    filters.search,
+    angle,
+    contentSource,
+  ]);
   useEffect(() => {
     let cancelled = false;
     setLoading(true);
@@ -399,6 +426,7 @@ function AdLibrary({
       ...filters,
       page: String(page),
       angle,
+      contentSource,
     });
     api<AdResult>(`/api/ads?${q}`)
       .then((r) => {
@@ -413,7 +441,15 @@ function AdLibrary({
     return () => {
       cancelled = true;
     };
-  }, [brandId, filters.platform, filters.range, filters.search, page, angle]);
+  }, [
+    brandId,
+    filters.platform,
+    filters.range,
+    filters.search,
+    page,
+    angle,
+    contentSource,
+  ]);
   return (
     <section>
       <div className="mobile-library-search">
@@ -426,6 +462,18 @@ function AdLibrary({
         />
       </div>
       <div className="library-toolbar">
+        <label>
+          Content source
+          <select
+            aria-label="Content source"
+            value={contentSource}
+            onChange={(e) => setContentSource(e.target.value)}
+          >
+            <option value="all">Paid & organic</option>
+            <option value="paid">Paid ads</option>
+            <option value="organic">Organic posts</option>
+          </select>
+        </label>
         <span>
           <strong>{result?.total.toLocaleString() || "0"}</strong> creatives in
           your landscape
@@ -835,6 +883,11 @@ export default function App() {
                   <option>Meta</option>
                   <option>TikTok</option>
                   <option>Google</option>
+                  {["Instagram", "Facebook", "LinkedIn", "X", "YouTube"].map(
+                    (p) => (
+                      <option key={p}>{p}</option>
+                    ),
+                  )}
                 </select>
               </label>
               <label className="date-select">
@@ -867,7 +920,9 @@ export default function App() {
                 : "You’re exploring sample data"}
               <span className="status-separator">·</span>
               {brand?.mode === "imported"
-                ? "Refresh reloads saved imports; live feeds are not connected."
+                ? dashboard?.sourceStatus?.connected
+                  ? "Saved provider observations; see Data sources for sync and reporting lag."
+                  : "Saved data only; no verified live feeds connected."
                 : "Illustrative insights, not live market results."}
             </span>
             <button onClick={() => navigate("sources")}>
@@ -910,6 +965,15 @@ export default function App() {
                     onSearch={setSearch}
                   />
                 )}{" "}
+                {page === "formats" && (
+                  <FormatsView
+                    key={refresh}
+                    brandId={brandId}
+                    platform={platform}
+                    range={range}
+                    onAd={setAd}
+                  />
+                )}
                 {page === "competitors" && (
                   <CompetitorsView dashboard={dashboard} />
                 )}{" "}
@@ -947,7 +1011,10 @@ export default function App() {
               {dashboard?.mode === "demo"
                 ? "Sample dataset"
                 : "Imported dataset"}
-              <span className="status-separator">·</span>No live feeds connected
+              <span className="status-separator">·</span>
+              {dashboard?.sourceStatus?.connected
+                ? `Source last synced ${new Date(dashboard.sourceStatus.lastSuccessfulSyncAt!).toLocaleTimeString()}`
+                : "No verified live feeds connected"}
             </span>
           </footer>
         </main>
@@ -968,7 +1035,12 @@ export default function App() {
         />
       )}
       {askOpen && brand && (
-        <AskPanel brand={brand} onClose={() => setAskOpen(false)} />
+        <AskPanel
+          brand={brand}
+          onClose={() => setAskOpen(false)}
+          platform={platform}
+          range={range}
+        />
       )}{" "}
       {ad && <AdDetail ad={ad} onClose={() => setAd(null)} />}{" "}
       {helpOpen && (

@@ -1,3 +1,5 @@
+import { engagementObservation } from "../../shared/engagement";
+import { classifyCreativeFormats } from "../../shared/formats";
 import { useState } from "react";
 import {
   ArrowUpRight,
@@ -20,7 +22,18 @@ export function PlatformIcon({ platform }: { platform: string }) {
       className={`platform-icon platform-${platform.toLowerCase()}`}
       aria-label={platform}
     >
-      {platform === "Meta" ? "∞" : platform === "TikTok" ? "♪" : "G"}
+      {(
+        {
+          Meta: "∞",
+          TikTok: "♪",
+          Google: "G",
+          Instagram: "◎",
+          Facebook: "f",
+          LinkedIn: "in",
+          X: "X",
+          YouTube: "▶",
+        } as Record<string, string>
+      )[platform] || platform.slice(0, 1)}
     </span>
   );
 }
@@ -83,7 +96,11 @@ export function AdCard({ ad, onOpen }: { ad: Ad; onOpen: (ad: Ad) => void }) {
         <span className="image-shade" />
         <span className="ad-status">
           <i />
-          {ad.active ? "Active" : "Inactive"}
+          {ad.deliveryStatus === "unknown"
+            ? "Status unavailable"
+            : ad.active
+              ? "Active"
+              : "Inactive"}
         </span>
         <span className="ad-platform">
           <PlatformIcon platform={ad.platform} />
@@ -99,21 +116,26 @@ export function AdCard({ ad, onOpen }: { ad: Ad; onOpen: (ad: Ad) => void }) {
         )}
       </button>
       <div className="ad-card-body">
-        <span className="angle-tag">{ad.angle}</span>
+        <div className="creative-tags">
+          {classifyCreativeFormats(ad).map((tag) => (
+            <span className="angle-tag creative-format-tag" key={tag}>
+              {tag}
+            </span>
+          ))}
+          <span className="angle-tag">{ad.angle}</span>
+        </div>
         <p>{ad.copy}</p>
         <div className="ad-card-stats">
           <span>
             <Heart size={13} />
-            {number(ad.engagements)}
+            {ad.metricsAvailable===false?"—":number(ad.engagements)}
           </span>
           <span>
             <Eye size={13} />
-            {number(ad.impressions)}
+            {ad.metricsAvailable===false?"—":number(engagementObservation(ad).denominator)}
           </span>
           <strong>
-            {percent(
-              ad.impressions ? (ad.engagements / ad.impressions) * 100 : 0,
-            )}{" "}
+            {engagementObservation(ad).rate===null?'Unavailable':percent(engagementObservation(ad).rate!)}{" "}
             <ArrowUpRight size={12} />
           </strong>
         </div>
@@ -121,101 +143,4 @@ export function AdCard({ ad, onOpen }: { ad: Ad; onOpen: (ad: Ad) => void }) {
     </article>
   );
 }
-export function AdDetail({ ad, onClose }: { ad: Ad; onClose: () => void }) {
-  return (
-    <div className="modal-backdrop" onClick={onClose}>
-      <section
-        className="ad-detail modal"
-        role="dialog"
-        aria-modal="true"
-        aria-label="Creative analysis"
-        onClick={(e) => e.stopPropagation()}
-      >
-        <button
-          onClick={onClose}
-          className="modal-close icon-button"
-          aria-label="Close creative"
-        >
-          <X size={20} />
-        </button>
-        <div className="detail-visual">
-          {ad.image ? (
-            <img src={ad.image} alt={ad.title} />
-          ) : (
-            <div className="imported-detail">
-              <Layers size={50} />
-              <p>No creative image supplied</p>
-            </div>
-          )}
-          <span>{ad.brand.toLowerCase()}</span>
-        </div>
-        <div className="detail-content">
-          <div className="eyebrow">CREATIVE INTELLIGENCE</div>
-          <h2>{ad.title}</h2>
-          <p>{ad.copy}</p>
-          <div className="detail-meta">
-            <PlatformIcon platform={ad.platform} />
-            {ad.platform}
-            <span>·</span>
-            {ad.format}
-          </div>
-          <dl>
-            <div>
-              <dt>Ad angle</dt>
-              <dd>{ad.angle}</dd>
-            </div>
-            <div>
-              <dt>Audience</dt>
-              <dd>{ad.audience}</dd>
-            </div>
-            <div>
-              <dt>Engagement rate</dt>
-              <dd>
-                {percent(
-                  ad.impressions ? (ad.engagements / ad.impressions) * 100 : 0,
-                )}
-              </dd>
-            </div>
-            <div>
-              <dt>Observed engagements</dt>
-              <dd>{ad.engagements.toLocaleString()}</dd>
-            </div>
-            <div>
-              <dt>Conversions</dt>
-              <dd>
-                {ad.conversions === null
-                  ? "Not available"
-                  : ad.conversions.toLocaleString()}
-              </dd>
-            </div>
-            <div>
-              <dt>Source</dt>
-              <dd>
-                {ad.source === "sample"
-                  ? "Illustrative sample"
-                  : "Imported record"}
-              </dd>
-            </div>
-          </dl>
-          <div className="inline-note">
-            <Info size={16} />
-            <span>
-              Engagement is an attention signal. It does not establish sales or
-              conversion performance.
-            </span>
-          </div>
-          {ad.sourceUrl && (
-            <a
-              href={ad.sourceUrl}
-              target="_blank"
-              rel="noreferrer"
-              className="button secondary"
-            >
-              View source <ExternalLink size={14} />
-            </a>
-          )}
-        </div>
-      </section>
-    </div>
-  );
-}
+export { AdIntelligence as AdDetail } from "./AdIntelligence";

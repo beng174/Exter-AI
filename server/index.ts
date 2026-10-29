@@ -2,8 +2,16 @@ import { createServer } from "node:http";
 import { resolve } from "node:path";
 import express from "express";
 import { createApp } from "./app.js";
+import { openDatabase } from "./db.js";
+import { startConnectionPolling } from "./connections.js";
 
-const app = createApp();
+const db = openDatabase();
+const app = createApp(db);
+const stopPolling = startConnectionPolling(db);
+process.once("SIGTERM", () => {
+  stopPolling();
+  process.exit(0);
+});
 const server = createServer(app);
 if (process.env.NODE_ENV === "production") {
   app.use(express.static(resolve("dist")));
@@ -19,6 +27,6 @@ if (process.env.NODE_ENV === "production") {
 const port = Number(process.env.PORT || 3000);
 server.listen(port, "0.0.0.0", () =>
   console.log(
-    `Exter AI available on port ${port}. Sample data and manual imports; no live provider feeds.`,
+    `Exter AI available on port ${port}. Sample/import workspaces available. Provider polling runs only after authorised account setup and a successful sync.`,
   ),
 );

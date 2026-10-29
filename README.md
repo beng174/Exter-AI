@@ -1,8 +1,12 @@
 # Exter AI
 
+**Public-first, platform-owned intelligence.** Exter researches public paid and organic content before client access is available, runs its own local text/vision inference, stores structured findings, and computes creative-format comparisons. Client-account reporting is optional after winning an account. Claude is an optional read-only consumer of Exter's results. See the [implemented architecture and exact coverage limits](docs/ARCHITECTURE.md).
+
+The updated **Creative formats** page and assistant compare UGC, influencer, static, before-and-after, live-photo, reviews and native formats separately by platform. Ad details expose general information, observed concepts, inferred audience and attention-map availability. All sample data and uncertain/missing inferences remain labelled.
+
 A working local MVP for competitive creative research, based on the supplied Defy decks and the Exter brief. Browse ad landscapes, compare creative angles, explore audience and review themes, shortlist illustrative creators, ask grounded questions, and download intelligence briefs.
 
-**Live Meta, TikTok and Google feeds are not connected.** The app opens with a clearly labelled fictional sample dataset; real workspaces use user-supplied imports. Public engagement does not reveal competitors’ conversions.
+**Broad live public monitoring is not connected.** A submitted public X URL was collected and analysed end-to-end without client credentials. Other embed endpoints can withhold source content or deny access. Comprehensive Instagram/Facebook/LinkedIn/category/ad-library collection needs approved public-data service access for Exter, not a client's advertising account. The app opens with a clearly labelled fictional dataset. Public engagement does not reveal competitors’ conversions.
 
 ## No-install test drive
 
@@ -42,7 +46,7 @@ npm start
 - Weighted engagement rankings, brand comparison, audience tags, sample brand voices and review themes.
 - Illustrative creator matches with reasons, profile briefs and SQLite-persisted shortlists.
 - Markdown research reports with explicit sample/import provenance and download support.
-- Data-grounded, **rule-based** research answers; no external LLM or MCP server is connected.
+- Data-grounded format/performance answers, a local text/vision inference engine, and a read-only MCP server for optional Claude Desktop setup. No user's Claude client or external LLM API is connected.
 - New brand workspaces, validated JSON imports of up to 10,000 records per request, persistent SQLite storage.
 
 ## Import your data
@@ -95,7 +99,7 @@ Browser verification requires Python Playwright and system Chromium (`CHROMIUM_P
 
 This is a **trusted local, single-workspace application** with no authentication or tenant isolation. Do not expose it as a public service. Production requires accounts, workspace access controls, request protections, provider OAuth, encrypted credentials, ingestion queues, source retention policies, observability and approved provider access. No code contacts creators, sends messages, spends budgets or publishes campaigns.
 
-See [product scope and live-data roadmap](docs/PRODUCT.md) and [sample image sources](docs/ASSETS.md). Live integrations and verified attribution require a separate implementation and authorised accounts. Campaign execution, native mobile apps and Claude/MCP integration are not part of this MVP.
+See [architecture and coverage](docs/ARCHITECTURE.md), [Claude setup](docs/CLAUDE.md), [product scope](docs/PRODUCT.md), and [sample image sources](docs/ASSETS.md). Broad public collection, verified attribution, campaign execution and a hosted multi-user Claude connector remain unfinished.
 
 ## Download the browser test version
 

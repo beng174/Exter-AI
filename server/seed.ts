@@ -1,3 +1,4 @@
+import { hydrateAd } from "../shared/ad-records.js";
 import type { Ad, Brand, Category, Creator, Review } from "../shared/types.js";
 
 export const CATEGORIES: Category[] = [
@@ -7,6 +8,16 @@ export const CATEGORIES: Category[] = [
   "Food & beverage",
 ];
 export const PLATFORM_NAMES = ["Meta", "TikTok", "Google"] as const;
+export const CONTENT_PLATFORMS = [
+  "Meta",
+  "TikTok",
+  "Google",
+  "Instagram",
+  "Facebook",
+  "LinkedIn",
+  "X",
+  "YouTube",
+] as const;
 const palettes = ["#dc8c9f", "#837ab7", "#8caa80", "#d6a84a"];
 const workspaces = [
   {
@@ -165,6 +176,7 @@ export function seedData(now = new Date()): {
         revenue: conversions === null ? null : conversions * (28 + ci * 8),
         owned,
         source: "sample",
+        contentSource: i % 3 === 0 ? "organic" : "paid",
         sourceUrl: null,
       });
     }
@@ -282,5 +294,5 @@ export function seedData(now = new Date()): {
       source: "Fictional sample review",
     })),
   );
-  return { brands, ads, creators, reviews };
+  return { brands, ads: ads.map(hydrateAd), creators, reviews };
 }

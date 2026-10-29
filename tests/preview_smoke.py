@@ -74,16 +74,34 @@ def run_checks(artifact, url=None):
         assert all(ad['platform'] == 'TikTok' for ad in filtered['ads'])
         page.get_by_role('combobox', name='Date range', exact=True).select_option('30')
         page.get_by_role('combobox', name='Filter platform', exact=True).select_option('all')
-        navigate(page, 'Ad library')
+        navigate(page, 'Content library')
         page.get_by_role('textbox', name='Search ads and brands', exact=True).fill('no-such-ad-qa-search')
         expect(page.get_by_role('heading', name='No creatives found', exact=True)).to_be_visible()
         page.get_by_role('textbox', name='Search ads and brands', exact=True).fill('Glossier')
         expect(page.locator('.ad-card-top').first).to_contain_text('Glossier')
         page.locator('.ad-image').first.click()
         expect(page.get_by_role('dialog', name='Creative analysis', exact=True)).to_be_visible()
-        expect(page.get_by_text('Illustrative sample', exact=True)).to_be_visible()
+        expect(page.locator('.adi-provenance')).to_contain_text('sample')
         page.get_by_role('button', name='Close creative', exact=True).click()
         print('PASS filters, creative search, empty state and ad details offline', flush=True)
+
+        navigate(page, 'Creative formats')
+        expect(page.locator('.fmt-platform-card')).to_have_count(3)
+        expect(page.locator('.fmt-platform-card').first).to_contain_text('Meta')
+        page.get_by_label('Rank creative formats by', exact=True).select_option('cpa')
+        expect(page.locator('.fmt-platform-card').first).to_contain_text('CPA')
+        page.get_by_label('Format content source', exact=True).select_option('organic')
+        expect(page.locator('.fmt-platform-card').first).to_be_visible()
+        page.get_by_label('Rank creative formats by', exact=True).select_option('engagement')
+        page.get_by_label('Format content source', exact=True).select_option('all')
+        page.locator('.fmt-example-button').first.click()
+        expect(page.get_by_role('tab', name='Inferred audience', exact=True)).to_be_visible()
+        page.get_by_role('tab', name='Inferred audience', exact=True).click()
+        expect(page.get_by_role('term').filter(has_text='Gender')).to_be_visible()
+        page.get_by_role('tab', name='Attention map', exact=True).click()
+        expect(page.get_by_role('heading', name='Attention map not supplied', exact=True)).to_be_visible()
+        page.get_by_role('button', name='Close creative', exact=True).click()
+        print('PASS per-platform formats, owned CPA, organic filter, inferred audience and missing attention map', flush=True)
 
         navigate(page, 'Competitors')
         expect(page.locator('.rv-table tbody tr')).to_have_count(4)
@@ -128,7 +146,7 @@ def run_checks(artifact, url=None):
         print('PASS persisted reports, offline Markdown download and grounded assistant', flush=True)
 
         navigate(page, 'Data sources')
-        expect(page.get_by_text('No external platform is being monitored in real time.', exact=False)).to_be_visible()
+        expect(page.get_by_text('Research the market before you win the account.', exact=True)).to_be_visible()
         with page.expect_download() as template_download:
             page.get_by_role('button', name='Download template', exact=True).click()
         template = json.loads(Path(template_download.value.path()).read_text())
@@ -170,7 +188,7 @@ def run_checks(artifact, url=None):
         expect(audience_table.locator('.evidence-row').filter(has_text='Routine builders')).to_contain_text('10.00')
         print('PASS JSON validation, import isolation and owned angle/audience conversion/CPA analytics', flush=True)
 
-        navigate(page, 'Ad library')
+        navigate(page, 'Content library')
         expect(page.locator('.imported-creative').first).to_be_visible()
         page.locator('.ad-image').first.click()
         expect(page.get_by_text('No creative image supplied', exact=True)).to_be_visible()
@@ -189,7 +207,7 @@ def run_checks(artifact, url=None):
         print('PASS imported image placeholders, import reload persistence and real-data report download', flush=True)
 
         page.set_viewport_size({'width': 390, 'height': 844})
-        for label in ['Overview', 'Ad library', 'Competitors', 'Audience & voice', 'Creator discovery', 'Reports', 'Data sources']:
+        for label in ['Overview', 'Content library', 'Creative formats', 'Competitors', 'Audience & voice', 'Creator discovery', 'Reports', 'Data sources']:
             navigate(page, label, mobile=True)
             width = page.evaluate('({scroll:document.documentElement.scrollWidth,width:window.innerWidth})')
             assert width['scroll'] <= width['width'], (label, width)
@@ -201,7 +219,7 @@ def run_checks(artifact, url=None):
         reset = fetch_json(page, '/api/dashboard?brandId=rhode')
         assert reset['mode'] == 'demo' and reset['metrics']['ads'] == initial['metrics']['ads']
         assert fetch_json(page, '/api/reports?brandId=rhode') == []
-        print('PASS all seven views at 390px and confirmed demo reset', flush=True)
+        print('PASS all eight views at 390px and confirmed demo reset', flush=True)
         screenshot = os.environ.get('EXTER_PREVIEW_SCREENSHOT')
         if screenshot:
             page.screenshot(path=screenshot, full_page=True)

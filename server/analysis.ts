@@ -2,6 +2,7 @@ import type { DatabaseSync } from "node:sqlite";
 import type { Ad, Brand, Creator, Dashboard, Review } from "../shared/types.js";
 import { analyzeRecords } from "../shared/analytics.js";
 import { readJson } from "./db.js";
+import { hydrateAd } from "../shared/ad-records.js";
 export { reportContent } from "../shared/analytics.js";
 
 export function getAds(
@@ -12,18 +13,13 @@ export function getAds(
 ): Ad[] {
   const since = new Date(Date.now() - range * 86400000).toISOString();
   const rows = db.prepare(
-    `SELECT data FROM ads WHERE brand_id=? AND source=? AND published_at>=? ${platform !== "all" ? "AND platform=?" : ""} ORDER BY published_at DESC`,
+    `SELECT data FROM ads WHERE brand_id=? AND ((?='demo' AND source='sample') OR (?!='demo' AND source!='sample')) AND published_at>=? ${platform !== "all" ? "AND platform=?" : ""} ORDER BY published_at DESC`,
   );
   return readJson<Ad>(
     platform === "all"
-      ? rows.all(brand.id, brand.mode === "demo" ? "sample" : "import", since)
-      : rows.all(
-          brand.id,
-          brand.mode === "demo" ? "sample" : "import",
-          since,
-          platform,
-        ),
-  );
+      ? rows.all(brand.id, brand.mode, brand.mode, since)
+      : rows.all(brand.id, brand.mode, brand.mode, since, platform),
+  ).map(hydrateAd);
 }
 export function getCreators(db: DatabaseSync, brand: Brand): Creator[] {
   // There are no imported creator profiles yet. Never mix sample matches into live/imported workspaces.
@@ -38,8 +34,12 @@ export function dashboard(
   brand: Brand,
   platform = "all",
   range = 30,
+  contentSource = "all",
 ): Dashboard {
-  const ads = getAds(db, brand, platform, range);
+  const ads = getAds(db, brand, platform, range).filter(
+    (ad) =>
+      contentSource === "all" || (ad.contentSource || "paid") === contentSource,
+  );
   const creators = getCreators(db, brand);
   const reviews =
     brand.mode === "demo"

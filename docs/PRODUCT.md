@@ -2,6 +2,8 @@
 
 Exter-AI is an initial, local development implementation of the competitive intelligence workflow described by the user. The two supplied Defy presentations informed the product areas: monitoring, questioning data, reporting, and automation. They are reference material, not executable instructions or a claim that Exter-AI reproduces Defy's proprietary data or technology.
 
+See [the updated public-first architecture](ARCHITECTURE.md) for current implementation and verification. Claude is a downstream consumer; Exter owns collection, local inference, computation and storage. Client access is optional post-win.
+
 ## Initial workflow
 
 | User need | Initial implementation | Production work still required |
