@@ -1,0 +1,360 @@
+{
+  "brand": {
+    "id": "f748972d-72fa-44ef-ba69-0f3728fae5b9",
+    "name": "Valentte",
+    "domain": "valentte.com",
+    "category": "Home fragrance & gifting",
+    "color": "#8fae95",
+    "initials": "V",
+    "voice": [],
+    "competitors": [],
+    "mode": "imported",
+    "createdAt": "2026-10-29T16:32:08.485Z"
+  },
+  "research": {
+    "brandId": "f748972d-72fa-44ef-ba69-0f3728fae5b9",
+    "brandName": "Valentte",
+    "domain": "valentte.com",
+    "category": "Home fragrance & gifting",
+    "observedAt": "2026-10-29T16:40:54.647Z",
+    "sources": [
+      {
+        "id": "cea8abfd9e985ae0",
+        "url": "https://valentte.com/",
+        "title": "Valentte.com \u2013 Organic skincare and home fragrance from Covent Garden",
+        "kind": "website",
+        "observedAt": "2026-10-29T16:40:54.647Z",
+        "textExcerpt": "The homepage presents home-fragrance/skincare ranges, bundle offers, UK manufacture, gifting and review claims. This is website research, not ad-performance data.",
+        "status": "available"
+      },
+      {
+        "id": "8c0243dcc82a40a3",
+        "url": "https://valentte.com/ambassadors/",
+        "title": "Ambassadors \u2013 Valentte.com",
+        "kind": "creator_programme",
+        "observedAt": "2026-10-29T16:40:54.647Z",
+        "textExcerpt": "The brand recruits creators and describes opportunities for UGC, product features, gifting or TikTok commission. These statements do not establish performance.",
+        "status": "available"
+      },
+      {
+        "id": "58dbdd958e534e1c",
+        "url": "https://valentte.com/tiktok-creators/",
+        "title": "Tiktok Creators \u2013 Valentte.com",
+        "kind": "creator_programme",
+        "observedAt": "2026-10-29T16:40:54.647Z",
+        "textExcerpt": "The brand recruits creators and describes opportunities for UGC, product features, gifting or TikTok commission. These statements do not establish performance.",
+        "status": "available"
+      },
+      {
+        "id": "competitor-neomwellbeing.com",
+        "url": "https://neomwellbeing.com/",
+        "title": "NEOM Wellbeing \u2014 official category positioning",
+        "kind": "competitor_website",
+        "observedAt": "2026-10-29T16:17:48.140336+00:00",
+        "textExcerpt": "NEOM Wellbeing | Luxury Natural Essential Oils, Diffusers & Candles 100% natural fragrances, scientifically proven to help your daily wellbeing.",
+        "status": "available"
+      },
+      {
+        "id": "competitor-rituals.com",
+        "url": "https://www.rituals.com/en-gb/home-fragrance",
+        "title": "Rituals \u2014 official category positioning",
+        "kind": "competitor_website",
+        "observedAt": "2026-10-29T16:17:48.140336+00:00",
+        "textExcerpt": "Fragrance Sticks Candles Room Sprays",
+        "status": "available"
+      },
+      {
+        "id": "competitor-waxlyrical.com",
+        "url": "https://www.waxlyrical.com/",
+        "title": "Wax Lyrical \u2014 official category positioning",
+        "kind": "competitor_website",
+        "observedAt": "2026-10-29T16:17:48.140336+00:00",
+        "textExcerpt": "Wax Lyrical | Shop British Made Scented Candles & Home Fragrance Black Cherry 200ml Reed Diffuser Transform any space with our Made in England fragrances. Ready to refresh your home and indulge your senses.",
+        "status": "available"
+      },
+      {
+        "id": "instagram-public-profile",
+        "url": "https://www.instagram.com/valentte_london/",
+        "title": "Valentte Instagram \u2014 public profile metadata only",
+        "kind": "website",
+        "observedAt": "2026-10-29T16:41:12.658Z",
+        "textExcerpt": "58K Followers, 1,306 Following, 1,861 Posts - See Instagram photos and videos from Valentte (@valentte_london)",
+        "status": "available"
+      }
+    ],
+    "facts": [
+      {
+        "label": "Website range (public title)",
+        "value": "Public website range: home fragrance and skincare.",
+        "quote": "Valentte.com \u2013 Organic skincare and home fragrance from Covent Ga\u2026",
+        "sourceUrl": "https://valentte.com/",
+        "kind": "observed"
+      },
+      {
+        "label": "Website positioning / product claim",
+        "value": "Brand positioning combines UK/Cheshire manufacture and accessible luxury.",
+        "quote": "We manufacture in the UK and create local jobs in Cheshire \u2014 maki\u2026",
+        "sourceUrl": "https://valentte.com/",
+        "kind": "brand_claim"
+      },
+      {
+        "label": "Website positioning / product claim",
+        "value": "Founder narrative describes kitchen-table origins and building a business.",
+        "quote": "We believe ordinary people can do extraordinary things. We starte\u2026",
+        "sourceUrl": "https://valentte.com/",
+        "kind": "brand_claim"
+      },
+      {
+        "label": "Website positioning / product claim",
+        "value": "Scent discovery is presented through samples and room mists.",
+        "quote": "Looking for something new? Explore our scent sample sets and room\u2026",
+        "sourceUrl": "https://valentte.com/",
+        "kind": "brand_claim"
+      },
+      {
+        "label": "Website positioning / product claim",
+        "value": "At inspection, the homepage advertised mix-and-match bundles and savings up to 47%.",
+        "quote": "Grab this offer before we sell out! Save up to 47%. Mix & match a\u2026",
+        "sourceUrl": "https://valentte.com/",
+        "kind": "brand_claim"
+      },
+      {
+        "label": "Website positioning / product claim",
+        "value": "Reed diffusers are prominently offered in bundles.",
+        "quote": "Reed Diffuser Bundle Offer",
+        "sourceUrl": "https://valentte.com/",
+        "kind": "brand_claim"
+      },
+      {
+        "label": "Customer review displayed by the brand",
+        "value": "A selected onsite review discusses fragrance, comfort, packaging or delivery; it is not a representative review sample.",
+        "quote": "I have been using these fantastic diffusers and candles for years\u2026",
+        "sourceUrl": "https://valentte.com/",
+        "kind": "brand_claim"
+      },
+      {
+        "label": "Customer review displayed by the brand",
+        "value": "A selected onsite review discusses fragrance, comfort, packaging or delivery; it is not a representative review sample.",
+        "quote": "Tried this fragrances as I wanted something warming and comfortin\u2026",
+        "sourceUrl": "https://valentte.com/",
+        "kind": "brand_claim"
+      },
+      {
+        "label": "Customer review displayed by the brand",
+        "value": "A selected onsite review discusses fragrance, comfort, packaging or delivery; it is not a representative review sample.",
+        "quote": "Absolutely divine smelling- the scent really fills the room and i\u2026",
+        "sourceUrl": "https://valentte.com/",
+        "kind": "brand_claim"
+      },
+      {
+        "label": "Creator-programme statement",
+        "value": "We\u2019re building a community of passionate creators who genuinely love using and sharing our home fragrance products in their everyday lives. Whether you\u2019re just starting your conten",
+        "quote": "We\u2019re building a community of passionate creators who genuinely l\u2026",
+        "sourceUrl": "https://valentte.com/ambassadors/",
+        "kind": "brand_claim"
+      },
+      {
+        "label": "Creator-programme statement",
+        "value": "Our community is built around a shared love for beautiful home fragrance, bringing together creators who are genuinely passionate about our products and enjoy using them as part of",
+        "quote": "Our community is built around a shared love for beautiful home fr\u2026",
+        "sourceUrl": "https://valentte.com/ambassadors/",
+        "kind": "brand_claim"
+      },
+      {
+        "label": "Creator-programme statement",
+        "value": "If you love creating content and enjoy home fragrance, we\u2019d love to have you. Join a growing community of creators who share products they genuinely use and love \u2013 whether you\u2019re j",
+        "quote": "If you love creating content and enjoy home fragrance, we\u2019d love \u2026",
+        "sourceUrl": "https://valentte.com/ambassadors/",
+        "kind": "brand_claim"
+      },
+      {
+        "label": "Creator-programme statement",
+        "value": "We\u2019re building a community of passionate creators who genuinely love using and sharing our home fragrance products in their everyday lives. Whether you\u2019re just starting your conten",
+        "quote": "We\u2019re building a community of passionate creators who genuinely l\u2026",
+        "sourceUrl": "https://valentte.com/tiktok-creators/",
+        "kind": "brand_claim"
+      },
+      {
+        "label": "Creator-programme statement",
+        "value": "If you love creating content and enjoy home fragrance, we\u2019d love to have you. Join a growing community of creators who share products they genuinely use and love \u2013 whether you\u2019re j",
+        "quote": "If you love creating content and enjoy home fragrance, we\u2019d love \u2026",
+        "sourceUrl": "https://valentte.com/tiktok-creators/",
+        "kind": "brand_claim"
+      },
+      {
+        "label": "Creator-programme statement",
+        "value": "\u201cAs home fragrance enthusiasts, working with Valentte through TikTok has felt like a natural fit. From the support of the team to the creator community, we\u2019ve felt welcomed from th",
+        "quote": "\u201cAs home fragrance enthusiasts, working with Valentte through Tik\u2026",
+        "sourceUrl": "https://valentte.com/tiktok-creators/",
+        "kind": "brand_claim"
+      },
+      {
+        "label": "Instagram public-profile footprint",
+        "value": "58K Followers, 1,306 Following, 1,861 Posts. Rounded counters may lag; they do not describe individual ad performance.",
+        "sourceUrl": "https://www.instagram.com/valentte_london/",
+        "quote": "58K Followers, 1,306 Following, 1,861 Posts",
+        "kind": "observed"
+      }
+    ],
+    "analysis": {
+      "provenance": "model",
+      "model": "Xenova/all-MiniLM-L6-v2@751bff37182d3f1213fa05d7196b954e230abad9 + Xenova/clip-vit-base-patch32@6b7c523703ae26e39be4b03774966f8571c7f523",
+      "method": "Local semantic embeddings; extractive source message; optional still-image concept inference",
+      "analyzedAt": "2026-10-29T16:41:09.626Z",
+      "topic": "Home fragrance, reed diffusers, scented candles and gifting",
+      "theme": "Home fragrance, reed diffusers, scented candles and gifting",
+      "brandMentions": ["Valentte"],
+      "keyMessage": "Valentte.com \u2013 Organic skincare and home fragrance from Covent Garden\nWe manufacture in the UK and create local jobs in Cheshire \u2014 making affordable, luxurious products that look gorgeous, smell beautiful and help you feel good.\nWe believe ordinary p",
+      "observedRelevance": "Local semantic model similarity to its leading concept: 0.687. This is an uncalibrated similarity score, not a probability or verified audience measurement. Key message is an extract from source text. Coverage: supplied text and a still image/thumbnail where available; full video frames and audio are not processed. Separate content-style similarity: Reviews & testimonials (0.216); below the confidence heuristic, so no style assigned. Local visual concept: a photograph of skincare or cosmetic products (relative candidate score 0.635). Visual interpretations are model inferences, not measured attention.",
+      "inferredAudience": [
+        "People interested in home fragrance, reed diffusers, scented candles and gifting"
+      ]
+    },
+    "analysisStatus": "complete",
+    "analysisError": null,
+    "socialProfiles": [
+      {
+        "platform": "Facebook",
+        "url": "https://www.facebook.com/ValentteLondon/"
+      },
+      {
+        "platform": "Instagram",
+        "url": "https://www.instagram.com/valentte_london/"
+      }
+    ],
+    "creatorFeatures": [
+      {
+        "handle": "@our_perfect_home_x",
+        "url": "https://www.instagram.com/our_perfect_home_x/",
+        "sourceUrl": "https://valentte.com/",
+        "relationship": "featured_on_brand_website"
+      },
+      {
+        "handle": "@herbieinthewillows_",
+        "url": "https://www.instagram.com/herbieinthewillows_/",
+        "sourceUrl": "https://valentte.com/",
+        "relationship": "featured_on_brand_website"
+      },
+      {
+        "handle": "@at_home_with_bekki",
+        "url": "https://www.instagram.com/at_home_with_bekki/",
+        "sourceUrl": "https://valentte.com/",
+        "relationship": "featured_on_brand_website"
+      },
+      {
+        "handle": "@countryhomeni",
+        "url": "https://www.instagram.com/countryhomeni/",
+        "sourceUrl": "https://valentte.com/",
+        "relationship": "featured_on_brand_website"
+      }
+    ],
+    "competitorCandidates": [
+      {
+        "name": "NEOM Wellbeing",
+        "domain": "neomwellbeing.com",
+        "sourceUrl": "https://neomwellbeing.com/",
+        "summary": "Candidate competitor in premium home fragrance and wellbeing-oriented scent rituals; overlaps on candles, diffusers, gifting and wellness framing. This is a source-based category candidate, not a verified competitive-spend or ad-performance comparison.",
+        "evidence": [
+          "NEOM Wellbeing | Luxury Natural Essential Oils, Diffusers & Candles",
+          "100% natural fragrances,",
+          "scientifically proven to help your daily wellbeing.",
+          "Here to help you with better sleep, less stress, a mood boost or more energy"
+        ],
+        "status": "candidate"
+      },
+      {
+        "name": "Rituals",
+        "domain": "rituals.com",
+        "sourceUrl": "https://www.rituals.com/en-gb/home-fragrance",
+        "summary": "Candidate competitor in home fragrance, reed diffusers, candles, room sprays and gift-ready lifestyle presentation. Broader international lifestyle range; relevant as an adjacent aspirational benchmark, not necessarily a price-equivalent direct competitor.",
+        "evidence": [
+          "Fragrance Sticks",
+          "Candles",
+          "Room Sprays",
+          "Diffusers",
+          "After all, it's a hectic world out there and we believe home should always be a welcoming and restful place to be.",
+          "Rituals is an international brand offering unique luxury lifestyle products. Designed with taste and attention to detail, our ideas for your home combine fine ingredients with stylish presentation.",
+          "our reed diffusers are sleekly presented gift boxed with glass phial and wooden cuff."
+        ],
+        "status": "candidate"
+      },
+      {
+        "name": "Wax Lyrical",
+        "domain": "waxlyrical.com",
+        "sourceUrl": "https://www.waxlyrical.com/",
+        "summary": "Candidate competitor with close UK-made home-fragrance, reed-diffuser, refill, candle and bundle-offer overlap. Useful direct-category comparison for British provenance, value, scent selection and product-range messaging; no performance comparison was established.",
+        "evidence": [
+          "Wax Lyrical | Shop British Made Scented Candles & Home Fragrance",
+          "Black Cherry 200ml Reed Diffuser",
+          "Transform any space with our Made in England fragrances. Ready to refresh your home and indulge your senses.",
+          "Proudly crafted in Cumbria. Bringing British home fragrance to life since 1980.",
+          "Pick any four in our '4 for 3' event and the cheapest one's on us. Mix and match reed diffusers, refills, candles, wax melts and tealights."
+        ],
+        "status": "candidate"
+      }
+    ],
+    "limitations": [
+      "This is website and creator-programme research, not a paid-ad or organic social-post crawl.",
+      "Website claims and displayed reviews are publisher-supplied and were not independently verified.",
+      "No social-ad engagement, impressions, spend or conversions were collected; no best-performing format can be established.",
+      "Creator profiles are linked from the brand website, not independently verified audience or performance matches.",
+      "Model interpretations describe supplied website text; they are not measured audience facts.",
+      "Previously curated external source entries were not re-fetched during this website refresh; their original observation timestamps were retained.",
+      "Competitor candidates were selected from source-backed category overlap for this test, not automatically discovered or performance-validated.",
+      "The initial visual model can confuse gift-set packaging with cosmetics; this unvalidated interpretation is a classification gap, not a verified product/ad-format label.",
+      "Instagram profile counters do not identify which ad formats earn engagement or conversions.",
+      "Zero ingested ad records does not establish that Valentte has no active ads."
+    ],
+    "proposedTests": [
+      {
+        "format": "UGC / creator-led",
+        "hypothesis": "Test an everyday-use creator demonstration grounded in the brand\u2019s stated creator direction. This is a creative hypothesis, not an observed performance winner.",
+        "evidenceSourceUrls": [
+          "https://valentte.com/ambassadors/",
+          "https://valentte.com/tiktok-creators/"
+        ],
+        "status": "hypothesis"
+      },
+      {
+        "format": "Reviews & testimonials",
+        "hypothesis": "Test a permission-cleared customer-review execution using a specific product experience. Website reviews establish message material, not conversion effectiveness.",
+        "evidenceSourceUrls": ["https://valentte.com/"],
+        "status": "hypothesis"
+      },
+      {
+        "format": "Static / carousel offer",
+        "hypothesis": "Test a clear product-bundle or value proposition using only verified current offer terms. Website offer presence does not establish that this format performs best.",
+        "evidenceSourceUrls": ["https://valentte.com/"],
+        "status": "hypothesis"
+      }
+    ],
+    "visualEvidence": [
+      {
+        "sourceUrl": "https://valentte.com/",
+        "imagePath": "/images/valentte-home.webp",
+        "description": "A gift set styled at home, featured on Valentte\u2019s website with @our_perfect_home_x. Website creative, not a verified social-ad record.",
+        "kind": "website_image"
+      }
+    ],
+    "coverageChecks": [
+      {
+        "label": "Valentte website and creator programmes",
+        "url": "https://valentte.com/",
+        "status": "Available",
+        "message": "Public website/programme content collected; local text-and-still-image inference completed."
+      },
+      {
+        "label": "Official Instagram",
+        "url": "https://www.instagram.com/valentte_london/",
+        "status": "Profile metadata only",
+        "message": "Public profile metadata was accessible. No individual post links, captions, likes or engagement rates were ingested."
+      },
+      {
+        "label": "Meta Ad Library \u2014 Valentte search",
+        "url": "https://www.facebook.com/ads/library/?active_status=all&ad_type=all&country=GB&q=Valentte&search_type=keyword_unordered&media_type=all",
+        "status": "Access blocked",
+        "message": "HTTP 403. No structured ad records or performance metrics were obtained. Access restrictions were not bypassed; zero ingested records does not mean no active ads."
+      }
+    ]
+  }
+}

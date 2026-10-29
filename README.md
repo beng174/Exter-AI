@@ -104,3 +104,9 @@ See [architecture and coverage](docs/ARCHITECTURE.md), [Claude setup](docs/CLAUD
 ## Download the browser test version
 
 The ready-to-open package and instructions are in [test-drive/README.md](test-drive/README.md). This branch includes both the full application source and the standalone test drive. The repository's main branch is unchanged.
+
+## Real brand case: Valentte
+
+The updated browser test drive opens directly to **Valentte → Brand research**, using public website evidence and actual local-model inference. It does not substitute fictional ad results for missing real data. Read [the test findings and limitations](research/VALENTTE-TEST.md).
+
+With the full app running, `npm run research:valentte` reproduces the website/creator-source collection and model analysis. Comprehensive live ad-format benchmarking remains blocked by source coverage; client-account permission is not the prerequisite for that public research.

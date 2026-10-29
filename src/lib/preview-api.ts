@@ -1,4 +1,11 @@
-import { analyzeFormats, formatReportSummary, normalizeCreativeFormats } from "../../shared/formats";
+import valentteCase from "../../shared/cases/valentte.json";
+import { answerBrandResearchQuestion } from "../../shared/brand-research-answer";
+import type { BrandResearch } from "../../shared/brand-research";
+import {
+  analyzeFormats,
+  formatReportSummary,
+  normalizeCreativeFormats,
+} from "../../shared/formats";
 import { answerResearchQuestion } from "../../shared/research";
 import { normalizeAdAnalysis } from "../../shared/ad-intelligence";
 import { hydrateAd } from "../../shared/ad-records";
@@ -20,6 +27,7 @@ import type {
 
 declare global {
   interface Window {
+    __EXTER_RESEARCH_BRAND__?: string;
     __EXTER_PREVIEW_IMAGES__?: Record<string, string>;
     __EXTER_RESET_PREVIEW__?: () => void;
     __EXTER_PREVIEW_STORAGE__?: { persistent: boolean; message: string };
@@ -306,6 +314,25 @@ export function installPreviewApi(): void {
     }
   }
 
+  const realBrand = valentteCase.brand as Brand;
+  const researchSnapshot = valentteCase.research as BrandResearch;
+  window.__EXTER_RESEARCH_BRAND__ = realBrand.id;
+  if (!state.brands.some((brand) => brand.id === realBrand.id)) {
+    state = { ...state, brands: [...state.brands, realBrand] };
+    try {
+      storage.setItem(STORAGE_KEY, JSON.stringify(state));
+    } catch {}
+  }
+  if (!storage.getItem("exter-valentte-v1")) {
+    try {
+      storage.setItem("exter-brand", realBrand.id);
+      storage.setItem("exter-valentte-v1", "1");
+    } catch {
+      notice(
+        "The Valentte snapshot is available, but browser storage could not save the selected workspace.",
+      );
+    }
+  }
   function commit(next: PreviewState) {
     try {
       storage.setItem(STORAGE_KEY, JSON.stringify(next));
@@ -383,7 +410,7 @@ export function installPreviewApi(): void {
     return Object.fromEntries(
       Object.entries(value).map(([key, item]) => [
         key,
-        key === "image" && typeof item === "string"
+        (key === "image" || key === "imagePath") && typeof item === "string"
           ? (window.__EXTER_PREVIEW_IMAGES__?.[item] ?? item)
           : images(item),
       ]),
@@ -518,6 +545,15 @@ export function installPreviewApi(): void {
         if (!ad) throw new PreviewError("Ad not found in this workspace.", 404);
         return json(hydrateAd(ad));
       }
+      if (method === "GET" && path === "/api/brand-research") {
+        const brand = getBrand(url.searchParams.get("brandId"));
+        return json(brand.id === realBrand.id ? researchSnapshot : null);
+      }
+      if (method === "POST" && path === "/api/brand-research")
+        throw new PreviewError(
+          "This file contains the real Valentte research snapshot with source dates. Refreshing public website collection and local models requires the full server application.",
+          409,
+        );
       if (method === "GET" && path === "/api/brands") return json(state.brands);
       if (method === "POST" && path === "/api/brands") {
         const name = text(body.name, "name", 80);
@@ -674,7 +710,11 @@ export function installPreviewApi(): void {
           brandId: brand.id,
           title: `${brand.name} · Intelligence brief`,
           createdAt: new Date().toISOString(),
-          content: reportContent(dashboardFor(brand))+formatReportSummary(analyzeFormats(brand,adsFor(brand,"all",30),{range:30})),
+          content:
+            reportContent(dashboardFor(brand)) +
+            formatReportSummary(
+              analyzeFormats(brand, adsFor(brand, "all", 30), { range: 30 }),
+            ),
           mode: brand.mode,
         };
         commit({ ...state, reports: [...state.reports, report] });
@@ -695,6 +735,13 @@ export function installPreviewApi(): void {
         const question = text(body.question, "question", 2000);
         const { platform, range } = filters(body);
         const data: Dashboard = dashboardFor(brand, platform, range);
+        if (!data.metrics.ads && brand.id === realBrand.id) {
+          const answer = answerBrandResearchQuestion(
+            question,
+            researchSnapshot,
+          );
+          if (answer) return json(answer);
+        }
         return json(
           answerResearchQuestion({
             question,

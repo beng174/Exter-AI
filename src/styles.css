@@ -2559,3 +2559,5 @@ main {
   border-color: #d9e6cc;
   color: #6c8a56;
 }
+
+.sidebar{overflow-y:auto;scrollbar-width:thin}

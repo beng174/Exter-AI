@@ -28,3 +28,7 @@ python3 tests/preview_smoke.py --http .preview/Exter-AI-Test-Drive.html
 ```
 
 HTTP mode serves only the one embedded HTML file. Tests fail if the page requests external assets or backend APIs. Direct `file://` execution was not verified in the managed browser. Browsers managed by an organisation may need an approved local HTTP server instead of opening downloaded HTML files directly.
+
+## v0.3: real Valentte case
+
+On first open, the test drive selects **Valentte → Brand research**. This is a dated real website-research snapshot with source citations and local-model provenance, not a live ad-performance feed. The four other brand workspaces remain fictional samples. The ZIP also includes `Valentte-Research-Report.md`. Client-account access and Claude are not required for the original collection/model test.

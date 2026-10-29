@@ -51,10 +51,31 @@ def run_checks(artifact, url=None):
         target_url = url or artifact.resolve().as_uri()
         page.on('request', lambda request: external_requests.append(request.url) if request.url.startswith(('http://', 'https://')) and not (request.url == target_url and request.resource_type == 'document') else None)
         page.goto(target_url, wait_until='networkidle')
+        expect(page.get_by_role('heading', name='Valentte, in focus.', exact=True)).to_be_visible()
+        case_id=page.evaluate('window.__EXTER_RESEARCH_BRAND__')
+        case=fetch_json(page,'/api/brand-research?brandId='+case_id)
+        assert case['analysisStatus']=='complete' and case['analysis']['provenance']=='model'
+        assert case['category']=='Home fragrance & gifting' and len(case['competitorCandidates'])==3
+        assert fetch_json(page,'/api/dashboard?brandId='+case_id)['metrics']['ads']==0
+        expect(page.get_by_role('heading',name='Ad-format winner: not yet measurable',exact=True)).to_be_visible()
+        with page.expect_download() as research_download:
+            page.get_by_role('button',name='Download research report',exact=True).click()
+        report_text=Path(research_download.value.path()).read_text()
+        assert 'Valentte' in report_text and 'not yet measurable' in report_text
+        page.get_by_role('button',name='Ask Exter',exact=True).click()
+        page.locator('.suggested-questions button').first.click()
+        expect(page.locator('.chat-answer')).to_contain_text('cannot identify a winning ad format')
+        page.get_by_role('button',name='Close assistant',exact=True).click()
+        page.set_viewport_size({'width':390,'height':844})
+        assert page.evaluate('document.documentElement.scrollWidth<=innerWidth')
+        page.set_viewport_size({'width':1440,'height':1000})
+        page.get_by_role('button',name='Change brand workspace',exact=True).click()
+        page.locator('.brand-options button').filter(has_text='Rhode').click()
+        print('PASS real Valentte snapshot, own-model provenance, zero fabricated ads, honest answer and downloadable research',flush=True)
         expect(page.get_by_role('heading', name='A wider lens. A clearer advantage.', exact=True)).to_be_visible()
         expect(page.locator('.main-loading')).not_to_be_visible()
         brands = fetch_json(page, '/api/brands')
-        assert len(brands) == 4
+        assert len(brands) == 5
         initial = fetch_json(page, '/api/dashboard?brandId=rhode')
         assert initial['mode'] == 'demo' and initial['metrics']['ads'] > 0
         images = page.locator('.ad-image img')
@@ -207,7 +228,7 @@ def run_checks(artifact, url=None):
         print('PASS imported image placeholders, import reload persistence and real-data report download', flush=True)
 
         page.set_viewport_size({'width': 390, 'height': 844})
-        for label in ['Overview', 'Content library', 'Creative formats', 'Competitors', 'Audience & voice', 'Creator discovery', 'Reports', 'Data sources']:
+        for label in ['Overview', 'Brand research', 'Content library', 'Creative formats', 'Competitors', 'Audience & voice', 'Creator discovery', 'Reports', 'Data sources']:
             navigate(page, label, mobile=True)
             width = page.evaluate('({scroll:document.documentElement.scrollWidth,width:window.innerWidth})')
             assert width['scroll'] <= width['width'], (label, width)
@@ -215,11 +236,11 @@ def run_checks(artifact, url=None):
         page.once('dialog', lambda dialog: dialog.accept())
         page.get_by_role('button', name='Reset demo', exact=True).click()
         expect(page.get_by_role('heading', name='A wider lens. A clearer advantage.', exact=True)).to_be_visible()
-        assert len(fetch_json(page, '/api/brands')) == 4
+        assert len(fetch_json(page, '/api/brands')) == 5
         reset = fetch_json(page, '/api/dashboard?brandId=rhode')
         assert reset['mode'] == 'demo' and reset['metrics']['ads'] == initial['metrics']['ads']
         assert fetch_json(page, '/api/reports?brandId=rhode') == []
-        print('PASS all eight views at 390px and confirmed demo reset', flush=True)
+        print('PASS all nine views at 390px and confirmed demo reset', flush=True)
         screenshot = os.environ.get('EXTER_PREVIEW_SCREENSHOT')
         if screenshot:
             page.screenshot(path=screenshot, full_page=True)

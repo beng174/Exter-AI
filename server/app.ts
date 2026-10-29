@@ -17,10 +17,12 @@ import {
   classifyCreativeFormats,
 } from "../shared/formats.js";
 import { normalizeAdAnalysis } from "../shared/ad-intelligence.js";
+import { answerBrandResearchQuestion } from "../shared/brand-research-answer.js";
 import { answerResearchQuestion } from "../shared/research.js";
 import { hydrateAd, coalesceObservations } from "../shared/ad-records.js";
 import { attachConnections, getConnectionStatuses } from "./connections.js";
 import { attachBrain } from "./brain.js";
+import { attachBrandResearch, readBrandResearch } from "./brand-research.js";
 import { attachPublicMonitor } from "./public-monitor.js";
 import type { FormatMetric } from "../shared/format-types.js";
 
@@ -218,6 +220,7 @@ export function createApp(db: DatabaseSync = openDatabase()) {
   attachConnections(app, db);
   attachPublicMonitor(app, db);
   attachBrain(app, db);
+  attachBrandResearch(app, db);
   app.get("/api/health", (_req, res) =>
     res.json({
       status: "ok",
@@ -463,7 +466,11 @@ export function createApp(db: DatabaseSync = openDatabase()) {
       brandId: brand.id,
       title: `${brand.name} · Intelligence brief`,
       createdAt: new Date().toISOString(),
-      content: reportContent(dashboard(db, brand))+formatReportSummary(analyzeFormats(brand,getAds(db,brand,"all",30),{range:30})),
+      content:
+        reportContent(dashboard(db, brand)) +
+        formatReportSummary(
+          analyzeFormats(brand, getAds(db, brand, "all", 30), { range: 30 }),
+        ),
       mode: brand.mode,
     };
     db.prepare("INSERT INTO reports VALUES (?, ?, ?, ?)").run(
@@ -497,6 +504,14 @@ export function createApp(db: DatabaseSync = openDatabase()) {
       range: req.body?.range,
     });
     const data = dashboard(db, brand, platform, range);
+    const profile = readBrandResearch(db, brand.id);
+    if (!data.metrics.ads && profile) {
+      const answer = answerBrandResearchQuestion(question, profile);
+      if (answer) {
+        res.json(answer);
+        return;
+      }
+    }
     res.json(
       answerResearchQuestion({
         question,

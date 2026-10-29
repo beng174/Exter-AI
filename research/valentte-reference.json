@@ -1,0 +1,54 @@
+{
+  "selectionMethod": "Source-based analyst-selected candidate set for the Valentte real-brand test, not automatic ad-performance discovery",
+  "competitors": [
+    {
+      "name": "NEOM Wellbeing",
+      "domain": "neomwellbeing.com",
+      "sourceUrl": "https://neomwellbeing.com/",
+      "observedAt": "2026-10-29T16:17:48.140336+00:00",
+      "summary": "Candidate competitor in premium home fragrance and wellbeing-oriented scent rituals; overlaps on candles, diffusers, gifting and wellness framing. This is a source-based category candidate, not a verified competitive-spend or ad-performance comparison.",
+      "evidence": [
+        "NEOM Wellbeing | Luxury Natural Essential Oils, Diffusers & Candles",
+        "100% natural fragrances,",
+        "scientifically proven to help your daily wellbeing.",
+        "Here to help you with better sleep, less stress, a mood boost or more energy"
+      ],
+      "evidenceCaveat": "Scientific efficacy is NEOM\u2019s own marketing claim, not independently verified in this test.",
+      "httpStatus": 200
+    },
+    {
+      "name": "Rituals",
+      "domain": "rituals.com",
+      "sourceUrl": "https://www.rituals.com/en-gb/home-fragrance",
+      "observedAt": "2026-10-29T16:17:48.140336+00:00",
+      "summary": "Candidate competitor in home fragrance, reed diffusers, candles, room sprays and gift-ready lifestyle presentation. Broader international lifestyle range; relevant as an adjacent aspirational benchmark, not necessarily a price-equivalent direct competitor.",
+      "evidence": [
+        "Fragrance Sticks",
+        "Candles",
+        "Room Sprays",
+        "Diffusers",
+        "After all, it's a hectic world out there and we believe home should always be a welcoming and restful place to be.",
+        "Rituals is an international brand offering unique luxury lifestyle products. Designed with taste and attention to detail, our ideas for your home combine fine ingredients with stylish presentation.",
+        "our reed diffusers are sleekly presented gift boxed with glass phial and wooden cuff."
+      ],
+      "evidenceCaveat": "Positioning and product descriptions are brand-owned claims; ad volume, engagement, spend and conversions were not obtained.",
+      "httpStatus": 200
+    },
+    {
+      "name": "Wax Lyrical",
+      "domain": "waxlyrical.com",
+      "sourceUrl": "https://www.waxlyrical.com/",
+      "observedAt": "2026-10-29T16:17:48.140336+00:00",
+      "summary": "Candidate competitor with close UK-made home-fragrance, reed-diffuser, refill, candle and bundle-offer overlap. Useful direct-category comparison for British provenance, value, scent selection and product-range messaging; no performance comparison was established.",
+      "evidence": [
+        "Wax Lyrical | Shop British Made Scented Candles & Home Fragrance",
+        "Black Cherry 200ml Reed Diffuser",
+        "Transform any space with our Made in England fragrances. Ready to refresh your home and indulge your senses.",
+        "Proudly crafted in Cumbria. Bringing British home fragrance to life since 1980.",
+        "Pick any four in our '4 for 3' event and the cheapest one's on us. Mix and match reed diffusers, refills, candles, wax melts and tealights."
+      ],
+      "evidenceCaveat": "UK provenance and offers are brand-owned claims observed on the page, not independently verified or guaranteed to remain current.",
+      "httpStatus": 200
+    }
+  ]
+}

@@ -21,9 +21,9 @@ const css = bundled.outputFiles
   .text.replace(/@import\s*(?:url\([^)]*\)|"[^"]*"|'[^']*')\s*;/gi, "");
 const images: Record<string, string> = {};
 for (const file of await readdir("public/images")) {
-  if (!file.endsWith(".jpg")) continue;
+  if (!/\.(jpg|webp)$/.test(file)) continue;
   images[`/images/${file}`] =
-    `data:image/jpeg;base64,${(await readFile(`public/images/${file}`)).toString("base64")}`;
+    `data:image/${file.endsWith(".webp") ? "webp" : "jpeg"};base64,${(await readFile(`public/images/${file}`)).toString("base64")}`;
 }
 const bannerCss = `
 .preview-notice{position:fixed;z-index:1000;inset:0 0 auto;height:40px;display:flex;align-items:center;justify-content:center;gap:20px;background:#244d3b;color:#eef5e5;padding:0 18px;font:11px/1.5 system-ui,sans-serif;box-shadow:0 1px 5px #18392130}.preview-notice-title{font-size:9px;font-weight:700;letter-spacing:1.5px;color:#d2e7b7;white-space:nowrap}.preview-notice-copy{opacity:.8}.preview-notice button{font:inherit;color:#eff9e6;background:#ffffff12;border:1px solid #ffffff30;border-radius:4px;padding:3px 9px;white-space:nowrap}.preview-notice button:hover{background:#ffffff25}.offline-test-drive #root{padding-top:40px}.offline-test-drive .sidebar{top:40px}.offline-test-drive .ask-panel{top:40px}.offline-test-drive .modal-backdrop{padding-top:55px}@media(max-width:760px){.preview-notice{gap:12px;justify-content:space-between;font-size:9px}.preview-notice-title{font-size:8px}.preview-notice-copy{font-size:8px;line-height:1.4;max-width:180px}.preview-notice button{font-size:8px;padding:4px 6px}}`;

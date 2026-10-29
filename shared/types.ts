@@ -12,9 +12,11 @@ export type Category =
   | "Beauty & skincare"
   | "Fashion"
   | "Wellness"
-  | "Food & beverage";
+  | "Food & beverage"
+  | "Home fragrance & gifting";
 export type Page =
   | "overview"
+  | "brand"
   | "formats"
   | "ads"
   | "competitors"

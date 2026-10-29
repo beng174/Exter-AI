@@ -25,3 +25,9 @@ Organisation-managed browsers may block local HTML; use an ordinary desktop brow
 
 
 The full platform now has its own local text/vision engine; Claude is an optional downstream reader. See [architecture and current coverage limits](../docs/ARCHITECTURE.md). This HTML test drive demonstrates the interface and stored-data comparisons; it does not run the server models or public collectors.
+
+## Real brand test: Valentte (v0.3)
+
+**[Download the dedicated Valentte test](https://github.com/beng174/Exter-AI/raw/refs/heads/exter-test-drive/test-drive/Valentte-Real-Brand-Test.zip)**. Extract it and open `index.html`; the real Valentte research workspace is selected on first use. The archive includes a readable research report. This is a dated public-research snapshot, not live ad-performance data.
+
+[Read the real test findings and limitations](../research/VALENTTE-TEST.md). No fake Valentte ads or performance metrics were inserted.

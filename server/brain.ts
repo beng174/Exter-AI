@@ -18,6 +18,7 @@ export const BRAIN_MODELS = {
   },
 };
 const concepts = [
+  "Home fragrance, reed diffusers, scented candles and gifting",
   "A skincare or beauty routine",
   "An outfit or fashion styling idea",
   "A wellness or fitness routine",
@@ -30,8 +31,30 @@ const concepts = [
   "An educational product explanation",
   "An entertaining lifestyle story",
 ];
-const styles=[{name:'Reviews & testimonials',text:'A customer shares a first-person review, honest opinion or testimonial about using a product.'},{name:'Product demo',text:'A step-by-step product demonstration or how-to tutorial shows how a product works.'},{name:'Brand announcement',text:'A brand announces a new product, launch or company news.'},{name:'Educational explainer',text:'An educational explanation of a product, its ingredients or features.'},{name:'Promotional offer',text:'A sales promotion offers a discount, price reduction or limited-time deal.'}];
+const styles = [
+  {
+    name: "Reviews & testimonials",
+    text: "A customer shares a first-person review, honest opinion or testimonial about using a product.",
+  },
+  {
+    name: "Product demo",
+    text: "A step-by-step product demonstration or how-to tutorial shows how a product works.",
+  },
+  {
+    name: "Brand announcement",
+    text: "A brand announces a new product, launch or company news.",
+  },
+  {
+    name: "Educational explainer",
+    text: "An educational explanation of a product, its ingredients or features.",
+  },
+  {
+    name: "Promotional offer",
+    text: "A sales promotion offers a discount, price reduction or limited-time deal.",
+  },
+];
 const visualConcepts = [
+  "a home fragrance reed diffuser or scented candle",
   "a photograph of skincare or cosmetic products",
   "a fashion outfit or clothing product",
   "a person demonstrating a product",
@@ -59,7 +82,7 @@ async function localPipeline(kind: "text" | "vision") {
 function similarity(a: number[], b: number[]) {
   return a.reduce((total, value, i) => total + value * b[i], 0);
 }
-function safeImage(ad: Ad): string | null {
+function safeImage(ad: Pick<Ad, "image">): string | null {
   if (/^\/images\/[a-zA-Z0-9_-]+\.(jpg|png|webp)$/.test(ad.image))
     return resolve("public", ad.image.slice(1));
   try {
@@ -75,8 +98,15 @@ function safeImage(ad: Ad): string | null {
   } catch {}
   return null;
 }
+export interface BrainContentInput {
+  title: string;
+  copy: string;
+  brand: string;
+  image: string;
+  creativeFormats?: string[];
+}
 export async function analyseLocally(
-  ad: Ad,
+  ad: BrainContentInput,
 ): Promise<{ analysis: AdAnalysis; creativeFormats: string[] }> {
   const source = [ad.title, ad.copy].filter(Boolean).join(". ").slice(0, 4000);
   if (!source.trim())
@@ -84,7 +114,10 @@ export async function analyseLocally(
   textPipeline ??= localPipeline("text");
   const extractor = await textPipeline;
   const vectors = (
-    await extractor([source, ...concepts,...styles.map(style=>style.text)], { pooling: "mean", normalize: true })
+    await extractor(
+      [source, ...concepts, ...styles.map((style) => style.text)],
+      { pooling: "mean", normalize: true },
+    )
   ).tolist() as number[][];
   const scores = concepts
     .map((label, index) => ({
@@ -93,8 +126,15 @@ export async function analyseLocally(
     }))
     .sort((a, b) => b.score - a.score);
   const top = scores[0];
-  const styleScores=styles.map((style,index)=>({...style,score:similarity(vectors[0],vectors[concepts.length+index+1])})).sort((a,b)=>b.score-a.score);
-  const style=styleScores[0];const styleSupported=style.score>=.42&&style.score-(styleScores[1]?.score||0)>=.025;
+  const styleScores = styles
+    .map((style, index) => ({
+      ...style,
+      score: similarity(vectors[0], vectors[concepts.length + index + 1]),
+    }))
+    .sort((a, b) => b.score - a.score);
+  const style = styleScores[0];
+  const styleSupported =
+    style.score >= 0.42 && style.score - (styleScores[1]?.score || 0) >= 0.025;
   const analysis: AdAnalysis = {
     provenance: "model",
     model: `${BRAIN_MODELS.text.name}@${BRAIN_MODELS.text.revision}`,
@@ -103,7 +143,7 @@ export async function analyseLocally(
     analyzedAt: new Date().toISOString(),
     topic: top.score >= 0.3 ? top.label : undefined,
     theme: top.score >= 0.3 ? top.label : undefined,
-    contentType: styleSupported?style.name:undefined,
+    contentType: styleSupported ? style.name : undefined,
     contentOrientation: top.label.includes("educational")
       ? "Product education"
       : top.label.includes("offer")
@@ -123,8 +163,12 @@ export async function analyseLocally(
   };
   const creativeFormats = [...(ad.creativeFormats || [])];
   // Origins such as UGC/influencer cannot be established from a generic image alone.
-  if(styleSupported&&['Reviews & testimonials','Product demo'].includes(style.name))creativeFormats.push(style.name);
-  analysis.observedRelevance+=` Separate content-style similarity: ${style.name} (${style.score.toFixed(3)}); ${styleSupported?'stored as model inference':'below the confidence heuristic, so no style assigned'}.`;
+  if (
+    styleSupported &&
+    ["Reviews & testimonials", "Product demo"].includes(style.name)
+  )
+    creativeFormats.push(style.name);
+  analysis.observedRelevance += ` Separate content-style similarity: ${style.name} (${style.score.toFixed(3)}); ${styleSupported ? "stored as model inference" : "below the confidence heuristic, so no style assigned"}.`;
   const image = safeImage(ad);
   if (image) {
     analysis.model += ` + ${BRAIN_MODELS.vision.name}@${BRAIN_MODELS.vision.revision}`;
@@ -265,12 +309,9 @@ export function attachBrain(app: Express, db: DatabaseSync) {
   app.get("/api/brain/jobs/:id", (req, res) => {
     const job = jobs.get(String(req.params.id));
     if (!job) {
-      res
-        .status(404)
-        .json({
-          error:
-            "Analysis job not found; jobs do not survive a server restart.",
-        });
+      res.status(404).json({
+        error: "Analysis job not found; jobs do not survive a server restart.",
+      });
       return;
     }
     res.json(job);

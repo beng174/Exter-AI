@@ -6,6 +6,7 @@ export const CATEGORIES: Category[] = [
   "Fashion",
   "Wellness",
   "Food & beverage",
+  "Home fragrance & gifting",
 ];
 export const PLATFORM_NAMES = ["Meta", "TikTok", "Google"] as const;
 export const CONTENT_PLATFORMS = [

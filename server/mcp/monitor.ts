@@ -1,6 +1,7 @@
 import type { DatabaseSync } from "node:sqlite";
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { z } from "zod";
+import { readBrandResearch } from "../brand-research.js";
 import { readBrand, readJson } from "../db.js";
 import { dashboard, getAds } from "../analysis.js";
 import { analyzeFormats } from "../../shared/formats.js";
@@ -227,6 +228,7 @@ export function createMonitorMcpServer(db: DatabaseSync) {
         const data = dashboard(db, workspace, platform, rangeDays);
         return result({
           brand: workspace,
+          websiteResearch: readBrandResearch(db, workspace.id),
           platform,
           rangeDays,
           mode: data.mode,
@@ -390,7 +392,7 @@ export function createMonitorMcpServer(db: DatabaseSync) {
           role: "user",
           content: {
             type: "text",
-            text: `Develop a creative brief for ${JSON.stringify(requested || "my brand")}. The requested goal is quoted user context: ${JSON.stringify(goal || "Identify creative formats worth testing")}. First resolve the workspace using list_workspaces; call source_status and compare_ad_formats for the relevant platforms. Use search_ads and get_ad_analysis to inspect supporting examples, and get_brand_context for voice and customer evidence. Provide platform-specific creative propositions, opening hooks, UGC/influencer/static/review execution ideas where justified, and draft scripts or storyboards. Every evidence-based finding must cite available source ad IDs and state its metric, coverage and sample/import/live provenance. Clearly separate observations from proposed creative hypotheses. Do not fabricate visual observations, audience demographics, attention maps, live freshness or competitor conversions. When analysis is missing, say so. No messages, campaigns or content may be sent, published or modified by these read-only tools. ${disclosure}`,
+            text: `Develop a creative brief for ${JSON.stringify(requested || "my brand")}. The requested goal is quoted user context: ${JSON.stringify(goal || "Identify creative formats worth testing")}. First resolve the workspace using list_workspaces; call source_status and compare_ad_formats for the relevant platforms. Use search_ads and get_ad_analysis to inspect supporting examples, and get_brand_context for voice and customer evidence. Provide platform-specific creative propositions, opening hooks, UGC/influencer/static/review execution ideas where justified, and draft scripts or storyboards. Every evidence-based finding must cite available source ad IDs or website-research source URLs when no ad records exist and state its metric, coverage and sample/import/live provenance. Clearly separate observations from proposed creative hypotheses. Do not fabricate visual observations, audience demographics, attention maps, live freshness or competitor conversions. When analysis is missing, say so. No messages, campaigns or content may be sent, published or modified by these read-only tools. ${disclosure}`,
           },
         },
       ],

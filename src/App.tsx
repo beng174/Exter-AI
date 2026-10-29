@@ -42,6 +42,7 @@ import type {
 } from "../shared/types";
 import { api } from "./lib/api";
 import Overview from "./components/Overview";
+import { BrandResearchView } from "./components/BrandResearchView";
 import { FormatsView } from "./components/FormatsView";
 import { AdCard, AdDetail } from "./components/Creative";
 import {
@@ -54,6 +55,7 @@ import {
 
 const navigation: { id: Page; label: string; icon: typeof Compass }[] = [
   { id: "overview", label: "Overview", icon: Compass },
+  { id: "brand", label: "Brand research", icon: Globe2 },
   { id: "ads", label: "Content library", icon: Layers },
   { id: "formats", label: "Creative formats", icon: Activity },
   { id: "competitors", label: "Competitors", icon: BarChart3 },
@@ -62,6 +64,11 @@ const navigation: { id: Page; label: string; icon: typeof Compass }[] = [
   { id: "reports", label: "Reports", icon: FileChartColumnIncreasing },
 ];
 const headings: Record<Page, { title: string; subtitle: string }> = {
+  brand: {
+    title: "Start with the brand. Follow the evidence.",
+    subtitle:
+      "A sourced public website test, with actual observations separated from creative hypotheses.",
+  },
   formats: {
     title: "The format behind the performance.",
     subtitle:
@@ -211,6 +218,7 @@ function BrandModal({
                 "Fashion",
                 "Wellness",
                 "Food & beverage",
+                "Home fragrance & gifting",
               ].map((c) => (
                 <option key={c}>{c}</option>
               ))}
@@ -549,7 +557,12 @@ export default function App() {
       () => localStorage.getItem("exter-brand") || "rhode",
     ),
     [dashboard, setDashboard] = useState<Dashboard | null>(null),
-    [page, setPage] = useState<Page>("overview"),
+    [page, setPage] = useState<Page>(() =>
+      (window as Window & { __EXTER_RESEARCH_BRAND__?: string })
+        .__EXTER_RESEARCH_BRAND__ === localStorage.getItem("exter-brand")
+        ? "brand"
+        : "overview",
+    ),
     [platform, setPlatform] = useState("all"),
     [range, setRange] = useState("30"),
     [search, setSearch] = useState(""),
@@ -657,7 +670,7 @@ export default function App() {
     setBrandId(b.id);
     setBrandOpen(false);
     setSearch("");
-    setPage("overview");
+    setPage(b.domain === "valentte.com" ? "brand" : "overview");
     setDashboard(null);
   }
   async function exportReport() {
@@ -806,9 +819,11 @@ export default function App() {
             </form>
             <span className="mode-badge">
               <i />
-              {brand?.mode === "imported"
-                ? "Imported workspace"
-                : "Sample workspace"}
+              {page === "brand"
+                ? "Website research"
+                : brand?.mode === "imported"
+                  ? "Imported workspace"
+                  : "Sample workspace"}
             </span>
             <button
               className="top-avatar"
@@ -862,7 +877,11 @@ export default function App() {
               </span>
               <strong>{brand?.name || "Your brand"}</strong>
               <span className="vertical-rule" />
-              <span>{dashboard?.metrics.brands || 0} brands in landscape</span>
+              <span>
+                {page === "brand"
+                  ? "Website and source research"
+                  : `${dashboard?.metrics.brands || 0} brands in landscape`}
+              </span>
               <button
                 className="icon-button"
                 aria-label="Change brand workspace"
@@ -871,59 +890,65 @@ export default function App() {
                 <ChevronDown size={14} />
               </button>
             </div>
-            <div className="filter-group">
-              <label className="platform-select">
-                <Globe2 size={14} />
-                <select
-                  aria-label="Filter platform"
-                  value={platform}
-                  onChange={(e) => setPlatform(e.target.value)}
+            {page !== "brand" && (
+              <div className="filter-group">
+                <label className="platform-select">
+                  <Globe2 size={14} />
+                  <select
+                    aria-label="Filter platform"
+                    value={platform}
+                    onChange={(e) => setPlatform(e.target.value)}
+                  >
+                    <option value="all">All platforms</option>
+                    <option>Meta</option>
+                    <option>TikTok</option>
+                    <option>Google</option>
+                    {["Instagram", "Facebook", "LinkedIn", "X", "YouTube"].map(
+                      (p) => (
+                        <option key={p}>{p}</option>
+                      ),
+                    )}
+                  </select>
+                </label>
+                <label className="date-select">
+                  <CalendarDays size={14} />
+                  <select
+                    aria-label="Date range"
+                    value={range}
+                    onChange={(e) => setRange(e.target.value)}
+                  >
+                    <option value="7">Last 7 days</option>
+                    <option value="30">Last 30 days</option>
+                    <option value="90">Last 90 days</option>
+                  </select>
+                </label>
+                <button
+                  className="icon-button refresh-button"
+                  aria-label="Refresh workspace data"
+                  onClick={() => setRefresh((r) => r + 1)}
+                  disabled={loading}
                 >
-                  <option value="all">All platforms</option>
-                  <option>Meta</option>
-                  <option>TikTok</option>
-                  <option>Google</option>
-                  {["Instagram", "Facebook", "LinkedIn", "X", "YouTube"].map(
-                    (p) => (
-                      <option key={p}>{p}</option>
-                    ),
-                  )}
-                </select>
-              </label>
-              <label className="date-select">
-                <CalendarDays size={14} />
-                <select
-                  aria-label="Date range"
-                  value={range}
-                  onChange={(e) => setRange(e.target.value)}
-                >
-                  <option value="7">Last 7 days</option>
-                  <option value="30">Last 30 days</option>
-                  <option value="90">Last 90 days</option>
-                </select>
-              </label>
-              <button
-                className="icon-button refresh-button"
-                aria-label="Refresh workspace data"
-                onClick={() => setRefresh((r) => r + 1)}
-                disabled={loading}
-              >
-                <RefreshCw size={15} className={loading ? "spin" : ""} />
-              </button>
-            </div>
+                  <RefreshCw size={15} className={loading ? "spin" : ""} />
+                </button>
+              </div>
+            )}
           </div>
           <div className="data-status">
             <span>
               <i className={brand?.mode === "imported" ? "green" : ""} />
-              {brand?.mode === "imported"
-                ? "Your imported data"
-                : "You’re exploring sample data"}
+              {page === "brand"
+                ? "Public website evidence"
+                : brand?.mode === "imported"
+                  ? "Your imported data"
+                  : "You’re exploring sample data"}
               <span className="status-separator">·</span>
-              {brand?.mode === "imported"
-                ? dashboard?.sourceStatus?.connected
-                  ? "Saved provider observations; see Data sources for sync and reporting lag."
-                  : "Saved data only; no verified live feeds connected."
-                : "Illustrative insights, not live market results."}
+              {page === "brand"
+                ? "Source timestamps shown below; no ad-performance result implied."
+                : brand?.mode === "imported"
+                  ? dashboard?.sourceStatus?.connected
+                    ? "Saved provider observations; see Data sources for sync and reporting lag."
+                    : "Saved data only; no verified live feeds connected."
+                  : "Illustrative insights, not live market results."}
             </span>
             <button onClick={() => navigate("sources")}>
               {brand?.mode === "imported"
@@ -949,6 +974,12 @@ export default function App() {
           ) : (
             dashboard && (
               <div key={brandId} className="page-content">
+                {page === "brand" && (
+                  <BrandResearchView
+                    brandId={brandId}
+                    onUpdated={() => setRefresh((r) => r + 1)}
+                  />
+                )}
                 {page === "overview" && (
                   <Overview
                     dashboard={dashboard}
