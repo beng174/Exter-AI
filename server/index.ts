@@ -7,6 +7,7 @@ import { startConnectionPolling } from "./connections.js";
 
 const db = openDatabase();
 const app = createApp(db);
+app.locals.videoAnalysis.recoverInterruptedJobs();
 const stopPolling = startConnectionPolling(db);
 process.once("SIGTERM", () => {
   stopPolling();

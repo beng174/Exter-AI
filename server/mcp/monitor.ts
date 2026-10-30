@@ -292,7 +292,9 @@ export function createMonitorMcpServer(db: DatabaseSync) {
           category: workspace.category,
           record: source,
           analysis: ad.analysis || null,
-          analysisStatus: ad.analysis ? "saved_analysis" : "not_available",
+          nativeVideoAnalysis: ad.videoAnalysis || null,
+          videoMediaId: ad.videoMediaId || null,
+          analysisStatus: ad.videoAnalysis ? "saved_native_video_analysis" : ad.analysis ? "saved_analysis" : "not_available",
           note: "Saved annotations and inferences are evidence to assess, not validated audience targeting or a measured eye-tracking study.",
           disclosure,
         });

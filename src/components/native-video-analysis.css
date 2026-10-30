@@ -1,0 +1,50 @@
+.nva-analysis, .nva-empty { min-width: 0; color: #526c47; }
+.nva-heading { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 17px; }
+.nva-eyebrow { display: flex; align-items: center; gap: 6px; color: #8c9c7c; font-size: 8px; letter-spacing: 1.1px; }
+.nva-heading h3 { margin: 10px 0 0; font-size: 17px; font-weight: 550; }
+.nva-download { display: flex; align-items: center; gap: 6px; padding: 8px 10px; border: 1px solid #dce5d2; border-radius: 5px; background: #f5f8ee; color: #607e4c; font: inherit; font-size: 10px; }
+.nva-download:hover { background: #e9f0df; }
+.nva-note { display: flex; align-items: flex-start; gap: 8px; padding: 12px; margin: 0 0 10px; color: #839573; background: #f1f5e9; font-size: 10px; line-height: 1.8; border-radius: 6px; }
+.nva-note > svg { flex-shrink: 0; margin-top: 2px; }
+.nva-fields, .nva-segments { margin: 0; }
+.nva-field { display: grid; grid-template-columns: 130px minmax(0, 1fr); gap: 20px; padding: 15px 0; border-bottom: 1px solid #e6ecdf; }
+.nva-field dt { font-size: 10px; color: #879978; line-height: 1.8; }
+.nva-field dd { margin: 0; min-width: 0; }
+.nva-field dd > p { margin: 0; font-size: 11px; line-height: 1.9; white-space: pre-wrap; overflow-wrap: anywhere; }
+.nva-unknown dd > p { color: #9da992; font-style: italic; }
+.nva-field-meta { display: flex; flex-wrap: wrap; gap: 5px 12px; color: #9aa78c; font-size: 8px; line-height: 1.8; margin-top: 6px; }
+.nva-section { margin-top: 24px; }
+.nva-section h4 { font-size: 11px; font-weight: 550; margin: 0 0 5px; }
+.nva-small-note { color: #94a284; font-size: 9px; line-height: 1.9; margin: 11px 0; }
+.nva-details { margin-top: 18px; border: 1px solid #e1e9d6; border-radius: 6px; background: #f7f9f2; }
+.nva-details > summary { display: list-item; padding: 13px 14px; font-size: 11px; font-weight: 500; cursor: pointer; line-height: 1.7; }
+.nva-details > summary > span { color: #9aa78b; font-size: 9px; font-weight: 400; margin-left: 8px; }
+.nva-details .nva-segments { padding: 0 14px 6px; }
+.nva-details .nva-field:last-child { border-bottom: 0; }
+.nva-evidence { padding: 0; list-style: none; margin: 10px 0 0; }
+.nva-evidence > li { padding: 13px; background: #f3f6eb; border: 1px solid #e3ead8; border-radius: 5px; margin-bottom: 10px; }
+.nva-evidence-kind { font-size: 8px; color: #8e9d7e; }
+.nva-evidence p { margin: 8px 0; font-size: 11px; overflow-wrap: anywhere; line-height: 1.8; }
+.nva-evidence a { display: inline-flex; align-items: center; gap: 5px; font-size: 9px; color: #6c8858; margin-top: 9px; }
+.nva-provenance dl { padding: 0 14px 8px; margin: 0; }
+.nva-provenance dl > div { display: grid; grid-template-columns: 120px minmax(0, 1fr); gap: 12px; padding: 9px 0; font-size: 9px; line-height: 1.8; border-top: 1px solid #e4ebdb; }
+.nva-provenance dt { color: #8e9e7e; }
+.nva-provenance dd { margin: 0; min-width: 0; overflow-wrap: anywhere; }
+.nva-provenance code { font-size: 8px; }
+.nva-empty { text-align: center; background: #f3f6eb; border: 1px dashed #d8e2ca; border-radius: 8px; padding: 31px 25px; }
+.nva-empty > svg { color: #99ad83; }
+.nva-empty h3 { font-size: 15px; font-weight: 500; margin: 17px 0 12px; }
+.nva-empty p { font-size: 10px; line-height: 1.9; color: #90a07c; margin: 12px 0 0; }
+.adi-tabs:has(.nva-tab) { gap: 16px; }
+@media (max-width: 800px) {
+  .adi-tabs:has(.nva-tab) { gap: 9px; flex-wrap: wrap; justify-content: flex-start; }
+  .adi-tabs:has(.nva-tab) > button { flex: 1 1 calc(50% - 9px); padding: 9px 0; }
+}
+@media (max-width: 620px) {
+  .nva-field { grid-template-columns: minmax(0, 92px) minmax(0, 1fr); gap: 12px; }
+  .nva-field dt, .nva-field dd > p { font-size: 10px; }
+  .nva-note { font-size: 9px; padding: 10px; }
+  .nva-heading h3 { font-size: 15px; }
+  .nva-provenance dl > div { grid-template-columns: minmax(0, 90px) minmax(0, 1fr); gap: 8px; }
+  .nva-empty { padding: 25px 16px; }
+}

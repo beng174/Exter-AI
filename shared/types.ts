@@ -1,4 +1,5 @@
 import type { AdAnalysis } from "./ad-intelligence";
+import type { VideoAnalysisResult } from "./video-analysis";
 export type Platform =
   | "Meta"
   | "TikTok"
@@ -55,6 +56,8 @@ export interface Ad {
   followers?: number;
   deliveryStatus?: "active" | "inactive" | "unknown";
   analysis?: AdAnalysis;
+  videoMediaId?: string;
+  videoAnalysis?: VideoAnalysisResult;
   providerAdId?: string;
   metricDate?: string;
   observedAt?: string;

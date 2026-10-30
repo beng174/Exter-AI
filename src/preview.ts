@@ -5,7 +5,7 @@ const notice = document.createElement("aside");
 notice.className = "preview-notice";
 notice.setAttribute("aria-label", "Offline test drive");
 notice.innerHTML =
-  '<span class="preview-notice-title">EXTER TEST · v0.4</span><span class="preview-notice-copy">Real Valentte ads · Dated public-library sample</span><button type="button" id="preview-reset">Reset demo</button>';
+  '<span class="preview-notice-title">EXTER TEST · v0.5</span><span class="preview-notice-copy">Real Valentte ads · Dated public-library sample</span><button type="button" id="preview-reset">Reset demo</button>';
 document.body.prepend(notice);
 notice.querySelector("#preview-reset")!.addEventListener("click", () => {
   if (

@@ -6,6 +6,10 @@ The primary workflow is **public competitor/category research before winning a c
 flowchart LR
   P[Public paid and organic sources] --> I[Collect source records and provenance]
   I --> B[Exter local text and vision inference]
+  I --> V[Retain and verify video in Exter media storage]
+  V --> N[Swappable native-video analyser]
+  N --> G[Gemini Files API and native agentic processing]
+  G --> D
   B --> D[Stored concepts, format tags and inferred interests]
   D --> A[Exter format and performance computation]
   A --> U[Monitor interface and reports]
@@ -14,7 +18,7 @@ flowchart LR
   O[Optional post-win owned-account reporting] --> A
 ```
 
-Claude does not run Exter's ingestion, model inference or metric calculations. The platform can operate independently of a Claude account. Claude's MCP tools read the platform's stored results and source evidence for downstream briefs, scripts and strategies.
+Claude does not run Exter's ingestion, model inference or metric calculations. The platform can operate independently of a Claude account. Claude's MCP tools read the platform's stored results and source evidence for downstream briefs, scripts and strategies. Exter owns orchestration, validation, storage and calculations; Gemini is the external native-video model provider selected for this pipeline.
 
 ## Internal inference implemented
 
@@ -23,9 +27,9 @@ The server runs pinned, open-source models on its own CPU:
 - Text: `Xenova/all-MiniLM-L6-v2`, revision `751bff37182d3f1213fa05d7196b954e230abad9`.
 - Still-image concepts: `Xenova/clip-vit-base-patch32`, revision `6b7c523703ae26e39be4b03774966f8571c7f523`.
 
-Exter owns the pipeline, schemas, stored intelligence and computations. These are pretrained open-source models, not a newly trained proprietary foundation model. The initial engine uses semantic similarity, still-image zero-shot concept interpretation and source-text extraction. It does not yet provide full video-frame/audio analysis, OCR, open-ended research-grade semantic reasoning, calibrated demographic estimates or attention heatmaps. Missing fields remain unknown. Similarity scores are not probabilities or proof of an audience trait.
+These local models are pretrained open-source models, not a newly trained proprietary foundation model. They use semantic similarity, still-image zero-shot concept interpretation and source-text extraction. They do not process full videos or audio; native video is handled separately below. Open-ended research-grade reasoning, calibrated demographic estimates and attention heatmaps remain unfinished. Missing fields remain unknown. Similarity scores are not probabilities or proof of an audience trait.
 
-The built-in assistant is a separate deterministic, data-grounded rules engine. Running the local annotation models does not turn that assistant into a general research agent. A platform-hosted reasoning layer, richer media processing and evaluation on human-labelled real ads are explicit next steps in the [completion plan](../research/COMPLETION-PLAN.md).
+The built-in assistant is a separate deterministic, data-grounded rules engine. Running annotation models does not turn that assistant into a general research agent. A platform-hosted reasoning layer and a completed human-labelled real-ad evaluation remain next steps in the [completion plan](../research/COMPLETION-PLAN.md).
 
 `POST /api/brain/analyse` queues up to 25 existing records for analysis. `GET /api/brain/jobs/:id` exposes progress. Results persist in SQLite; job progress is currently in process memory and does not survive a restart. Public URL collection automatically queues a batch when source text is available. Models load lazily, cache in `.data/models`, and require neither Claude nor an external model API key. Source dates, metrics and inferred concepts are separate fields.
 
@@ -35,6 +39,18 @@ NODE_USE_ENV_PROXY=1 node --import tsx scripts/verify-public-brain.ts
 ```
 
 The model check ran actual text and visual inference. The end-to-end public check collected a submitted public X post, ran local semantic inference and stored its annotation without client-account or Claude access. This validates a single source URL, not complete category coverage or real-time performance intelligence.
+
+## Native video pipeline
+
+`VideoAnalyser` separates provider inference from Exter's storage and validation. The Gemini Flash adapter uses a locally retained video, resumable Files API upload, processing-state polling and the Interactions API's native `processing: "agentic"` mode. It returns one structured inference response per ad attempt. Upload, polling, model-metadata lookup and remote-file cleanup are separate transport requests, not additional inference calls.
+
+Only an explicit unsupported-agentic-mode error permits a second attempt using native static video processing: 5 FPS over seconds 0–5 and 1 FPS over the remaining duration, in one request. Authentication, quota, invalid-output and generic network failures do not trigger that fallback. This replaces the planned external frame-sampling, transcription and OCR stages.
+
+The media store verifies downloaded MP4/WebM/QuickTime containers using `ffprobe`, applies byte/duration/host limits, and retains immutable content plus per-ad manifests under `EXTER_MEDIA_ROOT` (default `.data/media`). Signed media query strings are not persisted in manifests. A valid stored video can be reused after restart without its source URL. SQLite analysis history and the media root both require persistent volumes and backups; a local directory alone does not provide cloud object storage or production recovery.
+
+Exter validates structured fields and source-relative timestamps, applies its confidence threshold, and downgrades unsupported UGC labels to `unknown`. Creator evidence must be a visible third-party handle/partnership label or exactly match trusted ad-library attribution. Model confidence is an estimate, not calibrated accuracy. Saved results include the media hash, provider/model name, provider-reported model version, processing mode, prompt version and observation time. A missing provider revision remains `null`; an alias is not presented as an immutable version.
+
+The TwelveLabs Pegasus adapter is a deliberate `not_implemented` stub. The offline evaluator scores saved outputs against the same human-labelled CSV, including per-field exact match, lexical text overlap, answer coverage and timestamp agreement. No real-ad labels or live Gemini verification were available during implementation, so no production accuracy or live-provider success is claimed. See [native video configuration and evaluation](VIDEO-ANALYSIS.md).
 
 ## Public collection and actual limits
 
@@ -55,4 +71,4 @@ Owned Meta, TikTok and Google reporting adapters and polling are a separate phas
 
 The read-only MCP server is implemented and tested with an actual SDK stdio handshake. Claude Desktop setup is documented in [CLAUDE.md](CLAUDE.md). No user's Claude client was connected. Claude web/team access still needs a hosted authenticated MCP endpoint and tenant controls; the local server is not a team deployment.
 
-The downloadable HTML contains the real, dated Valentte website/ad-library snapshot plus four separate fictional sample workspaces. Public collection and local model execution run in the full server application, not inside the standalone HTML file. The hosted application, durable collection workers and authenticated team connector remain unfinished.
+The downloadable HTML contains the real, dated Valentte website/ad-library snapshot plus four separate fictional sample workspaces. Public collection, model execution and native-video uploads run in the full server application, not inside the standalone HTML file. The hosted application, durable collection workers and authenticated team connector remain unfinished.

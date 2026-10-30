@@ -14,9 +14,11 @@ Connect each creative to a public post when a verified mapping is available, the
 
 ## 3. Improve Exter's own AI
 
-Add video-frame sampling, speech transcription, OCR and category context before richer format, message and angle analysis. Run a stronger multimodal model in Exter's inference service, with structured outputs and access to Exter's stored evidence and calculations. The current assistant is rules-based, so general research reasoning is a separate addition. Claude remains an optional reader of Exter's results.
+The planned frame-sampling, separate transcription and OCR pipeline has been replaced by the [native-video pipeline](../docs/VIDEO-ANALYSIS.md). Exter first retains the actual video, then submits it through Gemini's Files API for native agentic analysis. A capability-specific static fallback increases native processing FPS over the opening five seconds while retaining the rest of the ad. A swappable interface and explicit TwelveLabs Pegasus stub support future provider comparison.
 
-Create a human-labelled set of real ads across categories and platforms. Measure format and concept accuracy, test the Valentte packaging error, keep low-confidence fields unknown, and require source evidence for UGC/influencer origin. Add persistent analysis jobs and model/version tracking. Larger models require an infrastructure and capacity choice.
+The remaining validation work is to configure a Gemini credential, run actual ads end to end, and create a human-labelled held-out set across categories/platforms. The evaluation script reports accuracy and coverage per field, text overlap and timestamp agreement; it cannot supply a real accuracy figure without human labels. Benchmark a completed Pegasus adapter against the identical labelled set. Retain every run's model/version/mode/prompt/media identity and review unsupported creator attributions and the known still-image packaging error.
+
+The current assistant is rules-based, so a general research reasoning layer remains a separate addition. Claude continues to read Exter's results rather than operate the collection/analysis pipeline. Native video is processed by the configured external provider; it is not represented as local CPU inference.
 
 ## 4. Build real creator and review ingestion
 

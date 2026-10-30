@@ -12,6 +12,7 @@ import {
   ScanEye,
   Target,
   UsersRound,
+  Video,
   X,
 } from "lucide-react";
 import type { Ad } from "../../shared/types";
@@ -20,6 +21,7 @@ import {
   type AdAnalysis,
 } from "../../shared/ad-intelligence";
 import { classifyCreativeFormats } from "../../shared/formats";
+import { NativeVideoAnalysis } from "./NativeVideoAnalysis";
 import "./ad-intelligence.css";
 
 type EnrichedAd = Ad & {
@@ -28,11 +30,12 @@ type EnrichedAd = Ad & {
   metricDate?: string;
   activeDate?: string;
 };
-type Tab = "concepts" | "audience" | "attention";
+type Tab = "concepts" | "audience" | "attention" | "video";
 const tabs: { id: Tab; label: string; icon: typeof Eye }[] = [
   { id: "concepts", label: "Observed concepts", icon: FileText },
   { id: "audience", label: "Inferred audience", icon: UsersRound },
   { id: "attention", label: "Attention map", icon: ScanEye },
+  { id: "video", label: "Native video", icon: Video },
 ];
 
 function dateLabel(value?: string) {
@@ -326,7 +329,7 @@ export function AdIntelligence({
                   aria-selected={tab === key}
                   aria-controls={`${id}-${key}-panel`}
                   tabIndex={tab === key ? 0 : -1}
-                  className={tab === key ? "adi-tab-active" : ""}
+                  className={`${tab === key ? "adi-tab-active" : ""}${key === "video" ? " nva-tab" : ""}`}
                   onClick={() => setTab(key)}
                   onKeyDown={(event) => {
                     if (
@@ -511,13 +514,16 @@ export function AdIntelligence({
                   </div>
                 </>
               )}
+              {tab === "video" && (
+                <NativeVideoAnalysis analysis={ad.videoAnalysis} mediaId={ad.videoMediaId} sample={sample} />
+              )}
             </div>
             <footer className="adi-footer">
               <Target size={14} />
               <span>
-                {analysis
+                {analysis || ad.videoAnalysis
                   ? "Interpretations support research; verify important claims against the source."
-                  : "Import structured analysis to populate these fields. No content model is connected."}
+                  : "No saved content interpretation is available for this record."}
               </span>
               {analysis?.confidence !== undefined && (
                 <span>

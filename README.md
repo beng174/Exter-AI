@@ -1,6 +1,6 @@
 # Exter AI
 
-**Public-first, platform-owned intelligence.** Exter researches public paid and organic content before client access is available, runs its own local text/vision inference, stores structured findings, and computes creative-format comparisons. Client-account reporting is optional after winning an account. Claude is an optional read-only consumer of Exter's results. See the [implemented architecture and exact coverage limits](docs/ARCHITECTURE.md).
+**Public-first, platform-owned intelligence.** Exter researches public paid and organic content before client access is available, runs local text/still-image inference and a provider-swappable native-video pipeline, stores structured findings, and computes creative-format comparisons. Native video uses the Gemini API; Claude is an optional read-only consumer of Exter's saved results. Client-account reporting is optional after winning an account. See the [implemented architecture and exact coverage limits](docs/ARCHITECTURE.md).
 
 The updated **Creative formats** page and assistant compare UGC, influencer, static, before-and-after, live-photo, reviews and native formats separately by platform. Ad details expose general information, observed concepts, inferred audience and attention-map availability. All sample data and uncertain/missing inferences remain labelled.
 
@@ -22,7 +22,7 @@ The output is `.preview/Exter-AI-Test-Drive.html`. See [test-drive instructions]
 
 ## Run
 
-Requires Node.js 24+ and npm. No API keys or external database are needed for the local MVP.
+Requires Node.js 24+ and npm. Browsing the local MVP requires no API key or external database. Native Gemini video analysis additionally requires `ffprobe`, a persistent media directory and a server-side `GEMINI_API_KEY`; see [native video setup](docs/VIDEO-ANALYSIS.md).
 
 ```sh
 cd /workspace/Exter-AI
@@ -48,6 +48,8 @@ npm start
 - Illustrative creator matches with reasons, profile briefs and SQLite-persisted shortlists.
 - Markdown research reports with explicit sample/import provenance and download support.
 - Data-grounded format/performance answers, a local text/vision inference engine, and a read-only MCP server for optional Claude Desktop setup. No user's Claude client or external LLM API is connected.
+- Native video analysis behind a swappable `VideoAnalyser`: local video retention, Gemini Files API upload and agentic video processing, timestamped structured results, confidence/evidence validation and versioned history. The Gemini adapter is tested with provider fixtures; no live Gemini credential was available for end-to-end verification.
+- Offline evaluation of saved video predictions against a human-labelled CSV, including field accuracy, coverage and timestamp scores. TwelveLabs Pegasus remains an explicit provider stub; no human-labelled real-ad benchmark or Pegasus score is supplied.
 - New brand workspaces, validated JSON imports of up to 10,000 records per request, persistent SQLite storage.
 
 ## Import your data
@@ -102,6 +104,12 @@ Browser verification requires Python Playwright and system Chromium (`CHROMIUM_P
 This is a **trusted local, single-workspace application** with no authentication or tenant isolation. Do not expose it as a public service. Production requires accounts, workspace access controls, request protections, provider OAuth, encrypted credentials, ingestion queues, source retention policies, observability and approved provider access. No code contacts creators, sends messages, spends budgets or publishes campaigns.
 
 See [architecture and coverage](docs/ARCHITECTURE.md), [Claude setup](docs/CLAUDE.md), [product scope](docs/PRODUCT.md), and [sample image sources](docs/ASSETS.md). Broad public collection, verified attribution, campaign execution and a hosted multi-user Claude connector remain unfinished.
+
+## Native video analysis
+
+Videos are downloaded and verified in Exter's media storage before analysis. Gemini receives that stored file through its Files API, rather than an expiring ad-library URL. Native agentic processing returns the hook, format, angle, claims, transcript, on-screen text, CTA and talking-to-camera observations in one structured inference response. A capability-specific fallback uses native static video processing at 5 FPS for the opening five seconds and 1 FPS for the remaining footage in the same inference request.
+
+Low-confidence values become `unknown`; UGC requires recorded partnership-label or visible third-party creator-handle evidence. Each result retains model/version, processing mode, prompt version, media hash and source-relative timestamps. See [setup, API and evaluation](docs/VIDEO-ANALYSIS.md). This replaces the planned separate frame-sampling/transcription/OCR pipeline; the existing still-image model remains available for still content.
 
 ## Download the browser test version
 

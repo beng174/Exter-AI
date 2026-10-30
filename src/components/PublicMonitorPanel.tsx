@@ -197,8 +197,9 @@ export function PublicMonitorPanel({
           <p className="cx-footnote">
             {engine?.runtime ||
               "Full application required for local model execution"}
-            . Coverage is supplied text and still images/thumbnails; full
-            video/audio analysis is not implemented.
+            . This button analyses supplied text and still images. Native video
+            analysis uses the separately configured video provider and retained
+            video files.
           </p>
           <button
             className="button secondary"

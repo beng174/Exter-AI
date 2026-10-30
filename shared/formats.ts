@@ -9,6 +9,10 @@ import type {
 export const CREATIVE_FORMATS = [
   "UGC",
   "Influencer",
+  "Founder-led",
+  "Studio",
+  "Animation",
+  "Mixed",
   "Static",
   "Before & after",
   "Live photo",
@@ -161,9 +165,20 @@ export function normalizeCreativeFormats(value: unknown): string[] {
   ];
 }
 export function classifyCreativeFormats(ad: Ad): string[] {
-  const explicit = normalizeCreativeFormats(
+  let explicit = normalizeCreativeFormats(
     (ad as AnnotatedAd).creativeFormats,
   );
+  if (ad.videoAnalysis) {
+    const native = ad.videoAnalysis;
+    const creatorSupported = native.fields.creatorEvidence.some((evidence) => evidence.confidence >= native.confidenceThreshold);
+    explicit = explicit.filter((tag) => !["UGC", "Influencer"].includes(tag) || creatorSupported);
+    const field = native.fields.format;
+    if (field.confidence >= native.confidenceThreshold && field.timestamps.length && field.value !== "unknown" && (field.value !== "UGC" || creatorSupported)) {
+      const labels = { UGC: "UGC", "founder-led": "Founder-led", studio: "Studio", animation: "Animation", mixed: "Mixed" };
+      explicit.push(labels[field.value]);
+    }
+  }
+  explicit = [...new Set(explicit)];
   if (explicit.length) return explicit;
   // An image is observably static; video alone does not establish UGC, influencer or a review.
   return /^(image|static|static image)$/i.test(ad.format.trim())

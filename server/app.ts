@@ -24,6 +24,7 @@ import { attachConnections, getConnectionStatuses } from "./connections.js";
 import { attachBrain } from "./brain.js";
 import { attachBrandResearch, readBrandResearch } from "./brand-research.js";
 import { attachPublicMonitor } from "./public-monitor.js";
+import { attachVideoAnalysis } from "./video/api.js";
 import type { FormatMetric } from "../shared/format-types.js";
 
 function formatMetric(value: unknown): FormatMetric {
@@ -219,6 +220,7 @@ export function createApp(db: DatabaseSync = openDatabase()) {
   app.use(express.json({ limit: "20mb" }));
   attachConnections(app, db);
   attachPublicMonitor(app, db);
+  attachVideoAnalysis(app, db);
   attachBrain(app, db);
   attachBrandResearch(app, db);
   app.get("/api/health", (_req, res) =>

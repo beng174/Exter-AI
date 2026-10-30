@@ -1,6 +1,6 @@
 {
   "name": "exter-ai",
-  "version": "0.4.0",
+  "version": "0.5.0",
   "private": true,
   "type": "module",
   "scripts": {
@@ -14,7 +14,9 @@
     "models:verify": "NODE_USE_ENV_PROXY=1 node --import tsx scripts/verify-brain.ts",
     "research:valentte": "NODE_USE_ENV_PROXY=1 node --import tsx scripts/test-valentte.ts",
     "import:meta-library": "node --import tsx scripts/import-meta-library.ts",
-    "claude:setup": "node scripts/setup-claude-mac.mjs"
+    "claude:setup": "node scripts/setup-claude-mac.mjs",
+    "video:analyse": "NODE_USE_ENV_PROXY=1 node --import tsx scripts/analyse-video.ts",
+    "video:evaluate": "node --import tsx scripts/evaluate-video.ts"
   },
   "dependencies": {
     "@huggingface/transformers": "4.3.2",
