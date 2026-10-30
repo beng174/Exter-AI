@@ -33,6 +33,16 @@ function observedTime(value: string) {
   }).format(new Date(value))} London`;
 }
 
+function deliveryDate(value?: string) {
+  if (!value || !Number.isFinite(Date.parse(value))) return "Not supplied";
+  return new Intl.DateTimeFormat("en-GB", {
+    day: "numeric",
+    month: "short",
+    year: "numeric",
+    timeZone: "UTC",
+  }).format(new Date(value));
+}
+
 function safeSource(value: string) {
   try {
     const url = new URL(value);
@@ -88,6 +98,7 @@ export function BrandResearchView({
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
+  const [showAllLibraryAds, setShowAllLibraryAds] = useState(false);
   const currentBrand = useRef(brandId);
 
   useEffect(() => {
@@ -97,6 +108,7 @@ export function BrandResearchView({
     setLoading(true);
     setBusy(false);
     setError("");
+    setShowAllLibraryAds(false);
     api<BrandResearch | null>(
       `/api/brand-research?brandId=${encodeURIComponent(brandId)}`,
     )
@@ -135,6 +147,7 @@ export function BrandResearchView({
 
   function downloadReport() {
     if (!profile) return;
+    const library = profile.adLibraryEvidence;
     const source = (url: string) => safeSource(url) || "Source URL unavailable";
     const quote = (value: string) =>
       value
@@ -147,7 +160,33 @@ export function BrandResearchView({
       `Category: ${profile.category}`,
       `Website: https://${profile.domain}`,
       "## Performance conclusion",
-      "Ad-format winner: not yet measurable from this research snapshot. No verified public ad-performance dataset is included. Website strategy, brand claims and creator recruitment do not establish a winning format or conversion performance.",
+      library?.records.length
+        ? "Real Meta Ad Library records are included as a bounded research sample. An engagement-format winner is not yet measurable: the retrieved records do not supply engagement counts and a consistent denominator. Ad presence, format frequency and delivery duration do not establish engagement performance."
+        : "Ad-format winner: not yet measurable from this research snapshot. No verified public ad-performance dataset is included. Website strategy, brand claims and creator recruitment do not establish a winning format or engagement rate.",
+      ...(library?.records.length
+        ? [
+            "## Public ad-library sample",
+            `Source: ${library.source}. Captured: ${library.capturedAt}. Advertiser: ${library.advertiserName} (page ${library.advertiserPageId}).`,
+            `${library.records.length} observed records in a bounded sample; this is not the advertiser's total ad count or exhaustive category coverage.`,
+            `Search source: ${source(library.queryUrl)}`,
+            "Dates below are ad delivery dates supplied by the library, not original post publication dates. Status is as shown at capture, not a live delivery check. Engagement rate: N/A, counts and denominator not supplied.",
+            ...library.records.flatMap((ad) => [
+              `### Ad ${ad.providerAdId || ad.id} — ${ad.format || "Media format not supplied"}`,
+              `Status shown at capture: ${ad.deliveryStatus || "unknown"}. Delivery began: ${deliveryDate(ad.deliveryStartAt)}. Delivery ended: ${deliveryDate(ad.deliveryStopAt)}.`,
+              ...(ad.brandedContentPartner
+                ? [
+                    `Library-attributed creator: ${ad.brandedContentPartner.name} (page ${ad.brandedContentPartner.pageId}). This is source attribution, not verified audience fit or performance.`,
+                    ...(ad.brandedContentPartner.profileUrl
+                      ? [`Creator profile: ${source(ad.brandedContentPartner.profileUrl)}`]
+                      : []),
+                  ]
+                : []),
+              ad.copy ? `Copy excerpt:\n${quote(ad.copy)}` : "Copy unavailable.",
+              `Source: ${ad.sourceUrl ? source(ad.sourceUrl) : "Source URL unavailable"}`,
+            ]),
+            ...library.limitations.map((limitation) => `- ${limitation}`),
+          ]
+        : []),
       "## Public website observations",
       ...profile.facts.flatMap((fact) => [
         `### ${fact.label}`,
@@ -264,7 +303,7 @@ export function BrandResearchView({
           {busy ? "Researching public website…" : "Research public website"}
         </button>
         <p className="br-empty-note">
-          Website research does not establish which ad formats are converting.
+          Website research does not establish which ad formats earn engagement.
           That requires actual creative and performance evidence.
         </p>
         {error && (
@@ -277,20 +316,39 @@ export function BrandResearchView({
 
   const analysis = profile.analysis;
   const visualEvidence = profile.visualEvidence || [];
+  const library = profile.adLibraryEvidence;
+  const libraryAds = [...(library?.records || [])].sort((a, b) => {
+    const activeFirst =
+      Number(b.deliveryStatus === "active") -
+      Number(a.deliveryStatus === "active");
+    return (
+      activeFirst ||
+      (b.deliveryStartAt || "").localeCompare(a.deliveryStartAt || "")
+    );
+  });
+  const libraryFormats = libraryAds.reduce<Record<string, number>>((counts, ad) => {
+    const format = ad.format || "Not supplied";
+    counts[format] = (counts[format] || 0) + 1;
+    return counts;
+  }, {});
   return (
     <div className="br-stack">
       <section className="br-hero">
         <div className="br-hero-copy">
           <span className="br-eyebrow">
-            <Leaf size={15} /> REAL BRAND · PUBLIC WEBSITE EVIDENCE
+            <Leaf size={15} /> REAL BRAND ·{" "}
+            {libraryAds.length
+              ? "WEBSITE + AD-LIBRARY EVIDENCE"
+              : "PUBLIC WEBSITE EVIDENCE"}
           </span>
           <h2>{profile.brandName}, in focus.</h2>
           <p>
             A sourced look at {profile.category.toLowerCase()}, brand
-            positioning and creative directions worth testing.
+            positioning{libraryAds.length ? ", observed public ads" : ""} and
+            creative directions worth testing.
           </p>
           <div className="br-observed">
-            <Clock3 size={13} /> Observed {observedTime(profile.observedAt)}
+            <Clock3 size={13} /> Website observed {observedTime(profile.observedAt)}
           </div>
           <div className="br-official-links">
             <SourceLink
@@ -345,14 +403,125 @@ export function BrandResearchView({
         <div>
           <h3>Ad-format winner: not yet measurable</h3>
           <p>
-            This website-research snapshot includes no verified public
-            ad-performance dataset. Website positioning and creator recruitment
-            can support creative hypotheses; they do not prove a winning format,
-            engagement rate or conversion result.
+            {libraryAds.length
+              ? `${libraryAds.length} real Meta Ad Library records are available below. The library supplied creative and delivery evidence, but no usable engagement counts and denominator. We can compare what was advertised; we cannot yet rank its engagement performance.`
+              : "This website-research snapshot includes no verified public ad-performance dataset. Website positioning and creator recruitment can support creative hypotheses; they do not prove a winning format or engagement rate."}
           </p>
         </div>
         <span className="br-pill">Evidence gap</span>
       </section>
+
+      {library && libraryAds.length > 0 && (
+        <section
+          className="br-library-evidence"
+          aria-labelledby="brand-library-title"
+        >
+          <div className="br-section-heading">
+            <div>
+              <h2 id="brand-library-title">Observed public ads</h2>
+              <p>
+                Real {library.source} records for {library.advertiserName}.
+                This dated sample is shown independently of dashboard filters.
+              </p>
+            </div>
+            <span className="br-pill">Bounded sample · not live</span>
+          </div>
+          <div className="br-library-summary">
+            <div>
+              <strong>{libraryAds.length} observed ad records</strong>
+              <p>
+                Captured {observedTime(library.capturedAt)} · Advertiser page{" "}
+                {library.advertiserPageId}. This sample does not establish the
+                advertiser’s total ads or category coverage.
+              </p>
+              <div className="br-library-formats">
+                {Object.entries(libraryFormats).map(([format, count]) => (
+                  <span className="br-pill" key={format}>
+                    {format}: {count}
+                  </span>
+                ))}
+              </div>
+              <p>
+                These are media labels supplied by the library. They do not
+                establish UGC or influencer origin, or which style works best.
+              </p>
+            </div>
+            <SourceLink url={library.queryUrl} label="Open public library" />
+          </div>
+          <div className="br-library-grid">
+            {(showAllLibraryAds ? libraryAds : libraryAds.slice(0, 6)).map((ad) => (
+              <article className="br-card br-library-ad" key={ad.id}>
+                <div className="br-library-ad-top">
+                  <span className="br-pill">{ad.format || "Media unknown"}</span>
+                  <span>
+                    {ad.deliveryStatus === "active"
+                      ? "Shown active at capture"
+                      : ad.deliveryStatus === "inactive"
+                        ? "Shown inactive at capture"
+                        : "Delivery status unavailable"}
+                  </span>
+                </div>
+                <h3>{ad.title || ad.brand}</h3>
+                <p className="br-library-copy">
+                  {ad.copy
+                    ? `${ad.copy.slice(0, 240)}${ad.copy.length > 240 ? "…" : ""}`
+                    : "Ad copy was not supplied in this record."}
+                </p>
+                {ad.brandedContentPartner && (
+                  <div className="br-library-creator">
+                    <span>Library-attributed creator</span>
+                    <strong>{ad.brandedContentPartner.name}</strong>
+                    {ad.brandedContentPartner.profileUrl && (
+                      <SourceLink
+                        url={ad.brandedContentPartner.profileUrl}
+                        label="Creator profile"
+                      />
+                    )}
+                    <p>Source attribution; audience fit and performance unverified.</p>
+                  </div>
+                )}
+                <dl>
+                  <div>
+                    <dt>Library ID</dt>
+                    <dd>{ad.providerAdId || "Not supplied"}</dd>
+                  </div>
+                  <div>
+                    <dt>Delivery began</dt>
+                    <dd>{deliveryDate(ad.deliveryStartAt)}</dd>
+                  </div>
+                  <div>
+                    <dt>Delivery ended</dt>
+                    <dd>{deliveryDate(ad.deliveryStopAt)}</dd>
+                  </div>
+                  <div>
+                    <dt>Engagement rate</dt>
+                    <dd>N/A · counts unavailable</dd>
+                  </div>
+                </dl>
+                {ad.sourceUrl && (
+                  <SourceLink url={ad.sourceUrl} label="Go to source ad" />
+                )}
+              </article>
+            ))}
+          </div>
+          {libraryAds.length > 6 && (
+            <button
+              className="button secondary br-library-toggle"
+              onClick={() => setShowAllLibraryAds((value) => !value)}
+              aria-expanded={showAllLibraryAds}
+            >
+              {showAllLibraryAds
+                ? "Show fewer records"
+                : `Show all ${libraryAds.length} observed records`}
+            </button>
+          )}
+          <p className="br-library-note">
+            Dates describe ad delivery, not original post publication. Missing
+            engagement is unavailable, not zero. Ad longevity and format counts
+            alone do not prove performance.
+          </p>
+        </section>
+      )}
 
       {visualEvidence.length > 0 && (
         <section

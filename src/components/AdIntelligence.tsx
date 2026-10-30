@@ -224,6 +224,8 @@ export function AdIntelligence({
                       ? "Active date not available"
                       : ad.dateBasis === "report"
                         ? "Report date only: " + dateLabel(ad.publishedAt)
+                        : ad.dateBasis === "delivery"
+                          ? "Ad delivery started: " + dateLabel(ad.deliveryStartAt || ad.publishedAt)
                         : dateLabel(enriched.activeDate || ad.publishedAt)}
                   </dd>
                 </div>

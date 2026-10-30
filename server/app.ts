@@ -505,7 +505,7 @@ export function createApp(db: DatabaseSync = openDatabase()) {
     });
     const data = dashboard(db, brand, platform, range);
     const profile = readBrandResearch(db, brand.id);
-    if (!data.metrics.ads && profile) {
+    if (!data.metrics.engagementRateAvailable && profile) {
       const answer = answerBrandResearchQuestion(question, profile);
       if (answer) {
         res.json(answer);

@@ -1,4 +1,5 @@
 import valentteCase from "../../shared/cases/valentte.json";
+import valentteAds from "../../shared/cases/valentte-ads.json";
 import { answerBrandResearchQuestion } from "../../shared/brand-research-answer";
 import type { BrandResearch } from "../../shared/brand-research";
 import {
@@ -323,6 +324,10 @@ export function installPreviewApi(): void {
       storage.setItem(STORAGE_KEY, JSON.stringify(state));
     } catch {}
   }
+  // Upgrade the public research snapshot by stable native IDs; preserve user imports.
+  const snapshotAds = valentteAds.ads as Ad[];
+  const snapshotIds = new Set(snapshotAds.map((ad) => ad.id));
+  state = { ...state, ads: [...state.ads.filter((ad) => !snapshotIds.has(ad.id)), ...snapshotAds] };
   if (!storage.getItem("exter-valentte-v1")) {
     try {
       storage.setItem("exter-brand", realBrand.id);
@@ -381,7 +386,7 @@ export function installPreviewApi(): void {
       .filter(
         (a) =>
           a.brandId === brand.id &&
-          a.source === (brand.mode === "demo" ? "sample" : "import") &&
+          (brand.mode === "demo" ? a.source === "sample" : a.source !== "sample") &&
           a.publishedAt >= since &&
           (platform === "all" || a.platform === platform),
       )
@@ -735,7 +740,7 @@ export function installPreviewApi(): void {
         const question = text(body.question, "question", 2000);
         const { platform, range } = filters(body);
         const data: Dashboard = dashboardFor(brand, platform, range);
-        if (!data.metrics.ads && brand.id === realBrand.id) {
+        if (!data.metrics.engagementRateAvailable && brand.id === realBrand.id) {
           const answer = answerBrandResearchQuestion(
             question,
             researchSnapshot,

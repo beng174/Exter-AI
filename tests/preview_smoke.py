@@ -57,11 +57,19 @@ def run_checks(artifact, url=None):
         assert case['analysisStatus']=='complete' and case['analysis']['provenance']=='model'
         assert case['category']=='Home fragrance & gifting' and len(case['competitorCandidates'])==3
         assert fetch_json(page,'/api/dashboard?brandId='+case_id)['metrics']['ads']==0
+        assert len(case['adLibraryEvidence']['records'])==58
+        assert all(ad['metricsAvailable'] is False for ad in case['adLibraryEvidence']['records'])
+        expect(page.get_by_role('heading',name='Observed public ads',exact=True)).to_be_visible()
+        expect(page.get_by_text('58 observed ad records',exact=True)).to_be_visible()
+        expect(page.locator('.br-library-ad')).to_have_count(6)
+        page.get_by_role('button',name='Show all 58 observed records',exact=True).click()
+        expect(page.locator('.br-library-ad')).to_have_count(58)
+        page.get_by_role('button',name='Show fewer records',exact=True).click()
         expect(page.get_by_role('heading',name='Ad-format winner: not yet measurable',exact=True)).to_be_visible()
         with page.expect_download() as research_download:
             page.get_by_role('button',name='Download research report',exact=True).click()
         report_text=Path(research_download.value.path()).read_text()
-        assert 'Valentte' in report_text and 'not yet measurable' in report_text
+        assert 'Valentte' in report_text and 'not yet measurable' in report_text and '58 observed records' in report_text
         page.get_by_role('button',name='Ask Exter',exact=True).click()
         page.locator('.suggested-questions button').first.click()
         expect(page.locator('.chat-answer')).to_contain_text('cannot identify a winning ad format')

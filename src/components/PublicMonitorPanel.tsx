@@ -124,9 +124,10 @@ export function PublicMonitorPanel({
           <p>
             Direct collection currently supports public TikTok video, YouTube
             video and X post URLs through their embed endpoints. This collects
-            source metadata; broad discovery across Instagram, Facebook,
-            LinkedIn and ad libraries still needs an approved public-data
-            source.
+            source metadata. Meta ad-library records can be collected through
+            the full application's separate browser workflow; the Valentte
+            sample is in Brand research. Broad discovery and continuous
+            multi-platform monitoring remain unfinished.
           </p>
           <label>
             Competitor / publisher <span>(optional)</span>

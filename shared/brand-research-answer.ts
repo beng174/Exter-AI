@@ -1,12 +1,16 @@
 import type { BrandResearch } from "./brand-research";
 
-/** Website research can support hypotheses, never a substitute for missing ad results. */
+/** Public evidence supports observed activity; missing engagement must not become a winner. */
 export function answerBrandResearchQuestion(
   question: string,
   profile: BrandResearch,
 ) {
   const context = `${profile.brandName} · ${profile.category} · Public website research observed ${profile.observedAt}. `;
   let answer: string;
+  const library = profile.adLibraryEvidence;
+  const librarySummary = library?.records.length
+    ? `${library.records.length} source-linked Meta ad-library records were collected in a bounded sample at ${library.capturedAt}; ${library.records.filter((ad) => ad.deliveryStatus === "active").length} were labelled active at capture. Source media labels: ${Object.entries(library.records.reduce<Record<string, number>>((counts, ad) => { counts[ad.format] = (counts[ad.format] || 0) + 1; return counts; }, {})).map(([format, count]) => `${format}: ${count}`).join(", ")}. This is observed use in the sample, not an exhaustive brand/category count or a performance ranking. `
+    : "";
   let sourceUrls = profile.sources
     .filter((source) => source.status === "available")
     .slice(0, 3)
@@ -16,12 +20,17 @@ export function answerBrandResearchQuestion(
       question,
     )
   ) {
-    answer =
-      "There are no verified ad-performance records in this research snapshot, so I cannot identify a winning ad format or claim real-time results. ";
+    answer = librarySummary
+      ? librarySummary + "The library did not supply per-ad engagement counts and a usable denominator, so I cannot identify a winning ad format by engagement rate or claim real-time results. Dynamic creative is a source label, not proof of UGC, influencer or carousel style. "
+      : "There are no verified ad-performance records in this research snapshot, so I cannot identify a winning ad format or claim real-time results. ";
+    if (librarySummary) sourceUrls = [library!.queryUrl, ...library!.records.slice(0, 2).map((ad) => ad.sourceUrl!)];
     if (profile.proposedTests.length)
       answer += `Source-backed hypotheses to test: ${profile.proposedTests.map((test) => test.format).join("; ")}. `;
     answer +=
       "The website’s creator/UGC recruitment and product/review messaging are creative-direction evidence, not proof that those formats outperform competitors.";
+  } else if (librarySummary && /ad.?library|show.*ads|list.*ads|ads.*(?:active|running)|(?:active|running).*ads|how many ads/i.test(question)) {
+    answer = librarySummary + "Each saved record has a source link and available delivery start/end dates. Delivery dates are not necessarily the original post publication date. Missing engagement remains unavailable; ad longevity is a creative-use signal, not measured effectiveness.";
+    sourceUrls = [library!.queryUrl, ...library!.records.slice(0, 2).map((ad) => ad.sourceUrl!)];
   } else if (/competitor|compare.*brand|other brands/i.test(question)) {
     sourceUrls = profile.competitorCandidates.map(
       (candidate) => candidate.sourceUrl,

@@ -1,6 +1,6 @@
 # Exter AI test drive
 
-The downloadable test-drive ZIP contains `index.html`, `START-HERE.txt`, and a fictional `sample-import.json` for import testing.
+The general test-drive ZIP contains `index.html`, `START-HERE.txt`, the Valentte research report and a fictional `sample-import.json` for import testing. The dedicated Valentte ZIP contains the HTML, instructions and report without the fictional import example.
 
 1. Download and extract the ZIP on a computer.
 2. Open `index.html` in a desktop browser such as Chrome or Edge. No installation, terminal, account, or server is needed.
@@ -29,6 +29,10 @@ python3 tests/preview_smoke.py --http .preview/Exter-AI-Test-Drive.html
 
 HTTP mode serves only the one embedded HTML file. Tests fail if the page requests external assets or backend APIs. Direct `file://` execution was not verified in the managed browser. Browsers managed by an organisation may need an approved local HTTP server instead of opening downloaded HTML files directly.
 
-## v0.3: real Valentte case
+## Real Valentte case: 30 October update
 
-On first open, the test drive selects **Valentte → Brand research**. This is a dated real website-research snapshot with source citations and local-model provenance, not a live ad-performance feed. The four other brand workspaces remain fictional samples. The ZIP also includes `Valentte-Research-Report.md`. Client-account access and Claude are not required for the original collection/model test.
+On first open, the test drive selects **Valentte → Brand research**. It shows real website evidence, local-model provenance and **58 source-checked Meta Ad Library records** captured on 30 October 2026. Thirty were marked active by the source at capture. This is a bounded sample from two searches, not all Valentte ads and not a live feed. The four other brand workspaces remain fictional samples.
+
+Ad-library cards preserve delivery dates and source links. Delivery start is not the organic post publication date. The source did not provide per-ad engagement counts or a usable denominator, so engagement rates and a winning format remain unavailable. Source media types do not prove UGC or influencer origin. See [the corrected findings](../research/VALENTTE-TEST.md).
+
+The ZIP includes `Valentte-Research-Report.md`. Client-account access and Claude were not required for collection. Refreshing sources, running the platform's models and exposing data to Claude require the full server application. A hosted service with scheduled collection is the route to ongoing monitoring; opening this HTML cannot start one.

@@ -6,7 +6,7 @@ The updated **Creative formats** page and assistant compare UGC, influencer, sta
 
 A working local MVP for competitive creative research, based on the supplied Defy decks and the Exter brief. Browse ad landscapes, compare creative angles, explore audience and review themes, shortlist illustrative creators, ask grounded questions, and download intelligence briefs.
 
-**Broad live public monitoring is not connected.** A submitted public X URL was collected and analysed end-to-end without client credentials. Other embed endpoints can withhold source content or deny access. Comprehensive Instagram/Facebook/LinkedIn/category/ad-library collection needs approved public-data service access for Exter, not a client's advertising account. The app opens with a clearly labelled fictional dataset. Public engagement does not reveal competitors’ conversions.
+**Public ad libraries are a core source.** An ordinary browser collected a bounded sample of **58 real Valentte Meta Ad Library records** on 30 October 2026 without client credentials. The earlier HTTP-only access check was insufficient: the browser rendered records even when an initial response reported HTTP 403. The records supply creatives, delivery dates and source activity status, but no usable per-ad engagement counts or denominator. They therefore support creative research, not an engagement winner yet. Continuous, comprehensive multi-platform monitoring is still unfinished; see [the corrected test findings](research/VALENTTE-TEST.md).
 
 ## No-install test drive
 
@@ -43,6 +43,7 @@ npm start
 
 - Four sample workspaces: beauty, fashion, wellness, and food & beverage; 2,400 fictional ads total, with 7/30/90-day and Meta/TikTok/Google filters.
 - Searchable, paginated ad library, creative details and browser-local saved ads.
+- Repeatable, bounded Meta public-library browser collection and advertiser-validated import, with native-ID deduplication, delivery-date provenance and unavailable engagement kept explicit.
 - Weighted engagement rankings, brand comparison, audience tags, sample brand voices and review themes.
 - Illustrative creator matches with reasons, profile briefs and SQLite-persisted shortlists.
 - Markdown research reports with explicit sample/import provenance and download support.
@@ -78,7 +79,8 @@ The first import switches the workspace to import mode: all sample ads, reviews,
 
 ## Reading the metrics
 
-- Engagement rate = engagements / impressions × 100. It ranks attention, not sales.
+- Engagement rate uses reported engagements divided by its declared denominator × 100. Impressions, views and followers are different bases and are not combined into one ranking. Missing counts or denominator mean unavailable, not zero.
+- Public ad-library delivery start/end dates are separate from the original post publication date. Activity status is what the source showed at capture, not a guarantee that an ad is active now. Longevity and number of variants are research signals, not measured engagement.
 - Share of ads describes the current dataset, not market share or spend share.
 - The chart groups **observed engagements by ad publication date**; it is not an event-time feed. The competitor line averages across distinct competitor brands in the filtered dataset.
 - Imported ads have no image. The UI shows a neutral record placeholder rather than an invented creative.
@@ -107,6 +109,6 @@ The ready-to-open package and instructions are in [test-drive/README.md](test-dr
 
 ## Real brand case: Valentte
 
-The updated browser test drive opens directly to **Valentte → Brand research**, using public website evidence and actual local-model inference. It does not substitute fictional ad results for missing real data. Read [the test findings and limitations](research/VALENTTE-TEST.md).
+The updated browser test drive opens directly to **Valentte → Brand research**, using public website evidence, actual local-model inference and the dated real Meta Ad Library sample. The 58 records are a bounded sample, not a complete brand or category census. Read [the test findings and limitations](research/VALENTTE-TEST.md).
 
-With the full app running, `npm run research:valentte` reproduces the website/creator-source collection and model analysis. Comprehensive live ad-format benchmarking remains blocked by source coverage; client-account permission is not the prerequisite for that public research.
+With the full app running, `npm run research:valentte` reproduces the website/creator-source collection and model analysis. Separate browser collection/import commands are documented in the test findings. Reliable refreshes, public engagement sources and validated creative classification are the next priorities in the [completion plan](research/COMPLETION-PLAN.md); client-account permission is not a prerequisite.

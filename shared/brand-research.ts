@@ -1,4 +1,5 @@
 import type { AdAnalysis } from "./ad-intelligence";
+import type { Ad } from "./types";
 
 export interface BrandResearchSource {
   id: string;
@@ -43,6 +44,16 @@ export interface BrandResearch {
     status: "candidate";
   }[];
   limitations: string[];
+  adLibraryEvidence?: {
+    source: "Meta Ad Library";
+    queryUrl: string;
+    capturedAt: string;
+    advertiserPageId: string;
+    advertiserName: string;
+    completeness: "bounded_sample";
+    records: Ad[];
+    limitations: string[];
+  };
   proposedTests: {
     format: string;
     hypothesis: string;

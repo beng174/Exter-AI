@@ -557,7 +557,9 @@ export async function researchBrand(
       status: "hypothesis",
     });
   const limitations = [
-    "This is website and creator-programme research, not a paid-ad or organic social-post crawl.",
+    previous?.adLibraryEvidence?.records.length
+      ? "Website research and a separate bounded Meta ad-library sample are stored. Website refresh does not refresh the ad-library capture."
+      : "This is website and creator-programme research, not a paid-ad or organic social-post crawl.",
     "Website claims and displayed reviews are publisher-supplied and were not independently verified.",
     "No social-ad engagement, impressions, spend or conversions were collected; no best-performing format can be established.",
     "Creator profiles are linked from the brand website, not independently verified audience or performance matches.",

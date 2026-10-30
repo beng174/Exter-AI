@@ -34,6 +34,9 @@ const brand = await post<Brand>("/api/brands", {
   domain: "valentte.com",
   category: "Home fragrance & gifting",
 });
+const beforeDb = openDatabase();
+const beforeAdCount = Number(beforeDb.prepare("SELECT COUNT(*) AS n FROM ads WHERE brand_id=?").get(brand.id)!.n);
+beforeDb.close();
 const profile = await post<BrandResearch>("/api/brand-research", {
   brandId: brand.id,
 });
@@ -150,14 +153,18 @@ profile.coverageChecks = [
   },
   {
     label: "Meta Ad Library — Valentte search",
-    url: libraryUrl,
+    url: profile.adLibraryEvidence?.queryUrl || libraryUrl,
     status:
-      library.status === 403
+      profile.adLibraryEvidence?.records.length
+        ? "Public ad sample collected"
+        : library.status === 403
         ? "Access blocked"
         : library.status === 200
           ? "Search page only"
           : `Not available (HTTP ${library.status || "network failure"})`,
-    message: `HTTP ${library.status || "network failure"}. No structured ad records or performance metrics were obtained. Access restrictions were not bypassed; zero ingested records does not mean no active ads.`,
+    message: profile.adLibraryEvidence?.records.length
+      ? `${profile.adLibraryEvidence.records.length} separately captured browser records are retained from ${profile.adLibraryEvidence.capturedAt}. This website/HTTP check does not refresh or invalidate that ad-library evidence. Engagement metrics remain unavailable.`
+      : `HTTP ${library.status || "network failure"}. This HTTP-only check obtained no structured ad records. A rendered browser check is needed before concluding that public library records are unavailable.`,
   },
 ];
 profile.limitations = [
@@ -166,7 +173,7 @@ profile.limitations = [
     "Competitor candidates were selected from source-backed category overlap for this test, not automatically discovered or performance-validated.",
     "The initial visual model can confuse gift-set packaging with cosmetics; this unvalidated interpretation is a classification gap, not a verified product/ad-format label.",
     "Instagram profile counters do not identify which ad formats earn engagement or conversions.",
-    "Zero ingested ad records does not establish that Valentte has no active ads.",
+    ...(profile.adLibraryEvidence?.records.length ? [] : ["Zero ingested ad records does not establish that Valentte has no active ads."]),
   ]),
 ];
 // Publish short evidence excerpts and paraphrased findings rather than full page text.
@@ -214,7 +221,8 @@ try {
   assert.equal(
     db.prepare("SELECT COUNT(*) AS n FROM ads WHERE brand_id=?").get(brand.id)!
       .n,
-    0,
+    beforeAdCount,
+    "Website research must not create, delete or replace existing ad-library records.",
   );
   const current = readBrand(db, brand.id)!;
   await mkdir("shared/cases", { recursive: true });
@@ -237,7 +245,7 @@ console.log(
       facts: profile.facts.length,
       creatorFeatures: profile.creatorFeatures.length,
       competitorCandidates: profile.competitorCandidates.map((c) => c.name),
-      verifiedAdRecords: 0,
+      verifiedAdRecords: profile.adLibraryEvidence?.records.length || 0,
       adFormatWinner: "Not measurable from currently accessible sources",
       coverage: profile.coverageChecks.map((c) => ({
         source: c.label,

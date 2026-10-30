@@ -106,6 +106,23 @@ function data(result: Awaited<ReturnType<Client["callTool"]>>) {
   return result.structuredContent as Record<string, any>;
 }
 
+test("MCP can inspect historical public library sources without redating or inventing engagement", async () => {
+  const s = await session();
+  try {
+    const row = s.db.prepare("SELECT data FROM ads WHERE id='meta-static'").get() as { data: string };
+    const old: Ad = { ...JSON.parse(row.data), source: "public", publishedAt: "2020-01-01T00:00:00.000Z", dateBasis: "delivery", deliveryStartAt: "2020-01-01T00:00:00.000Z", observedAt: new Date().toISOString(), metricsAvailable: false, engagementRateBasis: "unavailable", owned: false, impressions: 0, engagements: 0 };
+    s.db.prepare("UPDATE ads SET source=?,published_at=?,data=? WHERE id=?").run(old.source, old.publishedAt, JSON.stringify(old), old.id);
+    const recent = data(await s.client.callTool({ name: "search_ads", arguments: { brandId: workspace.id, query: "Evidence meta-static", rangeDays: 7 } }));
+    assert.equal(recent.total, 0);
+    const saved = data(await s.client.callTool({ name: "search_ads", arguments: { brandId: workspace.id, query: "Evidence meta-static", includeArchived: true } }));
+    assert.equal(saved.total, 1);
+    assert.equal(saved.rangeDays, null);
+    assert.equal(saved.records[0].deliveryStartAt, old.deliveryStartAt);
+    assert.equal(saved.records[0].metricsAvailable, false);
+    assert.equal((s.db.prepare("SELECT data FROM ads WHERE id=?").get(old.id) as { data: string }).data, JSON.stringify(old));
+  } finally { await s.close(); }
+});
+
 test("MCP advertises read-only tools and source-grounded research prompts", async () => {
   const s = await session();
   try {

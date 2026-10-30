@@ -46,10 +46,10 @@ const providers = [
   })),
   {
     platform: "Meta",
-    method: "Public ad library / licensed source required",
-    status: "provider_required",
+    method: "Public ad-library browser capture and native-ID import",
+    status: "bounded_capture_available",
     coverage:
-      "Paid competitor creative requires an approved transparency-library/data provider. Availability varies by geography and ad type; private conversions are not public.",
+      "A repeatable normal-browser collector captured real Valentte ads without client credentials. Collection is an on-request CLI workflow with a bounded initial batch; broad discovery and continuous polling are not connected. Engagement counts are unavailable in the tested library records.",
   },
   {
     platform: "Google",

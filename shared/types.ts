@@ -58,7 +58,19 @@ export interface Ad {
   providerAdId?: string;
   metricDate?: string;
   observedAt?: string;
-  dateBasis?: "creative" | "report" | "observed";
+  dateBasis?: "creative" | "report" | "observed" | "delivery";
+  deliveryStartAt?: string;
+  deliveryStopAt?: string;
+  firstObservedAt?: string;
+  publisherPlatforms?: string[];
+  advertiserPageId?: string;
+  copyTruncated?: boolean;
+  mediaType?: string;
+  brandedContentPartner?: {
+    pageId: string;
+    name: string;
+    profileUrl: string | null;
+  };
   engagementMetric?: string;
   currency?: string;
   conversionEvent?: string;
