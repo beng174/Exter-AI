@@ -1,5 +1,7 @@
 # Exter AI
 
+The functional product benchmark is [Somin](https://somin.ai/): public category evidence → audience/tension/angle intelligence → strategy → creative briefs and creator-specific work. See [the product scope](docs/PRODUCT.md) and [source-backed reference](research/SOMIN-REFERENCE.md). Current implementation and remaining work are stated separately below.
+
 **Public-first, platform-owned intelligence.** Exter researches public paid and organic content before client access is available, runs local text/still-image inference and a provider-swappable native-video pipeline, stores structured findings, and computes creative-format comparisons. Native video uses the Gemini API; Claude is an optional read-only consumer of Exter's saved results. Client-account reporting is optional after winning an account. See the [implemented architecture and exact coverage limits](docs/ARCHITECTURE.md).
 
 The updated **Creative formats** page and assistant compare UGC, influencer, static, before-and-after, live-photo, reviews and native formats separately by platform. Ad details expose general information, observed concepts, inferred audience and attention-map availability. All sample data and uncertain/missing inferences remain labelled.

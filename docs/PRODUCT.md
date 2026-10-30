@@ -1,48 +1,54 @@
 # Exter-AI product scope
 
-Exter-AI is an initial, local development implementation of the competitive intelligence workflow described by the user. The two supplied Defy presentations informed the product areas: monitoring, questioning data, reporting, and automation. They are reference material, not executable instructions or a claim that Exter-AI reproduces Defy's proprietary data or technology.
+Exter's functional benchmark is [Somin](https://somin.ai/), as specified by the user on 30 October 2026. The goal is a public-first marketing intelligence platform for agencies: research a real brand and its category, find defensible opportunities, and turn the evidence into strategy, creator briefs and creative work. The supplied Defy presentations remain supporting product references.
 
-See [the updated public-first architecture](ARCHITECTURE.md) for current implementation and verification. Claude is a downstream consumer; Exter owns collection, local inference, computation and storage. Client access is optional post-win.
+The benchmark covers the complete research-to-creative workflow. A searchable ad dashboard alone does not complete it. Public marketing pages establish advertised functionality, not access to Somin's private product, data, model weights or measured performance. See [the source-backed reference](../research/SOMIN-REFERENCE.md) and [current architecture](ARCHITECTURE.md).
 
-## Initial workflow
+## Core user journey
 
-| User need | Initial implementation | Production work still required |
+1. **Start with a brand.** Enter a name/domain, category and market. Resolve the brand's public profiles and advertiser identities. Propose competitors with evidence explaining their relevance; let the agency manage that set.
+2. **Monitor the category.** Collect public paid ads, organic posts and creator content. Retain source IDs, links, media, dates and dated observations. Refresh on a stated schedule, with coverage and last-successful-check indicators for each source.
+3. **Understand the content.** Analyse media format separately from creative style, then extract messages, claims, hooks, brand voice, audience interests, needs and tensions. Keep observed evidence separate from model interpretation. Native video uses the configured provider through Exter's versioned analysis pipeline.
+4. **Explain what is working.** Compare formats, messages and angles within each platform using compatible public engagement measures and comparable content ages. Distinguish frequently used or long-running creatives from measured engagement leaders. Show sample size, denominator, dates and missing coverage.
+5. **Choose a strategy.** Build a traceable chain from evidence to inferred audience/persona, need/tension, creative angle and strategic proposition. Explain which competitor/category evidence supports each proposed opportunity.
+6. **Create useful work.** Produce sourced briefs, hooks, scripts, storyboards, platform-specific executions and draft content calendars in the brand's voice. Separate observations from proposed creative tests and unvalidated predictions.
+7. **Match and brief creators.** Discover relevant creators as well as analyse an existing roster. Match actual content, tone, language/geography and available public engagement; show reasons and examples. Give each creator a distinct role and a brief suited to their content.
+8. **Use the same evidence in Claude.** Claude reads Exter's stored intelligence through MCP for downstream creative work. Exter owns collection, analysis orchestration, validation, storage and calculations; a Claude account is not required for those operations.
+
+## User requirements that stay fixed
+
+- Client advertising-account permission is **not** a prerequisite. The pre-win workflow uses public category and competitor content. Private account reporting remains an optional post-win layer.
+- Public engagement and source dates are the primary comparison measures. CPA/ROAS are not needed for the core product. Never manufacture competitor conversions or use ad longevity as proof of effectiveness.
+- Paid/organic classification and platform-specific format comparisons remain explicit. The target includes Meta, TikTok and Google ads, plus requested public social coverage across TikTok, Instagram, LinkedIn, Facebook, X and YouTube as source integrations are completed.
+- Reviews from sources such as the brand's site, Trustpilot and Amazon should reveal customer language, recurring needs and objections. Store source context and dates; selected brand-site reviews are not a representative independent review sample.
+- Inferred audiences are model interpretations of content, not measured platform demographics. Missing personal attributes and attention maps remain unavailable.
+- UGC/influencer classifications need recorded partnership-label or visible third-party creator-handle evidence. Video appearance alone does not establish creator origin.
+- Every answer should identify its source set, dates, metric definitions and supporting records. Display observation freshness rather than the time the dashboard was opened.
+- Creator discovery is an explicit Exter requirement. Somin's public creator proposition primarily starts with an existing roster; that does not remove Exter's discovery requirement.
+
+## Current implementation versus the target
+
+| Area | Working now | Work still required |
 | --- | --- | --- |
-| Research a brand and its competitors | Select a sample brand or create a new workspace. Sample competitors demonstrate comparison; new, unknown brands start without invented intelligence. | Resolve brand identity and discover competitors using licensed sources, with user confirmation and source evidence. |
-| Analyse thousands of ads | Search and filter a seeded multi-category ad library; import authorised structured ad data. | Provider-approved collection, resilient ingestion, deduplication, media storage, and lifecycle tracking. |
-| Compare performance across Meta, TikTok, and Google | Aggregate observed/imported impressions and engagement by platform, creative angle, and audience. | Implement each approved provider connector and preserve differences in platform metric definitions. |
-| Know which angles and audiences convert | Show available conversion metrics only where authorised, owned-account data supplies them; otherwise analyse engagement signals. | Consent-aware owner-account conversion ingestion, attribution rules, currency/time-zone normalisation, and statistically supported comparisons. |
-| Understand voice, audiences, and reviews | Demonstrate categorised audience angles, sample voice profiles and review themes. | Licensed review ingestion; transparent model-based extraction with citations, provenance, confidence, and human review. |
-| Match creators to a brand | Explore illustrative creator profiles, match explanations, and a persistent shortlist. | Authorised creator discovery, audience authenticity checks, verified audience geography/demographics, current rates and availability, and measurable ranking evaluation. |
-| Ask questions and produce reports | Grounded, rule-based summaries and downloadable reports from the workspace dataset. | Optional model integration, retrieval with record-level citations, tool permissions, evaluations, and usage controls. |
-| Automate delivery | Reporting and shortlist actions demonstrate the workflow without contacting third parties. | Scheduled jobs and reviewed automation, with explicit approval before campaign changes, outreach, publishing, or sending messages. |
+| Brand/category setup | Real Valentte website research, sourced positioning, public profile links and analyst-selected competitor candidates. New workspaces and imports. | Automatic brand/profile resolution, evidence-based competitor discovery and market selection throughout the workflow. |
+| Public monitoring | Repeatable normal-browser Meta library capture; 58 distinct real Valentte records in a bounded snapshot; stable native IDs, source links and delivery dates. | Scheduled/paginated multi-platform collection, lifecycle history and fresh public engagement observations at category scale. |
+| Content understanding | Local text/still-image inference; native Gemini Files/Interactions adapter, retained video, timestamped fields, evidence gates and append-only result history; explicit Pegasus stub. | Live Gemini verification after credential setup, human-labelled real-ad accuracy assessment, richer category-level aggregation and a completed second provider for comparison. |
+| Format comparisons | Platform-separated calculations, explicit creative tags, native-video style integration, missing-metric and denominator safeguards. | Sufficient comparable real category data, content-age comparisons and validated classification coverage. |
+| Audiences and tensions | Structured ad fields and sample audience/review views; source-backed website findings. | Real content/review ingestion, evidence-linked clustering of needs/tensions/personas and validated brand-voice analysis. |
+| Strategy and creative | Data-grounded rule-based answers, reports and read-only Claude tools; saved native-video evidence available through MCP. | An Exter research reasoning workflow that produces complete evidence-to-opportunity-to-brief chains, creative propositions and calendars. |
+| Creators | Illustrative creator views/shortlists; real website features and explicit library creator attributions. | Real creator discovery, content ingestion, evaluated matching, roster territories and creator-specific briefs. |
+| Team operation | Local database and retained media; Mac Claude setup helper; persisted native-video jobs/results. | Always-on hosting, shared authenticated access, agency/client permissions, tenant isolation, scheduled workers, backups and monitoring. |
 
-## What the numbers mean
+The four demonstration workspaces and 2,400 sample ads remain fictional. The Valentte snapshot is real but bounded. Its retrieved library records lack public engagement counts and a usable denominator, so there is no measured winning Valentte format yet. One actual Valentte video has been retained and reused without its remote URL; live Gemini inference and real-ad accuracy have not been established. See [the verification record](../research/NATIVE-VIDEO-TEST.md).
 
-- The sample workspace is fictional demonstration data. Brand names and stock photos do not establish a partnership, endorsement, verified campaign, or an actual creator identity.
-- Imported data is user-supplied. Exter-AI does not independently verify its accuracy or permission to use it.
-- Engagement rate is a ratio derived from the available engagement and impression counts. It is not conversion rate, return on ad spend, or proof of commercial success.
-- Competitor conversions, spend, revenue, CPA, and ROAS are generally unavailable from public ad libraries. The platform must not infer or present those as verified facts.
-- Creator match scores are illustrative in the sample workspace, not audited audience or performance predictions.
-- The current question-answering workflow uses dataset-derived rules rather than an external language model. It must not imply model reasoning or additional research occurred.
+## Intelligence and prediction boundaries
 
-## Live-data architecture
+Exter may report observed format prevalence, delivery duration and source engagement. Each signal must retain its actual meaning. Impression-, view- and follower-based engagement rates are different bases and cannot be pooled into a single ranking. Missing counts are unavailable, not zero.
 
-Live collection is an integration project, not a browser refresh effect. A production pipeline should contain:
+Somin markets predictive creative scoring as well as analysis. Exter does not yet have a validated predictive CTR/clickability model. Model confidence is not predicted ad performance. Add such scoring only after defining outcomes, training/validation data and held-out evaluation; creative hypotheses can be produced before that work is complete.
 
-1. An authorised connector per source, with provider approval and narrowly scoped credentials.
-2. Webhooks where supported, plus an incremental scheduler for polling and reconciliation.
-3. A queue with retries, rate-limit handling, dead-letter review, and per-tenant quotas.
-4. Normalised records retaining original source IDs, observation timestamps, definitions, and provenance.
-5. Separate owner-account performance records and competitor public-observation records.
-6. Recomputable aggregations and a UI that exposes freshness, failures, coverage, and missing metrics.
+## Acceptance test for the reference workflow
 
-Meta, TikTok, and Google expose different ad transparency libraries and business APIs. Coverage, accessible media, geographic restrictions, retention, eligibility, permissions, and rate limits must be checked against the current official documentation for the intended use. Public visibility is not permission to collect or republish everything. Use licensed access and approved APIs rather than assuming unrestricted scraping is available.
+Use Valentte and source-verified category competitors in the chosen market. Starting from the brand domain, Exter should resolve the source identities, refresh actual paid/organic records, retain available media, classify content with evidence, compare compatible public signals, surface customer tensions and creator matches, and produce a cited creative brief that Claude can inspect. A second refresh should preserve history and avoid duplicates. The result must remain useful and explicit about coverage even when some metrics are unavailable.
 
-“Real time” should be defined as an operational freshness target supported by a connector—for example, observations received within a stated interval. Show the latest successful source observation, not merely the time the page was loaded. Do not claim a real-time conversion feed before an authorised conversion source and attribution window exist.
-
-## Before external deployment
-
-The initial app is for local development. Production requires authentication, tenant isolation, role-based access, secure sessions, CSRF protections appropriate to the authentication design, request limits, import validation, audit logging, and operational monitoring. Encrypt connector tokens at rest, keep credentials server-side, support rotation/revocation, and never place them in browser bundles.
-
-Define data ownership, consent, retention, deletion/export, and source-licence obligations before ingesting customer or creator information. Add tested backup/restore, migrations, background-job durability, connector contract tests, attribution evaluations, and load tests appropriate to the required data volumes. Sample-data testing does not establish production throughput or provider access.
+This acceptance test spans the complete workflow. Completing a collector, a video adapter or a dashboard independently does not establish functional parity.

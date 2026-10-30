@@ -2,6 +2,8 @@
 
 The target is category intelligence from public paid ads and organic posts before a client grants account access. Public engagement and source dates are the core measures. Private account reporting is an optional later layer.
 
+[Somin is the functional product benchmark](SOMIN-REFERENCE.md). Completion means a connected workflow from public evidence through audience/tension/angle analysis to strategic opportunities and cited creative briefs, with creator-specific work and Claude access. The dashboard and individual collectors are components of that workflow. See the updated [product scope and acceptance test](../docs/PRODUCT.md).
+
 ## 1. Make public collection repeatable and measurable
 
 Use ad libraries for creatives, advertiser identities, source activity and delivery dates. The corrected Valentte browser test supplies 58 real records and proves that the previous HTTP-only access check was inadequate. Next add incremental collection, supported pagination, durable scheduling, retries and native-ID deduplication across libraries and public posts. Prefer official APIs or licensed feeds where they improve permitted coverage and reliability.
