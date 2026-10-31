@@ -1,3 +1,4 @@
+import { basicAuth } from "./auth.js";
 import express, {
   type Request,
   type Response,
@@ -216,6 +217,7 @@ function parseImportRow(row: unknown, brand: Brand): Ad {
 }
 export function createApp(db: DatabaseSync = openDatabase()) {
   const app = express();
+  app.use(basicAuth());
   app.disable("x-powered-by");
   app.use(express.json({ limit: "20mb" }));
   attachConnections(app, db);
