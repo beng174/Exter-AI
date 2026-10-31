@@ -1,3 +1,5 @@
+import { MetaCollectionPanel } from "./components/MetaCollectionPanel";
+import { InfrastructureStatus } from "./components/InfrastructureStatus";
 import { useEffect, useRef, useState } from "react";
 import {
   Activity,
@@ -835,6 +837,8 @@ export default function App() {
           </div>
         </header>
         <main>
+          <InfrastructureStatus />
+          <MetaCollectionPanel key={brandId} workspaceId={brandId} />
           <div className="page-title-row">
             <div>
               <div className="page-eyebrow">

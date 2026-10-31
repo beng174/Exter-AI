@@ -103,7 +103,8 @@ export class LocalVideoMediaStore implements VideoMediaStore {
   private readonly timeoutMs: number;
   private readonly resolver: NonNullable<VideoMediaOptions["resolve"]>;
   constructor(private readonly options: VideoMediaOptions = {}) {
-    this.root = resolve(options.root || process.env.EXTER_MEDIA_ROOT || ".data/media");
+    if (process.env.MEDIA_STORAGE_TYPE && process.env.MEDIA_STORAGE_TYPE !== "disk") throw new MediaStorageError("MEDIA_STORAGE_TYPE must be disk; object storage is not configured.");
+    this.root = resolve(options.root || process.env.MEDIA_STORAGE_PATH || process.env.EXTER_MEDIA_ROOT || ".data/media");
     this.hosts = safeHosts(options.allowedHosts || (process.env.EXTER_MEDIA_ALLOWED_HOSTS
       ? process.env.EXTER_MEDIA_ALLOWED_HOSTS.split(",").map((value) => value.trim()).filter(Boolean)
       : ["*.fbcdn.net"]));

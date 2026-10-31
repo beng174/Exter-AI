@@ -1,3 +1,4 @@
+import { attachInfrastructure } from "./infrastructure/api.js";
 import { basicAuth } from "./auth.js";
 import express, {
   type Request,
@@ -220,6 +221,7 @@ export function createApp(db: DatabaseSync = openDatabase()) {
   app.use(basicAuth());
   app.disable("x-powered-by");
   app.use(express.json({ limit: "20mb" }));
+  attachInfrastructure(app, db);
   attachConnections(app, db);
   attachPublicMonitor(app, db);
   attachVideoAnalysis(app, db);

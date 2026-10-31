@@ -1,3 +1,4 @@
+import { guardedGeminiCall } from "../infrastructure/budget.js";
 import { createHash } from "node:crypto";
 import { createReadStream } from "node:fs";
 import { lstat } from "node:fs/promises";
@@ -112,6 +113,7 @@ export class GeminiVideoAnalyser implements VideoAnalyser {
     agenticAttempt = false,
   ): Promise<Response> {
     apiUrl(url.href);
+    if (!this.options.fetch) await guardedGeminiCall();
     let response: Response;
     try {
       response = await this.fetcher(url, {

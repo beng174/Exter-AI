@@ -4,9 +4,9 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "dev": "NODE_USE_ENV_PROXY=1 tsx watch server/index.ts",
+    "dev": "NODE_USE_ENV_PROXY=1 node --env-file-if-exists=.env --import tsx --watch server/index.ts",
     "build": "tsc --noEmit && vite build",
-    "start": "NODE_USE_ENV_PROXY=1 NODE_ENV=production tsx server/index.ts",
+    "start": "NODE_USE_ENV_PROXY=1 NODE_ENV=production node --env-file-if-exists=.env --import tsx server/index.ts",
     "test": "tsx --test tests/*.test.ts",
     "check": "tsc --noEmit",
     "build:preview": "tsx scripts/build-preview.ts",
@@ -16,7 +16,12 @@
     "import:meta-library": "node --import tsx scripts/import-meta-library.ts",
     "claude:setup": "node scripts/setup-claude-mac.mjs",
     "video:analyse": "NODE_USE_ENV_PROXY=1 node --import tsx scripts/analyse-video.ts",
-    "video:evaluate": "node --import tsx scripts/evaluate-video.ts"
+    "video:evaluate": "node --import tsx scripts/evaluate-video.ts",
+    "worker": "NODE_USE_ENV_PROXY=1 node --env-file-if-exists=.env --import tsx server/infrastructure/runtime.ts worker",
+    "scheduler": "NODE_USE_ENV_PROXY=1 node --env-file-if-exists=.env --import tsx server/infrastructure/runtime.ts scheduler",
+    "db:migrate": "node --env-file-if-exists=.env --import tsx server/infrastructure/runtime.ts migrate",
+    "secrets:check": "node scripts/check-secrets.mjs",
+    "test:infrastructure": "tsx --test tests/infrastructure.integration.ts"
   },
   "dependencies": {
     "@huggingface/transformers": "4.3.2",
@@ -24,6 +29,7 @@
     "cheerio": "1.2.0",
     "express": "^5.1.0",
     "lucide-react": "^0.468.0",
+    "pg": "^8.23.1",
     "react": "^19.1.0",
     "react-dom": "^19.1.0",
     "zod": "4.6.7"
@@ -31,6 +37,7 @@
   "devDependencies": {
     "@types/express": "^5.0.3",
     "@types/node": "^24.0.0",
+    "@types/pg": "^8.23.1",
     "@types/react": "^19.1.0",
     "@types/react-dom": "^19.1.0",
     "@vitejs/plugin-react": "^4.7.0",

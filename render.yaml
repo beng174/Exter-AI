@@ -1,0 +1,72 @@
+# Disk-backed services require paid Render plans. This does not upgrade an existing service automatically.
+services:
+  - type: web
+    name: exter-ai
+    runtime: docker
+    plan: starter
+    branch: exter-test-drive
+    dockerfilePath: ./Dockerfile
+    # No unauthenticated health endpoint: every HTTP route is protected.
+    disk:
+      name: exter-data
+      mountPath: /var/data
+      sizeGB: 10
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: EXTER_ADMIN_USER
+        sync: false
+      - key: EXTER_ADMIN_PASSWORD
+        sync: false
+      - key: GEMINI_API_KEY
+        sync: false
+      - key: GEMINI_VIDEO_MODEL
+        sync: false
+      - key: GEMINI_REQUEST_RESERVE_GBP
+        sync: false
+      # Optional META_ACCESS_TOKEN: add securely after approval; not required to deploy.
+      - key: MEDIA_STORAGE_TYPE
+        value: disk
+      - key: MEDIA_STORAGE_PATH
+        value: /var/data/media
+      - key: EXTER_BACKUPS_ENABLED
+        value: "true"
+      - key: EXTER_DB_PATH
+        value: /var/data/exter.db
+      - key: DATABASE_URL
+        fromDatabase:
+          name: exter-postgres
+          property: connectionString
+  - type: worker
+    name: exter-worker
+    runtime: docker
+    plan: starter
+    branch: exter-test-drive
+    dockerCommand: npm run worker
+    envVars:
+      - key: NODE_ENV
+        value: production
+      # Optional META_ACCESS_TOKEN: add securely after approval; not required to deploy.
+      - key: META_API_VERSION
+        value: v25.0
+      - key: DATABASE_URL
+        fromDatabase:
+          name: exter-postgres
+          property: connectionString
+  - type: cron
+    name: exter-scheduler
+    runtime: docker
+    branch: exter-test-drive
+    schedule: "0 3 * * *"
+    dockerCommand: npm run scheduler
+    envVars:
+      - key: DATABASE_URL
+        fromDatabase:
+          name: exter-postgres
+          property: connectionString
+
+databases:
+  - name: exter-postgres
+    plan: basic-256mb
+    postgresMajorVersion: "17"
+    diskSizeGB: 5
