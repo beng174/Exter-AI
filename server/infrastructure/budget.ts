@@ -2,6 +2,7 @@ import { randomUUID } from "node:crypto";
 import type pg from "pg";
 import { infrastructureDatabase } from "./database.js";
 export type CostType = "inference" | "data_providers";
+export type BudgetPauseReason = "budget_unset" | "threshold_reached" | "reserve_not_configured" | "next_request_would_exceed";
 export async function budgetStatus(pool: pg.Pool) {
   const result = await pool.query(`SELECT b.cost_type,b.monthly_budget_gbp::float8,
     COALESCE(sum(l.cost_gbp),0)::float8 AS used_gbp,
@@ -10,7 +11,22 @@ export async function budgetStatus(pool: pg.Pool) {
     AND l.created_at >= date_trunc('month',now() AT TIME ZONE 'UTC') AT TIME ZONE 'UTC'
     GROUP BY b.cost_type,b.monthly_budget_gbp ORDER BY b.cost_type`);
   const reserve = Number(process.env.GEMINI_REQUEST_RESERVE_GBP);
-  return result.rows.map(row => ({ ...row, paused: row.paused || (row.cost_type === "inference" && Number.isFinite(reserve) && reserve > 0 && row.used_gbp + reserve > row.monthly_budget_gbp * 0.9) }));
+  return result.rows.map(row => {
+    const threshold = row.monthly_budget_gbp * 0.9;
+    let pauseReason: BudgetPauseReason | null = null;
+    if (row.monthly_budget_gbp <= 0) pauseReason = "budget_unset";
+    else if (row.used_gbp >= threshold) pauseReason = "threshold_reached";
+    else if (row.cost_type === "inference" && (!Number.isFinite(reserve) || reserve <= 0)) pauseReason = "reserve_not_configured";
+    else if (row.cost_type === "inference" && row.used_gbp + reserve > threshold) pauseReason = "next_request_would_exceed";
+    return {
+      ...row,
+      paused: pauseReason !== null,
+      pause_reason: pauseReason,
+      threshold_gbp: threshold,
+      remaining_gbp: Math.max(0, threshold - row.used_gbp),
+      request_reserve_gbp: row.cost_type === "inference" && Number.isFinite(reserve) && reserve > 0 ? reserve : null,
+    };
+  });
 }
 /** Reserve before each provider HTTP attempt. Unknown/failed charges remain reserved conservatively. */
 export async function reserveCost(pool: pg.Pool, type: CostType, provider: string, amount: number) {
@@ -30,12 +46,30 @@ export async function reserveCost(pool: pg.Pool, type: CostType, provider: strin
   } catch (error) { await client.query("ROLLBACK"); throw error; }
   finally { client.release(); }
 }
-export async function guardedGeminiCall() {
+export interface GeminiReservation { reservationId: string; reservedGbp: number }
+export async function guardedGeminiCall(): Promise<GeminiReservation | undefined> {
   if (!process.env.DATABASE_URL) {
     if (process.env.NODE_ENV === "production") throw new Error("Paid inference requires DATABASE_URL and a configured budget.");
     return;
   }
   const cost = Number(process.env.GEMINI_REQUEST_RESERVE_GBP);
   if (!Number.isFinite(cost) || cost <= 0) throw new Error("Set a conservative GEMINI_REQUEST_RESERVE_GBP before paid inference.");
-  await reserveCost(infrastructureDatabase(), "inference", "gemini", cost);
+  return { reservationId: await reserveCost(infrastructureDatabase(), "inference", "gemini", cost), reservedGbp: cost };
+}
+
+/** Settle only known token-based estimates. Failed/unknown attempts retain their full reserve. */
+export async function settleGeminiCost(reservationId: string, estimatedGbp: number, pool: pg.Pool = infrastructureDatabase()) {
+  if (!reservationId || !Number.isFinite(estimatedGbp) || estimatedGbp < 0)
+    throw new Error("Invalid inference cost estimate.");
+  const client = await pool.connect();
+  try {
+    await client.query("BEGIN");
+    // Match reserveCost's lock, so settlement and new reservations see a consistent ledger.
+    await client.query("SELECT monthly_budget_gbp FROM budget_settings WHERE cost_type='inference' FOR UPDATE");
+    const result = await client.query(`UPDATE cost_ledger SET cost_gbp=$2,cost_basis='estimated',status='settled'
+      WHERE id=$1 AND cost_type='inference' AND provider='gemini' AND status='reserved' RETURNING id`, [reservationId,estimatedGbp]);
+    if (result.rowCount !== 1) throw new Error("Inference cost reservation could not be settled.");
+    await client.query("COMMIT");
+  } catch (error) { await client.query("ROLLBACK"); throw error; }
+  finally { client.release(); }
 }

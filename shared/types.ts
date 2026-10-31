@@ -24,7 +24,9 @@ export type Page =
   | "audiences"
   | "creators"
   | "reports"
-  | "sources";
+  | "sources"
+  | "settings"
+  | "labelling";
 export interface Brand {
   id: string;
   name: string;

@@ -1,0 +1,41 @@
+.labelling-tool { display: grid; gap: 20px; color: #243146; }
+.labelling-header { display: flex; align-items: flex-start; justify-content: space-between; gap: 24px; }
+.labelling-header h2 { margin: 3px 0 9px; font-size: 26px; letter-spacing: -.6px; }
+.labelling-header p { max-width: 650px; margin: 0; line-height: 1.6; color: #627086; }
+.labelling-header .labelling-eyebrow { color: #a77642; text-transform: uppercase; font-weight: 700; font-size: 11px; letter-spacing: 1.8px; }
+.labelling-exports { display: flex; gap: 10px; flex-shrink: 0; }
+.labelling-tool a { color: #395e88; text-underline-offset: 3px; }
+.labelling-exports a { border: 1px solid #d6dde5; padding: 9px 12px; border-radius: 7px; text-decoration: none; font-size: 12px; background: #fff; }
+.labelling-draft, .labelling-caution { background: #fff8eb; color: #775522; padding: 12px 15px; border: 1px solid #ecd9b3; border-radius: 8px; font-size: 12px; line-height: 1.6; }
+.labelling-draft strong { display: block; }
+.labelling-error { border: 1px solid #e9c1c1; color: #9b3030; background: #fff4f4; padding: 12px 15px; border-radius: 8px; }
+.labelling-message { border: 1px solid #cbded5; color: #2b654a; background: #f2faf6; padding: 12px 15px; border-radius: 8px; }
+.labelling-toolbar { display: grid; grid-template-columns: minmax(130px, 1fr) minmax(200px, 2fr); gap: 14px; align-items: end; }
+.labelling-tool label { display: grid; gap: 7px; color: #465469; font-size: 12px; font-weight: 600; }
+.labelling-tool input, .labelling-tool select, .labelling-tool textarea { box-sizing: border-box; width: 100%; min-height: 39px; padding: 9px 10px; border: 1px solid #ced7e1; border-radius: 6px; background: #fff; color: #243146; font: inherit; font-weight: 400; }
+.labelling-tool input:focus-visible, .labelling-tool select:focus-visible, .labelling-tool textarea:focus-visible, .labelling-tool button:focus-visible, .labelling-tool a:focus-visible { outline: 3px solid #b2cae3; outline-offset: 2px; }
+.labelling-tool button { border: 1px solid #d1d9e2; border-radius: 6px; background: #fff; padding: 9px 12px; font: inherit; font-size: 12px; color: #34475f; cursor: pointer; }
+.labelling-tool button:disabled { opacity: .55; cursor: default; }
+.labelling-tool button.labelling-primary { border-color: #293e57; background: #293e57; color: #fff; }
+.labelling-pagination { grid-column: 1 / -1; display: flex; gap: 12px; align-items: center; color: #6c7786; font-size: 11px; }
+.labelling-layout { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.15fr); gap: 22px; align-items: start; }
+.labelling-source, .labelling-review { min-width: 0; border: 1px solid #dce2e8; border-radius: 10px; padding: 21px; background: #fff; }
+.labelling-source-heading { display: flex; justify-content: space-between; gap: 12px; margin-bottom: 16px; font-size: 13px; }
+.labelling-source-heading span { color: #788493; }
+.labelling-source video, .labelling-source img { display: block; width: 100%; max-height: 490px; object-fit: contain; background: #151d29; border-radius: 5px; }
+.labelling-tool h3 { font-size: 14px; margin: 0 0 10px; }
+.labelling-source h3 { margin-top: 20px; }
+.labelling-tool h4 { margin: 0 0 8px; font-size: 13px; }
+.labelling-review p, .labelling-source p { font-size: 12px; line-height: 1.7; color: #657184; }
+.labelling-copy { white-space: pre-wrap; overflow-wrap: anywhere; }
+.labelling-source a { font-size: 12px; }
+.labelling-hash { overflow-wrap: anywhere; font-size: 10px !important; }
+.labelling-hash code { font-size: 10px; }
+.labelling-fields { display: grid; grid-template-columns: 1fr 1fr; gap: 13px; margin: 20px 0; }
+.labelling-fields label:first-child { grid-column: 1 / -1; }
+.labelling-actions { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 16px; }
+.labelling-store { border-top: 1px solid #e5e9ef; margin: 20px 0; padding-top: 18px; display: grid; gap: 10px; }
+.labelling-store p { margin: 0; }
+.labelling-empty { color: #687487; font-size: 13px; padding: 30px; border: 1px dashed #cdd6df; border-radius: 8px; }
+@media (max-width: 1000px) { .labelling-layout { grid-template-columns: 1fr; } }
+@media (max-width: 650px) { .labelling-header { flex-direction: column; gap: 12px; } .labelling-toolbar, .labelling-fields { grid-template-columns: 1fr; } .labelling-source, .labelling-review { padding: 15px; } .labelling-pagination { flex-wrap: wrap; } }

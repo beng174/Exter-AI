@@ -5,7 +5,32 @@ import { infrastructureDatabase } from "./database.js";
 import { budgetStatus } from "./budget.js";
 import { metaStatus } from "../connectors/meta-library.js";
 import { enqueueCollection } from "./jobs.js";
+type BudgetPool = ReturnType<typeof infrastructureDatabase>;
+
+export function attachBudgetRoutes(app: Express, getPool: () => BudgetPool = infrastructureDatabase) {
+  app.get("/api/budgets", async (_req,res) => {
+    try {
+      const budgets = await budgetStatus(getPool());
+      res.json({ currency: "GBP", month: new Date().toISOString().slice(0,7), timezone: "UTC", pause_threshold: 0.9, budgets });
+    } catch { res.status(503).json({ error: "Budget database unavailable. Check the database configuration and migrations in Render." }); }
+  });
+  app.put("/api/budgets/:type", async (req,res) => {
+    const amount = req.body?.monthly_budget_gbp;
+    const pence = typeof amount === "number" ? amount * 100 : NaN;
+    if (!["inference","data_providers"].includes(String(req.params.type)) || typeof amount !== "number" || !Number.isFinite(amount) || amount < 0 || !Number.isSafeInteger(Math.round(pence)) || Math.abs(pence - Math.round(pence)) > 0.000001) {
+      res.status(400).json({ error: "Provide a valid cost type and a non-negative monthly GBP budget with at most two decimal places." }); return;
+    }
+    try {
+      const pool = getPool();
+      await pool.query(`INSERT INTO budget_settings(cost_type,monthly_budget_gbp) VALUES($1,$2)
+        ON CONFLICT(cost_type) DO UPDATE SET monthly_budget_gbp=excluded.monthly_budget_gbp`, [req.params.type,amount]);
+      res.json({ saved: true, budget: (await budgetStatus(pool)).find(row => row.cost_type === req.params.type) });
+    } catch { res.status(503).json({ error: "Budget database unavailable. The updated budget could not be confirmed." }); }
+  });
+}
+
 export function attachInfrastructure(app: Express, db: DatabaseSync) {
+  attachBudgetRoutes(app);
   app.get("/api/infrastructure/status", async (_req,res) => {
     const meta = metaStatus();
     if (!process.env.DATABASE_URL) { res.json({ meta, database: "not_configured", budgets: [], message: "Durable collection and paid inference paused: DATABASE_URL is not configured." }); return; }
@@ -14,11 +39,6 @@ export function attachInfrastructure(app: Express, db: DatabaseSync) {
       const [budgets,runs] = await Promise.all([budgetStatus(pool),pool.query("SELECT id,watchlist_id,status,records_new,records_updated,started_at,finished_at,last_successful_check,errors FROM collection_runs ORDER BY started_at DESC LIMIT 20")]);
       res.json({ meta, database: "connected", budgets, runs: runs.rows });
     } catch { res.json({ meta, database: "unavailable", message: "Collection database unavailable. Check DATABASE_URL and run migrations." }); }
-  });
-  app.put("/api/budgets/:type", async (req,res) => {
-    if (!["inference","data_providers"].includes(String(req.params.type)) || typeof req.body?.monthly_budget_gbp !== "number" || !Number.isFinite(req.body.monthly_budget_gbp) || req.body.monthly_budget_gbp < 0) { res.status(400).json({ error: "Provide a valid cost type and non-negative monthly_budget_gbp." }); return; }
-    try { await infrastructureDatabase().query("UPDATE budget_settings SET monthly_budget_gbp=$2 WHERE cost_type=$1", [req.params.type,req.body.monthly_budget_gbp]); res.json({ saved: true }); }
-    catch { res.status(503).json({ error: "Budget database unavailable." }); }
   });
   app.get("/api/public/meta/watchlists", async (req,res) => {
     if (typeof req.query.workspaceId !== "string" || !readBrand(db,req.query.workspaceId)) { res.status(400).json({ error: "Choose an existing workspace." }); return; }

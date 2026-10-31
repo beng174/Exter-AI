@@ -1,5 +1,8 @@
 import { MetaCollectionPanel } from "./components/MetaCollectionPanel";
 import { InfrastructureStatus } from "./components/InfrastructureStatus";
+import { BudgetSettings } from "./components/BudgetSettings";
+import { GeminiSmokeTest } from "./components/GeminiSmokeTest";
+import { LabellingTool } from "./components/LabellingTool";
 import { useEffect, useRef, useState } from "react";
 import {
   Activity,
@@ -14,6 +17,7 @@ import {
   ChevronDown,
   ChevronRight,
   CircleHelp,
+  ClipboardCheck,
   Command,
   Compass,
   FileChartColumnIncreasing,
@@ -64,8 +68,17 @@ const navigation: { id: Page; label: string; icon: typeof Compass }[] = [
   { id: "audiences", label: "Audience & voice", icon: Target },
   { id: "creators", label: "Creator discovery", icon: UsersRound },
   { id: "reports", label: "Reports", icon: FileChartColumnIncreasing },
+  { id: "labelling", label: "Labelling", icon: ClipboardCheck },
 ];
 const headings: Record<Page, { title: string; subtitle: string }> = {
+  settings: {
+    title: "Budgets and live tests",
+    subtitle: "Set monthly GBP caps and run the hosted Gemini validation.",
+  },
+  labelling: {
+    title: "Review the creative. Record your labels.",
+    subtitle: "Human review of source ads, with model predictions hidden.",
+  },
   brand: {
     title: "Start with the brand. Follow the evidence.",
     subtitle:
@@ -747,6 +760,13 @@ export default function App() {
             </button>
           </div>
           <button
+            className={`nav-item ${page === "settings" ? "active" : ""}`}
+            onClick={() => navigate("settings")}
+          >
+            <Settings2 size={18} />
+            <span>Budgets & tests</span>
+          </button>
+          <button
             className={`nav-item ${page === "sources" ? "active" : ""}`}
             onClick={() => navigate("sources")}
           >
@@ -768,7 +788,7 @@ export default function App() {
             <button
               className="icon-button"
               aria-label="Workspace settings"
-              onClick={() => setBrandOpen(true)}
+              onClick={() => navigate("settings")}
             >
               <Settings2 size={16} />
             </button>
@@ -793,6 +813,8 @@ export default function App() {
             <strong>
               {page === "sources"
                 ? "Data sources"
+                : page === "settings"
+                  ? "Budgets & tests"
                 : navigation.find((n) => n.id === page)?.label}
             </strong>
           </div>
@@ -838,7 +860,7 @@ export default function App() {
         </header>
         <main>
           <InfrastructureStatus />
-          <MetaCollectionPanel key={brandId} workspaceId={brandId} />
+          {page !== "settings" && page !== "labelling" && <MetaCollectionPanel key={brandId} workspaceId={brandId} />}
           <div className="page-title-row">
             <div>
               <div className="page-eyebrow">
@@ -850,7 +872,7 @@ export default function App() {
               <h1>{title.title}</h1>
               <p>{title.subtitle}</p>
             </div>
-            <div className="title-actions">
+            {page !== "settings" && page !== "labelling" && <div className="title-actions">
               <button
                 className="button secondary export-button"
                 title="Generate a report covering the last 30 days across all platforms"
@@ -872,9 +894,9 @@ export default function App() {
                 <Sparkles size={15} />
                 Ask Exter
               </button>
-            </div>
+            </div>}
           </div>
-          <div className="context-toolbar">
+          {page !== "settings" && <div className="context-toolbar">
             <div className="brand-context">
               <span className="tiny-brand" style={{ background: brand?.color }}>
                 {brand?.initials || "R"}
@@ -894,7 +916,7 @@ export default function App() {
                 <ChevronDown size={14} />
               </button>
             </div>
-            {page !== "brand" && (
+            {page !== "brand" && page !== "labelling" && (
               <div className="filter-group">
                 <label className="platform-select">
                   <Globe2 size={14} />
@@ -936,8 +958,8 @@ export default function App() {
                 </button>
               </div>
             )}
-          </div>
-          <div className="data-status">
+          </div>}
+          {page !== "settings" && page !== "labelling" && <div className="data-status">
             <span>
               <i className={brand?.mode === "imported" ? "green" : ""} />
               {page === "brand"
@@ -960,7 +982,7 @@ export default function App() {
                 : "Connect your data"}
               <ArrowRight size={13} />
             </button>
-          </div>
+          </div>}
           {error && (
             <div className="error-banner" role="alert">
               {error}
@@ -969,7 +991,11 @@ export default function App() {
               </button>
             </div>
           )}
-          {loading && !dashboard ? (
+          {page === "settings" ? (
+            <div className="page-content"><BudgetSettings /><GeminiSmokeTest /></div>
+          ) : page === "labelling" ? (
+            <div key={brandId} className="page-content"><LabellingTool brandId={brandId} /></div>
+          ) : loading && !dashboard ? (
             <div className="loading-state main-loading">
               <LoaderCircle className="spin" size={23} />
               <h3>Bringing your landscape into focus…</h3>

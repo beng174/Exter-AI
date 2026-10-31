@@ -1,0 +1,44 @@
+.budget-settings { color: #526c47; max-width: 1120px; }
+.budget-heading { display: flex; justify-content: space-between; gap: 24px; align-items: center; margin-bottom: 24px; }
+.budget-eyebrow { display: flex; align-items: center; gap: 7px; font-size: 10px; letter-spacing: 1.4px; color: #80936c; }
+.budget-heading h2 { margin: 12px 0 8px; font-size: 25px; font-weight: 500; }
+.budget-heading p { margin: 0; font-size: 12px; line-height: 1.7; color: #7b8e6e; }
+.budget-refresh, .budget-input-row button { display: inline-flex; align-items: center; justify-content: center; gap: 7px; border: 1px solid #d3dfc4; border-radius: 6px; color: #526d43; background: #f6f8ef; font: inherit; font-size: 12px; padding: 11px 14px; cursor: pointer; }
+.budget-settings button:hover { background: #eaf0df; }
+.budget-settings button:disabled, .budget-settings input:disabled { opacity: .6; cursor: wait; }
+.budget-settings button:focus-visible, .budget-settings input:focus-visible { outline: 2px solid #6e8c51; outline-offset: 3px; }
+.budget-policy { padding: 18px 20px; border: 1px solid #e0e7d5; background: #f1f5e8; border-radius: 8px; margin-bottom: 24px; }
+.budget-policy strong { font-size: 13px; font-weight: 550; }
+.budget-policy p { font-size: 12px; color: #7b8d6c; line-height: 1.8; margin: 8px 0 0; max-width: 900px; }
+.budget-grid { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: 20px; }
+.budget-card { border: 1px solid #dee6d2; border-radius: 10px; background: #fafbf6; padding: 24px; min-width: 0; }
+.budget-card-heading { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.budget-card h3 { margin: 0; font-size: 19px; font-weight: 500; }
+.budget-state { font-size: 10px; border-radius: 20px; padding: 6px 10px; white-space: nowrap; }
+.budget-state.is-active { background: #e4edd8; color: #4f6f39; }
+.budget-state.is-paused { background: #f3e8ce; color: #806329; }
+.budget-description { font-size: 12px; color: #7b8d6d; line-height: 1.8; margin: 12px 0 25px; }
+.budget-usage { display: flex; flex-direction: column; gap: 6px; }
+.budget-usage strong { font-weight: 500; font-size: 27px; overflow-wrap: anywhere; }
+.budget-usage span { font-size: 11px; color: #839273; }
+.budget-meter { position: relative; margin: 17px 0 10px; height: 9px; }
+.budget-meter progress { display: block; width: 100%; height: 9px; appearance: none; border: 0; border-radius: 5px; overflow: hidden; background: #e8eddf; }
+.budget-meter progress::-webkit-progress-bar { background: #e8eddf; }
+.budget-meter progress::-webkit-progress-value { background: #93aa73; }
+.budget-meter progress::-moz-progress-bar { background: #93aa73; }
+.budget-meter > span { position: absolute; left: 90%; top: -3px; width: 1px; height: 15px; background: #8c845a; }
+.budget-threshold { font-size: 10px; line-height: 1.9; color: #7f8e70; margin: 7px 0; }
+.budget-pause-note { font-size: 12px; line-height: 1.8; background: #eff3e7; border-radius: 6px; padding: 13px; margin: 18px 0 24px; }
+.budget-pause-note.is-paused { color: #806329; background: #f8f1df; }
+.budget-card form { margin-top: 16px; }
+.budget-card label { display: block; font-size: 12px; margin-bottom: 10px; }
+.budget-input-row { display: flex; align-items: center; gap: 8px; }
+.budget-input-row > span { color: #869775; font-size: 15px; }
+.budget-input-row input { min-width: 0; width: 100%; background: #fff; border: 1px solid #d6dfcb; border-radius: 5px; padding: 11px; font: inherit; color: #526c47; font-size: 13px; }
+.budget-input-row button { flex-shrink: 0; background: #e9efdf; }
+.budget-error, .budget-success, .budget-unavailable { padding: 13px 16px; border-radius: 6px; font-size: 12px; line-height: 1.8; }
+.budget-error { color: #8a4838; background: #faece5; }
+.budget-success { color: #526e40; background: #e9f0df; }
+.budget-unavailable { background: #f1f4ea; }
+@media (max-width: 850px) { .budget-grid { grid-template-columns: minmax(0,1fr); } }
+@media (max-width: 540px) { .budget-heading { align-items: flex-start; flex-direction: column; gap: 16px; } .budget-card { padding: 18px; } .budget-input-row { flex-wrap: wrap; } .budget-input-row input { flex: 1; } .budget-input-row button { width: 100%; margin-top: 4px; } }

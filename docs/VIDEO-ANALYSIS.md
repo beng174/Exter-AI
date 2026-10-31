@@ -10,6 +10,10 @@ Install Node.js 24+, project dependencies and `ffprobe` (part of FFmpeg). Set `G
 
 - `GEMINI_API_KEY`: server-side Gemini API credential.
 - `GEMINI_VIDEO_MODEL`: Gemini Flash model ID; default `gemini-3.8-flash`.
+- `GEMINI_VIDEO_CONCURRENCY`: parallel video jobs per web process; default `3`, allowed range `1–10`.
+- `GEMINI_MAX_RETRIES`: extra attempts after 429 or 5xx responses; default `2`, allowed range `0–5`.
+- `GEMINI_INPUT_GBP_PER_MILLION_TOKENS`, `GEMINI_OUTPUT_GBP_PER_MILLION_TOKENS`: positive GBP prices for the selected model. Set current paid-tier prices converted to GBP; no provider price is guessed.
+- `GEMINI_REQUEST_RESERVE_GBP`: conservative charge reserved in the inference ledger before each generation HTTP attempt. Production inference also requires `DATABASE_URL` and an enabled monthly inference budget.
 - `EXTER_VIDEO_CONFIDENCE`: confidence threshold; default `0.75`.
 - `EXTER_MEDIA_ROOT`: persistent video directory; default `.data/media`.
 - `EXTER_MEDIA_ALLOWED_HOSTS`: comma-separated public media-host allowlist; default `*.fbcdn.net`. Add an actual source host when integrating another platform.
@@ -31,7 +35,7 @@ Put the media root and database on persistent volumes and back them up together.
 
 The primary native-video input uses Interactions API `processing: "agentic"`. One inference request per ad attempt returns a structured JSON object. Files API upload, ACTIVE-state polling, model metadata and remote-file deletion are transport calls in addition to the inference request. Cleanup attempts to delete Gemini's remote file when the attempt ends; Exter keeps its own local copy. A cleanup failure does not turn a completed analysis into a fabricated failure or guarantee that the remote file was removed.
 
-Only a provider response explicitly rejecting agentic capability triggers the static fallback. In that attempt the same stored file is supplied as native video clips: 5 FPS for seconds 0–5 (or the duration if shorter), followed by 1 FPS over the remainder, within the same inference request. Timestamps always refer to the original video. This can require two inference attempts total; both processing modes and outcomes are recorded. Authentication, rate limits, network failures and invalid JSON are reported without silently switching modes.
+Only a provider response explicitly rejecting agentic capability triggers the static fallback. Ads of 60 seconds or less use 3 FPS over the entire stored video. Longer videos use native clips at 5 FPS for seconds 0–5, followed by 1 FPS over the remainder, within the same inference request. Timestamps always refer to the original video, and the saved coverage lists the actual clips and frame rates. The mode identifier remains `static-high-fps-hook` for compatibility. Both processing modes and outcomes are recorded. Authentication, rate limits, network failures and invalid JSON never silently switch modes; 429 and 5xx responses receive bounded exponential retries in the selected mode, with an inference budget reservation before every generation attempt.
 
 The returned fields are:
 
@@ -49,7 +53,9 @@ A casual visual style, first-person voice or person talking to camera does not e
 
 Each saved analysis identifies its ad/workspace, retained media ID and SHA-256, provider, requested model, provider-reported model, provider-reported model version, processing mode, prompt version, creation time, confidence threshold and covered intervals. Unknown provider versions remain `null`; an unpinned model alias is not represented as an immutable model revision. Retain original predictions when changing models or prompts so comparisons use the same media.
 
-Job records and completed analyses persist in SQLite; successful runs are append-only. A single worker serializes requests. On server startup, unfinished jobs are marked `interrupted` rather than silently replaying a possibly billable remote call. Submit a new explicit request to retry; retained media and prior runs remain available. Matching saved results are reused unless forced. Durable native-video job records do not imply that a general scheduled collection worker, distributed queue or hosted production service is complete.
+The analysis and each job attempt also retain `accounting`: sanitised raw provider response, input/output/total tokens, model prices, token-based GBP estimate, conservative reserves for unknown retry charges, combined estimated cost and generation-attempt count. Missing token counts remain `null`. Failed field validation preserves the raw response and accounting in the job. Known token estimates settle their generation reservation; unknown/failed attempts keep their conservative ledger reserve. These are estimates, not a Google billing invoice. If ledger settlement is unavailable, the larger existing reserve remains until reconciled.
+
+Job records and completed analyses persist in SQLite; successful runs are append-only. One web process runs up to the configured number of jobs concurrently. On server startup, unfinished jobs are marked `interrupted` rather than silently replaying a possibly billable remote call. Submit a new explicit request to retry; retained media and prior runs remain available. Matching saved results are reused unless forced. Durable native-video job records do not imply a distributed native-video queue.
 
 ## Run the CLI
 
@@ -105,7 +111,7 @@ The API uses Exter's stored ad ID, with workspace IDs required for scoped record
 | `GET /api/video/export?brandId=...&adId=...&analysisId=...` | Download a chosen run as `{ "predictions": [...] }`; without `analysisId`, exports only the latest run. Full history remains in `/analyses`. |
 | `GET /api/video/media/:id?brandId=...&adId=...` | Stream retained video after matching its stored media, workspace and ad references. |
 
-These routes inherit the application's trusted-local deployment boundary; scoped identifiers do not add user authentication. Retain the same media when comparing providers or prompt versions.
+These routes inherit the application's authentication middleware. Scoped identifiers restrict records to their saved workspace and ad; they do not establish multi-tenant permissions. Retain the same media when comparing providers or prompt versions.
 
 ## Evaluate real ads
 

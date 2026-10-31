@@ -4,8 +4,13 @@ import { once } from "node:events";
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import pg from "pg";
+import express from "express";
+import { createServer } from "node:http";
+import type { AddressInfo } from "node:net";
+import { basicAuth } from "../server/auth.js";
 import { migrate } from "../server/infrastructure/database.js";
-import { budgetStatus, reserveCost } from "../server/infrastructure/budget.js";
+import { attachBudgetRoutes } from "../server/infrastructure/api.js";
+import { budgetStatus, reserveCost, settleGeminiCost } from "../server/infrastructure/budget.js";
 import { enqueueCollection, claimJob, workOnce, schedule } from "../server/infrastructure/jobs.js";
 import { collectMetaPage, MetaLibraryConnector } from "../server/connectors/meta-library.js";
 
@@ -21,6 +26,25 @@ test("Postgres budgets, idempotent scheduling, append-only observations and cras
     const charges = await Promise.allSettled([reserveCost(pool,"inference","fixture",5),reserveCost(pool,"inference","fixture",5)]);
     assert.equal(charges.filter(r => r.status === "fulfilled").length,1,"parallel calls cannot overspend reservation cap");
     assert.equal((await budgetStatus(pool)).find(r => r.cost_type === "inference").used_gbp,5);
+    const unknownAttempt = await reserveCost(pool,"inference","gemini",1);
+    const pending = (await pool.query("SELECT cost_gbp::float8,cost_basis,status FROM cost_ledger WHERE id=$1",[unknownAttempt])).rows[0];
+    assert.deepEqual(pending,{ cost_gbp: 1,cost_basis: "estimated",status: "reserved" },"a failed or unknown provider attempt retains its full reserve");
+    assert.equal((await budgetStatus(pool)).find(r => r.cost_type === "inference").used_gbp,6,"unknown attempts count against the cap");
+    await settleGeminiCost(unknownAttempt,0.25,pool);
+    assert.deepEqual((await pool.query("SELECT cost_gbp::float8,cost_basis,status FROM cost_ledger WHERE id=$1",[unknownAttempt])).rows[0],{ cost_gbp: 0.25,cost_basis: "estimated",status: "settled" });
+    assert.equal((await budgetStatus(pool)).find(r => r.cost_type === "inference").used_gbp,5.25);
+    const repeated = await Promise.allSettled([settleGeminiCost(unknownAttempt,0.1,pool),settleGeminiCost(unknownAttempt,0.2,pool)]);
+    assert.equal(repeated.filter(result => result.status === "rejected").length,2,"a reservation can be settled only once, including concurrent repeats");
+    assert.equal((await budgetStatus(pool)).find(r => r.cost_type === "inference").used_gbp,5.25);
+    const largerAttempt = await reserveCost(pool,"inference","gemini",0.5);
+    await settleGeminiCost(largerAttempt,0.75,pool);
+    assert.equal((await pool.query("SELECT cost_gbp::float8 FROM cost_ledger WHERE id=$1",[largerAttempt])).rows[0].cost_gbp,0.75,"an estimate above its reservation records the full larger charge");
+    assert.equal((await budgetStatus(pool)).find(r => r.cost_type === "inference").used_gbp,6);
+    const failedAttempt = await reserveCost(pool,"inference","gemini",0.2);
+    await assert.rejects(settleGeminiCost(failedAttempt,NaN,pool),/Invalid inference cost/);
+    assert.deepEqual((await pool.query("SELECT cost_gbp::float8,status FROM cost_ledger WHERE id=$1",[failedAttempt])).rows[0],{ cost_gbp: 0.2,status: "reserved" },"a failed attempt with unknown usage cannot release its reserved charge");
+    assert.equal((await budgetStatus(pool)).find(r => r.cost_type === "inference").used_gbp,6.2);
+    await assert.rejects(reserveCost(pool,"inference","gemini",3.01),/Jobs paused/,"the next reservation accounts for settled and unknown charges");
     await pool.query("UPDATE budget_settings SET monthly_budget_gbp=0 WHERE cost_type='inference'");
     await assert.rejects(reserveCost(pool,"inference","fixture",0),/Jobs paused/);
     await pool.query("INSERT INTO watchlists(id,workspace_id,page_ids) VALUES('watch-test','workspace-test','[\"12\"]')");
@@ -85,4 +109,52 @@ test("Postgres budgets, idempotent scheduling, append-only observations and cras
       assert.equal((await pool.query("SELECT count(*)::int AS n FROM ad_observations WHERE run_id=$1",[killRun])).rows[0].n,2);
     } finally { if (child.exitCode === null && child.signalCode === null) child.kill("SIGKILL"); }
   } finally { await pool.end(); }
+});
+
+test("authenticated budget settings persist in PostgreSQL and immediately govern reservations", async () => {
+  const connectionString = process.env.TEST_DATABASE_URL;
+  assert.ok(connectionString,"TEST_DATABASE_URL must point to a dedicated disposable test database.");
+  const pool = new pg.Pool({ connectionString });
+  const oldReserve = process.env.GEMINI_REQUEST_RESERVE_GBP;
+  let server: ReturnType<typeof createServer> | undefined;
+  try {
+    await migrate(pool);
+    await pool.query("TRUNCATE cost_ledger");
+    await pool.query("UPDATE budget_settings SET monthly_budget_gbp=10");
+    process.env.GEMINI_REQUEST_RESERVE_GBP = "0.1";
+    const app = express();
+    app.use(basicAuth({ EXTER_ADMIN_USER: "budget-integration", EXTER_ADMIN_PASSWORD: "test-only-password" }));
+    app.use(express.json());
+    attachBudgetRoutes(app,() => pool);
+    server = createServer(app);
+    await new Promise<void>(resolve => server!.listen(0,"127.0.0.1",resolve));
+    const base = `http://127.0.0.1:${(server.address() as AddressInfo).port}`;
+    const headers = { authorization: `Basic ${Buffer.from("budget-integration:test-only-password").toString("base64")}`,"Content-Type": "application/json" };
+    const update = (type: string,amount: number,authenticated = true) => fetch(`${base}/api/budgets/${type}`,{ method: "PUT",headers: authenticated ? headers : { "Content-Type": "application/json" },body: JSON.stringify({ monthly_budget_gbp: amount }) });
+    assert.equal((await fetch(`${base}/api/budgets`)).status,401);
+    assert.equal((await update("inference",999,false)).status,401);
+    assert.equal((await pool.query("SELECT monthly_budget_gbp::float8 AS budget FROM budget_settings WHERE cost_type='inference'")).rows[0].budget,10);
+    assert.equal((await update("inference",2.35)).status,200);
+    assert.equal((await update("data_providers",21.43)).status,200);
+    const saved = await (await fetch(`${base}/api/budgets`,{ headers })).json();
+    assert.equal(saved.budgets.find((row: { cost_type: string }) => row.cost_type === "inference").monthly_budget_gbp,2.35);
+    assert.equal(saved.budgets.find((row: { cost_type: string }) => row.cost_type === "data_providers").monthly_budget_gbp,21.43);
+    const reserved = await reserveCost(pool,"inference","gemini",2.1);
+    await assert.rejects(reserveCost(pool,"inference","gemini",0.02),/Jobs paused/);
+    const paused = await (await fetch(`${base}/api/budgets`,{ headers })).json();
+    assert.equal(paused.budgets.find((row: { cost_type: string }) => row.cost_type === "inference").pause_reason,"next_request_would_exceed");
+    assert.equal((await update("inference",0.001)).status,400);
+    assert.equal((await pool.query("SELECT monthly_budget_gbp::float8 AS budget FROM budget_settings WHERE cost_type='inference'")).rows[0].budget,2.35,"invalid settings do not change the stored cap");
+    assert.equal((await update("inference",0)).status,200);
+    await assert.rejects(reserveCost(pool,"inference","gemini",0.01),/Jobs paused/);
+    const disabled = await (await fetch(`${base}/api/budgets`,{ headers })).json();
+    const inference = disabled.budgets.find((row: { cost_type: string }) => row.cost_type === "inference");
+    assert.equal(inference.pause_reason,"budget_unset");
+    assert.equal(inference.used_gbp,2.1,"lowering the cap does not erase spend or outstanding reservations");
+    assert.equal((await pool.query("SELECT status FROM cost_ledger WHERE id=$1",[reserved])).rows[0].status,"reserved");
+  } finally {
+    if (server?.listening) await new Promise<void>(resolve => server!.close(() => resolve()));
+    if (oldReserve === undefined) delete process.env.GEMINI_REQUEST_RESERVE_GBP; else process.env.GEMINI_REQUEST_RESERVE_GBP = oldReserve;
+    await pool.end();
+  }
 });

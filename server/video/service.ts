@@ -34,6 +34,7 @@ export interface VideoServiceOptions {
   mediaStore?: VideoMediaStore;
   analyserFactory?: (provider: "gemini" | "twelvelabs") => VideoAnalyser;
   confidenceThreshold?: number;
+  concurrency?: number;
 }
 export function ensureVideoTables(db: DatabaseSync) {
   db.exec(`CREATE TABLE IF NOT EXISTS video_media (id TEXT PRIMARY KEY,brand_id TEXT NOT NULL REFERENCES brands(id),ad_id TEXT NOT NULL REFERENCES ads(id),data TEXT NOT NULL);
@@ -52,7 +53,8 @@ export class VideoAnalysisService {
   readonly mediaStore: VideoMediaStore;
   private readonly factory: NonNullable<VideoServiceOptions["analyserFactory"]>;
   private readonly threshold: number;
-  private queue: Promise<void> = Promise.resolve();
+  private readonly queues: Promise<void>[];
+  private nextQueue = 0;
   constructor(readonly db: DatabaseSync, options: VideoServiceOptions = {}) {
     ensureVideoTables(db);
     this.mediaStore = options.mediaStore || new LocalVideoMediaStore();
@@ -60,6 +62,10 @@ export class VideoAnalysisService {
     this.threshold = options.confidenceThreshold ?? Number(process.env.EXTER_VIDEO_CONFIDENCE ?? DEFAULT_VIDEO_CONFIDENCE);
     if (!Number.isFinite(this.threshold) || this.threshold < 0 || this.threshold > 1)
       throw new VideoProviderError("configuration", "EXTER_VIDEO_CONFIDENCE must be between zero and one.");
+    const concurrency = options.concurrency ?? Number(process.env.GEMINI_VIDEO_CONCURRENCY ?? process.env.GEMINI_CONCURRENCY ?? 3);
+    if (!Number.isInteger(concurrency) || concurrency < 1 || concurrency > 10)
+      throw new VideoProviderError("configuration", "GEMINI_VIDEO_CONCURRENCY must be an integer between one and ten.");
+    this.queues = Array.from({ length: concurrency }, () => Promise.resolve());
   }
   ad(brandId: string, adId: string): Ad {
     const brand = readBrand(this.db, brandId);
@@ -107,10 +113,11 @@ export class VideoAnalysisService {
     const job: VideoJob = { id: randomUUID(), brandId: input.brandId, adId: input.adId, provider, model: analyser.model, status: "queued", createdAt: now, updatedAt: now, requestedMode: mode, promptVersion: VIDEO_PROMPT_VERSION, attempts: [] };
     this.saveJob(job);
     // Signed source URLs remain in memory only. Persistent local media is the durable input.
-    this.queue = this.queue.then(() => this.execute(job, input, analyser)).catch(() => {});
+    const lane = this.nextQueue++ % this.queues.length;
+    this.queues[lane] = this.queues[lane].then(() => this.execute(job, input, analyser)).catch(() => {});
     return structuredClone(job);
   }
-  async idle() { await this.queue; }
+  async idle() { await Promise.all(this.queues); }
   async storeMedia(brandId: string, adId: string, sourceVideoUrl?: string): Promise<StoredVideo> {
     const ad = this.ad(brandId, adId);
     const media = await this.mediaStore.store({ adId, brandId, sourceUrl: sourceVideoUrl });
@@ -144,9 +151,9 @@ export class VideoAnalysisService {
       const call = async (processingMode: VideoProcessingMode) => {
         try {
           const value = await analyser.analyse({ adId: ad.id, brandId: ad.brandId, media, context, processingMode });
-          job.attempts.push({ processingMode, status: "succeeded" }); this.saveJob(job); return value;
+          job.attempts.push({ processingMode, status: "succeeded", ...(value.accounting ? { accounting: value.accounting } : {}) }); this.saveJob(job); return value;
         } catch (error) {
-          job.attempts.push({ processingMode, status: "failed", errorCode: error instanceof VideoProviderError ? error.code : "unavailable" }); this.saveJob(job); throw error;
+          job.attempts.push({ processingMode, status: "failed", errorCode: error instanceof VideoProviderError ? error.code : "unavailable", ...(error instanceof VideoProviderError && error.accounting ? { accounting: error.accounting } : {}) }); this.saveJob(job); throw error;
         }
       };
       let result;
@@ -158,7 +165,7 @@ export class VideoAnalysisService {
       if (Math.abs(result.coverage.durationSeconds - media.durationSeconds) > 0.05 || !result.model || result.promptVersion !== VIDEO_PROMPT_VERSION || result.processingMode !== job.attempts.at(-1)?.processingMode || (result.modelVersion !== null && (typeof result.modelVersion !== "string" || !result.modelVersion.trim())))
         throw new VideoProviderError("invalid_output", "Provider provenance or source duration does not match the stored video.");
       const fields = normalizeVideoAnalysisFields(result.fields, { coverage: result.coverage, threshold: this.threshold, trustedEvidence: evidence, brandName: ad.brand });
-      const analysis: VideoAnalysisResult = { id: randomUUID(), adId: ad.id, brandId: ad.brandId, mediaId: media.mediaId, mediaSha256: media.sha256, inputContextSha256, provider: analyser.provider, model: result.model, requestedModel: analyser.model, modelVersion: result.modelVersion, processingMode: result.processingMode, promptVersion: result.promptVersion, createdAt: new Date().toISOString(), confidenceThreshold: this.threshold, coverage: result.coverage, fields, ...(result.providerRequestId ? { providerRequestId: result.providerRequestId } : {}) };
+      const analysis: VideoAnalysisResult = { id: randomUUID(), adId: ad.id, brandId: ad.brandId, mediaId: media.mediaId, mediaSha256: media.sha256, inputContextSha256, provider: analyser.provider, model: result.model, requestedModel: analyser.model, modelVersion: result.modelVersion, processingMode: result.processingMode, promptVersion: result.promptVersion, createdAt: new Date().toISOString(), confidenceThreshold: this.threshold, coverage: result.coverage, fields, ...(result.providerRequestId ? { providerRequestId: result.providerRequestId } : {}), ...(result.accounting ? { accounting: result.accounting } : {}) };
       this.db.exec("BEGIN");
       try {
         this.db.prepare("INSERT INTO video_analysis_runs VALUES (?,?,?,?,?)").run(analysis.id, ad.brandId, ad.id, analysis.createdAt, JSON.stringify(analysis));

@@ -24,6 +24,16 @@ services:
         sync: false
       - key: GEMINI_REQUEST_RESERVE_GBP
         sync: false
+      - key: GEMINI_INPUT_GBP_PER_MILLION_TOKENS
+        sync: false
+      - key: GEMINI_OUTPUT_GBP_PER_MILLION_TOKENS
+        sync: false
+      - key: GEMINI_VIDEO_CONCURRENCY
+        value: "3"
+      - key: GEMINI_MAX_RETRIES
+        value: "2"
+      - key: CHROMIUM_PATH
+        value: /usr/bin/chromium
       # Optional META_ACCESS_TOKEN: add securely after approval; not required to deploy.
       - key: MEDIA_STORAGE_TYPE
         value: disk

@@ -1,5 +1,6 @@
 import { attachInfrastructure } from "./infrastructure/api.js";
 import { basicAuth } from "./auth.js";
+import { protectSettingsMutation } from "./request-guard.js";
 import express, {
   type Request,
   type Response,
@@ -27,6 +28,8 @@ import { attachBrain } from "./brain.js";
 import { attachBrandResearch, readBrandResearch } from "./brand-research.js";
 import { attachPublicMonitor } from "./public-monitor.js";
 import { attachVideoAnalysis } from "./video/api.js";
+import { attachLabelling } from "./labelling/api.js";
+import { attachGeminiSmoke } from "./smoke/api.js";
 import type { FormatMetric } from "../shared/format-types.js";
 
 function formatMetric(value: unknown): FormatMetric {
@@ -221,10 +224,13 @@ export function createApp(db: DatabaseSync = openDatabase()) {
   app.use(basicAuth());
   app.disable("x-powered-by");
   app.use(express.json({ limit: "20mb" }));
+  app.use(["/api/budgets", "/api/gemini-smoke", "/api/labelling"], protectSettingsMutation);
   attachInfrastructure(app, db);
   attachConnections(app, db);
   attachPublicMonitor(app, db);
-  attachVideoAnalysis(app, db);
+  const video = attachVideoAnalysis(app, db);
+  attachLabelling(app, db, video);
+  attachGeminiSmoke(app, db, video);
   attachBrain(app, db);
   attachBrandResearch(app, db);
   app.get("/api/health", (_req, res) =>

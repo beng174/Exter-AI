@@ -1,9 +1,9 @@
-import { guardedGeminiCall } from "../infrastructure/budget.js";
+import { guardedGeminiCall, settleGeminiCost, type GeminiReservation } from "../infrastructure/budget.js";
 import { createHash } from "node:crypto";
 import { createReadStream } from "node:fs";
 import { lstat } from "node:fs/promises";
 import { assertProxySupport } from "../connectors/http.js";
-import { VIDEO_PROMPT_VERSION, type VideoCoverage } from "../../shared/video-analysis.js";
+import { VIDEO_PROMPT_VERSION, type VideoAnalysisAccounting, type VideoCoverage } from "../../shared/video-analysis.js";
 import { buildVideoPrompt, VIDEO_RESPONSE_JSON_SCHEMA } from "./prompt.js";
 import {
   VideoProviderError,
@@ -26,6 +26,46 @@ export interface GeminiVideoOptions {
   maxFilePolls?: number;
   requestTimeoutMs?: number;
   onCleanupFailure?: () => void;
+  maxRetries?: number;
+  retryBaseMs?: number;
+  inputGbpPerMillion?: number;
+  outputGbpPerMillion?: number;
+  /** Test transports can inject the guard without a live database or API key. */
+  reserveCost?: () => Promise<GeminiReservation | undefined>;
+  settleCost?: (reservationId: string, estimatedGbp: number) => Promise<void>;
+}
+
+interface InferenceAccounting {
+  reservations: GeminiReservation[];
+  attempts: number;
+  rawResponse?: unknown;
+  usage: VideoAnalysisAccounting["usage"];
+  tokenCostGbp: number | null;
+  pricedReservationId?: string;
+  settledReservationId?: string;
+}
+
+function tokenCount(value: unknown): number | null {
+  return typeof value === "number" && Number.isSafeInteger(value) && value >= 0 ? value : null;
+}
+function usageOf(payload: Record<string, any>): VideoAnalysisAccounting["usage"] {
+  const usage = record(payload.usage);
+  const metadata = record(payload.usageMetadata);
+  const inputTokens = tokenCount(usage.total_input_tokens ?? usage.input_tokens ?? metadata.promptTokenCount);
+  let outputTokens = tokenCount(usage.total_output_tokens ?? usage.output_tokens);
+  if (outputTokens === null) {
+    const candidates = tokenCount(metadata.candidatesTokenCount);
+    const thoughts = tokenCount(metadata.thoughtsTokenCount);
+    if (candidates !== null) outputTokens = candidates + (thoughts ?? 0);
+  }
+  const totalTokens = tokenCount(usage.total_tokens ?? metadata.totalTokenCount) ??
+    (inputTokens !== null && outputTokens !== null ? inputTokens + outputTokens : null);
+  return { inputTokens, outputTokens, totalTokens };
+}
+/** The credential is only sent as a header and is scrubbed if a provider echoes it. */
+function sanitiseResponse(payload: Record<string, any>, key: string): Record<string, any> {
+  const encodedKey = JSON.stringify(key).slice(1, -1);
+  return JSON.parse(JSON.stringify(payload).split(encodedKey).join("[REDACTED]"));
 }
 
 interface GeminiFile {
@@ -90,6 +130,8 @@ export class GeminiVideoAnalyser implements VideoAnalyser {
   private readonly pollIntervalMs: number;
   private readonly maxFilePolls: number;
   private readonly requestTimeoutMs: number;
+  private readonly maxRetries: number;
+  private readonly retryBaseMs: number;
 
   constructor(private readonly options: GeminiVideoOptions = {}) {
     this.model = options.model || process.env.GEMINI_VIDEO_MODEL || DEFAULT_GEMINI_VIDEO_MODEL;
@@ -100,57 +142,114 @@ export class GeminiVideoAnalyser implements VideoAnalyser {
     this.pollIntervalMs = options.pollIntervalMs ?? 2000;
     this.maxFilePolls = options.maxFilePolls ?? 60;
     this.requestTimeoutMs = options.requestTimeoutMs ?? 180000;
+    this.maxRetries = options.maxRetries ?? Number(process.env.GEMINI_MAX_RETRIES ?? 2);
+    this.retryBaseMs = options.retryBaseMs ?? 500;
     if (!Number.isInteger(this.pollIntervalMs) || this.pollIntervalMs < 0 || this.pollIntervalMs > 10000 ||
         !Number.isInteger(this.maxFilePolls) || this.maxFilePolls < 1 || this.maxFilePolls > 120 ||
-        !Number.isInteger(this.requestTimeoutMs) || this.requestTimeoutMs < 1 || this.requestTimeoutMs > 300000)
+        !Number.isInteger(this.requestTimeoutMs) || this.requestTimeoutMs < 1 || this.requestTimeoutMs > 300000 ||
+        !Number.isInteger(this.maxRetries) || this.maxRetries < 0 || this.maxRetries > 5 ||
+        !Number.isInteger(this.retryBaseMs) || this.retryBaseMs < 0 || this.retryBaseMs > 10000)
       throw new VideoProviderError("configuration", "Gemini timeout or polling configuration is invalid.");
+  }
+
+  private pricing(): VideoAnalysisAccounting["pricing"] {
+    const input = this.options.inputGbpPerMillion ?? Number(process.env.GEMINI_INPUT_GBP_PER_MILLION_TOKENS);
+    const output = this.options.outputGbpPerMillion ?? Number(process.env.GEMINI_OUTPUT_GBP_PER_MILLION_TOKENS);
+    return Number.isFinite(input) && input > 0 && Number.isFinite(output) && output > 0
+      ? { inputGbpPerMillion: input, outputGbpPerMillion: output } : null;
+  }
+
+  private accounting(state: InferenceAccounting): VideoAnalysisAccounting {
+    const unknown = state.reservations.filter(value => value.reservationId !== state.settledReservationId);
+    const reservedCostGbp = state.reservations.length ? unknown.reduce((sum, value) => sum + value.reservedGbp, 0) : null;
+    const tokenCostGbp = state.tokenCostGbp;
+    const pricedReserve = unknown.find(value => value.reservationId === state.pricedReservationId)?.reservedGbp ?? 0;
+    const retryReserves = unknown.filter(value => value.reservationId !== state.pricedReservationId)
+      .reduce((sum, value) => sum + value.reservedGbp, 0);
+    // If settlement failed, the known token estimate and its still-reserved ledger
+    // entry describe the same generation attempt. Count their maximum once; only
+    // reservations for separate, uncertain retries are additional costs.
+    const estimatedCostGbp = tokenCostGbp !== null
+      ? retryReserves + Math.max(tokenCostGbp, pricedReserve) : reservedCostGbp;
+    return {
+      usage: state.usage, tokenCostGbp, reservedCostGbp, estimatedCostGbp,
+      costBasis: tokenCostGbp !== null
+        ? reservedCostGbp ? "token_and_reservation_estimate" : "token_estimate"
+        : reservedCostGbp !== null ? "reservation_estimate" : "unavailable",
+      pricing: this.pricing(), requestAttempts: state.attempts,
+      ...(state.rawResponse !== undefined ? { rawResponse: state.rawResponse } : {}),
+    };
   }
 
   private async request(
     url: URL,
-    init: RequestInit,
+    init: RequestInit | (() => RequestInit),
     signal?: AbortSignal,
     agenticAttempt = false,
+    accounting?: InferenceAccounting,
   ): Promise<Response> {
     apiUrl(url.href);
-    if (!this.options.fetch) await guardedGeminiCall();
-    let response: Response;
-    try {
-      response = await this.fetcher(url, {
-        ...init,
-        redirect: "manual",
-        signal: signal
-          ? AbortSignal.any([signal, AbortSignal.timeout(this.requestTimeoutMs)])
-          : AbortSignal.timeout(this.requestTimeoutMs),
-      });
-    } catch {
-      throw new VideoProviderError("unavailable", "Gemini could not be reached or the video request timed out.");
-    }
-    if (response.status >= 300 && response.status < 400)
-      throw new VideoProviderError("unavailable", "Gemini redirected a request; credentials were not forwarded.");
-    if (!response.ok) {
-      if (response.status === 401 || response.status === 403)
-        throw new VideoProviderError("authentication", "Gemini rejected the configured API credential or model permission.");
-      if (response.status === 429)
-        throw new VideoProviderError("rate_limit", "Gemini rate or quota limit reached. No fallback inference was started.");
-      // Only an explicit unsupported agentic capability permits a static retry.
-      // Raw provider text can echo request data and credentials; never expose it.
-      let unsupported = false;
-      if (agenticAttempt && [400, 422, 501].includes(response.status)) {
+    for (let attempt = 0; ; attempt++) {
+      if (signal?.aborted) throw new VideoProviderError("unavailable", "Video analysis was cancelled.");
+      // Only generation can incur inference charges. File operations and cleanup must
+      // remain available even when the monthly inference budget is paused.
+      if (accounting) {
         try {
-          const payload = await this.json(response);
-          const message = String(record(payload.error).message || "");
-          unsupported = /agentic/i.test(message) && /unsupported|not supported|not available|not enabled|not implemented/i.test(message);
-        } catch {}
+          const reserve = this.options.reserveCost || (!this.options.fetch ? guardedGeminiCall : undefined);
+          const reservation = await reserve?.();
+          if (reservation) accounting.reservations.push(reservation);
+        } catch {
+          throw new VideoProviderError("budget_paused", "Paid inference paused: the inference budget, request reserve or budget database is unavailable. Review Budgets before retrying.");
+        }
+        accounting.attempts++;
       }
-      if (unsupported)
-        throw new VideoProviderError("unsupported_mode", "The selected Gemini model does not support agentic video processing.");
-      throw new VideoProviderError("unavailable", `Gemini request failed (HTTP ${response.status}); no fallback inference was started.`);
+      let response: Response;
+      const request = typeof init === "function" ? init() : init;
+      try {
+        response = await this.fetcher(url, {
+          ...request,
+          redirect: "manual",
+          signal: signal
+            ? AbortSignal.any([signal, AbortSignal.timeout(this.requestTimeoutMs)])
+            : AbortSignal.timeout(this.requestTimeoutMs),
+        });
+      } catch {
+        throw new VideoProviderError("unavailable", "Gemini could not be reached or the video request timed out.");
+      } finally {
+        const body = request.body as unknown as { destroy?: () => void } | null | undefined;
+        if (typeof body?.destroy === "function") body.destroy();
+      }
+      if (response.status >= 300 && response.status < 400)
+        throw new VideoProviderError("unavailable", "Gemini redirected a request; credentials were not forwarded.");
+      if (!response.ok) {
+        if (response.status === 401 || response.status === 403)
+          throw new VideoProviderError("authentication", "Gemini rejected the configured API credential or model permission.");
+        // Only an explicit unsupported agentic capability permits a static retry.
+        // Raw provider error text can echo credentials; never expose or persist it.
+        if (agenticAttempt && [400, 422, 501].includes(response.status)) {
+          let unsupported = false;
+          try {
+            const payload = await this.json(response);
+            const message = String(record(payload.error).message || "");
+            unsupported = /agentic/i.test(message) && /unsupported|not supported|not available|not enabled|not implemented/i.test(message);
+          } catch {}
+          if (unsupported)
+            throw new VideoProviderError("unsupported_mode", "The selected Gemini model does not support agentic video processing.");
+        }
+        if ((response.status === 429 || response.status >= 500) && attempt < this.maxRetries) {
+          await response.body?.cancel().catch(() => {});
+          await this.sleep(Math.min(30000, this.retryBaseMs * 2 ** attempt), signal);
+          continue;
+        }
+        if (response.status === 429)
+          throw new VideoProviderError("rate_limit", "Gemini rate or quota limit reached after bounded retries. No fallback inference was started.");
+        throw new VideoProviderError("unavailable", `Gemini request failed (HTTP ${response.status}); no fallback inference was started.`);
+      }
+      return response;
     }
-    return response;
   }
 
-  private async json(response: Response): Promise<Record<string, any>> {
+  private async json(response: Response, onRaw?: (value: string) => void): Promise<Record<string, any>> {
     if (Number(response.headers.get("content-length")) > MAX_RESPONSE_BYTES)
       throw new VideoProviderError("invalid_output", "Gemini response exceeds the supported size.");
     const reader = response.body?.getReader();
@@ -168,7 +267,9 @@ export class GeminiVideoAnalyser implements VideoAnalyser {
         }
         chunks.push(part.value);
       }
-      const payload: unknown = JSON.parse(Buffer.concat(chunks).toString("utf8"));
+      const raw = Buffer.concat(chunks).toString("utf8");
+      onRaw?.(raw);
+      const payload: unknown = JSON.parse(raw);
       if (!payload || typeof payload !== "object" || Array.isArray(payload))
         throw new Error("not an object");
       return payload as Record<string, any>;
@@ -204,10 +305,11 @@ export class GeminiVideoAnalyser implements VideoAnalyser {
     assertProxySupport(Boolean(this.options.fetch), process.env);
     const authorization = { "x-goog-api-key": key };
     let uploadedName: string | null = null;
+    const state: InferenceAccounting = { reservations: [], attempts: 0, usage: { inputTokens: null, outputTokens: null, totalTokens: null }, tokenCostGbp: null };
     try {
-      const modelInfo = await this.json(await this.request(
+      const modelInfo = sanitiseResponse(await this.json(await this.request(
         new URL(`${API}/v1beta/models/${this.model}`), { headers: authorization }, input.signal,
-      ));
+      )), key);
       const resolvedModel = text(modelInfo.name)?.replace(/^models\//, "") || this.model;
       const version = text(modelInfo.version);
       const uploadStart = await this.request(new URL(`${API}/upload/v1beta/files`), {
@@ -226,10 +328,9 @@ export class GeminiVideoAnalyser implements VideoAnalyser {
       if (!uploadHeader)
         throw new VideoProviderError("invalid_output", "Gemini did not supply a resumable upload destination.");
       const uploadUrl = apiUrl(uploadHeader, true);
-      const stream = createReadStream(input.media.absolutePath);
       let uploaded: Record<string, any>;
-      try {
-        const finalized = await this.request(uploadUrl, {
+      {
+        const finalized = await this.request(uploadUrl, () => ({
           method: "POST",
           headers: {
             "Content-Length": String(input.media.bytes),
@@ -237,11 +338,11 @@ export class GeminiVideoAnalyser implements VideoAnalyser {
             "X-Goog-Upload-Offset": "0",
             "X-Goog-Upload-Command": "upload, finalize",
           },
-          body: stream as unknown as BodyInit,
+          body: createReadStream(input.media.absolutePath) as unknown as BodyInit,
           duplex: "half",
-        } as RequestInit, input.signal);
+        } as RequestInit), input.signal);
         uploaded = await this.json(finalized);
-      } finally { stream.destroy(); }
+      }
       const rawFile = record(uploaded.file || uploaded);
       if (safeFileName(rawFile.name)) uploadedName = rawFile.name;
       let file = checkedFile(rawFile);
@@ -264,7 +365,7 @@ export class GeminiVideoAnalyser implements VideoAnalyser {
         fullVideo: true,
         segments: input.processingMode === "agentic"
           ? [{ startSeconds: 0, endSeconds: duration, processing: "agentic" }]
-          : [
+          : duration <= 60 ? [{ startSeconds: 0, endSeconds: duration, processing: "static", fps: 3 }] : [
               { startSeconds: 0, endSeconds: firstEnd, processing: "static", fps: 5 },
               ...(duration > 5 ? [{ startSeconds: 5, endSeconds: duration, processing: "static" as const, fps: 1 }] : []),
             ],
@@ -280,7 +381,7 @@ export class GeminiVideoAnalyser implements VideoAnalyser {
           fps: segment.fps,
         },
       }));
-      const interaction = await this.json(await this.request(new URL(`${API}/v1beta/interactions`), {
+      const interaction = sanitiseResponse(await this.json(await this.request(new URL(`${API}/v1beta/interactions`), {
         method: "POST",
         headers: { ...authorization, "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -291,7 +392,25 @@ export class GeminiVideoAnalyser implements VideoAnalyser {
           store: false,
           background: false,
         }),
-      }, input.signal, input.processingMode === "agentic"));
+      }, input.signal, input.processingMode === "agentic", state), raw => { state.rawResponse = { unparsedText: raw.split(key).join("[REDACTED]") }; }), key);
+      // Persist accounting even if the response's structured fields fail validation.
+      state.rawResponse = interaction;
+      state.usage = usageOf(interaction);
+      const pricing = this.pricing();
+      if (pricing && state.usage.inputTokens !== null && state.usage.outputTokens !== null) {
+        state.tokenCostGbp = (state.usage.inputTokens * pricing.inputGbpPerMillion + state.usage.outputTokens * pricing.outputGbpPerMillion) / 1_000_000;
+        const reservation = state.reservations.at(-1);
+        if (reservation) {
+          // Unknown retry charges keep their reserves. A failed database settlement
+          // also leaves its reserve in the ledger; it must not discard valid output.
+          state.pricedReservationId = reservation.reservationId;
+          try {
+            await (this.options.settleCost || settleGeminiCost)(reservation.reservationId, state.tokenCostGbp);
+            state.settledReservationId = reservation.reservationId;
+          }
+          catch {}
+        }
+      }
       if (interaction.status !== "completed")
         throw new VideoProviderError("invalid_output", "Gemini did not complete the structured video analysis.");
       const finalStep = Array.isArray(interaction.steps)
@@ -311,8 +430,15 @@ export class GeminiVideoAnalyser implements VideoAnalyser {
         processingMode: input.processingMode,
         promptVersion: VIDEO_PROMPT_VERSION,
         coverage,
+        accounting: this.accounting(state),
         ...(text(interaction.id, 500) ? { providerRequestId: interaction.id } : {}),
       };
+    } catch (error) {
+      if (error instanceof VideoProviderError) {
+        error.accounting = this.accounting(state);
+        throw error;
+      }
+      throw new VideoProviderError("unavailable", "Gemini video analysis failed; retained media and earlier results were preserved.", this.accounting(state));
     } finally {
       if (uploadedName) {
         try {

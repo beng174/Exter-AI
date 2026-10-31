@@ -1,4 +1,4 @@
-import type { CreatorEvidence, VideoCoverage, VideoProcessingMode } from "../../shared/video-analysis.js";
+import type { CreatorEvidence, VideoAnalysisAccounting, VideoCoverage, VideoProcessingMode } from "../../shared/video-analysis.js";
 
 export interface StoredVideo {
   mediaId: string;
@@ -33,6 +33,7 @@ export interface VideoProviderResult {
   promptVersion: string;
   coverage: VideoCoverage;
   providerRequestId?: string;
+  accounting?: VideoAnalysisAccounting;
 }
 export interface VideoAnalyser {
   readonly provider: string;
@@ -40,7 +41,7 @@ export interface VideoAnalyser {
   readonly implemented?: boolean;
   analyse(input: VideoAnalyserInput): Promise<VideoProviderResult>;
 }
-export type VideoErrorCode = "unsupported_mode" | "authentication" | "rate_limit" | "invalid_output" | "unavailable" | "not_implemented" | "configuration";
+export type VideoErrorCode = "unsupported_mode" | "authentication" | "rate_limit" | "invalid_output" | "unavailable" | "not_implemented" | "configuration" | "budget_paused";
 export class VideoProviderError extends Error {
-  constructor(public code: VideoErrorCode, message: string) { super(message); this.name = "VideoProviderError"; }
+  constructor(public code: VideoErrorCode, message: string, public accounting?: VideoAnalysisAccounting) { super(message); this.name = "VideoProviderError"; }
 }

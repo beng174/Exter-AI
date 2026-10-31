@@ -13,8 +13,9 @@ cannot attach persistent disks: adopting this blueprint requires paid web, worke
 and PostgreSQL plans. Review current Render prices before applying it. Keep a
 single web instance while legacy application data lives in SQLite; separate workers
 use PostgreSQL only. The worker currently consumes Meta public collection jobs;
-legacy video inference remains in the web process and retains its existing explicit
-interrupted-job recovery. A PostgreSQL migration of the legacy application is a
+video inference and the Gemini smoke runner execute in the web process, which owns
+the media disk. Interrupted paid work requires explicit review and is never replayed
+by a status request. A PostgreSQL migration of the legacy application is a
 separate remaining task; do not run two independent SQLite copies.
 
 1. Preserve existing `.data/exter.db` and media before redeploying or changing paths.
@@ -24,7 +25,9 @@ separate remaining task; do not run two independent SQLite copies.
 2. Apply `render.yaml` through Render Blueprints, or make matching changes to the
    existing service. Avoid creating a second public service accidentally. If you
    retain the Node runtime instead of Docker, build with `npm ci && npm run build`
-   and start with `npm start`; install ffprobe and PostgreSQL 17 client tools too.
+   and start with `npm start`; install Chromium, ffprobe and PostgreSQL 17 client
+   tools too. The Docker image includes these tools and is recommended for media
+   preparation. A code push alone cannot convert an existing Node service to Docker.
 3. Supply the variables below in Render environment settings. Reuse the existing
    admin username/password. Set the Meta token on **both web and worker** when
    approved; leave it absent until then. The scheduler does not need it.
@@ -35,12 +38,12 @@ separate remaining task; do not run two independent SQLite copies.
    login. Every route, including health, static assets and unknown paths, requires
    authentication. Do not configure an unauthenticated HTTP health check: use
    Render's default TCP check. HTTPS is supplied by Render.
-6. Set positive monthly GBP budgets for `inference` and `data_providers` through
-   authenticated `PUT /api/budgets/inference` and
-   `PUT /api/budgets/data_providers`, body `{"monthly_budget_gbp": 20}` (example,
-   choose your own cap). Zero is the initial fail-closed budget, even for the
-   official Meta connector's zero-cost requests. Configure a conservative
-   `GEMINI_REQUEST_RESERVE_GBP` before requesting Gemini analysis.
+6. Sign in and open **Budgets & tests**. Save your monthly GBP caps for `inference`
+   and `data_providers`. Zero pauses that cost type, including the official Meta
+   connector's zero-cost requests. The page shows usage, the 90% pause threshold,
+   the next inference reservation and the reason for any pause. Settings apply
+   immediately; no Render restart is needed to change a cap. Configure a conservative
+   `GEMINI_REQUEST_RESERVE_GBP` and both token prices before requesting live inference.
 7. Set a Google Cloud Billing alert separately. Exter cannot configure your billing
    dashboard or guarantee a provider-side spending cap.
 
@@ -57,7 +60,11 @@ in the provider console and enter its replacement directly in host secret settin
 | `EXTER_ADMIN_USER`, `EXTER_ADMIN_PASSWORD` | Both required in production; partial configuration also fails in development |
 | `DATABASE_URL` | PostgreSQL, internal Render connection string; no TLS verification bypass |
 | `GEMINI_API_KEY`, `GEMINI_VIDEO_MODEL` | Optional until live video analysis; model availability is checked by the existing adapter on each analysis |
-| `GEMINI_REQUEST_RESERVE_GBP` | Conservative estimated GBP reserve for each Gemini HTTP request, including metadata/upload/poll/cleanup requests |
+| `GEMINI_REQUEST_RESERVE_GBP` | Conservative estimated GBP reserve before each billable inference attempt, including retries and static fallback; choose above the maximum plausible request charge |
+| `GEMINI_INPUT_GBP_PER_MILLION_TOKENS`, `GEMINI_OUTPUT_GBP_PER_MILLION_TOKENS` | Positive prices for the selected model, converted to GBP per million tokens. Set from current provider pricing; no default exchange rate or price is invented |
+| `GEMINI_VIDEO_CONCURRENCY` | Web inference and smoke-test concurrency, default `3`, integer `1`–`10` |
+| `GEMINI_MAX_RETRIES` | Retries of 429/5xx responses with exponential backoff, default `2`, integer `0`–`5`; each inference attempt reserves separately |
+| `CHROMIUM_PATH` | `/usr/bin/chromium` in the Docker image; needed only to resolve missing public Valentte media |
 | `META_ACCESS_TOKEN` | Approved Meta Ad Library access; never required merely to start the app |
 | `META_API_VERSION` | Defaults to `v25.0`; verify supported fields/version with your approved app |
 | `APIFY_TOKEN`, `YOUTUBE_API_KEY` | Reserved for later connectors; no implemented paid calls yet |
@@ -82,17 +89,76 @@ one ledger. The UI shows paused budgets and collection failures. Setting a highe
 budget resumes collection on its next persisted retry, or on a new run once failed
 work has completed. Never clear the ledger to bypass the cap.
 
-Gemini ledger entries are **estimated reservations**, not a measured invoice. Every
-real Gemini HTTP attempt reserves the configured amount; failures and ambiguous
-responses retain that reservation conservatively, and a static fallback reserves
-again. This intentionally overcounts non-billable API operations. Set the reserve
-above the maximum plausible charge for a request, based on current model pricing
-and input limits. A provider could charge more than that assumption, so also use
-provider-side controls. Observed token accounting, pricing-version reconciliation
-and the 25-ad live-cost report are remaining Phase 1 work. Missing DATABASE_URL in
+Gemini ledger entries are **estimated costs**, not a measured invoice. Each inference
+POST reserves the configured amount before dispatch. Metadata, upload, polling and
+cleanup do not consume an inference reservation. Known token usage and configured
+GBP prices settle the successful attempt; unknown or failed attempts retain their
+reservation. Static fallback and retries reserve separately. Raw responses, token
+counts, pricing assumptions and accounting are retained with the analysis attempts.
+Missing usage remains unavailable. Set the reserve above the maximum plausible
+request charge using current pricing, media limits and the output-token limit. A
+provider could charge more than that assumption, so also use provider-side controls.
+Missing DATABASE_URL in
 production disables paid inference, while existing pages remain available with an
 explicit infrastructure warning. Local development without DATABASE_URL retains
 the existing non-hosted workflow and does not provide these durable budget guards.
+
+## Hosted Gemini smoke test
+
+The authenticated action is restricted to Render's runtime. Do not move
+`GEMINI_API_KEY` into Codex, a local `.env`, a shell command, or the repository to
+run this test. Keep the existing key in the **web service** environment. The Meta
+collection worker and scheduler do not execute this smoke test and do not need it.
+
+1. Deploy the current commit from `exter-test-drive`. For automatic public media
+   capture, use the Docker image (Chromium and ffprobe included), the mounted
+   `/var/data` disk, `EXTER_DB_PATH=/var/data/exter.db`, and
+   `MEDIA_STORAGE_TYPE=disk`, `MEDIA_STORAGE_PATH=/var/data/media`.
+2. Keep `DATABASE_URL` and both administrator variables on the web service. Add
+   positive `GEMINI_REQUEST_RESERVE_GBP`, `GEMINI_INPUT_GBP_PER_MILLION_TOKENS` and
+   `GEMINI_OUTPUT_GBP_PER_MILLION_TOKENS`. Check that `GEMINI_VIDEO_MODEL` names a
+   model available to your Google project. Redeploy after environment changes.
+   Model availability is verified before uploading each input; an unavailable model
+   produces a recorded failure, never a fabricated result.
+3. In **Budgets & tests**, save an inference cap large enough for your intended
+   run. With 25 videos and three concurrent requests, each next reservation must
+   still fit inside 90% of that cap. Data-provider budget is separate; preparing
+   public media makes no Gemini calls and uses no paid discovery provider.
+4. Click **Prepare Valentte videos**. This explicitly loads the saved verified
+   public Valentte records if they are absent, preserves existing records, and
+   retains 25 playable videos with checksums. Missing URLs are resolved from
+   ordinary public Ad Library pages for verified ad IDs. If Meta requires a login
+   or challenge, preparation stops visibly. Expired, static or unavailable inputs
+   do not count towards the 25-video target. You can retain current approved video
+   URLs through Labelling and retry preparation. No inference starts with fewer
+   than 25 retained inputs.
+5. Choose Agentic or Static and click **Run Gemini smoke test**. Missing media is
+   prepared automatically as well. Short videos in static mode use 3 FPS across
+   the full clip; longer videos use the higher-FPS opening segment. The page shows
+   each ad's status, model, actual mode, tokens and estimated GBP cost.
+6. Download **gemini-live-report.md** from that run. It includes success/failure
+   counts, reasons, per-ad accounting, averages, known total cost and up to five
+   complete saved outputs. At least 24 of 25 successful analyses is the Phase 1
+   success target. Missing cost or usage is disclosed rather than treated as zero;
+   compare estimated costs with provider billing separately.
+
+Runs and reports remain in the web SQLite database on the persistent disk.
+Refresh and download are read-only. If the budget pauses, increase the cap and
+click **Resume pending items**. After a restart, completed work remains intact;
+resume continues work that had not started. An uncertain paid attempt stays
+interrupted for review. Starting a new test is an explicit new paid run.
+
+## Human labelling
+
+Open **Labelling** in a workspace containing real source ads. Read
+`research/LABELLING-GUIDE.md` first: it is a draft for Benjamin's review, not an
+approved measurement protocol. The tool shows original copy and creative while
+withholding model predictions and prior labels. Retain full videos before review.
+Choose a labeller name, start a review, complete all seven dropdowns (each supports
+Unsure), add notes and save. Time taken is server wall-clock time including pauses.
+Human reviews are append-only and include source/media identity, schema and guide
+versions. Download JSON or CSV from the tool. Static-image byte retention and the
+stratified 200-ad/50-ad holdout sampling protocol are separate follow-up work.
 
 Official Meta calls are recorded at £0 per request; they still require an enabled
 data-provider budget. No APIFY or other paid discovery call is implemented yet.

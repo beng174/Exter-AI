@@ -157,3 +157,70 @@ test("changed creator/copy context invalidates cached analysis and native format
     assert.deepEqual(classifyCreativeFormats(unverified), ["Unclassified"]);
   } finally { db.close(); }
 });
+
+test("failed ad validation preserves the provider's raw output, usage and estimated cost in the durable job", async () => {
+  const { db, store } = fixture();
+  const accounting = {
+    usage: { inputTokens: 1200, outputTokens: 300, totalTokens: 1500 },
+    tokenCostGbp: 0.0012, reservedCostGbp: 0.2, estimatedCostGbp: 0.2012,
+    costBasis: "token_and_reservation_estimate" as const,
+    pricing: { inputGbpPerMillion: 0.5, outputGbpPerMillion: 2 }, requestAttempts: 2,
+    rawResponse: { status: "completed", outputs: [{ type: "text", text: "invalid field fixture" }] },
+  };
+  try {
+    const service = new VideoAnalysisService(db, { mediaStore: store, analyserFactory: () => provider(async () => ({ ...output(), fields: { unexpected: true }, accounting })) });
+    const job = service.enqueue({ brandId: brand.id, adId: sourceAd.id }); await service.idle();
+    const saved = service.job(brand.id, job.id)!;
+    assert.equal(saved.status, "error");
+    assert.equal(saved.errorCode, "invalid_output");
+    assert.deepEqual(saved.attempts[0].accounting, accounting);
+    assert.equal(service.history(brand.id, sourceAd.id).length, 0);
+    const reloaded = new VideoAnalysisService(db, { mediaStore: store }).job(brand.id, job.id)!;
+    assert.deepEqual(reloaded.attempts[0].accounting, accounting);
+  } finally { db.close(); }
+});
+
+test("failed provider attempts retain accounting and budget pauses without replacing earlier successful results", async () => {
+  const { db, store } = fixture();
+  const accounting = {
+    usage: { inputTokens: null, outputTokens: null, totalTokens: null },
+    tokenCostGbp: null, reservedCostGbp: 0.2, estimatedCostGbp: 0.2,
+    costBasis: "reservation_estimate" as const, pricing: null, requestAttempts: 1,
+  };
+  try {
+    const service = new VideoAnalysisService(db, { mediaStore: store, analyserFactory: () => provider(async () => { throw new VideoProviderError("budget_paused", "Inference budget paused", accounting); }) });
+    const job = service.enqueue({ brandId: brand.id, adId: sourceAd.id }); await service.idle();
+    const saved = service.job(brand.id, job.id)!;
+    assert.equal(saved.errorCode, "budget_paused");
+    assert.deepEqual(saved.attempts, [{ processingMode: "agentic", status: "failed", errorCode: "budget_paused", accounting }]);
+  } finally { db.close(); }
+});
+
+test("configured video concurrency bounds simultaneous inference and idle waits for every lane", async () => {
+  const { db } = fixture();
+  try {
+    for (let index = 1; index < 5; index++) {
+      const ad = { ...sourceAd, id: `concurrent-ad-${index}` };
+      db.prepare("INSERT INTO ads VALUES (?,?,?,?,?,?)").run(ad.id, brand.id, ad.source, ad.platform, ad.publishedAt, JSON.stringify(ad));
+    }
+    const store: VideoMediaStore = { store: async input => ({ ...media, mediaId: `media-${input.adId}`, sourceAdId: input.adId }), load: async () => null };
+    let running = 0, peak = 0, completed = 0;
+    const releases: (() => void)[] = [];
+    const service = new VideoAnalysisService(db, { concurrency: 3, mediaStore: store, analyserFactory: () => provider(async () => {
+      running++; peak = Math.max(peak, running);
+      await new Promise<void>(resolve => releases.push(resolve));
+      running--; completed++; return output();
+    }) });
+    const ids = [sourceAd.id, ...Array.from({ length: 4 }, (_, index) => `concurrent-ad-${index + 1}`)];
+    ids.forEach(adId => service.enqueue({ brandId: brand.id, adId }));
+    await new Promise(resolve => setImmediate(resolve));
+    assert.equal(running, 3);
+    releases.splice(0).forEach(release => release());
+    await new Promise(resolve => setImmediate(resolve));
+    assert.equal(running, 2);
+    releases.splice(0).forEach(release => release());
+    await service.idle();
+    assert.equal(peak, 3);
+    assert.equal(completed, 5);
+  } finally { db.close(); }
+});

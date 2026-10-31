@@ -1,5 +1,32 @@
 # Differentiation and build review
 
+## 31 October 2026 follow-up: budgets, hosted smoke test and labelling
+
+Implemented authenticated **Budgets & tests** with monthly GBP caps, usage,
+90% threshold and pause reasons. The Render-only Gemini action prepares and
+retains 25 verified playable Valentte inputs before inference, persists run/item
+progress, raw responses and cost accounting, and downloads `gemini-live-report.md`.
+Resume does not replay uncertain paid attempts. Retries and capability fallback
+reserve separately; unknown usage and costs remain explicit.
+
+Implemented blind human labelling with seven dropdowns, labeller identity, server
+timing, notes and append-only JSON/CSV exports. Known video and unresolved dynamic
+creatives cannot be reviewed from thumbnails. `LABELLING-GUIDE.md` is a draft for
+Benjamin's review, covering every allowed value with definitions and two examples.
+Static-image byte retention, stratified sampling and measured accuracy are later
+work; no human or Gemini accuracy result has been invented.
+
+Validation: production TypeScript/Vite build, unit/API suite, disposable PostgreSQL
+integration tests, and authenticated desktop/mobile browser checks passed. Browser
+checks exercised cap persistence, paused state, Render-only live-action guard,
+blind review save/export, and full-video gating. No live Gemini inference ran in
+Codex. The Docker image build could not finish because the execution environment
+ran out of disk space; Render must build the image during deployment. The actual
+24-of-25 live acceptance and current public media availability remain unverified
+until the owner runs the action on Render. See `docs/DEPLOY.md` for exact setup.
+
+The review below records the earlier baseline and remaining wider platform scope.
+
 ## Product direction and document precedence
 
 Both supplied documents are preserved unmodified as `DIFFERENTIATION-BRIEF.md` and

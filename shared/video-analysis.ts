@@ -34,6 +34,18 @@ export interface VideoCoverage {
   fullVideo: boolean;
   segments: (VideoTimestamp & { processing: "agentic" | "static"; fps?: number })[];
 }
+/** GBP estimates include conservative reservations for attempts whose charge is unknown. */
+export interface VideoAnalysisAccounting {
+  usage: { inputTokens: number | null; outputTokens: number | null; totalTokens: number | null };
+  tokenCostGbp: number | null;
+  reservedCostGbp: number | null;
+  estimatedCostGbp: number | null;
+  costBasis: "token_estimate" | "reservation_estimate" | "token_and_reservation_estimate" | "unavailable";
+  pricing: { inputGbpPerMillion: number; outputGbpPerMillion: number } | null;
+  requestAttempts: number;
+  /** Sanitised provider response; never contains the configured credential. */
+  rawResponse?: unknown;
+}
 export interface VideoAnalysisResult {
   id: string;
   adId: string;
@@ -52,10 +64,12 @@ export interface VideoAnalysisResult {
   coverage: VideoCoverage;
   fields: VideoAnalysisFields;
   providerRequestId?: string;
+  accounting?: VideoAnalysisAccounting;
 }
 
 export interface VideoAnalysisAttempt {
   processingMode: VideoProcessingMode;
   status: "succeeded" | "failed";
   errorCode?: string;
+  accounting?: VideoAnalysisAccounting;
 }

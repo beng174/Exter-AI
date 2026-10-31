@@ -1,0 +1,44 @@
+.gemini-smoke { min-width: 0; color: #526c47; padding: 26px; background: #fbfcf8; border: 1px solid #dce5d3; border-radius: 10px; }
+.gemini-smoke-heading, .gemini-smoke-run-heading { display: flex; align-items: center; justify-content: space-between; gap: 18px; }
+.gemini-smoke-eyebrow { display: flex; gap: 7px; align-items: center; color: #879a76; font-size: 10px; letter-spacing: 1px; }
+.gemini-smoke h2 { margin: 10px 0 0; font-size: 22px; font-weight: 550; }
+.gemini-smoke h3 { margin: 0 0 8px; font-size: 16px; font-weight: 550; }
+.gemini-smoke-intro { max-width: 760px; font-size: 13px; line-height: 1.8; color: #718363; margin: 17px 0 22px; }
+.gemini-smoke-facts { display: grid; grid-template-columns: repeat(4,minmax(0,1fr)); gap: 14px; padding: 17px; margin: 0 0 20px; background: #f0f4e9; border-radius: 7px; }
+.gemini-smoke-facts dt { font-size: 10px; color: #8b9b7b; margin-bottom: 7px; }
+.gemini-smoke-facts dd { margin: 0; overflow-wrap: anywhere; font-size: 12px; line-height: 1.7; }
+.gemini-smoke button, .gemini-smoke-download { display: inline-flex; align-items: center; justify-content: center; gap: 7px; min-height: 38px; padding: 9px 13px; border: 1px solid #d5dfca; border-radius: 6px; color: #607e4c; background: #f2f6e9; font: inherit; font-size: 12px; line-height: 1.5; cursor: pointer; text-decoration: none; }
+.gemini-smoke button:hover:not(:disabled), .gemini-smoke-download:hover { background: #e7efdd; }
+.gemini-smoke button:disabled { cursor: not-allowed; opacity: 0.55; }
+.gemini-smoke .gemini-smoke-primary { background: #617e4e; border-color: #617e4e; color: #fff; }
+.gemini-smoke .gemini-smoke-primary:hover:not(:disabled) { background: #4f6d3e; }
+.gemini-smoke .gemini-smoke-refresh { min-height: 32px; padding: 7px 10px; font-size: 11px; }
+.gemini-smoke-controls { display: flex; align-items: flex-end; flex-wrap: wrap; gap: 12px; }
+.gemini-smoke-controls label { display: flex; flex-direction: column; gap: 7px; min-width: 210px; font-size: 11px; color: #7e9070; }
+.gemini-smoke select { min-height: 38px; border: 1px solid #d5dfca; border-radius: 6px; padding: 8px 11px; background: #fff; color: #526c47; font: inherit; font-size: 12px; }
+.gemini-smoke button:focus-visible, .gemini-smoke a:focus-visible, .gemini-smoke select:focus-visible { outline: 2px solid #607e4c; outline-offset: 3px; }
+.gemini-smoke-note { color: #829372; font-size: 11px; line-height: 1.8; margin: 15px 0 0; }
+.gemini-smoke-notice { padding: 13px 15px; background: #f5f0dd; border: 1px solid #e5dcbb; border-radius: 6px; color: #827241; font-size: 12px; line-height: 1.8; margin: 0 0 18px; }
+.gemini-smoke-notice ul { margin: 7px 0 0; padding-left: 20px; }
+.gemini-smoke-error { padding: 12px 14px; color: #a0443e; border: 1px solid #ecc8bf; background: #fff2ed; border-radius: 6px; font-size: 12px; line-height: 1.8; overflow-wrap: anywhere; }
+.gemini-smoke-run { margin-top: 27px; border-top: 1px solid #e0e8d7; padding-top: 24px; }
+.gemini-smoke-run-heading p { margin: 0; color: #8b9b7d; font-size: 11px; line-height: 1.8; }
+.gemini-smoke-badge { display: inline-block; padding: 3px 7px; margin-left: 7px; border-radius: 4px; background: #eaf0e1; color: #71875b; font-size: 10px; font-weight: 400; vertical-align: middle; text-transform: capitalize; }
+.gemini-smoke-paused, .gemini-smoke-interrupted { background: #f2e8cb; color: #8b773c; }
+.gemini-smoke-failed { background: #fae7df; color: #a75d4a; }
+.gemini-smoke-progress { display: flex; align-items: center; gap: 20px; flex-wrap: wrap; margin: 20px 0; font-size: 12px; }
+.gemini-smoke-progress progress { width: 220px; max-width: 100%; height: 8px; accent-color: #6f8c58; }
+.gemini-smoke-resume { display: flex; align-items: center; justify-content: space-between; gap: 16px; margin-bottom: 18px; padding: 13px 15px; border: 1px solid #e3dcc2; background: #faf6e9; border-radius: 6px; }
+.gemini-smoke-resume p { margin: 0; font-size: 11px; line-height: 1.8; }
+.gemini-smoke-resume button { flex-shrink: 0; }
+.gemini-smoke-table-wrap { overflow-x: auto; border: 1px solid #e1e8d8; border-radius: 6px; }
+.gemini-smoke-table { width: 100%; min-width: 680px; border-collapse: collapse; font-size: 11px; text-align: left; }
+.gemini-smoke-table caption { text-align: left; padding: 13px 14px; color: #7b8e6c; background: #f3f6ed; font-size: 11px; }
+.gemini-smoke-table th, .gemini-smoke-table td { padding: 12px 14px; border-top: 1px solid #e5ebdf; vertical-align: top; line-height: 1.7; }
+.gemini-smoke-table thead th { color: #8a9b7c; font-weight: 400; font-size: 10px; }
+.gemini-smoke-table tbody th { font-weight: 450; overflow-wrap: anywhere; max-width: 180px; }
+.gemini-smoke-cell-note, .gemini-smoke-token-line { display: block; }
+.gemini-smoke-cell-note { color: #8b9b7d; font-size: 10px; margin-top: 5px; }
+.gemini-smoke-item-error { max-width: 260px; margin: 5px 0 0; color: #a16b57; font-size: 10px; line-height: 1.8; }
+@media (max-width: 850px) { .gemini-smoke-facts { grid-template-columns: repeat(2,minmax(0,1fr)); } .gemini-smoke-run-heading { align-items: flex-start; flex-wrap: wrap; } }
+@media (max-width: 620px) { .gemini-smoke { padding: 18px 14px; } .gemini-smoke-heading { align-items: flex-start; gap: 10px; } .gemini-smoke h2 { font-size: 19px; } .gemini-smoke-intro { font-size: 12px; } .gemini-smoke-controls { align-items: stretch; flex-direction: column; } .gemini-smoke-controls label { min-width: 0; } .gemini-smoke-resume { align-items: stretch; flex-direction: column; } .gemini-smoke-facts { padding: 13px; } }
