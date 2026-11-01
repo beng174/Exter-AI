@@ -185,7 +185,7 @@ export function NativeVideoAnalysis({
           <div><dt>Provider</dt><dd>{analysis.provider}</dd></div>
           <div><dt>Model</dt><dd>{analysis.model}</dd></div>
           <div><dt>Model version</dt><dd>{analysis.modelVersion || "Not reported by provider"}</dd></div>
-          <div><dt>Processing mode</dt><dd>{analysis.processingMode === "agentic" ? "Native agentic video" : "Native static video · higher-FPS hook"}</dd></div>
+          <div><dt>Processing mode</dt><dd>{analysis.processingMode === "agentic" ? "Native agentic video (preview)" : "Native static video · see saved coverage"}</dd></div>
           <div><dt>Prompt version</dt><dd>{analysis.promptVersion}</dd></div>
           <div><dt>Analysed</dt><dd>{new Date(analysis.createdAt).toLocaleString("en-GB", { timeZone: "Europe/London", timeZoneName: "short" })}</dd></div>
           <div><dt>Coverage</dt><dd>{analysis.coverage.fullVideo ? "Full video" : "Partial video"} · {seconds(analysis.coverage.durationSeconds)} seconds</dd></div>

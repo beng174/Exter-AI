@@ -20,7 +20,7 @@ for (let index = 2; index < process.argv.length; index++) {
 const brandId = flags.get("--brand-id"), requestedAd = flags.get("--ad-id");
 if (!brandId || !requestedAd) throw new Error("Provide --brand-id and --ad-id. Use --help.");
 if (flags.has("--capture") && flags.has("--video-url")) throw new Error("Choose either a capture file or a video URL.");
-const provider = flags.get("--provider") || "gemini", mode = flags.get("--mode") || "agentic";
+const provider = flags.get("--provider") || "gemini", mode = flags.get("--mode") || "static-high-fps-hook";
 if (!["gemini", "twelvelabs"].includes(provider) || !["agentic", "static-high-fps-hook"].includes(mode)) throw new Error("Unsupported video provider or mode.");
 const db = openDatabase(undefined, false);
 try {

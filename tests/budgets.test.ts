@@ -6,7 +6,7 @@ import type { AddressInfo } from "node:net";
 import type pg from "pg";
 import { basicAuth } from "../server/auth.js";
 import { attachBudgetRoutes } from "../server/infrastructure/api.js";
-import { budgetStatus, settleGeminiCost } from "../server/infrastructure/budget.js";
+import { budgetStatus, settleGeminiCost, releaseGeminiCost } from "../server/infrastructure/budget.js";
 
 test("budget status distinguishes unset caps, threshold, reserve configuration and next-call pauses", async () => {
   const oldReserve = process.env.GEMINI_REQUEST_RESERVE_GBP;
@@ -105,4 +105,39 @@ test("known Gemini estimates settle under the budget lock and preserve larger ch
   assert.equal(queries.at(-1),"COMMIT");
   await assert.rejects(settleGeminiCost("reserved-test-attempt",NaN,pool),/Invalid inference cost/);
   await assert.rejects(settleGeminiCost("reserved-test-attempt",-1,pool),/Invalid inference cost/);
+});
+
+test("explicitly rejected generation holds release once while settled or unrelated ledger entries stay intact", async () => {
+  let status = "reserved";
+  let provider = "gemini";
+  let value = 0.4;
+  let rollbacks = 0;
+  const queries: string[] = [];
+  const client = {
+    query: async (sql: string) => {
+      queries.push(sql);
+      if (sql.startsWith("UPDATE cost_ledger")) {
+        if (status === "reserved" && provider === "gemini") { status = "released"; value = 0; return { rowCount: 1, rows: [{ id: "attempt" }] }; }
+        return { rowCount: 0, rows: [] };
+      }
+      if (sql.startsWith("SELECT cost_type")) return { rowCount: 1, rows: [{ cost_type: "inference", provider, status }] };
+      if (sql === "ROLLBACK") rollbacks++;
+      return { rowCount: 1, rows: [] };
+    },
+    release: () => {},
+  };
+  const pool = { connect: async () => client } as unknown as pg.Pool;
+  await releaseGeminiCost("attempt",pool);
+  assert.equal(status,"released"); assert.equal(value,0);
+  assert.match(queries[1],/FOR UPDATE/);
+  await releaseGeminiCost("attempt",pool);
+  assert.equal(value,0,"repeated release is idempotent");
+  status = "settled"; value = 0.15;
+  await assert.rejects(releaseGeminiCost("attempt",pool),/could not be released/);
+  assert.equal(value,0.15,"a token estimate cannot be released as though it were an HTTP rejection");
+  status = "reserved"; provider = "another-provider"; value = 0.4;
+  await assert.rejects(releaseGeminiCost("attempt",pool),/could not be released/);
+  assert.equal(value,0.4);
+  assert.equal(rollbacks,2);
+  await assert.rejects(releaseGeminiCost("",pool),/Invalid inference cost reservation/);
 });

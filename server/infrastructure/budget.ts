@@ -28,7 +28,7 @@ export async function budgetStatus(pool: pg.Pool) {
     };
   });
 }
-/** Reserve before each provider HTTP attempt. Unknown/failed charges remain reserved conservatively. */
+/** Reserve before chargeable dispatch. A logical request may reuse its hold after a confirmed rejection. */
 export async function reserveCost(pool: pg.Pool, type: CostType, provider: string, amount: number) {
   if (!Number.isFinite(amount) || amount < 0) throw new Error("Invalid provider cost configuration.");
   const client = await pool.connect();
@@ -40,7 +40,7 @@ export async function reserveCost(pool: pg.Pool, type: CostType, provider: strin
     if (used.rows[0].used >= budget * 0.9 || used.rows[0].used + amount > budget * 0.9)
       throw new Error(`Jobs paused: ${type} monthly budget is unset or its 90% threshold would be reached.`);
     const id = randomUUID();
-    await client.query("INSERT INTO cost_ledger(id,cost_type,provider,cost_gbp,cost_basis) VALUES($1,$2,$3,$4,'estimated')", [id,type,provider,amount]);
+    await client.query("INSERT INTO cost_ledger(id,cost_type,provider,cost_gbp,cost_basis,initial_reserved_gbp) VALUES($1,$2,$3,$4,'estimated',$4)", [id,type,provider,amount]);
     await client.query("COMMIT");
     return id;
   } catch (error) { await client.query("ROLLBACK"); throw error; }
@@ -69,6 +69,28 @@ export async function settleGeminiCost(reservationId: string, estimatedGbp: numb
     const result = await client.query(`UPDATE cost_ledger SET cost_gbp=$2,cost_basis='estimated',status='settled'
       WHERE id=$1 AND cost_type='inference' AND provider='gemini' AND status='reserved' RETURNING id`, [reservationId,estimatedGbp]);
     if (result.rowCount !== 1) throw new Error("Inference cost reservation could not be settled.");
+    await client.query("COMMIT");
+  } catch (error) { await client.query("ROLLBACK"); throw error; }
+  finally { client.release(); }
+}
+
+/** Release only a hold whose generation was explicitly rejected. Timeouts are
+ * ambiguous and must retain their reservations. This is not billing evidence. */
+export async function releaseGeminiCost(reservationId: string, pool: pg.Pool = infrastructureDatabase()): Promise<void> {
+  if (typeof reservationId !== "string" || !reservationId.trim() || reservationId.length > 200)
+    throw new Error("Invalid inference cost reservation.");
+  const client = await pool.connect();
+  try {
+    await client.query("BEGIN");
+    await client.query("SELECT monthly_budget_gbp FROM budget_settings WHERE cost_type='inference' FOR UPDATE");
+    const released = await client.query(`UPDATE cost_ledger SET cost_gbp=0,status='released'
+      WHERE id=$1 AND cost_type='inference' AND provider='gemini' AND status='reserved' RETURNING id`, [reservationId]);
+    if (released.rowCount !== 1) {
+      const existing = await client.query("SELECT cost_type,provider,status FROM cost_ledger WHERE id=$1", [reservationId]);
+      const row = existing.rows[0];
+      if (!row || row.cost_type !== "inference" || row.provider !== "gemini" || row.status !== "released")
+        throw new Error("Inference cost reservation could not be released.");
+    }
     await client.query("COMMIT");
   } catch (error) { await client.query("ROLLBACK"); throw error; }
   finally { client.release(); }

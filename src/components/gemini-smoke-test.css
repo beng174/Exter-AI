@@ -30,6 +30,7 @@
 .gemini-smoke-progress progress { width: 220px; max-width: 100%; height: 8px; accent-color: #6f8c58; }
 .gemini-smoke-resume { display: flex; align-items: center; justify-content: space-between; gap: 16px; margin-bottom: 18px; padding: 13px 15px; border: 1px solid #e3dcc2; background: #faf6e9; border-radius: 6px; }
 .gemini-smoke-resume p { margin: 0; font-size: 11px; line-height: 1.8; }
+.gemini-smoke-resume .gemini-smoke-resume-mode { margin-top: 8px; color: #956645; }
 .gemini-smoke-resume button { flex-shrink: 0; }
 .gemini-smoke-table-wrap { overflow-x: auto; border: 1px solid #e1e8d8; border-radius: 6px; }
 .gemini-smoke-table { width: 100%; min-width: 850px; border-collapse: collapse; font-size: 11px; text-align: left; }
@@ -56,3 +57,18 @@
 
 .gemini-smoke-media-links { display: flex; flex-direction: column; gap: 4px; margin-top: 6px; min-width: 65px; }
 .gemini-smoke-media-links a { color: #607e4c; text-underline-offset: 2px; }
+
+.gemini-smoke-single-test { margin-top: 20px; padding: 17px; border: 1px solid #dce5d3; border-radius: 7px; background: #f4f7ef; }
+.gemini-smoke-single-test h3 { font-size: 14px; margin: 0 0 6px; }
+.gemini-smoke-single-test p { margin: 0; font-size: 11px; line-height: 1.8; color: #7b8d6e; }
+.gemini-smoke-single-controls { display: flex; flex-wrap: wrap; align-items: flex-end; gap: 12px; margin-top: 14px; }
+.gemini-smoke-single-controls label { display: flex; flex-direction: column; gap: 7px; flex: 1; min-width: 200px; font-size: 11px; }
+.gemini-smoke-single-controls select { width: 100%; min-width: 0; }
+.gemini-smoke-single-test .gemini-smoke-note { margin-top: 12px; }
+.gemini-smoke-costs { display: grid; grid-template-columns: repeat(3,minmax(0,1fr)); gap: 12px; margin: 18px 0 0; padding: 15px; background: #f0f4e9; border: 1px solid #dce5d3; border-radius: 7px; }
+.gemini-smoke-costs dt { font-size: 11px; color: #7b8d6e; }
+.gemini-smoke-costs dd { margin: 7px 0 0; font-size: 16px; overflow-wrap: anywhere; }
+.gemini-smoke-provider-diagnostic { margin-top: 10px; padding: 10px; min-width: 220px; max-width: 460px; border: 1px solid #e6d6c7; background: #fcf5ee; border-radius: 5px; color: #8c6352; font-size: 10px; }
+.gemini-smoke-provider-diagnostic pre { margin: 8px 0; white-space: pre-wrap; overflow-wrap: anywhere; word-break: break-word; font: inherit; line-height: 1.7; }
+.gemini-smoke-provider-diagnostic summary { cursor: pointer; }
+@media (max-width: 620px) { .gemini-smoke-single-controls { align-items: stretch; flex-direction: column; } .gemini-smoke-single-controls label { width: 100%; min-width: 0; } .gemini-smoke-costs { grid-template-columns: 1fr; } }

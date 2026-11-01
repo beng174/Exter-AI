@@ -1,4 +1,5 @@
 import type { VideoAnalysisAccounting, VideoProcessingMode } from "./video-analysis.js";
+import type { GeminiDiagnostic } from "./gemini-diagnostic.js";
 export const GEMINI_SMOKE_TARGET = 25;
 export const GEMINI_SMOKE_MIN_SAMPLE = 10;
 export type SmokeMediaKind = "video" | "image" | "carousel" | "unknown";
@@ -17,6 +18,7 @@ export interface SmokeItem {
   nativeId: string;
   mediaKind?: SmokeMediaKind;
   imageCount?: number;
+  durationSeconds?: number;
   status: SmokeItemStatus;
   mediaId?: string;
   mediaSha256?: string;
@@ -26,6 +28,13 @@ export interface SmokeItem {
   processingMode?: VideoProcessingMode | "image" | "carousel";
   usage?: VideoAnalysisAccounting["usage"];
   estimatedCostGbp?: number | null;
+  reservedCostGbp?: number | null;
+  tokenCostGbp?: number | null;
+  billedCostGbp?: number | null;
+  initialReservedCostGbp?: number | null;
+  rejectedAttempts?: number;
+  retryAttempts?: number;
+  geminiDiagnostic?: GeminiDiagnostic;
   costBasis?: string;
   accounting?: VideoAnalysisAccounting[];
   errorCode?: string;
@@ -36,7 +45,7 @@ export interface SmokeItem {
 }
 export interface SmokeRun {
   id: string;
-  kind: "prepare" | "smoke";
+  kind: "prepare" | "smoke" | "diagnostic";
   status: "queued" | "preparing" | "analysing" | "complete" | "paused" | "interrupted" | "failed";
   requestedMode: VideoProcessingMode;
   /** Actual retained preparation count or fixed inference sample, including failed inferences. */

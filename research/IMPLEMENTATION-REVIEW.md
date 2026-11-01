@@ -1,5 +1,30 @@
 # Differentiation and build review
 
+## 1 November 2026: Static request path and one-ad diagnostics
+
+A hosted 14-creative report had no successful outputs and exposed that Static was
+still sent through preview Interactions, with legacy Agentic defaults/restoration
+in several entry points. Static now defaults throughout UI/API/service/CLI and
+uses stable GenerateContent. Agentic preview is explicit; an old Agentic run
+cannot resume under a Static selection or have earlier results relabelled.
+
+Uploaded files must be ACTIVE before every generation dispatch and retry. Server
+errors and transport/response-read timeouts use bounded exponential retries
+(default three total attempts). Explicit rejections reuse one hold and final
+rejections release it; ambiguous timeouts retain their hold before an independently
+reserved retry. Outstanding reservations, original holds, token estimates and
+provider-confirmed billed costs are separate. Billing is unavailable without a
+provider invoice feed; historical unknown holds are preserved.
+
+Retained videos are codec-probed and normalized to MP4/H.264/AAC when needed,
+without overwriting the original. Source/upload SHA values and normalization
+provenance are retained. A new authenticated Test one ad action works on one
+verified stored video, image or carousel, without preparing or queuing a batch.
+It exposes the full bounded, sanitised provider error and stage/status/details.
+All credentials and sensitive URL values are redacted before persistence/display.
+Live Gemini execution continues only on Render. Existing Docker tooling and
+startup migrations cover the change; no new secret or manual migration is needed.
+
 ## 1 November 2026: source diagnostics and mixed-media smoke tests
 
 The owner reported 12 retained videos and 38 unresolved sources. Preparation now

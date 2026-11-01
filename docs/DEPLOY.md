@@ -60,10 +60,10 @@ in the provider console and enter its replacement directly in host secret settin
 | `EXTER_ADMIN_USER`, `EXTER_ADMIN_PASSWORD` | Both required in production; partial configuration also fails in development |
 | `DATABASE_URL` | PostgreSQL, internal Render connection string; no TLS verification bypass |
 | `GEMINI_API_KEY`, `GEMINI_VIDEO_MODEL` | Optional until live video analysis; model availability is checked by the existing adapter on each analysis |
-| `GEMINI_REQUEST_RESERVE_GBP` | Conservative estimated GBP reserve before each billable inference attempt, including retries and static fallback; choose above the maximum plausible request charge |
+| `GEMINI_REQUEST_RESERVE_GBP` | Conservative GBP hold before inference; explicit 5xx retries reuse the hold, while ambiguous timeout retries reserve separately |
 | `GEMINI_INPUT_GBP_PER_MILLION_TOKENS`, `GEMINI_OUTPUT_GBP_PER_MILLION_TOKENS` | Positive prices for the selected model, converted to GBP per million tokens. Set from current provider pricing; no default exchange rate or price is invented |
 | `GEMINI_VIDEO_CONCURRENCY` | Web inference and smoke-test concurrency, default `3`, integer `1`–`10` |
-| `GEMINI_MAX_RETRIES` | Retries of 429/5xx responses with exponential backoff, default `2`, integer `0`–`5`; each inference attempt reserves separately |
+| `GEMINI_MAX_RETRIES` | Extra attempts after HTTP 500/503/429 or transport timeouts, default `2` (three attempts total), integer `0`–`5`; exponential backoff honours bounded Retry-After |
 | `CHROMIUM_PATH` | `/usr/bin/chromium` in the Docker image; needed only to resolve missing public Valentte media |
 | `META_ACCESS_TOKEN` | Approved Meta Ad Library access; never required merely to start the app |
 | `META_API_VERSION` | Defaults to `v25.0`; verify supported fields/version with your approved app |
@@ -89,19 +89,22 @@ one ledger. The UI shows paused budgets and collection failures. Setting a highe
 budget resumes collection on its next persisted retry, or on a new run once failed
 work has completed. Never clear the ledger to bypass the cap.
 
-Gemini ledger entries are **estimated costs**, not a measured invoice. Each inference
-POST reserves the configured amount before dispatch. Metadata, upload, polling and
-cleanup do not consume an inference reservation. Known token usage and configured
-GBP prices settle the successful attempt; unknown or failed attempts retain their
-reservation. Static fallback and retries reserve separately. Raw responses, token
-counts, pricing assumptions and accounting are retained with the analysis attempts.
-Missing usage remains unavailable. Set the reserve above the maximum plausible
-request charge using current pricing, media limits and the output-token limit. A
-provider could charge more than that assumption, so also use provider-side controls.
-Missing DATABASE_URL in
-production disables paid inference, while existing pages remain available with an
-explicit infrastructure warning. Local development without DATABASE_URL retains
-the existing non-hosted workflow and does not provide these durable budget guards.
+Gemini holds and token prices are **estimates**, not provider invoices. Reserve
+before a logical inference request. Explicit HTTP 5xx/429 rejections reuse that
+hold during bounded retries, and a final confirmed rejection releases it. A
+transport timeout or unreadable response can be ambiguous: retain its hold and
+reserve separately before another possible charge. File operations and cleanup
+have no inference hold. Successful known usage settles its hold to the token-based
+estimate; unknown usage or unconfirmed release/settlement stays conservatively
+reserved. The ledger preserves the original hold separately from its current
+amount and status. Existing historical unknown holds are not retroactively cleared.
+
+Reports and the one-ad diagnostic show **outstanding reserved budget**, **token-based
+estimated processing cost** and **actually billed by Google** separately. No Google
+billing/invoice feed is connected, so billed amounts remain **Unavailable**; neither
+holds nor token estimates are presented as observed charges. Current model prices
+and the reserve remain owner configuration. Keep provider billing alerts as well.
+Production paid inference still requires DATABASE_URL and an enabled budget.
 
 ## Hosted Gemini smoke test
 
@@ -145,10 +148,19 @@ collection worker and scheduler do not execute this smoke test and do not need i
    a failed URL. Browser login/challenges are recorded and never bypassed. Old
    reports remain available with their original evidence; new attempts retain the
    recent failure history instead of erasing it.
-7. Choose **Static** or **Agentic** and click **Run Gemini smoke test**. This uses
+7. **Static** is the default, including after a page reload. Agentic is a preview
+   feature used only when explicitly selected. Before another full batch, choose
+   one retained creative in **Test one ad** and click the button. It runs exactly
+   that creative, even when fewer than 10 are stored, and shows the full sanitised
+   Gemini message, request stage, HTTP/provider status and details. No preparation
+   or other creative is silently queued. Credentials and sensitive URL values are
+   redacted before persistence/display. The same result has a downloadable report.
+   To proceed with a batch, click **Run Gemini smoke test**. This uses
    the verified stored set and does not wait for further source downloads. The
-   chosen video mode is passed to both preparation and inference and shown on the
-   run. Static videos up to 60 seconds use 3 FPS throughout. Image/carousel rows
+   chosen video mode is passed to preparation, diagnostics and inference and shown
+   on the run. Static uses stable GenerateContent with a retained file; only an
+   explicit Agentic selection uses preview Interactions. Every generation attempt
+   and retry checks that the uploaded file is ACTIVE. Static videos up to 60 seconds use 3 FPS throughout. Image/carousel rows
    show **Image input** or **Carousel image inputs**, with no invented video FPS.
    Images use Gemini's native image input for format, hook/headline, angle, claims,
    on-screen text, offer and CTA. Retained images/slides can be opened from the table.
@@ -158,6 +170,15 @@ collection worker and scheduler do not execute this smoke test and do not need i
    exploratory and does not establish the original 24-of-25-video acceptance gate.
    Missing cost or usage is disclosed rather than filled with zero. Compare
    estimated costs with provider billing separately.
+
+Before upload, ffprobe checks retained video encoding. Compatible MP4/H.264/AAC
+(or silent H.264) inputs pass through. Other supported videos are normalized with
+ffmpeg to MP4/H.264/AAC, using a bounded two-thread transcode. Original bytes stay
+unchanged; normalized derivatives are verified/cached under the persistent media
+root. Jobs/results record source and upload hashes, sizes, codecs and mode. The
+existing Docker image already includes both ffmpeg and ffprobe. No new environment
+variables or manual migrations are needed; startup applies the additive ledger
+migration automatically.
 
 Image storage supports JPEG, PNG and WebP, one still image or 2–10 ordered image
 carousel slides. Every slide must be exposed and retained: no partial carousel or
@@ -169,7 +190,9 @@ metadata and analysis tables are created automatically at startup.
 
 Runs and reports remain in the web SQLite database on the persistent disk.
 Refresh and download are read-only. If the budget pauses, increase the cap and
-click **Resume pending items**. After a restart, completed work remains intact;
+click **Resume pending items** with the same explicitly selected mode as that
+saved run. An old Agentic run cannot resume under a Static selection; start a new
+Static one-ad diagnostic instead of relabelling earlier paid results. After a restart, completed work remains intact;
 resume continues work that had not started. An uncertain paid attempt stays
 interrupted for review. Starting a new test is an explicit new paid run.
 

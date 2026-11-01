@@ -48,15 +48,16 @@ test("Gemini analyses all retained carousel slides as image inputs and persists 
     assert.ok(!JSON.stringify(result).includes(key)); assert.match(JSON.stringify(result.accounting.rawResponse),/REDACTED/);
   } finally {await f.close();}
 });
-test("image retries reserve each billable attempt and preserve unknown earlier charges without double counting settlement failures",async()=>{
+test("image retries reuse the same reserve after a rejected server response and never double count settlement failures",async()=>{
   const f=await fixture(); let reserves=0,posts=0; const waits:number[]=[];
   try{
     const provider=new GeminiImageAnalyser({apiKey:key,model:"gemini-fixture-flash",maxRetries:1,retryBaseMs:2,inputGbpPerMillion:1,outputGbpPerMillion:2,
       reserveCost:async()=>({reservationId:`r-${++reserves}`,reservedGbp:0.2}),settleCost:async()=>{throw new Error("private details");},sleep:async ms=>{waits.push(ms);},
       fetch:async(_url,init)=>init?.method!=="POST"?json({name:"models/gemini-fixture-flash"}):++posts===1?json({error:{message:key}},503):json(payload())});
     const result=await provider.analyse({media:f.media,context:{brandName:"Brand",adCopy:"Copy"}});
-    assert.equal(posts,2); assert.equal(reserves,2); assert.deepEqual(waits,[2]); assert.equal(result.accounting.requestAttempts,2);
-    assert.equal(result.accounting.reservedCostGbp,0.4); assert.equal(result.accounting.estimatedCostGbp,0.4);
+    assert.equal(posts,2); assert.equal(reserves,1); assert.deepEqual(waits,[2]); assert.equal(result.accounting.requestAttempts,2);
+    assert.equal(result.accounting.rejectedAttempts,1); assert.equal(result.accounting.retryAttempts,1); assert.equal(result.accounting.billedCostGbp,null);
+    assert.equal(result.accounting.reservedCostGbp,0.2); assert.equal(result.accounting.estimatedCostGbp,0.2);
     assert.ok(!JSON.stringify(result).includes("private details"));
   }finally{await f.close();}
 });
@@ -98,4 +99,73 @@ test("image service persists scoped immutable media, completed results and faile
     fail=false; const duplicate=await Promise.allSettled([service.analyse("brand","ad",f.media.mediaId,"parallel-attempt"),service.analyse("brand","ad",f.media.mediaId,"parallel-attempt")]);
     assert.equal(duplicate.filter(value=>value.status==="fulfilled").length,1);assert.equal(analyses,3);
   }finally{db.close();await f.close();}
+});
+
+
+test("final rejected image requests release one shared reserve and expose the sanitised provider diagnostic",async()=>{
+  const f=await fixture(); let reserves=0,posts=0; const releases:string[]=[],waits:number[]=[];
+  const hiddenQuery="opaque-signed-value";
+  try{
+    const provider=new GeminiImageAnalyser({apiKey:key,model:"gemini-fixture-flash",retryBaseMs:2,
+      reserveCost:async()=>({reservationId:`held-${++reserves}`,reservedGbp:0.2}),releaseCost:async id=>{releases.push(id);},sleep:async ms=>{waits.push(ms);},
+      fetch:async(_url,init)=>{
+        if(init?.method!=="POST")return json({name:"models/gemini-fixture-flash"});
+        posts++;
+        return new Response(JSON.stringify({error:{code:503,status:"UNAVAILABLE",message:`Model overloaded for image input. Key ${key}; Authorization: Bearer bearer-secret-value; source https://user:password-secret@fixture.fbcdn.net/asset?token=${hiddenQuery}`,details:[{"@type":"type.googleapis.com/google.rpc.RetryInfo",retryDelay:"2s"}]}}),{status:503,headers:{"Content-Type":"application/json","Retry-After":"2","x-request-id":"provider-request-one"}});
+      }});
+    await assert.rejects(()=>provider.analyse({media:f.media,context:{brandName:"Brand",adCopy:"Copy"}}),(error:any)=>{
+      assert.ok(error instanceof VideoProviderError);
+      assert.match(error.message,/Model overloaded for image input/);
+      assert.equal(error.diagnostic?.stage,"image_generation");
+      assert.equal(error.diagnostic?.httpStatus,503);
+      assert.equal(error.diagnostic?.providerStatus,"UNAVAILABLE");
+      assert.ok(error.diagnostic?.details);
+      const serialised=JSON.stringify(error);
+      for(const secret of [key,hiddenQuery,"bearer-secret-value","password-secret"])assert.ok(!serialised.includes(secret),`sanitised diagnostic excludes ${secret}`);
+      assert.equal(error.accounting?.requestAttempts,3);
+      assert.equal(error.accounting?.rejectedAttempts,3);
+      assert.equal(error.accounting?.reservedCostGbp,0);
+      assert.equal(error.accounting?.estimatedCostGbp,0);
+      assert.equal(error.accounting?.billedCostGbp,null,"HTTP rejection is not provider billing evidence");
+      return true;
+    });
+    assert.equal(posts,3);assert.equal(reserves,1);assert.deepEqual(releases,["held-1"]);
+    assert.deepEqual(waits,[2000,2000]);
+  }finally{await f.close();}
+});
+test("ambiguous image timeouts retry with new coverage while retaining the original uncertain reserve",async()=>{
+  const f=await fixture();let reserves=0,posts=0;const waits:number[]=[],settled:string[]=[];
+  try{
+    const provider=new GeminiImageAnalyser({apiKey:key,model:"gemini-fixture-flash",retryBaseMs:3,inputGbpPerMillion:1,outputGbpPerMillion:2,
+      reserveCost:async()=>({reservationId:`timeout-${++reserves}`,reservedGbp:0.2}),settleCost:async id=>{settled.push(id);},sleep:async ms=>{waits.push(ms);},
+      fetch:async(_url,init)=>{
+        if(init?.method!=="POST")return json({name:"models/gemini-fixture-flash"});
+        if(++posts<3)throw new DOMException("opaque upstream request body","TimeoutError");
+        return json(payload());
+      }});
+    const result=await provider.analyse({media:f.media,context:{brandName:"Brand",adCopy:"Copy"}});
+    assert.equal(posts,3);assert.equal(reserves,3);assert.deepEqual(waits,[3,6]);assert.deepEqual(settled,["timeout-3"]);
+    assert.equal(result.accounting.reservedCostGbp,0.4);
+    assert.equal(result.accounting.tokenCostGbp,0.00015);
+    assert.ok(Math.abs(result.accounting.estimatedCostGbp!-0.40015)<1e-10);
+    assert.equal(result.accounting.rejectedAttempts,0);assert.equal(result.accounting.billedCostGbp,null);
+  }finally{await f.close();}
+});
+
+test("timed-out successful image response bodies are retried as uncertain attempts",async()=>{
+  const f=await fixture();let reserves=0,posts=0;const waits:number[]=[];
+  try{
+    const provider=new GeminiImageAnalyser({apiKey:key,model:"gemini-fixture-flash",maxRetries:1,retryBaseMs:4,
+      reserveCost:async()=>({reservationId:`body-${++reserves}`,reservedGbp:0.2}),sleep:async ms=>{waits.push(ms);},
+      fetch:async(_url,init)=>{
+        if(init?.method!=="POST")return json({name:"models/gemini-fixture-flash"});
+        if(++posts===1)return new Response(new ReadableStream({start(controller){controller.error(new DOMException("untrusted transport text","TimeoutError"));}}),{headers:{"Content-Type":"application/json"}});
+        return json(payload());
+      }});
+    const result=await provider.analyse({media:f.media,context:{brandName:"Brand",adCopy:"Copy"}});
+    assert.equal(posts,2);assert.equal(reserves,2);assert.deepEqual(waits,[4]);
+    assert.equal(result.accounting.reservedCostGbp,0.4,"missing prices keep both possible charges reserved");
+    assert.equal(result.accounting.usage.totalTokens,125);
+    assert.equal(result.accounting.billedCostGbp,null);
+  }finally{await f.close();}
 });

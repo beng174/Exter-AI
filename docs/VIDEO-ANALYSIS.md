@@ -1,19 +1,19 @@
 # Native video analysis
 
-Exter retains each video's actual bytes before analysis and submits the stored file to a swappable `VideoAnalyser`. The first provider is Gemini Flash using the Files and Interactions APIs. The current default is `gemini-3.8-flash`; set `GEMINI_VIDEO_MODEL` to a supported Flash model when changing provider configuration. The TwelveLabs Pegasus implementation is an explicit stub and produces no benchmark predictions.
+Exter retains each video's actual bytes before analysis and submits the stored file to a swappable `VideoAnalyser`. The first provider is Gemini Flash using the Files API and stable GenerateContent for Static; preview Interactions is used only for an explicitly selected Agentic run. The current default is `gemini-3.8-flash`; set `GEMINI_VIDEO_MODEL` to a supported Flash model when changing provider configuration. The TwelveLabs Pegasus implementation is an explicit stub and produces no benchmark predictions.
 
 This replaces the planned frame-sampling, external speech-transcription and OCR pipeline. Gemini reads the native video, its audio and on-screen text. Exter owns media retention, prompts, validation, structured storage and comparisons. Claude remains an optional consumer of saved results. Native-video computation is performed by the configured external model provider, not by the existing local still-image model.
 
 ## Configure the full application
 
-Install Node.js 24+, project dependencies and `ffprobe` (part of FFmpeg). Set `GEMINI_API_KEY` through server secret configuration. Do not paste credentials into chat or commit them. The example [.env.example](../.env.example) documents variable names; it is not automatically loaded by the application.
+Install Node.js 24+, project dependencies and `ffmpeg`/`ffprobe`. Set `GEMINI_API_KEY` through server secret configuration. Do not paste credentials into chat or commit them. The example [.env.example](../.env.example) documents variable names; it is not automatically loaded by the application.
 
 - `GEMINI_API_KEY`: server-side Gemini API credential.
 - `GEMINI_VIDEO_MODEL`: Gemini Flash model ID; default `gemini-3.8-flash`.
 - `GEMINI_VIDEO_CONCURRENCY`: parallel video jobs per web process; default `3`, allowed range `1–10`.
-- `GEMINI_MAX_RETRIES`: extra attempts after 429 or 5xx responses; default `2`, allowed range `0–5`.
+- `GEMINI_MAX_RETRIES`: extra attempts after 429/5xx responses or timeouts; default `2`, allowed range `0–5`.
 - `GEMINI_INPUT_GBP_PER_MILLION_TOKENS`, `GEMINI_OUTPUT_GBP_PER_MILLION_TOKENS`: positive GBP prices for the selected model. Set current paid-tier prices converted to GBP; no provider price is guessed.
-- `GEMINI_REQUEST_RESERVE_GBP`: conservative charge reserved in the inference ledger before each generation HTTP attempt. Production inference also requires `DATABASE_URL` and an enabled monthly inference budget.
+- `GEMINI_REQUEST_RESERVE_GBP`: conservative hold before inference. Explicit rejection retries reuse it; ambiguous timeout retries need separate holds. Production inference also requires `DATABASE_URL` and an enabled monthly inference budget.
 - `EXTER_VIDEO_CONFIDENCE`: confidence threshold; default `0.75`.
 - `EXTER_MEDIA_ROOT`: persistent video directory; default `.data/media`.
 - `EXTER_MEDIA_ALLOWED_HOSTS`: comma-separated public media-host allowlist; default `*.fbcdn.net`. Add an actual source host when integrating another platform.
@@ -33,9 +33,30 @@ Put the media root and database on persistent volumes and back them up together.
 
 ## Processing and structured output
 
-The primary native-video input uses Interactions API `processing: "agentic"`. One inference request per ad attempt returns a structured JSON object. Files API upload, ACTIVE-state polling, model metadata and remote-file deletion are transport calls in addition to the inference request. Cleanup attempts to delete Gemini's remote file when the attempt ends; Exter keeps its own local copy. A cleanup failure does not turn a completed analysis into a fabricated failure or guarantee that the remote file was removed.
+Static is the default at the UI, API, service and CLI. It uses stable
+GenerateContent with native `fileData` and `videoMetadata` (3FPS throughout ads up
+to 60 seconds; longer clips use 5 FPS over the opening 5 seconds and 1 FPS afterwards).
+Only an explicit Agentic preview choice uses Interactions `processing:"agentic"`.
+There is no automatic opt-in from historical preferences or a previously saved run.
+An explicitly unsupported Agentic capability may fall back to Static, with both
+attempts and their actual modes recorded. Other errors do not silently switch modes.
 
-Only a provider response explicitly rejecting agentic capability triggers the static fallback. Ads of 60 seconds or less use 3 FPS over the entire stored video. Longer videos use native clips at 5 FPS for seconds 0–5, followed by 1 FPS over the remainder, within the same inference request. Timestamps always refer to the original video, and the saved coverage lists the actual clips and frame rates. The mode identifier remains `static-high-fps-hook` for compatibility. Both processing modes and outcomes are recorded. Authentication, rate limits, network failures and invalid JSON never silently switch modes; 429 and 5xx responses receive bounded exponential retries in the selected mode, with an inference budget reservation before every generation attempt.
+The uploaded file must be ACTIVE before every generation dispatch, including
+retries. PROCESSING is polled with a bound; FAILED and processing deadlines stop
+before inference and preserve sanitised provider diagnostics. Default retries are
+three total attempts with exponential backoff for HTTP 500/503/429 and fetch/response
+read timeouts. A known HTTP rejection reuses one hold; final rejection releases it.
+Ambiguous timeouts keep the earlier hold and reserve a new possible charge before
+retrying. Retry-After is honoured within the configured wait bound. Provider error
+message/status/details/request IDs and stage are sanitised before persistence;
+credentials, auth headers and signed query values are not logged or displayed.
+
+ffprobe checks the source encoding before upload. Compatible MP4/H.264/yuv420p
+with AAC audio (or no audio) passes unchanged. Other supported inputs are converted
+locally with ffmpeg to MP4/H.264/AAC. Original retained bytes and their SHA remain
+unchanged; an immutable verified derivative is cached, with both source/upload
+hashes, sizes and codecs saved as normalization provenance. Conversion failure,
+truncation or checksum mismatch prevents paid dispatch.
 
 The returned fields are:
 
@@ -53,7 +74,7 @@ A casual visual style, first-person voice or person talking to camera does not e
 
 Each saved analysis identifies its ad/workspace, retained media ID and SHA-256, provider, requested model, provider-reported model, provider-reported model version, processing mode, prompt version, creation time, confidence threshold and covered intervals. Unknown provider versions remain `null`; an unpinned model alias is not represented as an immutable model revision. Retain original predictions when changing models or prompts so comparisons use the same media.
 
-The analysis and each job attempt also retain `accounting`: sanitised raw provider response, input/output/total tokens, model prices, token-based GBP estimate, conservative reserves for unknown retry charges, combined estimated cost and generation-attempt count. Missing token counts remain `null`. Failed field validation preserves the raw response and accounting in the job. Known token estimates settle their generation reservation; unknown/failed attempts keep their conservative ledger reserve. These are estimates, not a Google billing invoice. If ledger settlement is unavailable, the larger existing reserve remains until reconciled.
+The analysis and each job attempt also retain `accounting`: sanitised raw provider response, input/output/total tokens, model prices, token-based GBP estimate, conservative reserves for unknown retry charges, combined estimated cost and generation-attempt count. Missing token counts remain `null`. Failed field validation preserves the raw response and accounting in the job. Known token estimates settle their hold; explicit rejected requests release it, while ambiguous attempts keep their hold. Outstanding reservations, token estimates and provider-confirmed billing are separate fields. No billing feed is connected, so billed cost is null/unavailable, never a token estimate or assumed zero. If ledger settlement is unavailable, the larger existing reserve remains until reconciled.
 
 Job records and completed analyses persist in SQLite; successful runs are append-only. One web process runs up to the configured number of jobs concurrently. On server startup, unfinished jobs are marked `interrupted` rather than silently replaying a possibly billable remote call. Submit a new explicit request to retry; retained media and prior runs remain available. Matching saved results are reused unless forced. Durable native-video job records do not imply a distributed native-video queue.
 
@@ -78,7 +99,7 @@ npm run video:analyse -- \
   --brand-id WORKSPACE_ID \
   --ad-id AD_LIBRARY_ID \
   --provider gemini \
-  --mode agentic \
+  --mode static-high-fps-hook \
   --output /tmp/gemini-predictions.json
 ```
 
@@ -91,7 +112,7 @@ Available options:
 | `--video-url HTTPS_URL` | Supply an allowed public video file URL instead of a capture. Mutually exclusive with `--capture`. |
 | `--download-only` | Retain and verify media without calling the model. |
 | `--provider gemini\|twelvelabs` | Select Gemini or the explicit, non-operational Pegasus stub. Default: Gemini. |
-| `--mode agentic\|static-high-fps-hook` | Select the initial processing mode. Default: agentic. |
+| `--mode agentic\|static-high-fps-hook` | Select the video mode. Default: Static (`static-high-fps-hook`); Agentic preview requires explicit `--mode agentic`. |
 | `--force` | Create a new inference run instead of reusing a matching saved result; prior runs remain. It does not force a new source download. |
 | `--output PATH` | Save JSON output; analysis output contains a `predictions` array suitable for the evaluator. |
 | `--recover-interrupted` | Mark unfinished jobs interrupted before proceeding. Use only when this process owns the worker and another worker is not running. |
@@ -136,3 +157,12 @@ No human-labelled real-ad accuracy figure is supplied. Provider tests use fixtur
 - [Gemini video understanding and native processing](https://ai.google.dev/gemini-api/docs/video-understanding)
 - [Gemini Interactions API](https://ai.google.dev/api/interactions-api)
 - [Gemini Files API](https://ai.google.dev/gemini-api/docs/files)
+
+## One-ad hosted diagnostics
+
+In Budgets & tests, choose one verified retained creative and use **Test one ad**.
+This has a1-ad sample and never starts a batch or a source download. Static is the
+default; images and carousels use their own native image inputs. The UI/report
+shows full sanitised Gemini diagnostics and outstanding reservations separately
+from token estimates and actual billed amounts (currently unavailable). Production
+execution stays on Render; no Gemini key is needed in Codex.

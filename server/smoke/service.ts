@@ -14,6 +14,7 @@ import { MediaStorageError } from "../video/media.js";
 import { VideoProviderError } from "../video/types.js";
 import { PublicValentteVideoSource, SmokeSourceError, VALENTTE_PAGE_ID, type SmokeVideoSource } from "./source.js";
 import { ImageAnalysisService } from "../image/service.js";
+import type { GeminiDiagnostic } from "../../shared/gemini-diagnostic.js";
 
 const ACTIVE = new Set(["queued", "preparing", "analysing"]);
 const now = () => new Date().toISOString();
@@ -70,12 +71,20 @@ function ensureValentteCase(db: DatabaseSync) {
   } catch (error) { db.exec("ROLLBACK"); throw error; }
 }
 function accountingSummary(parts: VideoAnalysisAccounting[]) {
-  const sum = (key: "inputTokens" | "outputTokens" | "totalTokens") => parts.length && parts.every(part => part.requestAttempts <= 1 && part.usage[key] !== null) ? parts.reduce((total, part) => total + (part.usage[key] || 0), 0) : null;
+  const accepted = parts.filter(part => part.requestAttempts > (part.rejectedAttempts || 0));
+  const sum = (key: "inputTokens" | "outputTokens" | "totalTokens") => accepted.length && accepted.every(part => part.requestAttempts - (part.rejectedAttempts || 0) <= 1 && part.usage[key] !== null) ? accepted.reduce((total, part) => total + (part.usage[key] || 0), 0) : null;
   const knownCosts = parts.map(part => part.estimatedCostGbp).filter((value): value is number => value !== null && Number.isFinite(value));
+  const costSum = (key: "reservedCostGbp" | "tokenCostGbp" | "billedCostGbp" | "initialReservedCostGbp") => {
+    const selected = key === "tokenCostGbp" ? accepted : parts;
+    return selected.length && selected.every(part => typeof part[key] === "number" && Number.isFinite(part[key])) ? selected.reduce((total, part) => total + part[key]!, 0) : null;
+  };
   return {
     usage: { inputTokens: sum("inputTokens"), outputTokens: sum("outputTokens"), totalTokens: sum("totalTokens") },
     estimatedCostGbp: parts.length && knownCosts.length === parts.length ? knownCosts.reduce((a,b) => a+b,0) : null,
     costBasis: parts.map(part => part.costBasis).filter((value,index,array) => array.indexOf(value) === index).join(", ") || "unavailable",
+    reservedCostGbp: costSum("reservedCostGbp"), tokenCostGbp: costSum("tokenCostGbp"), billedCostGbp: costSum("billedCostGbp"), initialReservedCostGbp: costSum("initialReservedCostGbp"),
+    retryAttempts: parts.reduce((total, part) => total + (part.retryAttempts ?? Math.max(0, part.requestAttempts - 1)), 0),
+    rejectedAttempts: parts.reduce((total, part) => total + (part.rejectedAttempts || 0), 0),
   };
 }
 export class GeminiSmokeService {
@@ -122,6 +131,7 @@ export class GeminiSmokeService {
             if (job) {
               item.model = job.model; item.processingMode = job.attempts.at(-1)?.processingMode || job.requestedMode;
               this.applyAccounting(item, job.attempts);
+              if (job.geminiDiagnostic) item.geminiDiagnostic = job.geminiDiagnostic;
             }
           }
         }
@@ -171,7 +181,7 @@ export class GeminiSmokeService {
         try {
           const media = await this.video.storedMedia(ad.brandId, ad.id, ad.videoMediaId);
           if (media) {
-            retained.push({ adId: ad.id, brandId: ad.brandId, nativeId: ad.providerAdId!, status: "stored", mediaKind: "video", mediaId: media.mediaId, mediaSha256: media.sha256 });
+            retained.push({ adId: ad.id, brandId: ad.brandId, nativeId: ad.providerAdId!, status: "stored", mediaKind: "video", mediaId: media.mediaId, mediaSha256: media.sha256, durationSeconds: media.durationSeconds });
             seen.add(ad.providerAdId!); continue;
           }
         } catch { /* Missing/corrupt disk objects do not count towards a sample. */ }
@@ -192,7 +202,25 @@ export class GeminiSmokeService {
     const retained = await this.retainedCreatives();
     return { hosted: readiness.hosted, configured: !readiness.errors.length, configurationErrors: readiness.errors, model: process.env.GEMINI_VIDEO_MODEL || DEFAULT_GEMINI_VIDEO_MODEL, concurrency: this.concurrency, candidateCount: ads.length || source.ads.length, storedCount: retained.length, storedCounts: formatCounts(retained), minSampleSize: GEMINI_SMOKE_MIN_SAMPLE, targetSampleSize: GEMINI_SMOKE_TARGET, run: this.active() || this.latest() };
   }
-  async start(kind: "prepare" | "smoke", requestedMode: VideoProcessingMode = "agentic", options: { refreshFailed?: boolean } = {}) {
+  async creatives() {
+    const items = await this.retainedCreatives();
+    return { defaultVideoMode: "static-high-fps-hook" as const, creatives: items.map(({ brandId, adId, nativeId, mediaKind, imageCount, durationSeconds }) => ({ brandId, adId, nativeId, mediaKind, ...(imageCount ? { imageCount } : {}), ...(durationSeconds ? { durationSeconds } : {}) })) };
+  }
+  async testOne(brandId: string, adId: string, requestedMode: VideoProcessingMode = "static-high-fps-hook") {
+    if (!["agentic", "static-high-fps-hook"].includes(requestedMode)) throw new SmokeRequestError("Choose Static or explicitly select Agentic preview.", 400);
+    const ready = await this.readiness();
+    if (!ready.hosted || ready.errors.length) throw new SmokeRequestError(ready.errors.join(" ") || "Run this diagnostic in the deployed Render app.");
+    const selected = (await this.retainedCreatives()).find(item => item.brandId === brandId && item.adId === adId);
+    if (!selected) throw new SmokeRequestError("The selected creative is not retained and verified in this workspace. Prepare it first.", 404);
+    const active = this.active();
+    if (active) {
+      if (active.kind === "diagnostic" && active.requestedMode === requestedMode && active.items.length === 1 && active.items[0].brandId === brandId && active.items[0].adId === adId) return active;
+      throw new SmokeRequestError("Another test or preparation is active. Wait for it to finish before testing one ad.");
+    }
+    const run: SmokeRun = { id: randomUUID(), kind: "diagnostic", status: "queued", requestedMode, createdAt: now(), updatedAt: now(), sampleSize: 1, sampleCounts: formatCounts([selected]), targetSampleSize: 1, minimumSampleSize: 1, items: [selected] };
+    this.save(run); this.launch(run); return structuredClone(run);
+  }
+  async start(kind: "prepare" | "smoke", requestedMode: VideoProcessingMode = "static-high-fps-hook", options: { refreshFailed?: boolean } = {}) {
     if (!["agentic", "static-high-fps-hook"].includes(requestedMode)) throw new SmokeRequestError("Choose agentic or static video processing.", 400);
     const current = this.active();
     if (current) return current;
@@ -226,14 +254,17 @@ export class GeminiSmokeService {
     this.launch(run);
     return structuredClone(run);
   }
-  async resume(id: string) {
+  async resume(id: string, requestedMode: VideoProcessingMode = "static-high-fps-hook") {
     let run = this.run(id);
     if (!run) throw new SmokeRequestError("Gemini smoke test not found.", 404);
+    if (!["agentic", "static-high-fps-hook"].includes(requestedMode)) throw new SmokeRequestError("Choose Static or explicitly select Agentic preview.", 400);
+    if (run.kind !== "prepare" && run.requestedMode !== requestedMode)
+      throw new SmokeRequestError("This saved run uses a different video mode. Select its recorded mode explicitly to resume it, or start a new Static test; earlier paid results will not be relabelled.");
     if (!["paused", "interrupted"].includes(run.status)) throw new SmokeRequestError("Only a paused or interrupted run can be resumed.");
     const active = this.active();
     if (active && active.id !== id) throw new SmokeRequestError("Another Gemini smoke run is already active.");
     const ready = await this.readiness();
-    if (!ready.hosted || run.kind === "smoke" && ready.errors.length) throw new SmokeRequestError(ready.errors.join(" ") || "Run this action in Render.");
+    if (!ready.hosted || run.kind !== "prepare" && ready.errors.length) throw new SmokeRequestError(ready.errors.join(" ") || "Run this action in Render.");
     // Read again after the awaited preflight: concurrent resume requests must not
     // launch two stale copies of the same billable batch.
     const fresh = this.run(id);
@@ -243,6 +274,8 @@ export class GeminiSmokeService {
     const otherActive = this.active();
     if (otherActive && otherActive.id !== id) throw new SmokeRequestError("Another Gemini smoke run is already active.");
     run = fresh;
+    if (run.kind !== "prepare" && run.requestedMode !== requestedMode) throw new SmokeRequestError("The saved run mode changed. Refresh its status before resuming.");
+    if (run.kind === "prepare") run.requestedMode = requestedMode;
     if (run.kind === "smoke" && run.sampleSize === undefined) {
       // Legacy runs had no fixed sample metadata and sometimes retained all
       // preparation candidates. Resume only their retained or already-paid set.
@@ -369,6 +402,7 @@ export class GeminiSmokeService {
     const analysis = this.video.history(item.brandId, item.adId).find(value => value.id === analysisId);
     if (!analysis) { item.status = "failed"; item.error = "The saved analysis could not be found."; return; }
     delete item.error; delete item.errorCode;
+    delete item.geminiDiagnostic;
     item.status = "complete"; item.analysisId = analysisId; item.model = analysis.model; item.processingMode = analysis.processingMode;
     this.applyAccounting(item, attempts);
     if (!item.accounting?.length && analysis.accounting) this.applyAccounting(item, [{ accounting: analysis.accounting }]);
@@ -376,13 +410,15 @@ export class GeminiSmokeService {
   private finishImageItem(item: SmokeItem, result: ReturnType<ImageAnalysisService["history"]>[number]) {
     item.status = "complete"; item.analysisId = result.id; item.model = result.model; item.processingMode = result.processingMode;
     delete item.error; delete item.errorCode;
+    delete item.geminiDiagnostic;
     this.applyAccounting(item, [{ accounting: result.accounting }]);
   }
-  private inferenceFailure(item: SmokeItem, code: string, message: string, accounting?: VideoAnalysisAccounting) {
+  private inferenceFailure(item: SmokeItem, code: string, message: string, accounting?: VideoAnalysisAccounting, diagnostic?: GeminiDiagnostic) {
     if (accounting) this.applyAccounting(item, [{ accounting }]);
     item.errorCode = code; item.error = message;
+    if (diagnostic) item.geminiDiagnostic = diagnostic;
     if (code === "budget_paused") {
-      const possiblyCharged = item.accounting?.some(part => part.requestAttempts > 0);
+      const possiblyCharged = item.accounting?.some(part => part.requestAttempts > (part.rejectedAttempts || 0));
       item.status = possiblyCharged ? "interrupted" : "stored";
       if (possiblyCharged) item.error = "Budget paused after an earlier provider attempt. Its cost accounting was retained; Resume will not replay this ad. Review the report before starting a new test.";
       return true;
@@ -393,7 +429,8 @@ export class GeminiSmokeService {
   private async execute(run: SmokeRun) {
     if (run.kind === "prepare") { await this.prepare(run); return; }
     const sampleSize = run.sampleSize ?? run.items.length;
-    if (sampleSize < GEMINI_SMOKE_MIN_SAMPLE) throw new SmokeRequestError("At least 10 retained inputs are required before inference.");
+    const minimum = run.kind === "diagnostic" ? 1 : GEMINI_SMOKE_MIN_SAMPLE;
+    if (sampleSize < minimum) throw new SmokeRequestError(`At least ${minimum} retained input${minimum === 1 ? " is" : "s are"} required before inference.`);
     run.status = "analysing";
     run.message = `Running Gemini on ${sampleSize} retained creatives. Each billable attempt reserves budget before calling the provider.`;
     this.save(run);
@@ -412,7 +449,7 @@ export class GeminiSmokeService {
             try { this.finishImageItem(item, await this.images.analyse(item.brandId, item.adId, item.mediaId!, item.jobId)); }
             catch (error) {
               const known = error instanceof VideoProviderError;
-              if (this.inferenceFailure(item, known ? error.code : "unavailable", known ? error.message : "Image inference could not finish; retained inputs and earlier results were preserved.", known ? error.accounting : undefined)) paused = true;
+              if (this.inferenceFailure(item, known ? error.code : "unavailable", known ? error.message : "Image inference could not finish; retained inputs and earlier results were preserved.", known ? error.accounting : undefined, known ? error.diagnostic : undefined)) paused = true;
             }
             this.save(run);
           })());
@@ -423,7 +460,7 @@ export class GeminiSmokeService {
           const job = this.video.enqueue({ brandId: item.brandId, adId: item.adId, provider: "gemini", processingMode: run.requestedMode, force: true });
           item.jobId = job.id; launched.push(item);
         } catch (error) {
-          if (this.inferenceFailure(item, error instanceof VideoProviderError ? error.code : "unavailable", error instanceof VideoProviderError ? error.message : "The video analysis could not be queued; no provider response is available.")) paused = true;
+          if (this.inferenceFailure(item, error instanceof VideoProviderError ? error.code : "unavailable", error instanceof VideoProviderError ? error.message : "The video analysis could not be queued; no provider response is available.", error instanceof VideoProviderError ? error.accounting : undefined, error instanceof VideoProviderError ? error.diagnostic : undefined)) paused = true;
         }
         this.save(run);
       }
@@ -435,7 +472,7 @@ export class GeminiSmokeService {
         if (job.status === "complete" && job.analysisId) this.finishItem(item, job.analysisId, job.attempts);
         else {
           this.applyAccounting(item, job.attempts);
-          if (this.inferenceFailure(item, job.errorCode || "unavailable", job.error || "Gemini did not produce a validated output.")) paused = true;
+          if (this.inferenceFailure(item, job.errorCode || "unavailable", job.error || "Gemini did not produce a validated output.", undefined, job.geminiDiagnostic)) paused = true;
         }
         this.save(run);
       }
@@ -444,8 +481,8 @@ export class GeminiSmokeService {
     run.status = "complete"; run.finishedAt = now();
     const complete = run.items.filter(item => item.status === "complete").length;
     const counts = run.sampleCounts || formatCounts(run.items);
-    const fullVideoGate = counts.video === GEMINI_SMOKE_TARGET && complete >= 24;
-    run.message = `${complete}/${sampleSize} creatives analysed (${counts.video} videos, ${counts.image} images, ${counts.carousel} carousels in the sample). ` +
+    const fullVideoGate = run.kind === "smoke" && counts.video === GEMINI_SMOKE_TARGET && complete >= 24;
+    run.message = `${run.kind === "diagnostic" ? "One-ad diagnostic: " : ""}${complete}/${sampleSize} creatives analysed (${counts.video} videos, ${counts.image} images, ${counts.carousel} carousels in the sample). ` +
       (fullVideoGate ? "The 24/25 video success target is met; review costs and outputs in the report." : "This sample is exploratory and does not establish the original 25-video Phase 1 acceptance target.");
     this.save(run);
   }
@@ -461,6 +498,17 @@ export class GeminiSmokeService {
     const counts = run.sampleCounts || formatCounts(run.kind === "prepare" ? stored : run.sampleSize === undefined ? legacyInputs : run.items);
     const knownCostItems = run.items.filter(item => typeof item.estimatedCostGbp === "number");
     const costs = knownCostItems.reduce((total,item) => total + item.estimatedCostGbp!,0);
+    const costAmount = (item: SmokeItem, field: "reservedCostGbp" | "tokenCostGbp" | "billedCostGbp" | "initialReservedCostGbp") => {
+      if (typeof item[field] === "number") return item[field];
+      const parts = (item.accounting || []).filter(part => field !== "tokenCostGbp" || part.requestAttempts > (part.rejectedAttempts || 0));
+      return parts.length && parts.every(part => typeof part[field] === "number") ? parts.reduce((sum, part) => sum + part[field]!, 0) : null;
+    };
+    const costTotal = (field: "reservedCostGbp" | "tokenCostGbp" | "billedCostGbp" | "initialReservedCostGbp") => {
+      const values = run.items.map(item => costAmount(item, field));
+      const known = values.filter((value): value is number => typeof value === "number");
+      return { amount: known.length ? known.reduce((a,b) => a+b, 0) : null, known: known.length };
+    };
+    const reserved = costTotal("reservedCostGbp"), estimatedTokens = costTotal("tokenCostGbp"), billed = costTotal("billedCostGbp"), initialReserved = costTotal("initialReservedCostGbp");
     const tokens = successes.filter(item => item.usage?.totalTokens !== null && item.usage?.totalTokens !== undefined);
     const totalTokens = tokens.reduce((total,item) => total + item.usage!.totalTokens!,0);
     const videoSuccesses = successes.filter(item => !item.mediaKind || item.mediaKind === "video").length;
@@ -474,19 +522,24 @@ export class GeminiSmokeService {
     const exploratory = counts.video !== GEMINI_SMOKE_TARGET || sampleSize !== GEMINI_SMOKE_TARGET;
     const sections = [
       "# Gemini live report", "", `Run: ${run.id}`, `Created: ${run.createdAt}`, `Updated: ${run.updatedAt}`,
-      `Execution: Render web service; ${run.kind === "smoke" ? "live Gemini inference" : "media preparation only"}.`, `Status: ${run.status}`,
+      `Execution: Render web service; ${run.kind === "prepare" ? "media preparation only" : run.kind === "diagnostic" ? "one-ad diagnostic inference" : "live Gemini inference"}.`, `Status: ${run.status}`,
       `Requested video processing mode: ${run.requestedMode}. Image and carousel ads use native image input, independent of the video mode.`, "",
       `Actual ${run.kind === "prepare" ? "retained input" : "sample"} size: ${sampleSize} ads — ${counts.video} videos, ${counts.image} static images, ${counts.carousel} carousels. Each carousel counts as one ad; every retained slide is supplied to Gemini.`,
-      `Preparation target: ${GEMINI_SMOKE_TARGET} creatives. Minimum runnable sample: ${GEMINI_SMOKE_MIN_SAMPLE}. ${exploratory ? "This is an exploratory partial or mixed-media sample; it is not the original 25-video acceptance set." : "This sample contains the full 25-video target."}`,
+      `Preparation target: ${GEMINI_SMOKE_TARGET} creatives. Minimum batch sample: ${GEMINI_SMOKE_MIN_SAMPLE}; one-ad diagnostics require only the selected retained creative. ${run.kind === "diagnostic" ? "This run tests exactly one ad and is not a batch or accuracy benchmark." : exploratory ? "This is an exploratory partial or mixed-media sample; it is not the original 25-video acceptance set." : "This sample contains the full 25-video target."}`,
       `Successful outputs: ${successes.length}/${sampleSize}. Failed/interrupted ads: ${failures.length}. Source-unavailable image/carousel ads: ${unavailable.length} (not format failures). Pending/stored ads: ${run.items.filter(item => ["pending", "preparing", "stored", "analysing"].includes(item.status)).length}.`,
       `Original Phase 1 video success acceptance: ${fullVideoGate ? "met (at least 24/25 videos)" : "not established by this run"}.`,
-      `Known estimated total cost, including reserved failed attempts: ${knownCostItems.length ? money(costs) : "unavailable"} (${knownCostItems.length}/${run.kind === "smoke" ? sampleSize : 0} ads with complete cost accounting).`,
+      `Known estimated total cost, including reserved failed attempts: ${knownCostItems.length ? money(costs) : "unavailable"} (${knownCostItems.length}/${run.kind !== "prepare" ? sampleSize : 0} ads with complete cost accounting).`,
+      `Outstanding reserved budget: ${money(reserved.amount)} (${reserved.known}/${sampleSize} ads with reservation accounting). Original holds created: ${money(initialReserved.amount)}. Reservations are not charges.`,
+      `Token-based estimated processing cost: ${money(estimatedTokens.amount)} (${estimatedTokens.known}/${sampleSize} ads with a known token estimate). This is calculated from usage and configured prices, not a provider invoice.`,
+      `Actually billed by Google: ${billed.known === sampleSize && sampleSize > 0 ? money(billed.amount) : "unavailable — no provider billing/invoice feed is connected"}. Missing billed amounts remain unavailable; they are never filled with the reservation or token estimate.`,
       `Average known estimated cost per attempted ad: ${knownCostItems.length ? money(costs/knownCostItems.length) : "unavailable"}.`,
       `Average total tokens per successful ad with complete usage: ${tokens.length ? (totalTokens/tokens.length).toFixed(1) : "unavailable"} (${tokens.length}/${successes.length} outputs).`,
-      "Cost figures are estimates, not invoices. The ledger reserves before each paid attempt; failures and missing usage can retain the reserve. Incomplete accounting gives a known subtotal. Input/output prices and prompt versions are saved per analysis. Per-ad tokens are unavailable if any retry has unknown usage; reported final-response usage remains saved.",
+      "A logical request reuses its budget reservation when Google explicitly rejects a retryable request with 5xx. A final confirmed rejection releases that hold; ambiguous timeouts retain their hold and require a new reservation before another dispatch. Historical unknown holds are not automatically cleared. Estimates are not invoices. Incomplete accounting gives a known subtotal. Per-ad tokens remain unavailable if any retry has unknown usage.",
       "A missing media URL does not prove expiration. HTTP 403 means blocked/forbidden; HTTP 410 means expired or removed. Images and carousels are valid creative types and do not count as failures merely because they are not video.", "", run.message || "", "",
-      "## Per-ad results", "", "| Ad ID | Format | Status | Model | Actual mode | Input tokens | Output tokens | Total tokens | Estimated GBP | Source/failure category | Reason / HTTP |", "| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |",
-      ...run.items.map(item => `| ${safe(item.nativeId)} | ${mediaLabel(item)}${item.imageCount ? ` (${item.imageCount} images)` : ""} | ${item.status} | ${safe(item.model || "unavailable")} | ${run.kind === "prepare" ? "no inference" : item.processingMode || run.requestedMode} | ${item.usage?.inputTokens ?? "unavailable"} | ${item.usage?.outputTokens ?? "unavailable"} | ${item.usage?.totalTokens ?? "unavailable"} | ${money(item.estimatedCostGbp)} | ${category(item)} | ${safe(item.error || "")}${item.sourceHttpStatus ? ` (HTTP ${item.sourceHttpStatus})` : ""} |`),
+      "## Per-ad results", "", "| Ad ID | Format | Status | Model | Actual mode | Input tokens | Output tokens | Total tokens | Reserved GBP | Token estimate GBP | Actually billed GBP | Estimated exposure GBP | Source/failure category | Reason / HTTP |", "| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |",
+      ...run.items.map(item => `| ${safe(item.nativeId)} | ${mediaLabel(item)}${item.imageCount ? ` (${item.imageCount} images)` : ""} | ${item.status} | ${safe(item.model || "unavailable")} | ${run.kind === "prepare" ? "no inference" : item.processingMode || run.requestedMode} | ${item.usage?.inputTokens ?? "unavailable"} | ${item.usage?.outputTokens ?? "unavailable"} | ${item.usage?.totalTokens ?? "unavailable"} | ${money(costAmount(item,"reservedCostGbp"))} | ${money(costAmount(item,"tokenCostGbp"))} | ${money(costAmount(item,"billedCostGbp"))} | ${money(item.estimatedCostGbp)} | ${category(item)} | ${safe(item.error || "")}${item.sourceHttpStatus ? ` (HTTP ${item.sourceHttpStatus})` : ""} |`),
+      "", "## Sanitised Gemini diagnostics", "", "Provider messages are retained for debugging with credentials and sensitive URL values redacted. No raw request headers are logged.",
+      ...run.items.filter(item => item.geminiDiagnostic).flatMap(item => ["", `### Gemini error for ad ${safe(item.nativeId)}`, "", "```json", JSON.stringify(item.geminiDiagnostic,null,2), "```"]),
       "", "## Source preparation attempts", "", "Prior errors remain recorded when a fresh snapshot later succeeds. Signed source URLs are never included.",
       ...run.items.filter(item => item.preparationAttempts?.length).flatMap(item => ["", `### Source ad ${safe(item.nativeId)}`, ...item.preparationAttempts!.map(attempt => `- ${attempt.at}: ${attempt.source}; ${attempt.errorCode ? `${safe(attempt.errorCode)} — ${safe(attempt.error || "source unavailable")}${attempt.httpStatus ? ` (HTTP ${attempt.httpStatus})` : ""}` : "retained successfully"}.`)]),
       "", "## Full sample outputs", "", `Up to five saved outputs, including each available input format. No synthetic outputs are supplied. Raw responses remain in the authenticated persistent analysis history.`,

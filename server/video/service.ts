@@ -2,11 +2,13 @@ import { createHash, randomUUID } from "node:crypto";
 import type { DatabaseSync } from "node:sqlite";
 import { readBrand } from "../db.js";
 import type { Ad } from "../../shared/types.js";
-import { DEFAULT_VIDEO_CONFIDENCE, VIDEO_PROMPT_VERSION, type CreatorEvidence, type VideoAnalysisAttempt, type VideoAnalysisResult, type VideoProcessingMode } from "../../shared/video-analysis.js";
+import { DEFAULT_VIDEO_CONFIDENCE, VIDEO_PROMPT_VERSION, type CreatorEvidence, type VideoAnalysisAttempt, type VideoAnalysisResult, type VideoProcessingMode, type VideoNormalization } from "../../shared/video-analysis.js";
 import { GeminiVideoAnalyser, DEFAULT_GEMINI_VIDEO_MODEL } from "./gemini.js";
 import { TwelveLabsPegasusAnalyser } from "./twelvelabs.js";
 import { LocalVideoMediaStore, MediaStorageError } from "./media.js";
 import { normalizeVideoAnalysisFields } from "./validation.js";
+import { prepareGeminiVideo, type PreparedGeminiVideo } from "./normalize.js";
+import type { GeminiDiagnostic } from "../../shared/gemini-diagnostic.js";
 import { VideoProviderError, type StoredVideo, type VideoAnalyser, type VideoMediaStore } from "./types.js";
 
 export interface VideoJobInput {
@@ -29,12 +31,16 @@ export interface VideoJob {
   cached?: boolean;
   errorCode?: string;
   error?: string;
+  geminiDiagnostic?: GeminiDiagnostic;
+  normalization?: VideoNormalization;
 }
 export interface VideoServiceOptions {
   mediaStore?: VideoMediaStore;
   analyserFactory?: (provider: "gemini" | "twelvelabs") => VideoAnalyser;
   confidenceThreshold?: number;
   concurrency?: number;
+  /** Injected adapters may supply fixture media. The production Gemini factory always normalizes. */
+  normalizeMedia?: (media: StoredVideo) => Promise<PreparedGeminiVideo>;
 }
 export function ensureVideoTables(db: DatabaseSync) {
   db.exec(`CREATE TABLE IF NOT EXISTS video_media (id TEXT PRIMARY KEY,brand_id TEXT NOT NULL REFERENCES brands(id),ad_id TEXT NOT NULL REFERENCES ads(id),data TEXT NOT NULL);
@@ -53,12 +59,14 @@ export class VideoAnalysisService {
   readonly mediaStore: VideoMediaStore;
   private readonly factory: NonNullable<VideoServiceOptions["analyserFactory"]>;
   private readonly threshold: number;
+  private readonly prepareMedia: NonNullable<VideoServiceOptions["normalizeMedia"]>;
   private readonly queues: Promise<void>[];
   private nextQueue = 0;
   constructor(readonly db: DatabaseSync, options: VideoServiceOptions = {}) {
     ensureVideoTables(db);
     this.mediaStore = options.mediaStore || new LocalVideoMediaStore();
     this.factory = options.analyserFactory || defaultAnalyser;
+    this.prepareMedia = options.normalizeMedia || (options.analyserFactory ? async media => ({ media }) : prepareGeminiVideo);
     this.threshold = options.confidenceThreshold ?? Number(process.env.EXTER_VIDEO_CONFIDENCE ?? DEFAULT_VIDEO_CONFIDENCE);
     if (!Number.isFinite(this.threshold) || this.threshold < 0 || this.threshold > 1)
       throw new VideoProviderError("configuration", "EXTER_VIDEO_CONFIDENCE must be between zero and one.");
@@ -104,7 +112,7 @@ export class VideoAnalysisService {
     this.ad(input.brandId, input.adId);
     const provider = input.provider || "gemini";
     if (!["gemini", "twelvelabs"].includes(provider)) throw new VideoProviderError("configuration", "Unknown video provider.");
-    const mode = input.processingMode || "agentic";
+    const mode = input.processingMode || "static-high-fps-hook";
     if (!["agentic", "static-high-fps-hook"].includes(mode)) throw new VideoProviderError("configuration", "Unknown video processing mode.");
     const analyser = this.factory(provider);
     const active = this.db.prepare("SELECT data FROM video_jobs WHERE brand_id=? AND ad_id=? AND provider=? AND status IN ('queued','downloading','analysing')").get(input.brandId, input.adId, provider) as { data: string } | undefined;
@@ -143,17 +151,19 @@ export class VideoAnalysisService {
       const evidence = this.trustedEvidence(ad);
       const context = { brandName: ad.brand, adCopy: ad.copy, sourceUrl: ad.sourceUrl || undefined, creatorEvidence: evidence };
       const inputContextSha256 = createHash("sha256").update(JSON.stringify(context)).digest("hex");
-      const existing = this.history(ad.brandId, ad.id).find((run) => run.provider === analyser.provider && (run.requestedModel || run.model) === analyser.model && run.mediaSha256 === media.sha256 && run.inputContextSha256 === inputContextSha256 && run.promptVersion === VIDEO_PROMPT_VERSION && (run.processingMode === job.requestedMode || job.requestedMode === "agentic") && run.confidenceThreshold === this.threshold);
+      const existing = this.history(ad.brandId, ad.id).find((run) => run.provider === analyser.provider && (run.requestedModel || run.model) === analyser.model && run.mediaSha256 === media.sha256 && run.inputContextSha256 === inputContextSha256 && run.promptVersion === VIDEO_PROMPT_VERSION && run.processingMode === job.requestedMode && run.confidenceThreshold === this.threshold);
       if (existing && !input.force) {
         job.status = "complete"; job.analysisId = existing.id; job.cached = true; this.saveJob(job); return;
       }
+      const prepared: PreparedGeminiVideo = analyser.provider === "gemini" ? await this.prepareMedia(media) : { media };
+      if (prepared.normalization) job.normalization = prepared.normalization;
       job.status = "analysing"; this.saveJob(job);
       const call = async (processingMode: VideoProcessingMode) => {
         try {
-          const value = await analyser.analyse({ adId: ad.id, brandId: ad.brandId, media, context, processingMode });
+          const value = await analyser.analyse({ adId: ad.id, brandId: ad.brandId, media: prepared.media, context, processingMode });
           job.attempts.push({ processingMode, status: "succeeded", ...(value.accounting ? { accounting: value.accounting } : {}) }); this.saveJob(job); return value;
         } catch (error) {
-          job.attempts.push({ processingMode, status: "failed", errorCode: error instanceof VideoProviderError ? error.code : "unavailable", ...(error instanceof VideoProviderError && error.accounting ? { accounting: error.accounting } : {}) }); this.saveJob(job); throw error;
+          job.attempts.push({ processingMode, status: "failed", errorCode: error instanceof VideoProviderError ? error.code : "unavailable", ...(error instanceof VideoProviderError && error.diagnostic ? { diagnostic: error.diagnostic } : {}), ...(error instanceof VideoProviderError && error.accounting ? { accounting: error.accounting } : {}) }); this.saveJob(job); throw error;
         }
       };
       let result;
@@ -162,10 +172,10 @@ export class VideoAnalysisService {
         if (job.requestedMode !== "agentic" || !(error instanceof VideoProviderError) || error.code !== "unsupported_mode") throw error;
         result = await call("static-high-fps-hook");
       }
-      if (Math.abs(result.coverage.durationSeconds - media.durationSeconds) > 0.05 || !result.model || result.promptVersion !== VIDEO_PROMPT_VERSION || result.processingMode !== job.attempts.at(-1)?.processingMode || (result.modelVersion !== null && (typeof result.modelVersion !== "string" || !result.modelVersion.trim())))
+      if (Math.abs(result.coverage.durationSeconds - prepared.media.durationSeconds) > 0.05 || !result.model || result.promptVersion !== VIDEO_PROMPT_VERSION || result.processingMode !== job.attempts.at(-1)?.processingMode || (result.modelVersion !== null && (typeof result.modelVersion !== "string" || !result.modelVersion.trim())))
         throw new VideoProviderError("invalid_output", "Provider provenance or source duration does not match the stored video.");
       const fields = normalizeVideoAnalysisFields(result.fields, { coverage: result.coverage, threshold: this.threshold, trustedEvidence: evidence, brandName: ad.brand });
-      const analysis: VideoAnalysisResult = { id: randomUUID(), adId: ad.id, brandId: ad.brandId, mediaId: media.mediaId, mediaSha256: media.sha256, inputContextSha256, provider: analyser.provider, model: result.model, requestedModel: analyser.model, modelVersion: result.modelVersion, processingMode: result.processingMode, promptVersion: result.promptVersion, createdAt: new Date().toISOString(), confidenceThreshold: this.threshold, coverage: result.coverage, fields, ...(result.providerRequestId ? { providerRequestId: result.providerRequestId } : {}), ...(result.accounting ? { accounting: result.accounting } : {}) };
+      const analysis: VideoAnalysisResult = { id: randomUUID(), adId: ad.id, brandId: ad.brandId, mediaId: media.mediaId, mediaSha256: media.sha256, inputContextSha256, provider: analyser.provider, model: result.model, requestedModel: analyser.model, modelVersion: result.modelVersion, processingMode: result.processingMode, promptVersion: result.promptVersion, createdAt: new Date().toISOString(), confidenceThreshold: this.threshold, coverage: result.coverage, fields, ...(result.providerRequestId ? { providerRequestId: result.providerRequestId } : {}), ...(result.accounting ? { accounting: result.accounting } : {}), ...(prepared.normalization ? { normalization: prepared.normalization } : {}) };
       this.db.exec("BEGIN");
       try {
         this.db.prepare("INSERT INTO video_analysis_runs VALUES (?,?,?,?,?)").run(analysis.id, ad.brandId, ad.id, analysis.createdAt, JSON.stringify(analysis));
@@ -177,6 +187,7 @@ export class VideoAnalysisService {
       } catch (error) { this.db.exec("ROLLBACK"); throw error; }
     } catch (error) {
       job.status = "error";
+      if (error instanceof VideoProviderError && error.diagnostic) job.geminiDiagnostic = error.diagnostic;
       job.errorCode = error instanceof VideoProviderError || error instanceof MediaStorageError ? error.code : "unavailable";
       job.error = error instanceof VideoProviderError || error instanceof MediaStorageError ? error.message : "Video processing failed. Stored media and earlier successful analysis were preserved.";
       this.saveJob(job);
@@ -191,5 +202,5 @@ export class VideoAnalysisService {
 }
 
 export function videoStatus() {
-  return { providers: [{ provider: "gemini", model: process.env.GEMINI_VIDEO_MODEL || DEFAULT_GEMINI_VIDEO_MODEL, configured: Boolean(process.env.GEMINI_API_KEY), implementation: "native-files-interactions" }, { provider: "twelvelabs", model: "pegasus", configured: false, implementation: "stub" }], promptVersion: VIDEO_PROMPT_VERSION, inferenceLocation: "Gemini API; Exter stores media, validates results and computes analytics", mediaStorage: "persistent local volume; configure EXTER_MEDIA_ROOT", disclosure: "No video result exists until stored source media has been analysed. Confidence is model-reported, not calibrated accuracy. This local application is not a multi-tenant hosted service." };
+  return { providers: [{ provider: "gemini", model: process.env.GEMINI_VIDEO_MODEL || DEFAULT_GEMINI_VIDEO_MODEL, configured: Boolean(process.env.GEMINI_API_KEY), implementation: "normalized-files-generate-content-static-or-explicit-interactions-agentic" }, { provider: "twelvelabs", model: "pegasus", configured: false, implementation: "stub" }], promptVersion: VIDEO_PROMPT_VERSION, inferenceLocation: "Gemini API; Exter stores media, validates results and computes analytics", mediaStorage: "persistent local volume; configure EXTER_MEDIA_ROOT", disclosure: "No video result exists until stored source media has been analysed. Confidence is model-reported, not calibrated accuracy. This local application is not a multi-tenant hosted service." };
 }

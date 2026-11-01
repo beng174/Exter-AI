@@ -65,7 +65,7 @@ function fixture(path = ":memory:") {
   return { db, store, events };
 }
 const provider = (run: VideoAnalyser["analyse"]): VideoAnalyser => ({ provider: "gemini", model: "gemini-fixture-flash", analyse: run });
-const output = (mode: "agentic" | "static-high-fps-hook" = "agentic") => ({ fields: fields(), model: "gemini-fixture-flash", modelVersion: "fixture-1", processingMode: mode, promptVersion: VIDEO_PROMPT_VERSION, coverage });
+const output = (mode: "agentic" | "static-high-fps-hook" = "static-high-fps-hook") => ({ fields: fields(), model: "gemini-fixture-flash", modelVersion: "fixture-1", processingMode: mode, promptVersion: VIDEO_PROMPT_VERSION, coverage });
 test("video service stores media before inference, deduplicates requests and preserves append-only history", async () => {
   const dir = mkdtempSync(join(tmpdir(), "exter-video-history-"));
   const { db, store, events } = fixture(join(dir, "exter.db"));
@@ -105,7 +105,7 @@ test("native capability failure alone triggers the recorded static fallback", as
       if (input.processingMode === "agentic") throw new VideoProviderError("unsupported_mode", "Native mode unavailable");
       return output("static-high-fps-hook");
     }) });
-    const job = service.enqueue({ brandId: brand.id, adId: sourceAd.id }); await service.idle();
+    const job = service.enqueue({ brandId: brand.id, adId: sourceAd.id, processingMode: "agentic" }); await service.idle();
     assert.deepEqual(modes, ["agentic", "static-high-fps-hook"]);
     assert.deepEqual(service.job(brand.id, job.id)!.attempts.map((attempt) => attempt.status), ["failed", "succeeded"]);
     assert.equal(service.history(brand.id, sourceAd.id)[0].processingMode, "static-high-fps-hook");
@@ -192,7 +192,7 @@ test("failed provider attempts retain accounting and budget pauses without repla
     const job = service.enqueue({ brandId: brand.id, adId: sourceAd.id }); await service.idle();
     const saved = service.job(brand.id, job.id)!;
     assert.equal(saved.errorCode, "budget_paused");
-    assert.deepEqual(saved.attempts, [{ processingMode: "agentic", status: "failed", errorCode: "budget_paused", accounting }]);
+    assert.deepEqual(saved.attempts, [{ processingMode: "static-high-fps-hook", status: "failed", errorCode: "budget_paused", accounting }]);
   } finally { db.close(); }
 });
 
@@ -222,5 +222,44 @@ test("configured video concurrency bounds simultaneous inference and idle waits 
     await service.idle();
     assert.equal(peak, 3);
     assert.equal(completed, 5);
+  } finally { db.close(); }
+});
+
+test("Static is the service default and normalized upload provenance preserves the original media identity", async () => {
+  const { db, store, events } = fixture();
+  const upload = { ...media, sha256: "c".repeat(64), bytes: 120, absolutePath: "/tmp/normalized-fixture.mp4" };
+  const normalization = { version: "exter-video-normalize-v1" as const, applied: true, originalSha256: media.sha256, uploadSha256: upload.sha256, originalMimeType: media.mimeType, uploadMimeType: "video/mp4" as const, originalBytes: media.bytes, uploadBytes: upload.bytes, videoCodec: "h264" as const, audioCodec: "aac" as const, pixelFormat: "yuv420p" as const, durationSeconds: 12 };
+  try {
+    const service = new VideoAnalysisService(db, {
+      mediaStore: store,
+      normalizeMedia: async input => { assert.equal(input.sha256, media.sha256); events.push("normalized"); return { media: upload, normalization }; },
+      analyserFactory: () => provider(async input => {
+        assert.equal(events.at(-1), "normalized");
+        assert.equal(input.processingMode, "static-high-fps-hook");
+        assert.equal(input.media.sha256, upload.sha256);
+        return output(input.processingMode);
+      }),
+    });
+    const job = service.enqueue({ brandId: brand.id, adId: sourceAd.id }); await service.idle();
+    assert.equal(service.job(brand.id, job.id)!.status, "complete");
+    assert.deepEqual(service.job(brand.id, job.id)!.normalization, normalization);
+    const saved = service.history(brand.id, sourceAd.id)[0];
+    assert.equal(saved.mediaId, media.mediaId); assert.equal(saved.mediaSha256, media.sha256);
+    assert.deepEqual(saved.normalization, normalization);
+    assert.equal(service.ad(brand.id, sourceAd.id).videoMediaId, media.mediaId);
+  } finally { db.close(); }
+});
+
+test("normalization failure prevents inference and provider diagnostics remain in the durable failed job", async () => {
+  const { db, store } = fixture(); let calls = 0;
+  try {
+    const blocked = new VideoAnalysisService(db, { mediaStore: store, normalizeMedia: async () => { throw new VideoProviderError("configuration", "The normalized input is unavailable."); }, analyserFactory: () => provider(async () => { calls++; return output(); }) });
+    const before = blocked.enqueue({ brandId: brand.id, adId: sourceAd.id }); await blocked.idle();
+    assert.equal(blocked.job(brand.id, before.id)!.status, "error"); assert.equal(calls, 0);
+    const diagnostic = { stage: "generation", httpStatus: 503, providerStatus: "UNAVAILABLE", message: "Provider fixture is overloaded.", details: [{ reason: "fixture" }] };
+    const service = new VideoAnalysisService(db, { mediaStore: store, analyserFactory: () => provider(async () => { throw new VideoProviderError("unavailable", diagnostic.message, undefined, diagnostic); }) });
+    const failed = service.enqueue({ brandId: brand.id, adId: sourceAd.id }); await service.idle();
+    assert.deepEqual(service.job(brand.id, failed.id)!.geminiDiagnostic, diagnostic);
+    assert.deepEqual(service.job(brand.id, failed.id)!.attempts[0].diagnostic, diagnostic);
   } finally { db.close(); }
 });

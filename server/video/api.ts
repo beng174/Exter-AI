@@ -16,7 +16,7 @@ export function attachVideoAnalysis(app: Express, db: DatabaseSync, options: Vid
   app.post("/api/video/jobs", (req, res) => {
     try {
       const provider = req.body?.provider ?? "gemini";
-      const processingMode = req.body?.processingMode ?? "agentic";
+      const processingMode = req.body?.processingMode ?? "static-high-fps-hook";
       if (!["gemini", "twelvelabs"].includes(provider) || !["agentic", "static-high-fps-hook"].includes(processingMode)) throw new VideoProviderError("configuration", "Choose a supported video provider and processing mode.");
       if (req.body?.sourceVideoUrl !== undefined && (typeof req.body.sourceVideoUrl !== "string" || req.body.sourceVideoUrl.length > 10000)) throw new VideoProviderError("configuration", "Provide a valid video source URL.");
       if (req.body?.force !== undefined && typeof req.body.force !== "boolean") throw new VideoProviderError("configuration", "force must be a boolean.");

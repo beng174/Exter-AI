@@ -1,3 +1,5 @@
+import type { GeminiDiagnostic } from "./gemini-diagnostic.js";
+
 export const VIDEO_FORMATS = ["UGC", "founder-led", "studio", "animation", "mixed", "unknown"] as const;
 export type VideoFormat = (typeof VIDEO_FORMATS)[number];
 export type VideoProcessingMode = "agentic" | "static-high-fps-hook";
@@ -43,8 +45,30 @@ export interface VideoAnalysisAccounting {
   costBasis: "token_estimate" | "reservation_estimate" | "token_and_reservation_estimate" | "unavailable";
   pricing: { inputGbpPerMillion: number; outputGbpPerMillion: number } | null;
   requestAttempts: number;
+  /** Total holds created, including holds subsequently settled or released. */
+  initialReservedCostGbp?: number | null;
+  /** Provider-confirmed bill/invoice amount. No billing feed is connected, so null. */
+  billedCostGbp?: number | null;
+  /** Extra generation dispatches after the first attempt; not a billing count. */
+  retryAttempts?: number;
+  /** Explicit provider HTTP rejections, as distinct from ambiguous timeouts. */
+  rejectedAttempts?: number;
   /** Sanitised provider response; never contains the configured credential. */
   rawResponse?: unknown;
+}
+export interface VideoNormalization {
+  version: "exter-video-normalize-v1";
+  applied: boolean;
+  originalSha256: string;
+  uploadSha256: string;
+  originalMimeType: string;
+  uploadMimeType: "video/mp4";
+  originalBytes: number;
+  uploadBytes: number;
+  videoCodec: "h264";
+  audioCodec: "aac" | null;
+  pixelFormat: "yuv420p";
+  durationSeconds: number;
 }
 export interface VideoAnalysisResult {
   id: string;
@@ -65,11 +89,13 @@ export interface VideoAnalysisResult {
   fields: VideoAnalysisFields;
   providerRequestId?: string;
   accounting?: VideoAnalysisAccounting;
+  normalization?: VideoNormalization;
 }
 
 export interface VideoAnalysisAttempt {
   processingMode: VideoProcessingMode;
   status: "succeeded" | "failed";
   errorCode?: string;
+  diagnostic?: GeminiDiagnostic;
   accounting?: VideoAnalysisAccounting;
 }

@@ -20,7 +20,7 @@ test("video API scopes jobs/history, reports configuration safely and exports on
   const field = (value: string | boolean) => ({ value, confidence: 0.9, timestamps: [{ startSeconds: 0, endSeconds: 2 }] });
   const service = attachVideoAnalysis(app, db, {
     mediaStore: { store: async () => ({ mediaId: "a".repeat(64), brandId: ad.brandId, sourceAdId: ad.id, absolutePath: "/tmp/unused.mp4", relativePath: "unused.mp4", sha256: "b".repeat(64), bytes: 1, mimeType: "video/mp4", durationSeconds: 5, storedAt: new Date().toISOString(), sourceUrl: "https://example.com/video.mp4" }), load: async () => null },
-    analyserFactory: () => ({ provider: "gemini", model: "fixture-flash", analyse: async () => ({ model: "fixture-flash", modelVersion: null, processingMode: "agentic", promptVersion: VIDEO_PROMPT_VERSION, coverage: { durationSeconds: 5, fullVideo: true, segments: [{ startSeconds: 0, endSeconds: 5, processing: "agentic" }] }, fields: { hook: field("Product opening"), format: field("studio"), angle: field("Product benefit"), keyClaims: [], spokenTranscript: [], onScreenText: [], cta: field("Shop"), personTalkingToCamera: field(false), creatorEvidence: [] } }) }),
+    analyserFactory: () => ({ provider: "gemini", model: "fixture-flash", analyse: async (input) => ({ model: "fixture-flash", modelVersion: null, processingMode: input.processingMode, promptVersion: VIDEO_PROMPT_VERSION, coverage: { durationSeconds: 5, fullVideo: true, segments: [input.processingMode === "agentic" ? { startSeconds: 0, endSeconds: 5, processing: "agentic" } : { startSeconds: 0, endSeconds: 5, processing: "static", fps: 3 }] }, fields: { hook: field("Product opening"), format: field("studio"), angle: field("Product benefit"), keyClaims: [], spokenTranscript: [], onScreenText: [], cta: field("Shop"), personTalkingToCamera: field(false), creatorEvidence: [] } }) }),
   });
   const server = createServer(app);
   await new Promise<void>((resolve) => server.listen(0, "127.0.0.1", resolve));
@@ -30,14 +30,16 @@ test("video API scopes jobs/history, reports configuration safely and exports on
     const status = await (await fetch(base + "/api/video/status")).json();
     assert.equal(status.providers[1].implementation, "stub");
     assert.ok(!JSON.stringify(status).includes("apiKey"));
-    const submit = () => fetch(base + "/api/video/jobs", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ brandId: ad.brandId, adId: ad.id, force: true }) });
+    const submit = (processingMode?: string) => fetch(base + "/api/video/jobs", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ brandId: ad.brandId, adId: ad.id, force: true, ...(processingMode ? { processingMode } : {}) }) });
     const firstResponse = await submit(); assert.equal(firstResponse.status, 202);
     const first = await firstResponse.json(); await service.idle();
-    const secondResponse = await submit(); const second = await secondResponse.json(); await service.idle();
+    assert.equal(first.requestedMode,"static-high-fps-hook");
+    const secondResponse = await submit("agentic"); const second = await secondResponse.json(); await service.idle();
     assert.equal((await fetch(base + `/api/video/jobs/${first.id}?brandId=other`)).status, 404);
     const scope = `brandId=${ad.brandId}&adId=${encodeURIComponent(ad.id)}`;
     const history = await (await fetch(base + "/api/video/analyses?" + scope)).json();
     assert.equal(history.length, 2);
+    assert.deepEqual(new Set(history.map((entry: { processingMode: string })=>entry.processingMode)),new Set(["static-high-fps-hook","agentic"]));
     const latest = await (await fetch(base + "/api/video/export?" + scope)).json();
     assert.equal(latest.predictions.length, 1);
     assert.equal(latest.predictions[0].id, history[0].id);

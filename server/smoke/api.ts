@@ -14,6 +14,18 @@ export function attachGeminiSmoke(app: Express, db: DatabaseSync, video: VideoAn
     res.setHeader("Cache-Control", "private, no-store");
     try { res.json(await service.status()); } catch (error) { fail(res,error); }
   });
+  app.get("/api/gemini-smoke/creatives", async (_req,res) => {
+    res.setHeader("Cache-Control", "private, no-store");
+    try { res.json(await service.creatives()); } catch (error) { fail(res,error); }
+  });
+  app.post("/api/gemini-smoke/test-one", async (req,res) => {
+    try {
+      const { brandId, adId } = req.body || {};
+      if (typeof brandId !== "string" || !brandId || brandId.length > 300 || typeof adId !== "string" || !adId || adId.length > 300)
+        throw new SmokeRequestError("Choose one retained creative in its workspace.", 400);
+      res.status(202).json(await service.testOne(brandId, adId, req.body?.processingMode ?? "static-high-fps-hook"));
+    } catch (error) { fail(res,error); }
+  });
   app.get("/api/gemini-smoke/image-media/:mediaId/:index", async (req,res) => {
     try {
       const { brandId, adId } = req.query;
@@ -31,11 +43,11 @@ export function attachGeminiSmoke(app: Express, db: DatabaseSync, video: VideoAn
     try {
       if (req.body?.refreshFailed !== undefined && typeof req.body.refreshFailed !== "boolean")
         throw new SmokeRequestError("refreshFailed must be a boolean.", 400);
-      res.status(202).json(await service.start("prepare", req.body?.processingMode ?? "agentic", { refreshFailed: req.body?.refreshFailed === true }));
+      res.status(202).json(await service.start("prepare", req.body?.processingMode ?? "static-high-fps-hook", { refreshFailed: req.body?.refreshFailed === true }));
     } catch (error) { fail(res,error); }
   });
   app.post("/api/gemini-smoke/runs", async (req,res) => {
-    try { res.status(202).json(await service.start("smoke", req.body?.processingMode ?? "agentic")); } catch (error) { fail(res,error); }
+    try { res.status(202).json(await service.start("smoke", req.body?.processingMode ?? "static-high-fps-hook")); } catch (error) { fail(res,error); }
   });
   app.get("/api/gemini-smoke/runs/:id", (req,res) => {
     res.setHeader("Cache-Control", "private, no-store");
@@ -46,7 +58,7 @@ export function attachGeminiSmoke(app: Express, db: DatabaseSync, video: VideoAn
     } catch (error) { fail(res,error); }
   });
   app.post("/api/gemini-smoke/runs/:id/resume", async (req,res) => {
-    try { res.status(202).json(await service.resume(id(req.params.id))); } catch (error) { fail(res,error); }
+    try { res.status(202).json(await service.resume(id(req.params.id), req.body?.processingMode ?? "static-high-fps-hook")); } catch (error) { fail(res,error); }
   });
   app.get("/api/gemini-smoke/runs/:id/report", (req,res) => {
     try {

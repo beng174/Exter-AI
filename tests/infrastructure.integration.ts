@@ -10,7 +10,7 @@ import type { AddressInfo } from "node:net";
 import { basicAuth } from "../server/auth.js";
 import { migrate } from "../server/infrastructure/database.js";
 import { attachBudgetRoutes } from "../server/infrastructure/api.js";
-import { budgetStatus, reserveCost, settleGeminiCost } from "../server/infrastructure/budget.js";
+import { budgetStatus, reserveCost, settleGeminiCost, releaseGeminiCost } from "../server/infrastructure/budget.js";
 import { enqueueCollection, claimJob, workOnce, schedule } from "../server/infrastructure/jobs.js";
 import { collectMetaPage, MetaLibraryConnector } from "../server/connectors/meta-library.js";
 
@@ -22,6 +22,14 @@ test("Postgres budgets, idempotent scheduling, append-only observations and cras
     await migrate(pool); await migrate(pool);
     assert.equal((await pool.query("SELECT extname FROM pg_extension WHERE extname='vector'")).rowCount,1);
     await pool.query("TRUNCATE schedule_slots,ad_observations,public_ads,collection_jobs,collection_runs,watchlists,cost_ledger CASCADE");
+    await pool.query(`INSERT INTO cost_ledger(id,cost_type,provider,cost_gbp,cost_basis,status) VALUES
+      ('legacy-reserved','inference','gemini',1,'estimated','reserved'),
+      ('legacy-settled','inference','gemini',0.2,'estimated','settled'),
+      ('legacy-released','inference','gemini',0,'estimated','released')`);
+    await migrate(pool);
+    const legacy = (await pool.query("SELECT id,initial_reserved_gbp::float8 FROM cost_ledger ORDER BY id")).rows;
+    assert.deepEqual(legacy,[{ id: "legacy-released",initial_reserved_gbp: null },{ id: "legacy-reserved",initial_reserved_gbp: 1 },{ id: "legacy-settled",initial_reserved_gbp: null }],"migration backfills only still-reserved holds; historical settled/released amounts cannot establish their original reserve");
+    await pool.query("TRUNCATE cost_ledger");
     await pool.query("UPDATE budget_settings SET monthly_budget_gbp=10");
     const charges = await Promise.allSettled([reserveCost(pool,"inference","fixture",5),reserveCost(pool,"inference","fixture",5)]);
     assert.equal(charges.filter(r => r.status === "fulfilled").length,1,"parallel calls cannot overspend reservation cap");
@@ -45,6 +53,18 @@ test("Postgres budgets, idempotent scheduling, append-only observations and cras
     assert.deepEqual((await pool.query("SELECT cost_gbp::float8,status FROM cost_ledger WHERE id=$1",[failedAttempt])).rows[0],{ cost_gbp: 0.2,status: "reserved" },"a failed attempt with unknown usage cannot release its reserved charge");
     assert.equal((await budgetStatus(pool)).find(r => r.cost_type === "inference").used_gbp,6.2);
     await assert.rejects(reserveCost(pool,"inference","gemini",3.01),/Jobs paused/,"the next reservation accounts for settled and unknown charges");
+    const rejectedAttempt = await reserveCost(pool,"inference","gemini",2.7);
+    await assert.rejects(reserveCost(pool,"inference","gemini",0.2),/Jobs paused/);
+    await Promise.all([releaseGeminiCost(rejectedAttempt,pool),releaseGeminiCost(rejectedAttempt,pool)]);
+    assert.deepEqual((await pool.query("SELECT cost_gbp::float8,initial_reserved_gbp::float8,status FROM cost_ledger WHERE id=$1",[rejectedAttempt])).rows[0],{ cost_gbp: 0,initial_reserved_gbp: 2.7,status: "released" },"HTTP rejections free their hold but preserve the original reserved amount for audit");
+    assert.equal((await budgetStatus(pool)).find(r => r.cost_type === "inference").used_gbp,6.2,"confirmed rejections do not consume future request budget");
+    await assert.rejects(releaseGeminiCost(unknownAttempt,pool),/could not be released/);
+    assert.equal((await pool.query("SELECT cost_gbp::float8,initial_reserved_gbp::float8,status FROM cost_ledger WHERE id=$1",[unknownAttempt])).rows[0].initial_reserved_gbp,1,"settling a token estimate preserves the initial hold without claiming invoice billing");
+    const racingAttempt = await reserveCost(pool,"inference","gemini",0.1);
+    const dispositions = await Promise.allSettled([settleGeminiCost(racingAttempt,0.03,pool),releaseGeminiCost(racingAttempt,pool)]);
+    assert.equal(dispositions.filter(result => result.status === "fulfilled").length,1,"settlement and release cannot both win the same reservation");
+    const disposition = (await pool.query("SELECT cost_gbp::float8,status FROM cost_ledger WHERE id=$1",[racingAttempt])).rows[0];
+    assert.ok(disposition.status === "settled" && disposition.cost_gbp === 0.03 || disposition.status === "released" && disposition.cost_gbp === 0);
     await pool.query("UPDATE budget_settings SET monthly_budget_gbp=0 WHERE cost_type='inference'");
     await assert.rejects(reserveCost(pool,"inference","fixture",0),/Jobs paused/);
     await pool.query("INSERT INTO watchlists(id,workspace_id,page_ids) VALUES('watch-test','workspace-test','[\"12\"]')");

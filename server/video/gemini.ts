@@ -1,4 +1,5 @@
-import { guardedGeminiCall, settleGeminiCost, type GeminiReservation } from "../infrastructure/budget.js";
+import type { GeminiReservation } from "../infrastructure/budget.js";
+import { GeminiSession } from "../gemini/transport.js";
 import { createHash } from "node:crypto";
 import { createReadStream } from "node:fs";
 import { lstat } from "node:fs/promises";
@@ -15,7 +16,6 @@ import {
 const HOST = "generativelanguage.googleapis.com";
 const API = `https://${HOST}`;
 export const DEFAULT_GEMINI_VIDEO_MODEL = "gemini-3.8-flash";
-const MAX_RESPONSE_BYTES = 2 * 1024 * 1024;
 
 export interface GeminiVideoOptions {
   apiKey?: string;
@@ -33,16 +33,7 @@ export interface GeminiVideoOptions {
   /** Test transports can inject the guard without a live database or API key. */
   reserveCost?: () => Promise<GeminiReservation | undefined>;
   settleCost?: (reservationId: string, estimatedGbp: number) => Promise<void>;
-}
-
-interface InferenceAccounting {
-  reservations: GeminiReservation[];
-  attempts: number;
-  rawResponse?: unknown;
-  usage: VideoAnalysisAccounting["usage"];
-  tokenCostGbp: number | null;
-  pricedReservationId?: string;
-  settledReservationId?: string;
+  releaseCost?: (reservationId: string) => Promise<void>;
 }
 
 function tokenCount(value: unknown): number | null {
@@ -62,12 +53,6 @@ function usageOf(payload: Record<string, any>): VideoAnalysisAccounting["usage"]
     (inputTokens !== null && outputTokens !== null ? inputTokens + outputTokens : null);
   return { inputTokens, outputTokens, totalTokens };
 }
-/** The credential is only sent as a header and is scrubbed if a provider echoes it. */
-function sanitiseResponse(payload: Record<string, any>, key: string): Record<string, any> {
-  const encodedKey = JSON.stringify(key).slice(1, -1);
-  return JSON.parse(JSON.stringify(payload).split(encodedKey).join("[REDACTED]"));
-}
-
 interface GeminiFile {
   name: string;
   uri: string;
@@ -107,6 +92,15 @@ function checkedFile(value: unknown): GeminiFile {
     throw new VideoProviderError("invalid_output", "Gemini returned an unknown file processing state.");
   return { name: file.name, uri: uri.href, state };
 }
+function failedFile(value: unknown): VideoProviderError {
+  // All file payloads have already passed the session's credential scrubber.
+  const error = record(record(value).error);
+  const message = typeof error.message === "string" && error.message.trim() ? error.message.slice(0, 64000) : "Gemini could not process the stored video.";
+  return new VideoProviderError("unavailable", `Gemini file processing failed: ${message}`, undefined, {
+    stage: "file_ready", httpStatus: 200, providerStatus: typeof error.status === "string" ? error.status : "FAILED", message,
+    ...(error.details !== undefined ? { details: error.details } : {}),
+  });
+}
 async function wait(milliseconds: number, signal?: AbortSignal) {
   if (signal?.aborted) throw new VideoProviderError("unavailable", "Video analysis was cancelled.");
   await new Promise<void>((resolve, reject) => {
@@ -121,7 +115,7 @@ async function wait(milliseconds: number, signal?: AbortSignal) {
   });
 }
 
-/** Native Files + Interactions API; Exter never submits an expiring ad-library URL. */
+/** Stable static GenerateContent or explicitly chosen preview Agentic Interactions. */
 export class GeminiVideoAnalyser implements VideoAnalyser {
   readonly provider = "gemini";
   readonly model: string;
@@ -159,126 +153,6 @@ export class GeminiVideoAnalyser implements VideoAnalyser {
       ? { inputGbpPerMillion: input, outputGbpPerMillion: output } : null;
   }
 
-  private accounting(state: InferenceAccounting): VideoAnalysisAccounting {
-    const unknown = state.reservations.filter(value => value.reservationId !== state.settledReservationId);
-    const reservedCostGbp = state.reservations.length ? unknown.reduce((sum, value) => sum + value.reservedGbp, 0) : null;
-    const tokenCostGbp = state.tokenCostGbp;
-    const pricedReserve = unknown.find(value => value.reservationId === state.pricedReservationId)?.reservedGbp ?? 0;
-    const retryReserves = unknown.filter(value => value.reservationId !== state.pricedReservationId)
-      .reduce((sum, value) => sum + value.reservedGbp, 0);
-    // If settlement failed, the known token estimate and its still-reserved ledger
-    // entry describe the same generation attempt. Count their maximum once; only
-    // reservations for separate, uncertain retries are additional costs.
-    const estimatedCostGbp = tokenCostGbp !== null
-      ? retryReserves + Math.max(tokenCostGbp, pricedReserve) : reservedCostGbp;
-    return {
-      usage: state.usage, tokenCostGbp, reservedCostGbp, estimatedCostGbp,
-      costBasis: tokenCostGbp !== null
-        ? reservedCostGbp ? "token_and_reservation_estimate" : "token_estimate"
-        : reservedCostGbp !== null ? "reservation_estimate" : "unavailable",
-      pricing: this.pricing(), requestAttempts: state.attempts,
-      ...(state.rawResponse !== undefined ? { rawResponse: state.rawResponse } : {}),
-    };
-  }
-
-  private async request(
-    url: URL,
-    init: RequestInit | (() => RequestInit),
-    signal?: AbortSignal,
-    agenticAttempt = false,
-    accounting?: InferenceAccounting,
-  ): Promise<Response> {
-    apiUrl(url.href);
-    for (let attempt = 0; ; attempt++) {
-      if (signal?.aborted) throw new VideoProviderError("unavailable", "Video analysis was cancelled.");
-      // Only generation can incur inference charges. File operations and cleanup must
-      // remain available even when the monthly inference budget is paused.
-      if (accounting) {
-        try {
-          const reserve = this.options.reserveCost || (!this.options.fetch ? guardedGeminiCall : undefined);
-          const reservation = await reserve?.();
-          if (reservation) accounting.reservations.push(reservation);
-        } catch {
-          throw new VideoProviderError("budget_paused", "Paid inference paused: the inference budget, request reserve or budget database is unavailable. Review Budgets before retrying.");
-        }
-        accounting.attempts++;
-      }
-      let response: Response;
-      const request = typeof init === "function" ? init() : init;
-      try {
-        response = await this.fetcher(url, {
-          ...request,
-          redirect: "manual",
-          signal: signal
-            ? AbortSignal.any([signal, AbortSignal.timeout(this.requestTimeoutMs)])
-            : AbortSignal.timeout(this.requestTimeoutMs),
-        });
-      } catch {
-        throw new VideoProviderError("unavailable", "Gemini could not be reached or the video request timed out.");
-      } finally {
-        const body = request.body as unknown as { destroy?: () => void } | null | undefined;
-        if (typeof body?.destroy === "function") body.destroy();
-      }
-      if (response.status >= 300 && response.status < 400)
-        throw new VideoProviderError("unavailable", "Gemini redirected a request; credentials were not forwarded.");
-      if (!response.ok) {
-        if (response.status === 401 || response.status === 403)
-          throw new VideoProviderError("authentication", "Gemini rejected the configured API credential or model permission.");
-        // Only an explicit unsupported agentic capability permits a static retry.
-        // Raw provider error text can echo credentials; never expose or persist it.
-        if (agenticAttempt && [400, 422, 501].includes(response.status)) {
-          let unsupported = false;
-          try {
-            const payload = await this.json(response);
-            const message = String(record(payload.error).message || "");
-            unsupported = /agentic/i.test(message) && /unsupported|not supported|not available|not enabled|not implemented/i.test(message);
-          } catch {}
-          if (unsupported)
-            throw new VideoProviderError("unsupported_mode", "The selected Gemini model does not support agentic video processing.");
-        }
-        if ((response.status === 429 || response.status >= 500) && attempt < this.maxRetries) {
-          await response.body?.cancel().catch(() => {});
-          await this.sleep(Math.min(30000, this.retryBaseMs * 2 ** attempt), signal);
-          continue;
-        }
-        if (response.status === 429)
-          throw new VideoProviderError("rate_limit", "Gemini rate or quota limit reached after bounded retries. No fallback inference was started.");
-        throw new VideoProviderError("unavailable", `Gemini request failed (HTTP ${response.status}); no fallback inference was started.`);
-      }
-      return response;
-    }
-  }
-
-  private async json(response: Response, onRaw?: (value: string) => void): Promise<Record<string, any>> {
-    if (Number(response.headers.get("content-length")) > MAX_RESPONSE_BYTES)
-      throw new VideoProviderError("invalid_output", "Gemini response exceeds the supported size.");
-    const reader = response.body?.getReader();
-    if (!reader) throw new VideoProviderError("invalid_output", "Gemini returned an empty response.");
-    const chunks: Uint8Array[] = [];
-    let size = 0;
-    try {
-      while (true) {
-        const part = await reader.read();
-        if (part.done) break;
-        size += part.value.byteLength;
-        if (size > MAX_RESPONSE_BYTES) {
-          await reader.cancel();
-          throw new VideoProviderError("invalid_output", "Gemini response exceeds the supported size.");
-        }
-        chunks.push(part.value);
-      }
-      const raw = Buffer.concat(chunks).toString("utf8");
-      onRaw?.(raw);
-      const payload: unknown = JSON.parse(raw);
-      if (!payload || typeof payload !== "object" || Array.isArray(payload))
-        throw new Error("not an object");
-      return payload as Record<string, any>;
-    } catch (error) {
-      if (error instanceof VideoProviderError) throw error;
-      throw new VideoProviderError("invalid_output", "Gemini returned invalid JSON.");
-    } finally { reader.releaseLock(); }
-  }
-
   async analyse(input: VideoAnalyserInput): Promise<VideoProviderResult> {
     const key = this.options.apiKey ?? process.env.GEMINI_API_KEY;
     if (!key?.trim() || /[\r\n]/.test(key))
@@ -304,60 +178,50 @@ export class GeminiVideoAnalyser implements VideoAnalyser {
       throw new VideoProviderError("configuration", "Stored video checksum does not match its saved metadata.");
     assertProxySupport(Boolean(this.options.fetch), process.env);
     const authorization = { "x-goog-api-key": key };
+    const session = new GeminiSession({ ...this.options, apiKey: key, sleep: this.sleep });
     let uploadedName: string | null = null;
-    const state: InferenceAccounting = { reservations: [], attempts: 0, usage: { inputTokens: null, outputTokens: null, totalTokens: null }, tokenCostGbp: null };
     try {
-      const modelInfo = sanitiseResponse(await this.json(await this.request(
-        new URL(`${API}/v1beta/models/${this.model}`), { headers: authorization }, input.signal,
-      )), key);
+      const modelInfo = await session.json(new URL(`${API}/v1beta/models/${this.model}`), { headers: authorization }, { stage: "model_metadata", signal: input.signal });
       const resolvedModel = text(modelInfo.name)?.replace(/^models\//, "") || this.model;
       const version = text(modelInfo.version);
-      const uploadStart = await this.request(new URL(`${API}/upload/v1beta/files`), {
+      const uploadStart = await session.request(new URL(`${API}/upload/v1beta/files`), {
         method: "POST",
         headers: {
-          ...authorization,
-          "Content-Type": "application/json",
-          "X-Goog-Upload-Protocol": "resumable",
-          "X-Goog-Upload-Command": "start",
+          ...authorization, "Content-Type": "application/json",
+          "X-Goog-Upload-Protocol": "resumable", "X-Goog-Upload-Command": "start",
           "X-Goog-Upload-Header-Content-Length": String(input.media.bytes),
           "X-Goog-Upload-Header-Content-Type": input.media.mimeType,
         },
         body: JSON.stringify({ file: { display_name: `exter-${input.media.sha256.slice(0, 16)}` } }),
-      }, input.signal);
+      }, { stage: "file_upload_start", signal: input.signal });
       const uploadHeader = uploadStart.headers.get("x-goog-upload-url");
-      if (!uploadHeader)
-        throw new VideoProviderError("invalid_output", "Gemini did not supply a resumable upload destination.");
+      if (!uploadHeader) throw new VideoProviderError("invalid_output", "Gemini did not supply a resumable upload destination.");
       const uploadUrl = apiUrl(uploadHeader, true);
-      let uploaded: Record<string, any>;
-      {
-        const finalized = await this.request(uploadUrl, () => ({
-          method: "POST",
-          headers: {
-            "Content-Length": String(input.media.bytes),
-            "Content-Type": input.media.mimeType,
-            "X-Goog-Upload-Offset": "0",
-            "X-Goog-Upload-Command": "upload, finalize",
-          },
-          body: createReadStream(input.media.absolutePath) as unknown as BodyInit,
-          duplex: "half",
-        } as RequestInit), input.signal);
-        uploaded = await this.json(finalized);
-      }
+      const uploaded = await session.json(uploadUrl, () => ({
+        method: "POST",
+        headers: { "Content-Length": String(input.media.bytes), "Content-Type": input.media.mimeType,
+          "X-Goog-Upload-Offset": "0", "X-Goog-Upload-Command": "upload, finalize" },
+        body: createReadStream(input.media.absolutePath) as unknown as BodyInit, duplex: "half",
+      } as RequestInit), { stage: "file_upload", signal: input.signal });
       const rawFile = record(uploaded.file || uploaded);
       if (safeFileName(rawFile.name)) uploadedName = rawFile.name;
       let file = checkedFile(rawFile);
-      for (let poll = 0; file.state === "PROCESSING" && poll < this.maxFilePolls; poll++) {
-        await this.sleep(this.pollIntervalMs, input.signal);
-        const next = checkedFile(await this.json(await this.request(
-          new URL(`${API}/v1beta/${file.name}`), { headers: authorization }, input.signal,
-        )));
-        if (next.name !== file.name || next.uri !== file.uri)
-          throw new VideoProviderError("invalid_output", "Gemini changed the uploaded video identity while processing.");
-        file = next;
-      }
-      if (file.state !== "ACTIVE")
-        throw new VideoProviderError("unavailable", file.state === "FAILED"
-          ? "Gemini could not process the stored video." : "Gemini file processing timed out before analysis.");
+      if (file.state === "FAILED") throw failedFile(rawFile);
+      const awaitActive = async () => {
+        // Re-read before EVERY generation attempt, including retries. An ACTIVE
+        // state observed before a rejected attempt is not reused blindly.
+        for (let poll = 0; poll < this.maxFilePolls; poll++) {
+          const metadata = await session.json(new URL(`${API}/v1beta/${file.name}`), { headers: authorization }, { stage: "file_status", signal: input.signal });
+          const next = checkedFile(metadata);
+          if (next.name !== file.name || next.uri !== file.uri)
+            throw new VideoProviderError("invalid_output", "Gemini changed the uploaded video identity while processing.");
+          file = next;
+          if (file.state === "ACTIVE") return;
+          if (file.state === "FAILED") throw failedFile(metadata);
+          if (poll + 1 < this.maxFilePolls) await this.sleep(this.pollIntervalMs, input.signal);
+        }
+        throw new VideoProviderError("unavailable", "Gemini file processing timed out before analysis.", undefined, { stage: "file_status", message: "Uploaded file did not become ACTIVE within the bounded polling window; no inference was dispatched." });
+      };
       const duration = input.media.durationSeconds;
       const firstEnd = Math.min(5, duration);
       const coverage: VideoCoverage = {
@@ -370,82 +234,71 @@ export class GeminiVideoAnalyser implements VideoAnalyser {
               ...(duration > 5 ? [{ startSeconds: 5, endSeconds: duration, processing: "static" as const, fps: 1 }] : []),
             ],
       };
-      const parts = coverage.segments.map((segment) => ({
-        type: "video",
-        uri: file.uri,
-        mime_type: input.media.mimeType,
-        processing: segment.processing === "agentic" ? "agentic" : {
-          type: "static",
-          start_offset: `${segment.startSeconds}s`,
-          end_offset: `${segment.endSeconds}s`,
-          fps: segment.fps,
-        },
-      }));
-      const interaction = sanitiseResponse(await this.json(await this.request(new URL(`${API}/v1beta/interactions`), {
-        method: "POST",
-        headers: { ...authorization, "Content-Type": "application/json" },
-        body: JSON.stringify({
-          model: this.model,
-          input: [...parts, { type: "text", text: buildVideoPrompt(input, coverage) }],
-          response_format: { type: "text", mime_type: "application/json", schema: VIDEO_RESPONSE_JSON_SCHEMA },
-          generation_config: { temperature: 0, max_output_tokens: 16384 },
-          store: false,
-          background: false,
-        }),
-      }, input.signal, input.processingMode === "agentic", state), raw => { state.rawResponse = { unparsedText: raw.split(key).join("[REDACTED]") }; }), key);
-      // Persist accounting even if the response's structured fields fail validation.
-      state.rawResponse = interaction;
-      state.usage = usageOf(interaction);
-      const pricing = this.pricing();
-      if (pricing && state.usage.inputTokens !== null && state.usage.outputTokens !== null) {
-        state.tokenCostGbp = (state.usage.inputTokens * pricing.inputGbpPerMillion + state.usage.outputTokens * pricing.outputGbpPerMillion) / 1_000_000;
-        const reservation = state.reservations.at(-1);
-        if (reservation) {
-          // Unknown retry charges keep their reserves. A failed database settlement
-          // also leaves its reserve in the ledger; it must not discard valid output.
-          state.pricedReservationId = reservation.reservationId;
-          try {
-            await (this.options.settleCost || settleGeminiCost)(reservation.reservationId, state.tokenCostGbp);
-            state.settledReservationId = reservation.reservationId;
-          }
-          catch {}
-        }
+      let output: Record<string, any>;
+      if (input.processingMode === "agentic") {
+        const parts = coverage.segments.map(segment => ({ type: "video", uri: file.uri, mime_type: input.media.mimeType, processing: "agentic" }));
+        output = await session.json(new URL(`${API}/v1beta/interactions`), {
+          method: "POST", headers: { ...authorization, "Content-Type": "application/json" },
+          body: JSON.stringify({ model: this.model, input: [...parts, { type: "text", text: buildVideoPrompt(input, coverage) }],
+            response_format: { type: "text", mime_type: "application/json", schema: VIDEO_RESPONSE_JSON_SCHEMA },
+            generation_config: { temperature: 0, max_output_tokens: 16384 }, store: false, background: false }),
+        }, { stage: "agentic_generation", billable: true, agenticAttempt: true, signal: input.signal, beforeAttempt: awaitActive,
+          onRaw: raw => session.setRawResponse({ unparsedText: raw }) });
+      } else {
+        // Static is the stable GenerateContent path. No agentic/preview option is
+        // present unless the caller explicitly chose the Agentic mode above.
+        const parts = coverage.segments.map(segment => ({ fileData: { fileUri: file.uri, mimeType: input.media.mimeType },
+          videoMetadata: { startOffset: `${segment.startSeconds}s`, endOffset: `${segment.endSeconds}s`, fps: segment.fps } }));
+        output = await session.json(new URL(`${API}/v1beta/models/${this.model}:generateContent`), {
+          method: "POST", headers: { ...authorization, "Content-Type": "application/json" },
+          body: JSON.stringify({ contents: [{ role: "user", parts: [...parts, { text: buildVideoPrompt(input, coverage) }] }],
+            generationConfig: { temperature: 0, maxOutputTokens: 16384, responseMimeType: "application/json", responseJsonSchema: VIDEO_RESPONSE_JSON_SCHEMA } }),
+        }, { stage: "static_generation", billable: true, signal: input.signal, beforeAttempt: awaitActive,
+          onRaw: raw => session.setRawResponse({ unparsedText: raw }) });
       }
-      if (interaction.status !== "completed")
-        throw new VideoProviderError("invalid_output", "Gemini did not complete the structured video analysis.");
-      const finalStep = Array.isArray(interaction.steps)
-        ? [...interaction.steps].reverse().find((step) => record(step).type === "model_output") : null;
-      const output = finalStep ? record(finalStep).content : interaction.outputs;
-      const outputText = Array.isArray(output)
-        ? output.filter((part) => record(part).type === "text" && typeof record(part).text === "string")
-            .map((part) => part.text).join("")
-        : "";
+      // Preserve response/accounting even when structured field validation fails.
+      session.setRawResponse(output);
+      session.setUsage(usageOf(output));
+      const pricing = this.pricing();
+      if (pricing) await session.settle(pricing.inputGbpPerMillion, pricing.outputGbpPerMillion);
+      let outputText = "";
+      if (input.processingMode === "agentic") {
+        if (output.status !== "completed") throw new VideoProviderError("invalid_output", "Gemini did not complete the structured video analysis.");
+        const finalStep = Array.isArray(output.steps) ? [...output.steps].reverse().find(step => record(step).type === "model_output") : null;
+        const parts = finalStep ? record(finalStep).content : output.outputs;
+        outputText = Array.isArray(parts) ? parts.filter(part => record(part).type === "text" && typeof record(part).text === "string").map(part => part.text).join("") : "";
+      } else {
+        const candidate = record(Array.isArray(output.candidates) ? output.candidates[0] : undefined);
+        if (candidate.finishReason && candidate.finishReason !== "STOP") throw new VideoProviderError("invalid_output", "Gemini did not finish the structured static video analysis.");
+        const parts = record(candidate.content).parts;
+        outputText = Array.isArray(parts) ? parts.filter(part => typeof record(part).text === "string" && !record(part).thought).map(part => part.text).join("") : "";
+      }
       let fields: unknown;
       try { fields = JSON.parse(outputText); }
       catch { throw new VideoProviderError("invalid_output", "Gemini did not return the required structured video JSON."); }
       return {
         fields,
-        model: text(interaction.model) || resolvedModel,
-        modelVersion: text(interaction.model_version) || text(interaction.modelVersion) || version,
+        model: text(output.model) || text(output.modelVersion) || resolvedModel,
+        modelVersion: text(output.model_version) || text(output.modelVersion) || version,
         processingMode: input.processingMode,
         promptVersion: VIDEO_PROMPT_VERSION,
         coverage,
-        accounting: this.accounting(state),
-        ...(text(interaction.id, 500) ? { providerRequestId: interaction.id } : {}),
+        accounting: session.accounting(this.pricing()),
+        ...(text(output.id, 500) ? { providerRequestId: output.id } : {}),
       };
     } catch (error) {
       if (error instanceof VideoProviderError) {
-        error.accounting = this.accounting(state);
+        error.accounting = session.accounting(this.pricing());
         throw error;
       }
-      throw new VideoProviderError("unavailable", "Gemini video analysis failed; retained media and earlier results were preserved.", this.accounting(state));
+      throw new VideoProviderError("unavailable", "Gemini video analysis failed; retained media and earlier results were preserved.", session.accounting(this.pricing()));
     } finally {
       if (uploadedName) {
         try {
           // Cleanup is attempted even after cancellation, and never masks a saved result.
-          await this.request(new URL(`${API}/v1beta/${uploadedName}`), {
+          await session.request(new URL(`${API}/v1beta/${uploadedName}`), {
             method: "DELETE", headers: authorization,
-          });
+          }, { stage: "file_cleanup" });
         } catch {
           if (this.options.onCleanupFailure) this.options.onCleanupFailure();
           else console.warn("Gemini temporary video cleanup was unavailable; Exter's stored video is preserved.");

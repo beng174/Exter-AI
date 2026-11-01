@@ -1,4 +1,5 @@
 import type { CreatorEvidence, VideoAnalysisAccounting, VideoCoverage, VideoProcessingMode } from "../../shared/video-analysis.js";
+import type { GeminiDiagnostic } from "../../shared/gemini-diagnostic.js";
 
 export interface StoredVideo {
   mediaId: string;
@@ -43,5 +44,5 @@ export interface VideoAnalyser {
 }
 export type VideoErrorCode = "unsupported_mode" | "authentication" | "rate_limit" | "invalid_output" | "unavailable" | "not_implemented" | "configuration" | "budget_paused";
 export class VideoProviderError extends Error {
-  constructor(public code: VideoErrorCode, message: string, public accounting?: VideoAnalysisAccounting) { super(message); this.name = "VideoProviderError"; }
+  constructor(public code: VideoErrorCode, message: string, public accounting?: VideoAnalysisAccounting, public diagnostic?: GeminiDiagnostic) { super(message); this.name = "VideoProviderError"; }
 }

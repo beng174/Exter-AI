@@ -42,6 +42,8 @@ function transport(override?: (call: Call) => Response | undefined | Promise<Res
     assert.equal(call.url.searchParams.has("key"), false, "credential belongs in a header, never query strings");
     const special = await override?.(call);
     if (special) return special;
+    if (call.url.pathname.endsWith(":generateContent"))
+      return response({ modelVersion: "gemini-3.8-flash", candidates: [{ finishReason: "STOP", content: { parts: [{ text: JSON.stringify(fields) }] } }] });
     if (call.url.pathname.startsWith("/v1beta/models/"))
       return response({ name: "models/gemini-3.8-flash", version: "3.8" });
     if (call.url.pathname === "/upload/v1beta/files" && !call.url.search)
@@ -68,6 +70,7 @@ function analyser(fetcher: typeof fetch, extra: Record<string, unknown> = {}) {
   return new GeminiVideoAnalyser({ apiKey: SECRET, fetch: fetcher, sleep: async () => {}, ...extra });
 }
 const interactions = (calls: Call[]) => calls.filter((call) => call.url.pathname === "/v1beta/interactions");
+const staticGenerations = (calls: Call[]) => calls.filter(call => call.url.pathname.endsWith(":generateContent"));
 const deletions = (calls: Call[]) => calls.filter((call) => call.init.method === "DELETE");
 
 test("Gemini uploads retained video and performs one genuine agentic Interactions request with version metadata", async () => {
@@ -96,39 +99,28 @@ test("Gemini uploads retained video and performs one genuine agentic Interaction
   } finally { await fixture.cleanup(); }
 });
 
-test("Static mode samples short ads at 3 FPS throughout and keeps focused hook coverage for longer videos", async () => {
-  const fixture = await input();
-  const mock = transport();
+test("Static mode uses stable GenerateContent with 3 FPS throughout short ads and no preview Agentic flag", async () => {
+  const fixture = await input(); const mock = transport();
   try {
     const result = await analyser(mock.fetcher).analyse({ ...fixture.value, processingMode: "static-high-fps-hook" });
-    const body = JSON.parse(String(interactions(mock.calls)[0].init.body));
-    assert.deepEqual(body.input.filter((part: any) => part.type === "video").map((part: any) => part.processing), [
-      { type: "static", start_offset: "0s", end_offset: "12s", fps: 3 },
-    ]);
-    assert.equal(interactions(mock.calls).length, 1);
-    assert.equal(result.coverage.fullVideo, true);
-    assert.equal(result.processingMode, "static-high-fps-hook");
-    const short = await input(2.5);
-    try {
-      const shortMock = transport();
-      await analyser(shortMock.fetcher).analyse({ ...short.value, processingMode: "static-high-fps-hook" });
-      const shortBody = JSON.parse(String(interactions(shortMock.calls)[0].init.body));
-      assert.equal(shortBody.input.length, 2, "one short native video segment plus the prompt");
-      assert.equal(shortBody.input[0].processing.end_offset, "2.5s");
-      assert.equal(shortBody.input[0].processing.fps, 3);
-    } finally { await short.cleanup(); }
-    const long = await input(61);
-    try {
-      const longMock = transport();
-      const longResult = await analyser(longMock.fetcher).analyse({ ...long.value, processingMode: "static-high-fps-hook" });
-      const longBody = JSON.parse(String(interactions(longMock.calls)[0].init.body));
-      assert.deepEqual(longBody.input.filter((part: any) => part.type === "video").map((part: any) => part.processing), [
-        { type: "static", start_offset: "0s", end_offset: "5s", fps: 5 },
-        { type: "static", start_offset: "5s", end_offset: "61s", fps: 1 },
-      ]);
-      assert.equal(longResult.coverage.fullVideo, true);
-    } finally { await long.cleanup(); }
-  } finally { await fixture.cleanup(); }
+    const body = JSON.parse(String(staticGenerations(mock.calls)[0].init.body));
+    assert.equal(interactions(mock.calls).length,0);
+    assert.deepEqual(body.contents[0].parts.filter((part:any)=>part.fileData).map((part:any)=>part.videoMetadata), [{startOffset:"0s",endOffset:"12s",fps:3}]);
+    assert.ok(body.contents[0].parts[0].fileData.fileUri === file.uri);
+    assert.ok(!JSON.stringify(body).toLowerCase().includes('agentic'));
+    assert.equal(body.generationConfig.responseMimeType,"application/json");
+    assert.equal(result.processingMode,"static-high-fps-hook"); assert.equal(result.coverage.fullVideo,true);
+    assert.deepEqual(result.fields,fields);
+    for (const duration of [2.5,61]) {
+      const clip=await input(duration); const calls=transport();
+      try {
+        const output=await analyser(calls.fetcher).analyse({...clip.value,processingMode:"static-high-fps-hook"});
+        const parts=JSON.parse(String(staticGenerations(calls.calls)[0].init.body)).contents[0].parts.filter((part:any)=>part.fileData);
+        assert.deepEqual(parts.map((part:any)=>part.videoMetadata),duration<=60 ? [{startOffset:"0s",endOffset:`${duration}s`,fps:3}] : [{startOffset:"0s",endOffset:"5s",fps:5},{startOffset:"5s",endOffset:"61s",fps:1}]);
+        assert.equal(interactions(calls.calls).length,0); assert.equal(output.coverage.fullVideo,true);
+      } finally {await clip.cleanup();}
+    }
+  } finally {await fixture.cleanup();}
 });
 
 test("Only explicit agentic unsupported errors allow the orchestration layer to select a fallback", async () => {
@@ -166,7 +158,7 @@ test("Processing files are polled with bounded waits and failed files never star
     });
     await analyser(mock.fetcher, { sleep: async () => { sleeps++; } }).analyse(fixture.value);
     assert.equal(polls, 2);
-    assert.equal(sleeps, 2);
+    assert.equal(sleeps, 1);
     assert.equal(interactions(mock.calls).length, 1);
     const failed = transport((call) => call.url.pathname === "/upload/v1beta/files" && call.url.search
       ? response({ file: { ...file, state: "FAILED" } }) : undefined);
@@ -232,7 +224,7 @@ test("Pegasus remains a clearly unimplemented swappable provider, never a fabric
   } finally { await fixture.cleanup(); }
 });
 
-test("token accounting settles the successful attempt and preserves conservative retry reservations", async () => {
+test("explicit transient rejections reuse one reservation and settle the successful generation estimate", async () => {
   const fixture = await input();
   let generationAttempts = 0, reservationCount = 0;
   const settlements: { id: string; value: number }[] = [];
@@ -250,25 +242,27 @@ test("token accounting settles the successful attempt and preserves conservative
       reserveCost: async () => ({ reservationId: `reserve-${++reservationCount}`, reservedGbp: 0.2 }),
       settleCost: async (id: string, value: number) => { settlements.push({ id, value }); },
     }).analyse(fixture.value);
-    assert.equal(reservationCount, 3, "only generation attempts reserve inference budget");
+    assert.equal(reservationCount, 1, "HTTP429/503 rejections retry the same reserved logical request");
     assert.deepEqual(sleeps, [500, 1000]);
     assert.deepEqual(result.accounting?.usage, { inputTokens: 1200, outputTokens: 300, totalTokens: 1500 });
     assert.equal(result.accounting?.requestAttempts, 3);
-    assert.equal(result.accounting?.costBasis, "token_and_reservation_estimate");
+    assert.equal(result.accounting?.costBasis, "token_estimate");
     assert.equal(result.accounting?.tokenCostGbp, 0.0012);
-    assert.equal(result.accounting?.reservedCostGbp, 0.4);
-    assert.ok(Math.abs(result.accounting!.estimatedCostGbp! - 0.4012) < 1e-10);
-    assert.deepEqual(settlements, [{ id: "reserve-3", value: 0.0012 }]);
+    assert.equal(result.accounting?.reservedCostGbp, 0);
+    assert.equal(result.accounting?.estimatedCostGbp, 0.0012);
+    assert.equal(result.accounting?.billedCostGbp,null);
+    assert.equal(result.accounting?.rejectedAttempts,2);
+    assert.deepEqual(settlements, [{ id: "reserve-1", value: 0.0012 }]);
     assert.ok(result.accounting?.rawResponse);
     assert.ok(!JSON.stringify(result).includes(SECRET), "a credential echoed by the provider is scrubbed before persistence");
     assert.equal(deletions(mock.calls).length, 1);
   } finally { await fixture.cleanup(); }
 });
 
-test("budget pause stops a transient retry while allowing temporary file cleanup", async () => {
+test("budget pause stops an ambiguous timeout retry while allowing temporary file cleanup", async () => {
   const fixture = await input();
   let reserves = 0;
-  const mock = transport(call => call.url.pathname === "/v1beta/interactions" ? response({ error: { message: SECRET } }, 503) : undefined);
+  const mock = transport(call => {if(call.url.pathname === "/v1beta/interactions") throw new DOMException("Fixture timed out","TimeoutError");return undefined;});
   try {
     await assert.rejects(analyser(mock.fetcher, {
       reserveCost: async () => {
@@ -341,4 +335,76 @@ test("failed ledger settlement counts one successful attempt once using the larg
       assert.deepEqual(result.fields, fields, "ledger unavailability preserves the valid provider output");
     }
   } finally { await fixture.cleanup(); }
+});
+
+test("every generation retry rechecks ACTIVE and a processing file cannot dispatch a retry early", async () => {
+  const fixture=await input(); let polls=0,posts=0,reserves=0; const events:string[]=[];
+  const mock=transport(call=>{
+    if(call.url.pathname===file.uri.replace(HOST,"") && call.init.method!=="DELETE") {
+      polls++; const state=polls===2?"PROCESSING":"ACTIVE"; events.push(state); return response({...file,state});
+    }
+    if(call.url.pathname==="/v1beta/interactions") {posts++;events.push("generate");if(posts===1)return response({error:{message:"Temporary server rejection"}},503);}
+    return undefined;
+  });
+  try {
+    await analyser(mock.fetcher,{reserveCost:async()=>({reservationId:`hold-${++reserves}`,reservedGbp:0.1})}).analyse(fixture.value);
+    assert.deepEqual(events,["ACTIVE","generate","PROCESSING","ACTIVE","generate"]);
+    assert.equal(reserves,1,"the explicit503 retry reuses the original hold");
+  } finally {await fixture.cleanup();}
+});
+
+test("terminal Google rejections release one hold and expose the full sanitised diagnostic without claiming billed spend", async () => {
+  const fixture=await input(); let reserves=0,releases=0; const waits:number[]=[];
+  const mock=transport(call=>call.url.pathname==="/v1beta/interactions" ? response({error:{code:503,status:"UNAVAILABLE",message:`Backend rejected input for project test. API key: ${SECRET}; Bearer hidden-bearer; https://user:password@example.com/video?signature=hidden-signature`,details:[{"@type":"type.googleapis.com/google.rpc.RetryInfo",retryDelay:"2s"}]}},503,{"retry-after":"2","x-request-id":"fixture-request"}) : undefined);
+  try {
+    await assert.rejects(analyser(mock.fetcher,{sleep:async(ms:number)=>{waits.push(ms);},reserveCost:async()=>({reservationId:`held-${++reserves}`,reservedGbp:0.1}),releaseCost:async(id:string)=>{assert.equal(id,"held-1");releases++;}}).analyse(fixture.value),(error:unknown)=>{
+      assert.ok(error instanceof VideoProviderError); assert.equal(error.diagnostic?.stage,"agentic_generation");
+      assert.equal(error.diagnostic?.httpStatus,503); assert.equal(error.diagnostic?.providerStatus,"UNAVAILABLE");
+      assert.equal(error.diagnostic?.requestId,"fixture-request"); assert.match(error.message,/Backend rejected input for project test/);
+      assert.match(JSON.stringify(error.diagnostic?.details),/RetryInfo/);
+      for(const privateValue of [SECRET,"hidden-bearer","hidden-signature","user:password"]) assert.ok(!JSON.stringify(error).includes(privateValue));
+      assert.equal(error.accounting?.requestAttempts,3);assert.equal(error.accounting?.rejectedAttempts,3);
+      assert.equal(error.accounting?.initialReservedCostGbp,0.1);assert.equal(error.accounting?.reservedCostGbp,0);
+      assert.equal(error.accounting?.estimatedCostGbp,0);assert.equal(error.accounting?.billedCostGbp,null);
+      return true;
+    });
+    assert.equal(reserves,1);assert.equal(releases,1);assert.deepEqual(waits,[2000,2000]);
+  }finally{await fixture.cleanup();}
+});
+
+test("a file that becomes FAILED before retry stops generation and releases only its explicitly rejected hold",async()=>{
+  const fixture=await input();let polls=0,posts=0,releases=0;
+  const mock=transport(call=>{
+    if(call.url.pathname===file.uri.replace(HOST,"") && call.init.method!=="DELETE")return response({...file,state:++polls===1?"ACTIVE":"FAILED"});
+    if(call.url.pathname==="/v1beta/interactions"){posts++;return response({error:{message:"Temporary rejection"}},503);}
+    return undefined;
+  });
+  try{
+    await assert.rejects(analyser(mock.fetcher,{reserveCost:async()=>({reservationId:"file-failed-hold",reservedGbp:0.1}),releaseCost:async()=>{releases++;}}).analyse(fixture.value),(error:unknown)=>{
+      assert.ok(error instanceof VideoProviderError);assert.equal(error.diagnostic?.stage,"file_ready");assert.equal(error.accounting?.reservedCostGbp,0);return true;
+    });
+    assert.equal(posts,1);assert.equal(releases,1);
+  }finally{await fixture.cleanup();}
+});
+
+test("cancellation during rejected-request backoff releases the known rejected hold and never retries",async()=>{
+  const fixture=await input();const signal=new AbortController();let releases=0;
+  const mock=transport(call=>call.url.pathname==="/v1beta/interactions"?response({error:{message:"Temporary rejection"}},503):undefined);
+  try{
+    await assert.rejects(analyser(mock.fetcher,{reserveCost:async()=>({reservationId:"cancelled-hold",reservedGbp:0.1}),releaseCost:async()=>{releases++;},sleep:async()=>{signal.abort();throw new VideoProviderError("unavailable","Gemini request was cancelled.");}}).analyse({...fixture.value,signal:signal.signal}),(error:unknown)=>{
+      assert.ok(error instanceof VideoProviderError);assert.equal(error.accounting?.reservedCostGbp,0);return true;
+    });
+    assert.equal(interactions(mock.calls).length,1);assert.equal(releases,1);
+  }finally{await fixture.cleanup();}
+});
+
+test("FAILED file payloads preserve the complete sanitised processing diagnostic without generation charges",async()=>{
+  const fixture=await input();let reserves=0;
+  const mock=transport(call=>call.url.pathname==="/upload/v1beta/files"&&call.url.search?response({file:{...file,state:"FAILED",error:{status:"INVALID_ARGUMENT",message:`Unsupported input audio codec ${SECRET}`,details:[{reason:"UNSUPPORTED_CODEC"}]}}}):undefined);
+  try{
+    await assert.rejects(analyser(mock.fetcher,{reserveCost:async()=>{reserves++;return{reservationId:"unused",reservedGbp:0.1};}}).analyse(fixture.value),(error:unknown)=>{
+      assert.ok(error instanceof VideoProviderError);assert.equal(error.diagnostic?.stage,"file_ready");assert.equal(error.diagnostic?.providerStatus,"INVALID_ARGUMENT");assert.match(error.message,/Unsupported input audio codec/);assert.match(JSON.stringify(error.diagnostic?.details),/UNSUPPORTED_CODEC/);assert.ok(!JSON.stringify(error).includes(SECRET));return true;
+    });
+    assert.equal(reserves,0);assert.equal(interactions(mock.calls).length,0);
+  }finally{await fixture.cleanup();}
 });

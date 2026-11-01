@@ -11,6 +11,10 @@ CREATE TABLE IF NOT EXISTS cost_ledger (
  status text NOT NULL DEFAULT 'reserved', created_at timestamptz NOT NULL DEFAULT now()
 );
 CREATE INDEX IF NOT EXISTS cost_ledger_month ON cost_ledger(cost_type,created_at);
+-- Preserve the original hold when it is later settled or explicitly released.
+-- Earlier settled/released rows cannot establish their original hold; leave null.
+ALTER TABLE cost_ledger ADD COLUMN IF NOT EXISTS initial_reserved_gbp numeric CHECK(initial_reserved_gbp >= 0);
+UPDATE cost_ledger SET initial_reserved_gbp=cost_gbp WHERE initial_reserved_gbp IS NULL AND status='reserved';
 CREATE TABLE IF NOT EXISTS watchlists (
  id text PRIMARY KEY, workspace_id text NOT NULL, page_ids jsonb NOT NULL DEFAULT '[]',
  search_terms jsonb NOT NULL DEFAULT '[]', countries jsonb NOT NULL DEFAULT '["GB"]', enabled boolean NOT NULL DEFAULT true
