@@ -9,6 +9,10 @@ jobs:
         with:
           node-version: 24
           cache: npm
+      - name: Install media tools
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y --no-install-recommends ffmpeg
       - run: npm ci
       - run: npm run secrets:check
       - run: npm test
