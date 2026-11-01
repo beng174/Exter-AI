@@ -32,9 +32,22 @@ export interface VideoMediaOptions {
   now?: () => Date;
 }
 export class MediaStorageError extends Error {
-  constructor(message: string, public status = 400, public code = "media_invalid") {
+  constructor(message: string, public status = 400, public code = "media_invalid", public sourceHttpStatus?: number) {
     super(message);
   }
+}
+
+function sourceHttpFailure(status: number): MediaStorageError {
+  const detail: Record<number, [string, string]> = {
+    401: ["media_unauthorized", "The video host requires authorization (HTTP 401)."],
+    403: ["media_forbidden", "The video host refused the download (HTTP 403). Refresh the source link or retry when server access is permitted."],
+    404: ["media_not_found", "The video file was not found (HTTP 404). Refresh its link from the ad snapshot."],
+    408: ["media_timeout", "The video host timed out (HTTP 408)."],
+    410: ["media_expired", "The video link has expired or the file was removed (HTTP 410). Refresh its link from the ad snapshot."],
+    429: ["media_rate_limited", "The video host rate-limited the download (HTTP 429). Retry later."],
+  };
+  const [code, message] = detail[status] || ["media_source_http_error", `The video host returned HTTP ${status}. Retry later or refresh its source link.`];
+  return new MediaStorageError(message, status === 408 ? 504 : 502, code, status);
 }
 const run = promisify(execFile);
 const DEFAULT_BYTES = 250 * 1024 * 1024;
@@ -195,14 +208,19 @@ export class LocalVideoMediaStore implements VideoMediaStore {
     if (typeof request.sourceUrl !== "string" || !request.sourceUrl || request.sourceUrl.length > 20000)
       throw new MediaStorageError("A public video URL is required when no verified local video is stored.");
     assertProxySupport(Boolean(this.options.fetch), process.env);
-    const signal = AbortSignal.any([AbortSignal.timeout(this.timeoutMs), ...(request.signal ? [request.signal] : [])]);
-    signal.throwIfAborted();
+    const timeoutSignal = AbortSignal.timeout(this.timeoutMs);
+    const signal = AbortSignal.any([timeoutSignal, ...(request.signal ? [request.signal] : [])]);
+    const aborted = () => new MediaStorageError(timeoutSignal.aborted ? "Video download timed out." : "Video download was cancelled.", timeoutSignal.aborted ? 504 : 499, timeoutSignal.aborted ? "media_timeout" : "media_cancelled");
+    if (signal.aborted) throw aborted();
     let url = await this.checkedUrl(request.sourceUrl);
     let response: Response | undefined;
     for (let redirects = 0; redirects <= 3; redirects++) {
       try {
         response = await (this.options.fetch || fetch)(url, { redirect: "manual", signal, headers: { Accept: "video/mp4,video/webm,video/quicktime,application/octet-stream" } });
-      } catch { throw new MediaStorageError(signal.aborted ? "Video download timed out or was cancelled." : "The public video source could not be reached.", signal.aborted ? 504 : 502, "media_source_unavailable"); }
+      } catch {
+        if (signal.aborted) throw aborted();
+        throw new MediaStorageError("The public video source could not be reached.", 502, "media_source_unavailable");
+      }
       if (response.status >= 300 && response.status < 400) {
         const target = response.headers.get("location");
         await response.body?.cancel().catch(() => {});
@@ -217,7 +235,8 @@ export class LocalVideoMediaStore implements VideoMediaStore {
     }
     if (!response?.ok || !response.body) {
       await response?.body?.cancel().catch(() => {});
-      throw new MediaStorageError("The public video source is unavailable; any previously stored media was preserved.", 502, "media_source_unavailable");
+      if (response && !response.ok) throw sourceHttpFailure(response.status);
+      throw new MediaStorageError("The video host returned an empty response; any previously stored media was preserved.", 502, "media_empty_response", response?.status);
     }
     const declared = (response.headers.get("content-type") || "").split(";")[0].trim().toLowerCase();
     if (!["video/mp4", "video/webm", "video/quicktime", "application/octet-stream"].includes(declared)) {
@@ -297,7 +316,8 @@ export class LocalVideoMediaStore implements VideoMediaStore {
     } catch (error) {
       await reader.cancel().catch(() => {});
       if (error instanceof MediaStorageError) throw error;
-      throw new MediaStorageError(signal.aborted ? "Video download timed out or was cancelled." : "Video could not be stored safely; existing media was preserved.", signal.aborted ? 504 : 500, "media_storage_failed");
+      if (signal.aborted) throw aborted();
+      throw new MediaStorageError("Video could not be stored safely; existing media was preserved.", 500, "media_storage_failed");
     } finally {
       await handle?.close().catch(() => {});
       reader.releaseLock();

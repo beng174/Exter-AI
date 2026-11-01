@@ -32,7 +32,7 @@
 .gemini-smoke-resume p { margin: 0; font-size: 11px; line-height: 1.8; }
 .gemini-smoke-resume button { flex-shrink: 0; }
 .gemini-smoke-table-wrap { overflow-x: auto; border: 1px solid #e1e8d8; border-radius: 6px; }
-.gemini-smoke-table { width: 100%; min-width: 680px; border-collapse: collapse; font-size: 11px; text-align: left; }
+.gemini-smoke-table { width: 100%; min-width: 850px; border-collapse: collapse; font-size: 11px; text-align: left; }
 .gemini-smoke-table caption { text-align: left; padding: 13px 14px; color: #7b8e6c; background: #f3f6ed; font-size: 11px; }
 .gemini-smoke-table th, .gemini-smoke-table td { padding: 12px 14px; border-top: 1px solid #e5ebdf; vertical-align: top; line-height: 1.7; }
 .gemini-smoke-table thead th { color: #8a9b7c; font-weight: 400; font-size: 10px; }
@@ -42,3 +42,17 @@
 .gemini-smoke-item-error { max-width: 260px; margin: 5px 0 0; color: #a16b57; font-size: 10px; line-height: 1.8; }
 @media (max-width: 850px) { .gemini-smoke-facts { grid-template-columns: repeat(2,minmax(0,1fr)); } .gemini-smoke-run-heading { align-items: flex-start; flex-wrap: wrap; } }
 @media (max-width: 620px) { .gemini-smoke { padding: 18px 14px; } .gemini-smoke-heading { align-items: flex-start; gap: 10px; } .gemini-smoke h2 { font-size: 19px; } .gemini-smoke-intro { font-size: 12px; } .gemini-smoke-controls { align-items: stretch; flex-direction: column; } .gemini-smoke-controls label { min-width: 0; } .gemini-smoke-resume { align-items: stretch; flex-direction: column; } .gemini-smoke-facts { padding: 13px; } }
+
+.gemini-smoke-sample-note { margin: 14px 0 18px; padding: 12px 14px; border: 1px solid #e5dcbb; border-radius: 6px; background: #faf6e8; color: #827241; font-size: 12px; line-height: 1.8; }
+.gemini-smoke-attempts { min-width: 190px; max-width: 280px; margin-top: 7px; color: #7b8069; font-size: 10px; }
+.gemini-smoke-attempts summary { cursor: pointer; color: #647e51; }
+.gemini-smoke-attempts ul { margin: 7px 0 0; padding-left: 15px; }
+.gemini-smoke-attempts li { margin-bottom: 8px; }
+.gemini-smoke-attempts span, .gemini-smoke-attempts code { display: block; overflow-wrap: anywhere; }
+.gemini-smoke-attempts code { color: #9b7058; font-size: 9px; }
+
+.gemini-smoke-format-summary { margin: -7px 0 18px; color: #6f825e; font-size: 12px; line-height: 1.8; }
+.gemini-smoke-failure-category { display: block; color: #976447; font-size: 10px; font-weight: 550; }
+
+.gemini-smoke-media-links { display: flex; flex-direction: column; gap: 4px; margin-top: 6px; min-width: 65px; }
+.gemini-smoke-media-links a { color: #607e4c; text-underline-offset: 2px; }

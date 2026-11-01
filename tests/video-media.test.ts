@@ -128,6 +128,47 @@ test("failed source refresh retains the original media and source errors never r
   } finally { await rm(root, { recursive: true, force: true }); }
 });
 
+test("download failures retain specific HTTP reasons without exposing signed URLs or response bodies", async () => {
+  const root = await temporary();
+  try {
+    const cases: [number, string][] = [[401,"media_unauthorized"],[403,"media_forbidden"],[404,"media_not_found"],[408,"media_timeout"],[410,"media_expired"],[429,"media_rate_limited"],[503,"media_source_http_error"]];
+    for (const [status, code] of cases) {
+      const store = new LocalVideoMediaStore(options(root, { fetch: async () => new Response(remote, { status }) }));
+      await assert.rejects(store.store(request), error => {
+        assert.ok(error instanceof MediaStorageError);
+        assert.equal(error.code,code);
+        assert.equal(error.sourceHttpStatus,status);
+        assert.ok(error.message.includes(String(status)));
+        assert.ok(!error.message.includes("SECRET"));
+        assert.ok(!error.message.includes("https://"));
+        if (status === 403) assert.ok(!error.message.toLowerCase().includes("expired"),"a forbidden response does not establish link expiry");
+        return true;
+      });
+    }
+    for (const dir of ["objects", "records", "refs"])
+      assert.deepEqual(await readdir(join(root, dir)).catch(() => []), []);
+  } finally { await rm(root,{ recursive: true,force: true }); }
+});
+
+test("download timeout and cancellation are separate from an unreachable host", async () => {
+  const root = await temporary();
+  try {
+    const timed = new LocalVideoMediaStore(options(root, { timeoutMs: 5,fetch: async (_url, init) => {
+      await new Promise<void>((resolve,reject) => {
+        init!.signal!.addEventListener("abort",() => reject(new Error(remote)),{ once:true });
+        // Keep the mock's event loop live until AbortSignal.timeout fires.
+        setTimeout(resolve,20);
+      });
+      return response();
+    } }));
+    await assert.rejects(timed.store(request),error => error instanceof MediaStorageError && error.code === "media_timeout" && error.status === 504);
+    const cancelled = new AbortController(); cancelled.abort();
+    await assert.rejects(timed.store({ ...request,signal:cancelled.signal }),error => error instanceof MediaStorageError && error.code === "media_cancelled");
+    const unreachable = new LocalVideoMediaStore(options(root,{ fetch:async () => { throw new Error(remote); } }));
+    await assert.rejects(unreachable.store(request),error => error instanceof MediaStorageError && error.code === "media_source_unavailable" && !error.message.includes("SECRET"));
+  } finally { await rm(root,{ recursive: true,force:true }); }
+});
+
 test("stored bytes and scoped manifests are integrity-checked before reuse", async () => {
   const root = await temporary();
   try {

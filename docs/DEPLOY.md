@@ -120,27 +120,52 @@ collection worker and scheduler do not execute this smoke test and do not need i
    model available to your Google project. Redeploy after environment changes.
    Model availability is verified before uploading each input; an unavailable model
    produces a recorded failure, never a fabricated result.
-3. In **Budgets & tests**, save an inference cap large enough for your intended
-   run. With 25 videos and three concurrent requests, each next reservation must
-   still fit inside 90% of that cap. Data-provider budget is separate; preparing
-   public media makes no Gemini calls and uses no paid discovery provider.
-4. Click **Prepare Valentte videos**. This explicitly loads the saved verified
-   public Valentte records if they are absent, preserves existing records, and
-   retains 25 playable videos with checksums. Missing URLs are resolved from
-   ordinary public Ad Library pages for verified ad IDs. If Meta requires a login
-   or challenge, preparation stops visibly. Expired, static or unavailable inputs
-   do not count towards the 25-video target. You can retain current approved video
-   URLs through Labelling and retry preparation. No inference starts with fewer
-   than 25 retained inputs.
-5. Choose Agentic or Static and click **Run Gemini smoke test**. Missing media is
-   prepared automatically as well. Short videos in static mode use 3 FPS across
-   the full clip; longer videos use the higher-FPS opening segment. The page shows
-   each ad's status, model, actual mode, tokens and estimated GBP cost.
-6. Download **gemini-live-report.md** from that run. It includes success/failure
-   counts, reasons, per-ad accounting, averages, known total cost and up to five
-   complete saved outputs. At least 24 of 25 successful analyses is the Phase 1
-   success target. Missing cost or usage is disclosed rather than treated as zero;
-   compare estimated costs with provider billing separately.
+3. In **Budgets & tests**, keep your chosen inference cap. The same 90% budget
+   guard applies to videos, still images and carousels. No new Render environment
+   variables are needed for image analysis. Preparing public media makes no Gemini
+   calls and uses no paid discovery provider.
+4. Your existing retained videos are reused, even if their old CDN links have
+   expired. **Run Gemini smoke test** is enabled when at least **10 verified
+   creatives** are stored; you can run the existing 12-video sample immediately.
+   The button shows the exact number of stored inputs that will be analysed.
+   A carousel counts as one ad, with every supported slide supplied to Gemini.
+5. To add more inputs, select the desired **video processing mode**, then click
+   **Prepare Valentte creatives**. Preparation checks every candidate until 25
+   creatives are retained or the candidate set is exhausted. It includes the eight
+   explicitly static records as well as the previous 50 video/dynamic candidates.
+   A blocked snapshot does not end preparation for the remaining ads. Per-ad rows
+   preserve the actual format, source error code, HTTP status and attempt history.
+   Images and carousels are valid creative types, not video failures. Unsupported
+   or unavailable image sets are listed separately. A missing URL stays **Other**;
+   it is not proof of expiration. HTTP 403 is blocked/forbidden and HTTP 410 is
+   expired or removed.
+6. Use **Refresh failed media links** to reopen each unresolved ad's own snapshot
+   page and capture fresh URLs. This bypasses the source cache and keeps already
+   retained media. Ordinary preparation also makes one fresh-snapshot retry after
+   a failed URL. Browser login/challenges are recorded and never bypassed. Old
+   reports remain available with their original evidence; new attempts retain the
+   recent failure history instead of erasing it.
+7. Choose **Static** or **Agentic** and click **Run Gemini smoke test**. This uses
+   the verified stored set and does not wait for further source downloads. The
+   chosen video mode is passed to both preparation and inference and shown on the
+   run. Static videos up to 60 seconds use 3 FPS throughout. Image/carousel rows
+   show **Image input** or **Carousel image inputs**, with no invented video FPS.
+   Images use Gemini's native image input for format, hook/headline, angle, claims,
+   on-screen text, offer and CTA. Retained images/slides can be opened from the table.
+8. Download **gemini-live-report.md**. It records actual sample size and counts by
+   format, per-ad tokens/costs, source diagnostics and up to five complete saved
+   outputs covering available input types. A 12-video or mixed-media sample is
+   exploratory and does not establish the original 24-of-25-video acceptance gate.
+   Missing cost or usage is disclosed rather than filled with zero. Compare
+   estimated costs with provider billing separately.
+
+Image storage supports JPEG, PNG and WebP, one still image or 2–10 ordered image
+carousel slides. Every slide must be exposed and retained: no partial carousel or
+unordered dynamic-creative variants are silently treated as a complete carousel.
+Limits are 8 MiB/40 megapixels per image, and 14 MiB for the complete inline image
+set before inference. Oversized sets fail before a paid request, with no omitted
+slides. Images live under the configured persistent media root; their SQLite
+metadata and analysis tables are created automatically at startup.
 
 Runs and reports remain in the web SQLite database on the persistent disk.
 Refresh and download are read-only. If the budget pauses, increase the cap and
@@ -157,8 +182,9 @@ withholding model predictions and prior labels. Retain full videos before review
 Choose a labeller name, start a review, complete all seven dropdowns (each supports
 Unsure), add notes and save. Time taken is server wall-clock time including pauses.
 Human reviews are append-only and include source/media identity, schema and guide
-versions. Download JSON or CSV from the tool. Static-image byte retention and the
-stratified 200-ad/50-ad holdout sampling protocol are separate follow-up work.
+versions. Download JSON or CSV from the tool. The new smoke-test image store retains
+image bytes, while binding those retained images into human labelling and the
+stratified 200-ad/50-ad holdout sampling protocol remain separate follow-up work.
 
 Official Meta calls are recorded at £0 per request; they still require an enabled
 data-provider budget. No APIFY or other paid discovery call is implemented yet.

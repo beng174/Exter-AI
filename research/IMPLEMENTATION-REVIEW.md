@@ -1,5 +1,24 @@
 # Differentiation and build review
 
+## 1 November 2026: source diagnostics and mixed-media smoke tests
+
+The owner reported 12 retained videos and 38 unresolved sources. Preparation now
+continues across all eligible candidates instead of stopping on the first source
+restriction, retains per-ad HTTP/error details and retry history, and can refresh
+URLs by reopening the exact ad snapshot. Verified images and complete carousels
+are valid inputs; unordered variants and incomplete/mixed carousels remain
+explicitly unavailable. No missing URL is labelled expired without evidence.
+
+The hosted action runs the verified retained set once it contains at least 10 ads,
+including the existing 12 videos, without forcing another round of downloads.
+Native image/carousel inputs use the same budget ledger and retain structured
+fields, raw responses, tokens, estimates and immutable source hashes. Reports
+state actual sample size and video/image/carousel counts. A mixed or smaller
+sample does not claim the original 25-video acceptance. The selected video mode
+is passed through preparation/inference and displayed separately from image input.
+No live Gemini inference runs in Codex. No new Render variables or manual
+migrations are required; deploy this commit and refresh the app.
+
 ## 31 October 2026 follow-up: budgets, hosted smoke test and labelling
 
 Implemented authenticated **Budgets & tests** with monthly GBP caps, usage,

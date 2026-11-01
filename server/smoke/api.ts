@@ -14,8 +14,25 @@ export function attachGeminiSmoke(app: Express, db: DatabaseSync, video: VideoAn
     res.setHeader("Cache-Control", "private, no-store");
     try { res.json(await service.status()); } catch (error) { fail(res,error); }
   });
-  app.post("/api/gemini-smoke/prepare", async (_req,res) => {
-    try { res.status(202).json(await service.start("prepare")); } catch (error) { fail(res,error); }
+  app.get("/api/gemini-smoke/image-media/:mediaId/:index", async (req,res) => {
+    try {
+      const { brandId, adId } = req.query;
+      if (typeof brandId !== "string" || !brandId || brandId.length > 300 || typeof adId !== "string" || !adId || adId.length > 300 || !/^[0-9]$/.test(String(req.params.index)))
+        throw new SmokeRequestError("Choose a retained image in its workspace.", 400);
+      const media = await service.images.storedMedia(brandId, adId, id(req.params.mediaId));
+      const image = media?.images[Number(req.params.index)];
+      if (!image) throw new SmokeRequestError("Retained image not found in this workspace.", 404);
+      res.setHeader("Cache-Control", "private, no-store");
+      res.setHeader("X-Content-Type-Options", "nosniff");
+      res.type(image.mimeType).sendFile(image.absolutePath);
+    } catch (error) { fail(res,error); }
+  });
+  app.post("/api/gemini-smoke/prepare", async (req,res) => {
+    try {
+      if (req.body?.refreshFailed !== undefined && typeof req.body.refreshFailed !== "boolean")
+        throw new SmokeRequestError("refreshFailed must be a boolean.", 400);
+      res.status(202).json(await service.start("prepare", req.body?.processingMode ?? "agentic", { refreshFailed: req.body?.refreshFailed === true }));
+    } catch (error) { fail(res,error); }
   });
   app.post("/api/gemini-smoke/runs", async (req,res) => {
     try { res.status(202).json(await service.start("smoke", req.body?.processingMode ?? "agentic")); } catch (error) { fail(res,error); }

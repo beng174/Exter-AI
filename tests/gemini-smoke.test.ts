@@ -52,8 +52,8 @@ test("smoke preparation stores exactly 25 videos; live action produces real save
   try {
     const prep = await runner.start("prepare"); await runner.idle();
     const prepared = runner.run(prep.id)!;
-    assert.equal(prepared.status,"complete"); assert.equal(prepared.items.length,25);
-    assert.ok(prepared.items.every(item => item.status === "stored" && item.mediaSha256));
+    assert.equal(prepared.status,"complete"); assert.equal(prepared.items.length,58); assert.equal(prepared.sampleSize,25);
+    assert.equal(prepared.items.filter(item => item.status === "stored" && item.mediaSha256).length,25);
     assert.deepEqual(f.counts(), { downloads:25, sourceCalls:25, analyses:0, factoryCalls:0 });
     const run = await runner.start("smoke", "agentic"); await runner.idle();
     const done = runner.run(run.id)!;
@@ -75,6 +75,7 @@ test("budget pause after a paid attempt retains its charge and resume never repl
   });
   const runner = new GeminiSmokeService(f.db,f.video,{ ...f.options, concurrency:1 });
   try {
+    await runner.start("prepare"); await runner.idle();
     const run = await runner.start("smoke"); await runner.idle();
     const stopped = runner.run(run.id)!;
     assert.equal(stopped.status,"paused"); assert.equal(stopped.items[0].status,"interrupted");
@@ -91,7 +92,7 @@ test("restart recovers saved state but inference continues only after explicit r
   try {
     const prep = await runner.start("prepare"); await runner.idle();
     const saved = runner.run(prep.id)!;
-    saved.kind="smoke"; saved.status="analysing"; saved.items[0].status="analysing";
+    saved.kind="smoke"; saved.status="analysing"; saved.items=saved.items.filter(item => item.status === "stored"); saved.items[0].status="analysing";
     f.db.prepare("UPDATE gemini_smoke_runs SET status=?,data=? WHERE id=?").run(saved.status,JSON.stringify(saved),saved.id);
     const recovered = new GeminiSmokeService(f.db,f.video,f.options);
     assert.equal(recovered.run(saved.id)!.status,"interrupted");
@@ -101,19 +102,23 @@ test("restart recovers saved state but inference continues only after explicit r
     assert.equal(f.counts().analyses,24); assert.equal(recovered.run(saved.id)!.items[0].status,"interrupted");
   } finally { f.db.close(); }
 });
-test("insufficient source videos stops before paid inference and reports the gap", async () => {
+test("insufficient retained inputs stop before paid inference and preserve all preparation diagnostics", async () => {
   const f = fixture(); const runner = new GeminiSmokeService(f.db,f.video,{ ...f.options, sourceFactory: () => ({ resolve: async () => null, close: async () => {} }) });
   try {
-    const run = await runner.start("smoke"); await runner.idle();
+    const run = await runner.start("prepare"); await runner.idle();
     const done = runner.run(run.id)!;
-    assert.equal(done.status,"failed"); assert.match(done.message!,/Retained 0 of 25/); assert.equal(f.counts().analyses,0);
-    assert.match(runner.report(run.id),/No new Gemini inference was started/);
+    assert.equal(done.status,"failed"); assert.equal(done.sampleSize,0); assert.equal(done.items.length,58);
+    assert.ok(done.items.every(item => item.errorCode === "source_media_unavailable"));
+    await assert.rejects(runner.start("smoke"), /at least 10/);
+    assert.equal(f.counts().analyses,0); assert.equal(f.counts().factoryCalls,0);
+    assert.match(runner.report(run.id),/No Gemini inference was started during preparation/);
   } finally { f.db.close(); }
 });
 test("HTTP retry usage remains unavailable for the whole ad while final provider usage is retained", async () => {
   const f = fixture(async input => { const result = output(input); result.accounting.requestAttempts = 2; return result; });
   const runner = new GeminiSmokeService(f.db, f.video, f.options);
   try {
+    await runner.start("prepare"); await runner.idle();
     const run = await runner.start("smoke"); await runner.idle();
     const saved = runner.run(run.id)!;
     assert.ok(saved.items.every(item => item.usage?.totalTokens === null));
@@ -139,9 +144,12 @@ test("all smoke routes and report download inherit authentication; GET never lau
     for(const path of ["/api/gemini-smoke/status","/api/gemini-smoke/runs/missing/report"] ) assert.equal((await fetch(base+path)).status,401);
     assert.equal((await fetch(base+"/api/gemini-smoke/prepare",{method:"POST",headers:{"content-type":"application/json"},body:"{}"})).status,401);
     await fetch(base+"/api/gemini-smoke/status",{headers}); assert.equal(runner.latest(),null); assert.equal(f.counts().analyses,0);
-    const response=await fetch(base+"/api/gemini-smoke/runs",{method:"POST",headers,body:"{}"}); assert.equal(response.status,202);
+    const prepResponse=await fetch(base+"/api/gemini-smoke/prepare",{method:"POST",headers,body:JSON.stringify({processingMode:"static-high-fps-hook"})});
+    assert.equal(prepResponse.status,202); const prepared=await prepResponse.json() as SmokeRun;
+    assert.equal(prepared.requestedMode,"static-high-fps-hook"); await runner.idle();
+    const response=await fetch(base+"/api/gemini-smoke/runs",{method:"POST",headers,body:JSON.stringify({processingMode:"static-high-fps-hook"})}); assert.equal(response.status,202);
     const run=await response.json() as SmokeRun; await runner.idle();
     const report=await fetch(base+`/api/gemini-smoke/runs/${run.id}/report`,{headers}); assert.equal(report.status,200); assert.match(report.headers.get("content-disposition")!,/gemini-live-report\.md/);
-    assert.match(await report.text(),/25\/25/);
+    const reportText=await report.text(); assert.match(reportText,/25\/25/); assert.match(reportText,/Requested video processing mode: static-high-fps-hook/);
   } finally { await new Promise<void>((resolve,reject)=>server.close(error=>error?reject(error):resolve())); f.db.close(); }
 });
