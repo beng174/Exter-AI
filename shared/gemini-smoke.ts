@@ -1,5 +1,6 @@
-import type { VideoAnalysisAccounting, VideoProcessingMode } from "./video-analysis.js";
+import type { VideoAnalysisAccounting, VideoNormalization, VideoProcessingMode } from "./video-analysis.js";
 import type { GeminiDiagnostic } from "./gemini-diagnostic.js";
+import type { InferenceGenerationMetadata, MediaResolution, VideoSamplingMetadata } from "./inference-config.js";
 export const GEMINI_SMOKE_TARGET = 25;
 export const GEMINI_SMOKE_MIN_SAMPLE = 10;
 export type SmokeMediaKind = "video" | "image" | "carousel" | "unknown";
@@ -25,6 +26,11 @@ export interface SmokeItem {
   jobId?: string;
   analysisId?: string;
   model?: string;
+  requestedModel?: string;
+  servedModel?: string;
+  generation?: InferenceGenerationMetadata;
+  sampling?: VideoSamplingMetadata;
+  normalization?: VideoNormalization;
   processingMode?: VideoProcessingMode | "image" | "carousel";
   usage?: VideoAnalysisAccounting["usage"];
   estimatedCostGbp?: number | null;
@@ -48,6 +54,9 @@ export interface SmokeRun {
   kind: "prepare" | "smoke" | "diagnostic";
   status: "queued" | "preparing" | "analysing" | "complete" | "paused" | "interrupted" | "failed";
   requestedMode: VideoProcessingMode;
+  /** Missing on historical runs; never inferred for already-paid outputs. */
+  mediaResolution?: MediaResolution;
+  generationSeed?: number;
   /** Actual retained preparation count or fixed inference sample, including failed inferences. */
   sampleSize?: number;
   sampleCounts?: SmokeFormatCounts;

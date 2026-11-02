@@ -39,8 +39,17 @@ test("VP9/Opus WebM becomes a verified H.264/AAC MP4 while the retained original
     assert.deepEqual(await readFile(f.media.absolutePath), f.bytes);
     const { stdout } = await run("ffprobe", ["-v", "error", "-print_format", "json", "-show_format", "-show_streams", prepared.media.absolutePath]);
     const output = JSON.parse(stdout);
-    assert.equal(output.streams.find((stream: any) => stream.codec_type === "video").codec_name, "h264");
-    assert.equal(output.streams.find((stream: any) => stream.codec_type === "video").pix_fmt, "yuv420p");
+    const video = output.streams.find((stream: any) => stream.codec_type === "video");
+    assert.equal(video.codec_name, "h264");
+    assert.equal(video.pix_fmt, "yuv420p");
+    assert.equal(prepared.normalization?.originalWidth, 64);
+    assert.equal(prepared.normalization?.originalHeight, 48);
+    assert.equal(prepared.normalization?.originalFps, 10);
+    assert.equal(prepared.normalization?.uploadWidth, video.width);
+    assert.equal(prepared.normalization?.uploadHeight, video.height);
+    const [numerator, denominator] = video.avg_frame_rate.split("/").map(Number);
+    assert.equal(prepared.normalization?.uploadFps, numerator / denominator);
+    assert.equal(prepared.normalization?.uploadBytes, (await stat(prepared.media.absolutePath)).size);
     assert.equal(output.streams.find((stream: any) => stream.codec_type === "audio").codec_name, "aac");
     assert.ok(Math.abs(Number(output.format.duration) - f.media.durationSeconds) <= 0.15);
     const firstStat = await stat(prepared.media.absolutePath);
@@ -60,9 +69,28 @@ test("compatible H.264/AAC MP4 and silent MP4 pass through without copying or ad
       assert.equal(prepared.media.sha256, f.media.sha256);
       assert.equal(prepared.normalization?.applied, false);
       assert.equal(prepared.normalization?.audioCodec, audio ? "aac" : null);
+      assert.equal(prepared.normalization?.originalWidth, 64);
+      assert.equal(prepared.normalization?.originalHeight, 48);
+      assert.equal(prepared.normalization?.originalFps, 10);
+      assert.equal(prepared.normalization?.uploadWidth, 64);
+      assert.equal(prepared.normalization?.uploadHeight, 48);
+      assert.equal(prepared.normalization?.uploadFps, 10);
       assert.deepEqual(await readdir(f.root), ["original.mp4"]);
     } finally { await f.close(); }
   }
+});
+test("legacy normalization manifests gain probed dimensions without rewriting the retained cache metadata", async () => {
+  const f = await fixture("webm");
+  try {
+    const first = await prepareGeminiVideo(f.media, { root: f.root });
+    const manifestPath = join(f.root, "normalized-videos", "exter-video-normalize-v1", `${f.media.sha256}.json`);
+    const { uploadWidth: _width, uploadHeight: _height, uploadFps: _fps, ...legacy } = JSON.parse(await readFile(manifestPath, "utf8"));
+    const originalManifest = JSON.stringify(legacy) + "\n";
+    await writeFile(manifestPath, originalManifest);
+    const cached = await prepareGeminiVideo(f.media, { root: f.root });
+    assert.deepEqual(cached.normalization, first.normalization);
+    assert.equal(await readFile(manifestPath, "utf8"), originalManifest);
+  } finally { await f.close(); }
 });
 test("normalization rejects changed source or cached bytes before they can become Gemini input", async () => {
   const f = await fixture("webm");

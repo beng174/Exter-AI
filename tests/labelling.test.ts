@@ -7,13 +7,14 @@ import { basicAuth } from "../server/auth.js";
 import { attachLabelling } from "../server/labelling/api.js";
 import { LabellingError, LabellingService } from "../server/labelling/service.js";
 import type { VideoAnalysisService } from "../server/video/service.js";
-import { LABELLING_FIELDS, validateHumanCreativeLabels } from "../shared/labelling.js";
+import { LABELLING_FIELDS, LABELLING_GUIDE_VERSION, LABELLING_SCHEMA_VERSION, validateHumanCreativeLabels } from "../shared/labelling.js";
+import { CREATIVE_TAXONOMY_VERSION } from "../shared/creative-taxonomy.js";
 import source from "../shared/cases/valentte-ads.json";
 import caseData from "../shared/cases/valentte.json";
 import type { Ad } from "../shared/types.js";
 import type { StoredVideo } from "../server/video/types.js";
 
-const labels = { format: "studio", hookType: "question", angle: "product-benefit", personOnCamera: "no", ugcEvidence: "none", offerType: "none", cta: "shop" };
+const labels = { format: "studio", hookType: "question", angle: "quality-luxury", personOnCamera: "no", ugcEvidence: "none", offerType: "none", cta: "shop" };
 function fixture(video = false) {
   const db = openDatabase(":memory:", false);
   const brand = caseData.brand;
@@ -47,7 +48,9 @@ test("blind labelling returns only source evidence, excludes samples and keeps p
     assert.equal(review.labeller, "Benjamin");
     assert.equal(review.elapsedSeconds, 73);
     assert.equal(review.mediaSha256, null);
-    assert.equal(review.guideVersion, "draft-v1");
+    assert.equal(review.guideVersion, LABELLING_GUIDE_VERSION);
+    assert.equal(review.schemaVersion, LABELLING_SCHEMA_VERSION);
+    assert.equal(review.taxonomyVersion, CREATIVE_TAXONOMY_VERSION);
     assert.equal(service.queue(brand.id).items[0].completedReviews, 1);
     assert.ok(!JSON.stringify(service.queue(brand.id)).includes("A blind human observation"));
     assert.throws(() => service.submit(brand.id, session.id, { labels }), rejectsStatus(409));
@@ -71,6 +74,32 @@ test("all seven human fields require documented choices and UGC needs attributio
   assert.throws(() => validateHumanCreativeLabels({ ...labels, extra: "injected field" }), /exactly/);
   assert.throws(() => validateHumanCreativeLabels({ ...labels, format: "UGC", personOnCamera: "yes" }), /UGC requires/);
   assert.equal(validateHumanCreativeLabels({ ...labels, format: "UGC", ugcEvidence: "visible-creator-handle" }).format, "UGC");
+});
+
+test("in-progress v1 reviews preserve their vocabulary without recoding historical labels", async () => {
+  const { db, ad, brand } = fixture();
+  const service = new LabellingService(db);
+  const oldLabels = { ...labels, hookType: "demonstration", angle: "product-benefit" };
+  try {
+    const started = await service.start({ brandId: brand.id, adId: ad.id, labeller: "Benjamin" });
+    const oldSession = { ...started.session, schemaVersion: "exter-human-labels-v1", guideVersion: "draft-v1", sourceUrl: ad.sourceUrl };
+    delete oldSession.taxonomyVersion;
+    db.prepare("UPDATE labelling_sessions SET data=? WHERE id=?").run(JSON.stringify(oldSession), started.session.id);
+    const saved = service.submit(brand.id, started.session.id, { labels: oldLabels });
+    assert.equal(saved.schemaVersion, "exter-human-labels-v1");
+    assert.equal(saved.guideVersion, "draft-v1");
+    assert.equal(saved.taxonomyVersion, undefined);
+    assert.deepEqual(saved.labels, oldLabels);
+    assert.throws(() => validateHumanCreativeLabels(oldLabels), /documented hook type/);
+    assert.deepEqual(validateHumanCreativeLabels(oldLabels, "exter-human-labels-v1"), oldLabels);
+    const next = await service.start({ brandId: brand.id, adId: ad.id, labeller: "Benjamin" });
+    service.submit(brand.id, next.session.id, { labels: { ...labels, hookType: "demo" } });
+    const exported = service.export(brand.id);
+    assert.deepEqual(exported.schemaVersions, ["exter-human-labels-v1", LABELLING_SCHEMA_VERSION]);
+    assert.deepEqual(exported.guideVersions, ["draft-v1", LABELLING_GUIDE_VERSION]);
+    assert.deepEqual(exported.labels[0].labels, oldLabels);
+    assert.equal(exported.labels[1].labels.hookType, "demo");
+  } finally { db.close(); }
 });
 
 test("original Valentte records use source container formats and dynamic creatives cannot pass as stills", async () => {
@@ -154,6 +183,8 @@ test("labelling HTTP routes inherit authentication and export safe CSV without m
     const csv = await fetch(base + `/api/labelling/export?brandId=${brand.id}&format=csv`, { headers });
     assert.match(csv.headers.get("Content-Disposition") || "", /exter-human-labels.csv/);
     const body = await csv.text();
+    assert.ok(body.includes('"taxonomyVersion"'));
+    assert.ok(body.includes(CREATIVE_TAXONOMY_VERSION));
     assert.ok(body.includes("\"'=HYPERLINK("));
     assert.ok(body.includes("A second line"));
     assert.ok(!body.includes("MODEL_OUTPUT_MUST_STAY_HIDDEN"));

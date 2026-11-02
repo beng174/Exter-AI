@@ -4,6 +4,7 @@ import { readBrand } from "../db.js";
 import { ensureVideoTables, type VideoAnalysisService } from "../video/service.js";
 import type { Ad } from "../../shared/types.js";
 import { LABELLING_GUIDE_VERSION, LABELLING_SCHEMA_VERSION, validateHumanCreativeLabels, type BlindLabellingAd, type HumanCreativeReview, type LabellingSession } from "../../shared/labelling.js";
+import { CREATIVE_TAXONOMY_VERSION } from "../../shared/creative-taxonomy.js";
 
 export class LabellingError extends Error {
   constructor(message: string, readonly status = 400) { super(message); }
@@ -82,7 +83,7 @@ export class LabellingService {
       throw new LabellingError("Choose a valid queue page.");
     const all = (this.db.prepare("SELECT data FROM ads WHERE brand_id=? AND source!='sample' ORDER BY id").all(brandId) as { data: string }[])
       .map(row => JSON.parse(row.data) as Ad).filter(ad => ad.source !== "sample" && safeHttps(ad.sourceUrl));
-    return { schemaVersion: LABELLING_SCHEMA_VERSION, guideVersion: LABELLING_GUIDE_VERSION, guideStatus: "draft_for_review",
+    return { schemaVersion: LABELLING_SCHEMA_VERSION, guideVersion: LABELLING_GUIDE_VERSION, taxonomyVersion: CREATIVE_TAXONOMY_VERSION, guideStatus: "draft_for_review",
       items: all.slice(offset, offset + limit).map(ad => this.project(ad)), total: all.length, offset, limit };
   }
   async storeVideo(input: { brandId?: unknown; adId?: unknown; sourceVideoUrl?: unknown }) {
@@ -113,7 +114,7 @@ export class LabellingService {
     }
     const session: SessionRecord = { id: randomUUID(), brandId, adId: ad.id, labeller, startedAt: this.now().toISOString(),
       mediaSha256: media?.sha256 || null, mediaId: media?.mediaId || null,
-      guideVersion: LABELLING_GUIDE_VERSION, schemaVersion: LABELLING_SCHEMA_VERSION, sourceUrl: item.sourceUrl! };
+      guideVersion: LABELLING_GUIDE_VERSION, schemaVersion: LABELLING_SCHEMA_VERSION, taxonomyVersion: CREATIVE_TAXONOMY_VERSION, sourceUrl: item.sourceUrl! };
     this.db.prepare("INSERT INTO labelling_sessions VALUES (?,?,?,?)").run(session.id, brandId, ad.id, JSON.stringify(session));
     // Deliberately return only the source projection, not prior human or model labels.
     return { session, ad: item };
@@ -124,11 +125,11 @@ export class LabellingService {
     const row = this.db.prepare("SELECT data FROM labelling_sessions WHERE id=? AND brand_id=?").get(id, brandId) as { data: string } | undefined;
     if (!row) throw new LabellingError("Review session not found in this workspace.", 404);
     if (this.db.prepare("SELECT id FROM human_creative_labels WHERE id=?").get(id)) throw new LabellingError("This review was already saved. Start a new review to record another judgement.", 409);
+    const session = JSON.parse(row.data) as SessionRecord;
     let labels;
-    try { labels = validateHumanCreativeLabels(input.labels); }
+    try { labels = validateHumanCreativeLabels(input.labels, session.schemaVersion); }
     catch (error) { throw new LabellingError((error as Error).message); }
     if (input.notes !== undefined && (typeof input.notes !== "string" || input.notes.length > 4000)) throw new LabellingError("Keep notes within 4,000 characters.");
-    const session = JSON.parse(row.data) as SessionRecord;
     const now = this.now();
     const review: HumanCreativeReview = { ...session, labelledAt: now.toISOString(), elapsedSeconds: Math.max(0, Math.round((now.getTime() - Date.parse(session.startedAt)) / 1000)),
       labels, notes: typeof input.notes === "string" ? input.notes.trim() : "" };
@@ -138,7 +139,8 @@ export class LabellingService {
   export(workspace: unknown) {
     const brandId = this.workspace(workspace);
     const labels = (this.db.prepare("SELECT data FROM human_creative_labels WHERE brand_id=? ORDER BY labelled_at,rowid").all(brandId) as { data: string }[]).map(row => JSON.parse(row.data) as HumanCreativeReview);
-    return { schemaVersion: LABELLING_SCHEMA_VERSION, guideVersion: LABELLING_GUIDE_VERSION, guideStatus: "draft_for_review",
+    return { schemaVersion: LABELLING_SCHEMA_VERSION, guideVersion: LABELLING_GUIDE_VERSION, taxonomyVersion: CREATIVE_TAXONOMY_VERSION, guideStatus: "draft_for_review",
+      schemaVersions: [...new Set(labels.map(review => review.schemaVersion))], guideVersions: [...new Set(labels.map(review => review.guideVersion))],
       exportedAt: this.now().toISOString(), timingDefinition: "Server wall-clock seconds from starting the review to saving; includes pauses.",
       identityDefinition: "Video reviews bind the exact retained video SHA-256. Static reviews bind the source URL; static image bytes are not retained or hashed by this tool.", labels };
   }

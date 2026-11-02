@@ -1,5 +1,6 @@
-import type { CreatorEvidence, VideoAnalysisAccounting, VideoCoverage, VideoProcessingMode } from "../../shared/video-analysis.js";
+import type { CreatorEvidence, VideoAnalysisAccounting, VideoAnalysisResult, VideoCoverage, VideoProcessingMode } from "../../shared/video-analysis.js";
 import type { GeminiDiagnostic } from "../../shared/gemini-diagnostic.js";
+import type { InferenceGenerationMetadata, InferenceSettings, MediaResolution, VideoSamplingMetadata } from "../../shared/inference-config.js";
 
 export interface StoredVideo {
   mediaId: string;
@@ -24,17 +25,25 @@ export interface VideoAnalyserInput {
   media: StoredVideo;
   context: { brandName: string; adCopy: string; sourceUrl?: string; creatorEvidence: CreatorEvidence[] };
   processingMode: VideoProcessingMode;
+  inferenceSettings?: InferenceSettings;
+  mediaResolution?: MediaResolution;
+  normalization?: VideoAnalysisResult["normalization"];
   signal?: AbortSignal;
 }
 export interface VideoProviderResult {
   fields: unknown;
   model: string;
+  requestedModel?: string;
+  servedModel?: string;
   modelVersion: string | null;
   processingMode: VideoProcessingMode;
   promptVersion: string;
   coverage: VideoCoverage;
   providerRequestId?: string;
   accounting?: VideoAnalysisAccounting;
+  inferenceSettings?: InferenceSettings;
+  generation?: InferenceGenerationMetadata;
+  sampling?: VideoSamplingMetadata;
 }
 export interface VideoAnalyser {
   readonly provider: string;

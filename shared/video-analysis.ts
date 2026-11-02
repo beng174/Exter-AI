@@ -1,10 +1,13 @@
 import type { GeminiDiagnostic } from "./gemini-diagnostic.js";
+import { FORMAT_VALUES, type AudioType, type ClaimType, type CreativeBooleanTag, type HookType, type OfferType } from "./creative-taxonomy.js";
+import type { InferenceGenerationMetadata, InferenceSettings, VideoSamplingMetadata } from "./inference-config.js";
 
-export const VIDEO_FORMATS = ["UGC", "founder-led", "studio", "animation", "mixed", "unknown"] as const;
+export const VIDEO_FORMATS = FORMAT_VALUES;
 export type VideoFormat = (typeof VIDEO_FORMATS)[number];
 export type VideoProcessingMode = "agentic" | "static-high-fps-hook";
-export const VIDEO_PROMPT_VERSION = "exter-native-video-v1";
-export const DEFAULT_VIDEO_CONFIDENCE = 0.75;
+export const VIDEO_PROMPT_VERSION = "exter-native-video-v2";
+/** Retained for old consumers; model confidence is uncalibrated and never filters evidence. */
+export const DEFAULT_VIDEO_CONFIDENCE = 0;
 
 export interface VideoTimestamp { startSeconds: number; endSeconds: number }
 export interface VideoField<T = string> {
@@ -20,16 +23,42 @@ export interface CreatorEvidence {
   source: "video" | "ad-library";
   sourceUrl?: string;
 }
+export interface VideoClaim extends VideoField {
+  claim_type?: ClaimType[];
+  /** A review aid derived by the server, not a finding that a claim breaches ASA rules. */
+  may_need_substantiation_asa?: boolean;
+  substantiation_note?: "may need substantiation (ASA)" | null;
+}
+export const AUDIO_SEGMENT_KINDS = ["spoken", "sung_lyrics", "instrumental_music", "silence", "uncertain"] as const;
+export const AUDIO_SPEAKER_TYPES = ["voiceover", "on-camera", "singer", "none", "unsure"] as const;
+export interface VideoAudioSegment extends VideoTimestamp {
+  kind: (typeof AUDIO_SEGMENT_KINDS)[number];
+  speaker_type: (typeof AUDIO_SPEAKER_TYPES)[number];
+  /** Spoken words only. Sung lyrics are never reproduced here. */
+  text: string;
+  confidence: number;
+}
 export interface VideoAnalysisFields {
   hook: VideoField;
   format: VideoField<VideoFormat>;
   angle: VideoField;
-  keyClaims: VideoField[];
+  keyClaims: VideoClaim[];
   spokenTranscript: VideoField[];
   onScreenText: VideoField[];
   cta: VideoField;
   personTalkingToCamera: VideoField<boolean>;
   creatorEvidence: CreatorEvidence[];
+  /** Optional only so historical v1 results remain readable. New v2 requests require these. */
+  hook_type?: VideoField<HookType>;
+  angle_explanation?: VideoField;
+  offer_type?: VideoField<OfferType>;
+  offer_explanation?: VideoField;
+  tags?: Record<CreativeBooleanTag, VideoField<boolean>>;
+  audio_type?: VideoField<AudioType>;
+  music_lyrics_present?: VideoField<boolean>;
+  /** Unknown without trusted rights metadata; audio alone cannot establish a licence. */
+  has_licensed_music_lyrics?: VideoField<boolean>;
+  audio_segments?: VideoAudioSegment[];
 }
 export interface VideoCoverage {
   durationSeconds: number;
@@ -43,7 +72,8 @@ export interface VideoAnalysisAccounting {
   reservedCostGbp: number | null;
   estimatedCostGbp: number | null;
   costBasis: "token_estimate" | "reservation_estimate" | "token_and_reservation_estimate" | "unavailable";
-  pricing: { inputGbpPerMillion: number; outputGbpPerMillion: number } | null;
+  pricing: { inputGbpPerMillion: number; outputGbpPerMillion: number; model?: string; source?: string } | null;
+  pricingReason?: string;
   requestAttempts: number;
   /** Total holds created, including holds subsequently settled or released. */
   initialReservedCostGbp?: number | null;
@@ -69,6 +99,12 @@ export interface VideoNormalization {
   audioCodec: "aac" | null;
   pixelFormat: "yuv420p";
   durationSeconds: number;
+  originalWidth?: number | null;
+  originalHeight?: number | null;
+  originalFps?: number | null;
+  uploadWidth?: number | null;
+  uploadHeight?: number | null;
+  uploadFps?: number | null;
 }
 export interface VideoAnalysisResult {
   id: string;
@@ -80,11 +116,17 @@ export interface VideoAnalysisResult {
   provider: string;
   model: string;
   requestedModel?: string;
+  servedModel?: string;
   modelVersion: string | null;
   processingMode: VideoProcessingMode;
   promptVersion: string;
   createdAt: string;
   confidenceThreshold: number;
+  confidencePolicy?: "uncalibrated-not-filtered";
+  analysisConfigSha256?: string;
+  inferenceSettings?: InferenceSettings;
+  generation?: InferenceGenerationMetadata;
+  sampling?: VideoSamplingMetadata;
   coverage: VideoCoverage;
   fields: VideoAnalysisFields;
   providerRequestId?: string;

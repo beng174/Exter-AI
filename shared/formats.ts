@@ -170,11 +170,16 @@ export function classifyCreativeFormats(ad: Ad): string[] {
   );
   if (ad.videoAnalysis) {
     const native = ad.videoAnalysis;
-    const creatorSupported = native.fields.creatorEvidence.some((evidence) => evidence.confidence >= native.confidenceThreshold);
+    // Confidence has not been calibrated against human labels. Use the retained
+    // evidence and its provenance, never a model's confidence score, for support.
+    const creatorSupported = native.fields.creatorEvidence.some((evidence) => evidence.value.trim() && (
+      evidence.source === "video" && evidence.timestamps.length > 0 ||
+      evidence.source === "ad-library" && evidence.kind === "paid-partnership-label" && evidence.sourceUrl
+    ));
     explicit = explicit.filter((tag) => !["UGC", "Influencer"].includes(tag) || creatorSupported);
     const field = native.fields.format;
-    if (field.confidence >= native.confidenceThreshold && field.timestamps.length && field.value !== "unknown" && (field.value !== "UGC" || creatorSupported)) {
-      const labels = { UGC: "UGC", "founder-led": "Founder-led", studio: "Studio", animation: "Animation", mixed: "Mixed" };
+    if (field.timestamps.length && field.value !== "unknown" && field.value !== "unsure" && (field.value !== "UGC" || creatorSupported)) {
+      const labels = { UGC: "UGC", "founder-led": "Founder-led", studio: "Studio", animation: "Animation", mixed: "Mixed", static: "Static" };
       explicit.push(labels[field.value]);
     }
   }

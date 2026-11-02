@@ -1,8 +1,9 @@
-import { randomUUID } from "node:crypto";
+import { createHash, randomUUID } from "node:crypto";
 import type { DatabaseSync } from "node:sqlite";
 import type { Ad } from "../../shared/types.js";
 import type { ImageAnalysisResult, ImageCreativeKind, StoredImageCreative } from "../../shared/image-analysis.js";
 import type { VideoAnalysisAccounting } from "../../shared/video-analysis.js";
+import { resolveInferenceSettings, type InferenceSettings } from "../../shared/inference-config.js";
 import { VideoProviderError } from "../video/types.js";
 import { LocalImageMediaStore } from "./media.js";
 import { GeminiImageAnalyser, type ImageAnalyser } from "./gemini.js";
@@ -24,6 +25,7 @@ interface StoredAttempt {
   createdAt: string;
   errorCode?: string;
   accounting?: VideoAnalysisAccounting;
+  inferenceSettings?: InferenceSettings;
 }
 export class ImageAnalysisService {
   readonly mediaStore: ImageMediaStore;
@@ -79,12 +81,17 @@ export class ImageAnalysisService {
   private saveAttempt(attempt: StoredAttempt) {
     this.db.prepare("INSERT INTO image_analysis_attempts VALUES (?,?,?,?,?) ON CONFLICT(id) DO UPDATE SET data=excluded.data").run(attempt.id,attempt.brandId,attempt.adId,attempt.createdAt,JSON.stringify(attempt));
   }
-  async analyse(brandId: string, adId: string, mediaId: string, attemptId: string = randomUUID()): Promise<ImageAnalysisResult> {
+  async analyse(brandId: string, adId: string, mediaId: string, attemptId: string = randomUUID(), settings: Partial<InferenceSettings> = {}): Promise<ImageAnalysisResult> {
     const ad = this.ad(brandId,adId);
+    let inferenceSettings: InferenceSettings;
+    try { inferenceSettings = resolveInferenceSettings(settings); }
+    catch (error) { throw new VideoProviderError("configuration", error instanceof Error ? error.message : "Invalid Gemini inference settings."); }
     const previous = this.db.prepare("SELECT data FROM image_analysis_attempts WHERE id=?").get(attemptId) as { data: string } | undefined;
     if (previous) {
       const attempt = JSON.parse(previous.data) as StoredAttempt;
       if (attempt.brandId !== brandId || attempt.adId !== adId || attempt.mediaId !== mediaId) throw new VideoProviderError("configuration", "Image attempt belongs to another source input.");
+      if (attempt.inferenceSettings && (attempt.inferenceSettings.mediaResolution !== inferenceSettings.mediaResolution || attempt.inferenceSettings.generationSeed !== inferenceSettings.generationSeed))
+        throw new VideoProviderError("configuration", "This image attempt already uses different inference settings. Start a new explicit attempt to compare settings.");
       const existing = this.history(brandId,adId).find(result => result.id === attemptId);
       if (attempt.status === "complete" && existing) return existing;
       throw new VideoProviderError("unavailable", "This image attempt already started. Its earlier charge may have occurred and will not be replayed.", attempt.accounting);
@@ -93,15 +100,16 @@ export class ImageAnalysisService {
     if (!media) throw new VideoProviderError("configuration", "Retained images are unavailable or changed. Prepare them before inference.");
     // Disk verification yielded to other callers. Recheck before claiming dispatch.
     if (this.db.prepare("SELECT id FROM image_analysis_attempts WHERE id=?").get(attemptId))
-      return this.analyse(brandId,adId,mediaId,attemptId);
-    const attempt: StoredAttempt = { id: attemptId,brandId,adId,mediaId,status: "analysing",createdAt: new Date().toISOString() };
+      return this.analyse(brandId,adId,mediaId,attemptId,inferenceSettings);
+    const attempt: StoredAttempt = { id: attemptId,brandId,adId,mediaId,status: "analysing",createdAt: new Date().toISOString(),inferenceSettings };
     // Persist the caller's identity before dispatch. Restart recovery can reconcile it.
     this.saveAttempt(attempt);
     try {
       const provider = this.factory();
-      const output = await provider.analyse({ media, context: { brandName: ad.brand,adCopy: ad.copy || "" } });
+      const output = await provider.analyse({ media, context: { brandName: ad.brand,adCopy: ad.copy || "" }, inferenceSettings, mediaResolution: inferenceSettings.mediaResolution });
       attempt.accounting = output.accounting;
-      const result: ImageAnalysisResult = { id: attemptId,brandId,adId,mediaId,mediaSha256: media.sha256,provider: "gemini",model: output.model,modelVersion: output.modelVersion,processingMode: media.kind,promptVersion: output.promptVersion,createdAt: new Date().toISOString(),fields: output.fields,accounting: output.accounting };
+      const analysisConfigSha256 = createHash("sha256").update(JSON.stringify({ provider: "gemini", requestedModel: provider.model, processingMode: media.kind, promptVersion: output.promptVersion, temperature: 0, ...inferenceSettings })).digest("hex");
+      const result: ImageAnalysisResult = { id: attemptId,brandId,adId,mediaId,mediaSha256: media.sha256,provider: "gemini",model: output.model,requestedModel: output.requestedModel || provider.model,...(output.servedModel ? { servedModel: output.servedModel } : {}),modelVersion: output.modelVersion,processingMode: media.kind,promptVersion: output.promptVersion,createdAt: new Date().toISOString(),confidencePolicy: "uncalibrated-not-filtered",analysisConfigSha256,inferenceSettings,...(output.generation ? { generation: output.generation } : {}),fields: output.fields,accounting: output.accounting };
       this.db.exec("BEGIN");
       try {
         this.db.prepare("INSERT INTO image_analysis_runs VALUES (?,?,?,?,?)").run(result.id,brandId,adId,result.createdAt,JSON.stringify(result));

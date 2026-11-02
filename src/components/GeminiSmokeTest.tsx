@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { Download, Film, RefreshCw } from "lucide-react";
 import type { SmokeItem, SmokeRun, SmokeStatus } from "../../shared/gemini-smoke";
+import type { MediaResolution } from "../../shared/inference-config";
 import type { VideoProcessingMode } from "../../shared/video-analysis";
 import { api } from "../lib/api";
 import "./gemini-smoke-test.css";
@@ -12,6 +13,7 @@ const modeLabel = (value?: string) => value === "agentic" ? "Agentic (preview)" 
 const mediaLabel = (value?: string) => value === "video" ? "Video" : value === "image" ? "Image" : value === "carousel" ? "Carousel" : "Unresolved format";
 const formatCounts = (value?: { video: number; image: number; carousel: number }) => value ? `${value.video} videos · ${value.image} images · ${value.carousel} carousels` : "Format breakdown unavailable";
 const failureLabel = (value?: string) => value === "expired_video_link" ? "Expired or removed video link" : value === "expired_media_link" ? "Expired or removed media/source link" : value === "blocked_restricted" ? "Blocked or restricted" : value === "other" ? "Other source issue" : null;
+const resolutionLabel = (value?: MediaResolution) => value === "low" ? "Low" : value === "default" ? "Default" : "Not recorded";
 interface RetainedCreative {
   adId: string;
   brandId: string;
@@ -41,6 +43,31 @@ function GeminiDiagnostic({ item }: { item: SmokeItem }) {
     {diagnostic.retryAfterMs != null && <span className="gemini-smoke-cell-note">Retry after: {Math.ceil(diagnostic.retryAfterMs / 1000)} seconds</span>}
   </div>;
 }
+function InferenceProvenance({ item }: { item: SmokeItem }) {
+  const generation = item.generation;
+  const sampling = item.sampling;
+  const pricingModels = [...new Set(item.accounting?.flatMap(accounting => accounting.pricing?.model ? [accounting.pricing.model] : []) ?? [])];
+  const dimensions = (width?: number | null, height?: number | null) => width && height ? `${width} × ${height} px` : "Not recorded";
+  return <details className="gemini-smoke-inference-provenance">
+    <summary>Model and media details</summary>
+    <dl>
+      <div><dt>Requested model</dt><dd>{item.requestedModel || "Not recorded"}</dd></div>
+      <div><dt>Served model</dt><dd>{item.servedModel || "Not recorded in this result"}</dd></div>
+      <div><dt>Pricing model</dt><dd>{pricingModels.length ? pricingModels.join(" · ") : "Unavailable"}</dd></div>
+      <div><dt>Temperature</dt><dd>{generation ? generation.temperature : "Not recorded"}</dd></div>
+      <div><dt>Seed</dt><dd>{generation ? `${generation.seedRequested} · ${generation.seedApplied ? "applied to request" : "not applied; unsupported by this mode"}` : "Not recorded"}</dd></div>
+      <div><dt>Requested resolution</dt><dd>{generation ? `${resolutionLabel(generation.mediaResolutionRequested)} · ${generation.mediaResolutionApplied ? "explicit provider setting" : "provider default"}` : "Not recorded"}</dd></div>
+      <div><dt>Provider-reported resolution</dt><dd>{generation?.providerMediaResolution || "Not reported"}</dd></div>
+      {item.mediaKind === "video" && <>
+        <div><dt>Stored dimensions</dt><dd>{dimensions(item.normalization?.originalWidth, item.normalization?.originalHeight)}</dd></div>
+        <div><dt>Upload dimensions</dt><dd>{dimensions(item.normalization?.uploadWidth, item.normalization?.uploadHeight)}</dd></div>
+        <div><dt>Requested FPS</dt><dd>{sampling?.requestedFps.length ? sampling.requestedFps.join(" / ") : "No fixed FPS reported"}</dd></div>
+        <div><dt>Scheduled frame estimate</dt><dd>{sampling?.estimatedFrames == null ? "Unavailable" : `${sampling.estimatedFrames} · duration × FPS; not observed frames`}</dd></div>
+        <div><dt>Actual frames sampled</dt><dd>{sampling?.actualFrames == null ? "Not reported by provider" : sampling.actualFrames}</dd></div>
+      </>}
+    </dl>
+  </details>;
+}
 const date = (value: string) => new Date(value).toLocaleString("en-GB", { timeZone: "Europe/London", timeZoneName: "short" });
 
 export function GeminiSmokeTest() {
@@ -48,6 +75,7 @@ export function GeminiSmokeTest() {
   const [run, setRun] = useState<SmokeRun | null>(null);
   // Agentic is a preview: neither an old run nor browser storage can opt in.
   const [mode, setMode] = useState<VideoProcessingMode>("static-high-fps-hook");
+  const [mediaResolution, setMediaResolution] = useState<MediaResolution>("default");
   const [creatives, setCreatives] = useState<RetainedCreative[]>([]);
   const [selectedCreativeKey, setSelectedCreativeKey] = useState("");
   const [busy, setBusy] = useState(false);
@@ -127,11 +155,13 @@ export function GeminiSmokeTest() {
   const mixedSample = run?.kind === "smoke" && Boolean(run.sampleCounts && run.sampleCounts.image + run.sampleCounts.carousel > 0);
   const nextSampleIncludesImages = Boolean(status?.storedCounts && status.storedCounts.video < availableSampleSize && status.storedCounts.image + status.storedCounts.carousel > 0);
   const checkedCandidates = run?.items.filter(item => item.status !== "pending").length || 0;
-  const canRun = Boolean(status?.hosted && status.configured && !status.configurationErrors.length && availableSampleSize >= minimumSampleSize && !busy && !running);
+  const unsupportedSettings = mode === "agentic" && mediaResolution === "low";
+  const canRun = Boolean(status?.hosted && status.configured && !status.configurationErrors.length && availableSampleSize >= minimumSampleSize && !busy && !running && !unsupportedSettings);
   const selectedCreative = creatives.find(creative => creativeKey(creative) === selectedCreativeKey);
-  const canTestOne = Boolean(status?.hosted && status.configured && !status.configurationErrors.length && selectedCreative && !busy && !running);
+  const canTestOne = Boolean(status?.hosted && status.configured && !status.configurationErrors.length && selectedCreative && !busy && !running && !unsupportedSettings);
   const canResume = Boolean(status?.hosted && status.configured && !status.configurationErrors.length && !busy && !running);
   const resumeModeMismatch = Boolean(run && run.kind !== "prepare" && run.requestedMode !== mode);
+  const resumeResolutionMismatch = Boolean(run && run.kind !== "prepare" && (run.mediaResolution ?? "default") !== mediaResolution);
   const progress = run?.kind === "prepare" ? stored : completed + failed + unavailable;
   const progressMaximum = run?.kind === "prepare" ? targetSampleSize : Math.max(1, actualSampleSize);
 
@@ -162,14 +192,20 @@ export function GeminiSmokeTest() {
         <label htmlFor="gemini-smoke-mode">Video processing mode
           <select id="gemini-smoke-mode" aria-label="Processing mode" value={mode} disabled={busy || running} onChange={event => setMode(event.target.value as VideoProcessingMode)}>
             <option value="static-high-fps-hook">Static · 3 fps for short ads</option>
-            <option value="agentic">Agentic (preview · explicit opt-in)</option>
+            <option value="agentic" disabled={mediaResolution === "low"}>Agentic (preview · explicit opt-in)</option>
+          </select>
+        </label>
+        <label htmlFor="gemini-smoke-resolution">Media resolution
+          <select id="gemini-smoke-resolution" aria-label="Media resolution" value={mediaResolution} disabled={busy || running} onChange={event => setMediaResolution(event.target.value as MediaResolution)}>
+            <option value="default">Default · provider setting</option>
+            <option value="low" disabled={mode === "agentic"}>Low · compare on labelled set</option>
           </select>
         </label>
         <button type="button" disabled={!status.hosted || busy || running} onClick={() => void submit("/api/gemini-smoke/prepare", { processingMode: mode })}>Prepare Valentte creatives</button>
         <button type="button" disabled={!status.hosted || busy || running} onClick={() => void submit("/api/gemini-smoke/prepare", { processingMode: mode, refreshFailed: true })}>Refresh failed media links</button>
-        <button type="button" className="gemini-smoke-primary" disabled={!canRun} onClick={() => void submit("/api/gemini-smoke/runs", { processingMode: mode })}>Run Gemini smoke test{availableSampleSize >= minimumSampleSize ? ` · ${availableSampleSize} stored inputs` : ""}</button>
+        <button type="button" className="gemini-smoke-primary" disabled={!canRun} onClick={() => void submit("/api/gemini-smoke/runs", { processingMode: mode, mediaResolution })}>Run Gemini smoke test{availableSampleSize >= minimumSampleSize ? ` · ${availableSampleSize} stored inputs` : ""}</button>
       </div>
-      <p className="gemini-smoke-note">The video mode selection applies to the next request. Saved runs keep the mode actually submitted.</p>
+      <p className="gemini-smoke-note">Mode and media resolution apply to the next test, including the one-ad test. Saved runs keep their submitted settings. Low resolution requires Static; the Agentic preview does not support this override. Default leaves resolution to the provider. Compare both settings on the same human-labelled set.</p>
       <div className="gemini-smoke-single-test" aria-labelledby="gemini-smoke-single-heading">
         <div><h3 id="gemini-smoke-single-heading">Test one retained creative</h3><p>Check one input and read the full sanitised Gemini response before starting a batch.</p></div>
         <div className="gemini-smoke-single-controls">
@@ -179,9 +215,9 @@ export function GeminiSmokeTest() {
               {creatives.map(creative => <option key={creativeKey(creative)} value={creativeKey(creative)}>{creative.nativeId || creative.adId} · {mediaLabel(creative.mediaKind)}{creative.durationSeconds != null ? ` · ${creative.durationSeconds.toFixed(1)} s` : ""}{creative.imageCount ? ` · ${creative.imageCount} ${creative.imageCount === 1 ? "image" : "images"}` : ""}</option>)}
             </select>
           </label>
-          <button type="button" className="gemini-smoke-primary" disabled={!canTestOne} onClick={() => selectedCreative && void submit("/api/gemini-smoke/test-one", { adId: selectedCreative.adId, brandId: selectedCreative.brandId, processingMode: mode })}>Test one ad</button>
+          <button type="button" className="gemini-smoke-primary" disabled={!canTestOne} onClick={() => selectedCreative && void submit("/api/gemini-smoke/test-one", { adId: selectedCreative.adId, brandId: selectedCreative.brandId, processingMode: mode, mediaResolution })}>Test one ad</button>
         </div>
-        <p className="gemini-smoke-note">One verified input is enough for this diagnostic. It uses the selected video mode and the same inference budget. Static is the default; Agentic preview runs only when explicitly chosen.</p>
+        <p className="gemini-smoke-note">One verified input is enough for this diagnostic. It uses the selected mode, {resolutionLabel(mediaResolution)} media resolution and the same inference budget. Static is the default; Agentic preview runs only when explicitly chosen.</p>
       </div>
       {availableSampleSize < minimumSampleSize && <p className="gemini-smoke-note" role="status">At least {minimumSampleSize} verified stored inputs are required to run the test. {status.storedCount == null ? "Refresh to check the retained media." : `${status.storedCount} currently available.`}</p>}
       {availableSampleSize >= minimumSampleSize && (availableSampleSize !== 25 || nextSampleIncludesImages) && <p className="gemini-smoke-sample-note" role="status">The next test will use {availableSampleSize} retained inputs. {nextSampleIncludesImages ? "Images and carousels are valid inputs; this mixed-format sample is exploratory and does not establish the original 25-video Phase 1 acceptance target." : "This sample size is exploratory and does not establish the original 25-video Phase 1 acceptance target."}</p>}
@@ -193,6 +229,7 @@ export function GeminiSmokeTest() {
         <div>
           <h3>{run.kind === "prepare" ? "Creative preparation" : run.kind === "diagnostic" ? "Single-ad test" : "Live test"} <span className={`gemini-smoke-badge gemini-smoke-${run.status}`}>{run.status}</span></h3>
           <p>Started {date(run.createdAt)} · {run.kind === "prepare" ? "Selected video mode for test" : "Requested video mode"}: {modeLabel(run.requestedMode)}</p>
+          {run.kind !== "prepare" && <p>Requested media resolution: {resolutionLabel(run.mediaResolution)}{run.mediaResolution === undefined ? " · historical run" : ""}</p>}
         </div>
         <a className="gemini-smoke-download" href={`/api/gemini-smoke/runs/${encodeURIComponent(run.id)}/report`} download="gemini-live-report.md"><Download size={14} /> Download report</a>
       </div>
@@ -214,8 +251,9 @@ export function GeminiSmokeTest() {
       {["paused", "interrupted"].includes(run.status) && <div className="gemini-smoke-resume">
         <div><p>Resume continues pending items. An interrupted paid item is retained for review and will not be replayed.</p>
           {resumeModeMismatch && <p className="gemini-smoke-resume-mode" role="status">This run recorded {modeLabel(run.requestedMode)}; the dropdown currently selects {modeLabel(mode)}. Select the recorded mode explicitly to resume, or start a new one-ad test using the current selection.</p>}
+          {resumeResolutionMismatch && <p className="gemini-smoke-resume-mode" role="status">This run recorded {resolutionLabel(run.mediaResolution ?? "default")} media resolution. Select that resolution to resume, or start a new test to compare the selected setting.</p>}
         </div>
-        <button type="button" disabled={!status?.hosted || busy || (run.kind !== "prepare" && (!canResume || resumeModeMismatch))} onClick={() => void submit(`/api/gemini-smoke/runs/${encodeURIComponent(run.id)}/resume`, { processingMode: mode })}>Resume pending items</button>
+        <button type="button" disabled={!status?.hosted || busy || (run.kind !== "prepare" && (!canResume || resumeModeMismatch || resumeResolutionMismatch || unsupportedSettings))} onClick={() => void submit(`/api/gemini-smoke/runs/${encodeURIComponent(run.id)}/resume`, { processingMode: mode, mediaResolution })}>Resume pending items</button>
       </div>}
       <div className="gemini-smoke-table-wrap">
         <table className="gemini-smoke-table">
@@ -231,7 +269,7 @@ export function GeminiSmokeTest() {
               {run.kind !== "prepare" && <GeminiDiagnostic item={item} />}
               {Boolean(item.preparationAttempts?.length) && <details className="gemini-smoke-attempts"><summary>Preparation attempts ({item.preparationAttempts!.length})</summary><ul>{item.preparationAttempts!.map((attempt, index) => <li key={index}><strong>{attempt.source === "refreshed_snapshot" ? "Fresh snapshot" : attempt.source === "snapshot" ? "Snapshot" : "Stored media"}</strong>{attempt.httpStatus ? ` · HTTP ${attempt.httpStatus}` : ""}{attempt.error ? <><span>{attempt.error}</span><code>{attempt.errorCode}</code></> : <span>Creative input retained.</span>}</li>)}</ul></details>}
             </td>
-            <td>{run.kind === "prepare" ? "No inference" : item.model || "Awaiting analysis"}<span className="gemini-smoke-cell-note">{run.kind === "prepare" ? `Selected video mode: ${modeLabel(run.requestedMode)}` : modeLabel(item.processingMode)}</span></td>
+            <td>{run.kind === "prepare" ? "No inference" : item.servedModel || item.model || "Awaiting analysis"}<span className="gemini-smoke-cell-note">{run.kind === "prepare" ? `Selected video mode: ${modeLabel(run.requestedMode)}` : modeLabel(item.processingMode)}</span>{run.kind !== "prepare" && <InferenceProvenance item={item} />}</td>
             <td>{run.kind === "prepare" ? "No inference" : <><span className="gemini-smoke-token-line">Input: {tokenCount(item.usage?.inputTokens)}</span><span className="gemini-smoke-token-line">Output: {tokenCount(item.usage?.outputTokens)}</span><span className="gemini-smoke-token-line">Total: {tokenCount(item.usage?.totalTokens)}</span></>}</td>
             <td>{run.kind === "prepare" ? "No inference" : cost(item.reservedCostGbp)}</td>
             <td>{run.kind === "prepare" ? "No inference" : cost(item.tokenCostGbp)}</td>

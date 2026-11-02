@@ -71,4 +71,10 @@
 .gemini-smoke-provider-diagnostic { margin-top: 10px; padding: 10px; min-width: 220px; max-width: 460px; border: 1px solid #e6d6c7; background: #fcf5ee; border-radius: 5px; color: #8c6352; font-size: 10px; }
 .gemini-smoke-provider-diagnostic pre { margin: 8px 0; white-space: pre-wrap; overflow-wrap: anywhere; word-break: break-word; font: inherit; line-height: 1.7; }
 .gemini-smoke-provider-diagnostic summary { cursor: pointer; }
+.gemini-smoke-inference-provenance { min-width: 180px; max-width: 340px; margin-top: 8px; font-size: 10px; }
+.gemini-smoke-inference-provenance summary { cursor: pointer; color: #607e4c; }
+.gemini-smoke-inference-provenance dl { margin: 8px 0 0; }
+.gemini-smoke-inference-provenance dl > div { padding: 6px 0; border-top: 1px solid #e5ebdf; }
+.gemini-smoke-inference-provenance dt { color: #8b9b7d; }
+.gemini-smoke-inference-provenance dd { margin: 2px 0 0; overflow-wrap: anywhere; }
 @media (max-width: 620px) { .gemini-smoke-single-controls { align-items: stretch; flex-direction: column; } .gemini-smoke-single-controls label { width: 100%; min-width: 0; } .gemini-smoke-costs { grid-template-columns: 1fr; } }

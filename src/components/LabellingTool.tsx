@@ -130,7 +130,7 @@ export function LabellingTool({ brandId }: { brandId: string }) {
           </details>}
           <button type="button" className="labelling-primary" onClick={start} disabled={busy || !labeller.trim() || ad.creativeKind === "unknown" || (ad.isVideo ? !ad.storedVideo : !ad.imageUrl)}>{busy ? "Working…" : "Start review"}</button>
         </> : <form onSubmit={event => { event.preventDefault(); save(); }}>
-          <h3>Record your judgement</h3><p>Choose Unsure when the evidence is insufficient. For a video, watch it to the end with sound. Opening hook refers to the first five seconds.</p>
+          <h3>Record your judgement</h3><p>Choose Unsure when the evidence is insufficient. For a video, watch it to the end with sound. Opening hook refers to the first three seconds.</p>
           <div className="labelling-fields">{LABELLING_FIELDS.map(field => <label key={field.key}>{field.label}<select aria-label={field.label} required value={labels[field.key]} disabled={busy} onChange={event => setLabels(current => ({ ...current, [field.key]: event.target.value }))}>
             <option value="">Choose a label…</option>{field.options.map(([value, label]) => <option key={value} value={value}>{label}</option>)}
           </select></label>)}</div>

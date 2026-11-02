@@ -36,7 +36,7 @@ export function attachLabelling(app: Express, db: DatabaseSync, video?: VideoAna
       const result = service.export(req.query.brandId);
       res.setHeader("Cache-Control", "private, no-store");
       if (req.query.format === "csv") {
-        const columns = ["id", "brandId", "adId", "sourceUrl", "mediaSha256", "labeller", "startedAt", "labelledAt", "elapsedSeconds", "schemaVersion", "guideVersion", ...LABELLING_FIELDS.map(field => field.key), "notes"];
+        const columns = ["id", "brandId", "adId", "sourceUrl", "mediaSha256", "labeller", "startedAt", "labelledAt", "elapsedSeconds", "schemaVersion", "guideVersion", "taxonomyVersion", ...LABELLING_FIELDS.map(field => field.key), "notes"];
         const rows = result.labels.map(review => ({ ...review, ...review.labels }));
         res.setHeader("Content-Disposition", 'attachment; filename="exter-human-labels.csv"');
         res.type("text/csv").send([columns, ...rows.map(row => columns.map(column => (row as Record<string, unknown>)[column]))].map(row => row.map(csvCell).join(",")).join("\r\n") + "\r\n");

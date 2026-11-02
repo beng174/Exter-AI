@@ -2,17 +2,18 @@ import { readFile, stat, writeFile } from "node:fs/promises";
 import { openDatabase, readJson } from "../server/db.js";
 import { VideoAnalysisService, type VideoJobInput } from "../server/video/service.js";
 import type { Ad } from "../shared/types.js";
+import { resolveInferenceSettings } from "../shared/inference-config.js";
 
 const flags = new Map<string, string>();
 const booleans = new Set<string>();
 for (let index = 2; index < process.argv.length; index++) {
   const flag = process.argv[index];
   if (flag === "--help") {
-    console.log("Usage: npm run video:analyse -- --brand-id ID --ad-id ID [--capture /tmp/meta.json | --video-url HTTPS_URL] [--provider gemini|twelvelabs] [--mode agentic|static-high-fps-hook] [--force] [--download-only] [--output predictions.json] [--recover-interrupted]\nAn ad ID may be Exter's ID or its native library ID. Stored video is reused without a URL. --force makes a new inference and preserves history. Keep API credentials in GEMINI_API_KEY, never command arguments. No automatic batch billing.");
+    console.log("Usage: npm run video:analyse -- --brand-id ID --ad-id ID [--capture /tmp/meta.json | --video-url HTTPS_URL] [--provider gemini|twelvelabs] [--mode agentic|static-high-fps-hook] [--resolution default|low] [--force] [--download-only] [--output predictions.json] [--recover-interrupted]\nAn ad ID may be Exter's ID or its native library ID. Stored video is reused without a URL. --force makes a new inference and preserves history. Keep API credentials in GEMINI_API_KEY, never command arguments. No automatic batch billing.");
     process.exit(0);
   }
   if (["--force", "--download-only", "--recover-interrupted"].includes(flag)) { booleans.add(flag); continue; }
-  if (!["--brand-id", "--ad-id", "--capture", "--video-url", "--provider", "--mode", "--output"].includes(flag)) throw new Error("Unknown video CLI option. Use --help.");
+  if (!["--brand-id", "--ad-id", "--capture", "--video-url", "--provider", "--mode", "--resolution", "--output"].includes(flag)) throw new Error("Unknown video CLI option. Use --help.");
   const value = process.argv[++index];
   if (!value || value.startsWith("--")) throw new Error(`${flag} needs a value.`);
   flags.set(flag, value);
@@ -21,6 +22,7 @@ const brandId = flags.get("--brand-id"), requestedAd = flags.get("--ad-id");
 if (!brandId || !requestedAd) throw new Error("Provide --brand-id and --ad-id. Use --help.");
 if (flags.has("--capture") && flags.has("--video-url")) throw new Error("Choose either a capture file or a video URL.");
 const provider = flags.get("--provider") || "gemini", mode = flags.get("--mode") || "static-high-fps-hook";
+const inferenceSettings = resolveInferenceSettings({ mediaResolution: flags.get("--resolution") as "default" | "low" | undefined });
 if (!["gemini", "twelvelabs"].includes(provider) || !["agentic", "static-high-fps-hook"].includes(mode)) throw new Error("Unsupported video provider or mode.");
 const db = openDatabase(undefined, false);
 try {
@@ -45,7 +47,7 @@ try {
     const media = await service.storeMedia(brandId, ad.id, sourceVideoUrl);
     exported = { status: "video_stored_without_inference", adId: ad.id, mediaId: media.mediaId, sha256: media.sha256, bytes: media.bytes, mimeType: media.mimeType, durationSeconds: media.durationSeconds, storedAt: media.storedAt, assetSelection: "The first video file in the supplied source record; other grouped variants were not analysed." };
   } else {
-    const queued = service.enqueue({ brandId, adId: ad.id, sourceVideoUrl, provider: provider as VideoJobInput["provider"], processingMode: mode as VideoJobInput["processingMode"], force: booleans.has("--force") });
+    const queued = service.enqueue({ brandId, adId: ad.id, sourceVideoUrl, provider: provider as VideoJobInput["provider"], processingMode: mode as VideoJobInput["processingMode"], ...inferenceSettings, force: booleans.has("--force") });
     await service.idle();
     const job = service.job(brandId, queued.id)!;
     const predictions = job.errorCode === "not_implemented"

@@ -1,6 +1,7 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { evaluateVideoPredictions, parseVideoLabelCsv, videoTokenF1 } from "../shared/video-evaluation.js";
+import { CREATIVE_TAXONOMY_VERSION } from "../shared/creative-taxonomy.js";
 
 const time = [{ startSeconds: 0, endSeconds: 3 }];
 const field = (value: string | boolean, confidence = 0.95, timestamps = time) => ({ value, confidence, timestamps });
@@ -43,14 +44,21 @@ test("missing ads and fields count against the complete labelled set rather than
   assert.equal(score.ignoredUnlabelledPredictions, 1);
   assert.ok(!JSON.stringify(report).includes("A secret human label"), "reports expose aggregate scores, not ground-truth text");
 });
-test("low-confidence outputs abstain and explicit unknown labels do not inflate answer coverage", () => {
+test("uncalibrated confidence never filters evidence by default, including thresholds stored in old predictions", () => {
   const labels = parse("adId,sourceUrl,format\na,https://example.com/a,UGC\nb,https://example.com/b,unknown\n");
-  const report = evaluateVideoPredictions(labels, [[prediction("a", { format: field("UGC", 0.3) }), prediction("b", { format: field("studio", 0.3) })]]);
+  const inputs = [[prediction("a", { format: field("UGC", 0.3) }, { confidenceThreshold: 0.99 }), prediction("b", { format: field("unknown", 0.3) })]];
+  const report = evaluateVideoPredictions(labels, inputs);
   const score = report.configurations[0].fields.format;
-  assert.equal(score.accuracy, 0.5);
-  assert.equal(score.coverage, 0);
-  assert.equal(score.abstentions, 2);
+  assert.equal(score.accuracy, 1);
+  assert.equal(score.coverage, 0.5);
+  assert.equal(score.abstentions, 1);
   assert.equal(score.missingPredictions, 0);
+  assert.equal(report.configurations[0].confidencePolicy, "uncalibrated-not-filtered");
+  assert.equal(report.confidenceThresholdDefault, 0);
+  const experiment = evaluateVideoPredictions(labels, inputs, { confidenceThreshold: 0.75 });
+  assert.equal(experiment.configurations[0].fields.format.coverage, 0);
+  assert.equal(experiment.configurations[0].confidencePolicy, "uncalibrated-explicit-calibration-experiment");
+  assert.match(experiment.confidenceDefinition, /not a production filtering rule/);
 });
 test("providers, exact versions, processing modes and prompts benchmark separately on the same label set", () => {
   const labels = parse("adId,sourceUrl,format\na,https://example.com/a,studio\nb,https://example.com/b,animation\n");
@@ -62,8 +70,44 @@ test("providers, exact versions, processing modes and prompts benchmark separate
   assert.equal(report.configurations[1].provider, "twelvelabs");
   assert.ok(report.configurations.every((configuration) => configuration.labelledAds === 2 && configuration.fields.format.accuracy === 0.5));
   assert.match(report.labelSetSha256, /^[a-f0-9]{64}$/);
-  assert.equal(report.configurations[0].confidenceThreshold, 0.75);
+  assert.equal(report.configurations[0].confidenceThreshold, 0);
   assert.throws(() => evaluateVideoPredictions(labels, [gemini, gemini]), /Duplicate predictions/);
+});
+test("resolution, seed, served revision and request settings remain separate, including unrecorded historical settings", () => {
+  const labels = parse("adId,sourceUrl,format\na,https://example.com/a,studio\n");
+  const base = prediction("a", { format: field("studio") });
+  const current = { ...base, requestedModel: "requested-flash", servedModel: "served-flash", promptVersion: "test-prompt-v2",
+    inferenceSettings: { mediaResolution: "default", generationSeed: 42 },
+    generation: { temperature: 0, seedRequested: 42, seedApplied: true, mediaResolutionRequested: "default", mediaResolutionApplied: false, providerMediaResolution: null } };
+  const variants = [base, current,
+    { ...current, inferenceSettings: { mediaResolution: "low", generationSeed: 42 }, generation: { ...current.generation, mediaResolutionRequested: "low", mediaResolutionApplied: true } },
+    { ...current, inferenceSettings: { mediaResolution: "default", generationSeed: 77 }, generation: { ...current.generation, seedRequested: 77 } },
+    { ...current, servedModel: "served-flash-new-revision", modelVersion: "fixture-v2" },
+    { ...current, generation: { ...current.generation, seedApplied: false } },
+    { ...current, analysisConfigSha256: "b".repeat(64) },
+  ];
+  const report = evaluateVideoPredictions(labels, [variants]);
+  assert.equal(report.configurations.length, variants.length);
+  assert.equal(report.configurations[0].inferenceSettings, null);
+  assert.equal(report.configurations[1].inferenceSettings?.mediaResolution, "default");
+  assert.equal(report.configurations[2].inferenceSettings?.mediaResolution, "low");
+  assert.equal(report.configurations[4].servedModel, "served-flash-new-revision");
+  const reordered = { ...current, inferenceSettings: { generationSeed: 42, mediaResolution: "default" } };
+  assert.throws(() => evaluateVideoPredictions(labels, [[current, reordered]]), /Duplicate predictions/);
+});
+test("v2 label CSV uses the shared taxonomy and evaluates nested boolean tags without confidence gating", () => {
+  const labels = parse(`adId,sourceUrl,taxonomyVersion,format,hook_type,angle,offer_type,audio_type,urgency_scarcity,music_lyrics_present,has_licensed_music_lyrics\na,https://example.com/a,${CREATIVE_TAXONOMY_VERSION},static,scarcity-restock,scarcity-urgency,bundle,music-only,true,true,unknown\n`);
+  const result = prediction("a", { format: field("static", 0.1), hook_type: field("scarcity-restock", 0.1), angle: field("scarcity-urgency", 0.1),
+    offer_type: field("bundle", 0.1), audio_type: field("music-only", 0.1), tags: { urgency_scarcity: field(true, 0.1) },
+    music_lyrics_present: field(true, 0.1), has_licensed_music_lyrics: field("unknown", 0.1) });
+  const score = evaluateVideoPredictions(labels, [[result]]).configurations[0].fields;
+  for (const key of ["format", "hook_type", "angle", "offer_type", "audio_type", "urgency_scarcity", "music_lyrics_present", "has_licensed_music_lyrics"] as const)
+    assert.equal(score[key].accuracy, 1, key);
+  assert.equal(score.angle.meanTokenF1, null, "fixed-taxonomy angle uses exact category accuracy");
+  assert.equal(score.has_licensed_music_lyrics.coverage, 0, "unknown licensing remains an explicit abstention");
+  assert.throws(() => parse(`adId,sourceUrl,taxonomyVersion,angle\na,https://example.com/a,${CREATIVE_TAXONOMY_VERSION},Some free-text positioning\n`), /angle taxonomy/);
+  assert.throws(() => parse("adId,sourceUrl,hook_type\na,https://example.com/a,A made-up category\n"), /hook_type taxonomy/);
+  assert.equal(parse("adId,sourceUrl,angle\na,https://example.com/a,A historical free-text angle\n")[0].fields.angle, "A historical free-text angle");
 });
 test("a TwelveLabs stub is unavailable rather than a scored real-provider result", () => {
   const labels = parse("adId,sourceUrl,format\na,https://example.com/a,studio\n");

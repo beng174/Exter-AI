@@ -1,7 +1,18 @@
+import type { ReactNode } from "react";
 import { Download, Film, Info, Link2 } from "lucide-react";
+import {
+  ANGLE_OPTIONS,
+  AUDIO_TYPE_OPTIONS,
+  CLAIM_TYPE_OPTIONS,
+  CREATIVE_BOOLEAN_TAG_OPTIONS,
+  FORMAT_OPTIONS,
+  HOOK_TYPE_OPTIONS,
+  OFFER_TYPE_OPTIONS,
+} from "../../shared/creative-taxonomy";
 import type {
   CreatorEvidence,
   VideoAnalysisResult,
+  VideoClaim,
   VideoField,
   VideoTimestamp,
 } from "../../shared/video-analysis";
@@ -17,8 +28,16 @@ function timestamps(ranges: VideoTimestamp[]) {
     : "No supported video interval";
 }
 
-function confidence(value: number) {
-  return `${Math.round(value * 100)}%`;
+function score(value: number) {
+  return `Model-reported score ${Number(value.toFixed(2))} · uncalibrated`;
+}
+
+function optionLabel(value: string, options?: ReadonlyArray<readonly [string, string]>) {
+  return options?.find(([key]) => key === value)?.[1] || value;
+}
+
+function dimensions(width?: number | null, height?: number | null) {
+  return width && height ? `${width} × ${height} px` : "Unavailable in this saved result";
 }
 
 function sourceLink(value?: string) {
@@ -36,14 +55,18 @@ function sourceLink(value?: string) {
 function Field({
   label,
   field,
+  options,
+  children,
 }: {
   label: string;
   field: VideoField<string | boolean>;
+  options?: ReadonlyArray<readonly [string, string]>;
+  children?: ReactNode;
 }) {
   const unknown = field.value === "unknown";
   const value = typeof field.value === "boolean"
     ? field.value ? "Yes" : "No"
-    : field.value;
+    : optionLabel(field.value, options);
   return (
     <div className={`nva-field${unknown ? " nva-unknown" : ""}`}>
       <dt>{label}</dt>
@@ -51,8 +74,9 @@ function Field({
         <p>{value}</p>
         <div className="nva-field-meta">
           <span>{timestamps(field.timestamps)}</span>
-          <span>Confidence {confidence(field.confidence)}</span>
+          <span>{score(field.confidence)}</span>
         </div>
+        {children}
       </dd>
     </div>
   );
@@ -77,7 +101,7 @@ function Segments({
   return collapsible ? (
     <details className="nva-details">
       <summary>{label} <span>{fields.length} {fields.length === 1 ? "segment" : "segments"}</span></summary>
-      {segments}
+      {fields.length ? segments : <p className="nva-details-note">No supported segments saved.</p>}
     </details>
   ) : (
     <section className="nva-section">
@@ -85,6 +109,17 @@ function Segments({
       {segments}
     </section>
   );
+}
+
+function Claims({ claims }: { claims: VideoClaim[] }) {
+  return <section className="nva-section">
+    <h4>Key claims</h4>
+    {claims.length ? <dl className="nva-segments">{claims.map((claim, index) => <Field key={index} label={`Claim ${index + 1}`} field={claim}>
+      {Boolean(claim.claim_type?.length) && <ul className="nva-tags" aria-label={`Claim ${index + 1} types`}>{claim.claim_type!.map(type => <li key={type}>{optionLabel(type, CLAIM_TYPE_OPTIONS)}</li>)}</ul>}
+      {claim.may_need_substantiation_asa && <p className="nva-claim-review">may need substantiation (ASA)</p>}
+    </Field>)}</dl> : <p className="nva-small-note">No supported claims saved.</p>}
+    <p className="nva-small-note">Claims describe what the ad says. Comparative and superlative tags prompt a substantiation review; they are not a finding that an ad breaches ASA rules. Product claims have not been independently verified.</p>
+  </section>;
 }
 
 function Evidence({ evidence }: { evidence: CreatorEvidence }) {
@@ -97,7 +132,7 @@ function Evidence({ evidence }: { evidence: CreatorEvidence }) {
       <p>{evidence.value}</p>
       <div className="nva-field-meta">
         <span>{evidence.source === "ad-library" ? "Ad-library source metadata" : timestamps(evidence.timestamps)}</span>
-        <span>Confidence {confidence(evidence.confidence)}</span>
+        <span>{score(evidence.confidence)}</span>
       </div>
       {url && <a href={url} target="_blank" rel="noreferrer"><Link2 size={12} /> Evidence source</a>}
     </li>
@@ -140,6 +175,7 @@ export function NativeVideoAnalysis({
   }
 
   const fields = analysis.fields;
+  const separatedAudio = Boolean(fields.audio_type);
   return (
     <section className="nva-analysis" aria-label="Saved native video analysis">
       <div className="nva-heading">
@@ -154,20 +190,46 @@ export function NativeVideoAnalysis({
 
       <p className="nva-note">
         <Info size={14} />
-        <span>Scores are model-reported and uncalibrated. Values below {confidence(analysis.confidenceThreshold)} confidence, or without sufficient evidence, stay unknown. Timestamps refer to the original stored video.</span>
+        <span>Scores are model-reported and uncalibrated; they are not accuracy probabilities and are not used for filtering in new analyses. Evidence is still required. {analysis.confidencePolicy !== "uncalibrated-not-filtered" && analysis.confidenceThreshold > 0 ? `This historical result used a ${Math.round(analysis.confidenceThreshold * 100)}% score threshold when saved. ` : ""}Timestamps refer to the original stored video.</span>
       </p>
 
       <dl className="nva-fields">
-        <Field label="Hook · 0–3 seconds" field={fields.hook} />
-        <Field label="Format" field={fields.format} />
-        <Field label="Angle" field={fields.angle} />
+        {fields.hook_type && <Field label="Hook type" field={fields.hook_type} options={HOOK_TYPE_OPTIONS} />}
+        <Field label="Hook explanation · 0–3 seconds" field={fields.hook} />
+        <Field label="Format" field={fields.format} options={FORMAT_OPTIONS} />
+        <Field label="Angle" field={fields.angle} options={ANGLE_OPTIONS} />
+        {fields.angle_explanation && <Field label="Angle explanation" field={fields.angle_explanation} />}
+        {fields.offer_type && <Field label="Offer type" field={fields.offer_type} options={OFFER_TYPE_OPTIONS} />}
+        {fields.offer_explanation && <Field label="Offer explanation" field={fields.offer_explanation} />}
         <Field label="CTA" field={fields.cta} />
         <Field label="Person talking to camera" field={fields.personTalkingToCamera} />
       </dl>
 
-      <Segments label="Key claims" fields={fields.keyClaims} />
-      <p className="nva-small-note">Claims describe what the ad says; product claims have not been independently verified.</p>
-      <Segments label="Spoken transcript" fields={fields.spokenTranscript} collapsible />
+      {fields.tags && <details className="nva-details">
+        <summary>Creative tags</summary>
+        <dl className="nva-segments">{CREATIVE_BOOLEAN_TAG_OPTIONS.map(([key, label]) => <Field key={key} label={label} field={fields.tags![key]} />)}</dl>
+      </details>}
+
+      <Claims claims={fields.keyClaims} />
+      {separatedAudio && <section className="nva-section" aria-label="Audio and music">
+        <h4>Audio and music</h4>
+        <dl className="nva-fields">
+          {fields.audio_type && <Field label="Audio type" field={fields.audio_type} options={AUDIO_TYPE_OPTIONS} />}
+          {fields.music_lyrics_present && <Field label="Sung lyrics present" field={fields.music_lyrics_present} />}
+          {fields.has_licensed_music_lyrics && <Field label="Licensed music / lyrics" field={fields.has_licensed_music_lyrics} />}
+        </dl>
+        <p className="nva-small-note">Music and sung lyrics are separate from spoken advertising speech. Lyrics are not reproduced. A music licence remains unknown without trusted rights metadata; it cannot be established by listening.</p>
+        {Boolean(fields.audio_segments?.length) && <details className="nva-details">
+          <summary>Audio timeline <span>{fields.audio_segments!.length} segments</span></summary>
+          <ul className="nva-audio-timeline">{fields.audio_segments!.map((segment, index) => <li key={index}>
+            <strong>{segment.kind === "sung_lyrics" ? "Sung lyrics" : segment.kind === "instrumental_music" ? "Instrumental music" : segment.kind === "silence" ? "Silence" : segment.kind === "spoken" ? "Spoken advertising speech" : "Uncertain audio"}</strong>
+            <span>{timestamps([segment])} · {segment.speaker_type} · {score(segment.confidence)}</span>
+            {segment.kind === "spoken" && segment.text && <p>{segment.text}</p>}
+          </li>)}</ul>
+        </details>}
+      </section>}
+      {!separatedAudio && <p className="nva-small-note">Historical audio result: speech and song lyrics were not separately classified. Review this transcript before using it as spoken advertising copy.</p>}
+      <Segments label={separatedAudio ? "Spoken transcript · excludes sung lyrics" : "Historical transcript"} fields={fields.spokenTranscript} collapsible />
       <Segments label="On-screen text" fields={fields.onScreenText} collapsible />
 
       <section className="nva-section">
@@ -183,14 +245,27 @@ export function NativeVideoAnalysis({
         <summary>Analysis provenance and coverage</summary>
         <dl>
           <div><dt>Provider</dt><dd>{analysis.provider}</dd></div>
-          <div><dt>Model</dt><dd>{analysis.model}</dd></div>
-          <div><dt>Model version</dt><dd>{analysis.modelVersion || "Not reported by provider"}</dd></div>
+          <div><dt>Requested model</dt><dd>{analysis.requestedModel || analysis.model}</dd></div>
+          <div><dt>Served model</dt><dd>{analysis.servedModel || "Not recorded in this result"}</dd></div>
+          {!analysis.servedModel && analysis.modelVersion && <div><dt>Historical model revision</dt><dd>{analysis.modelVersion} · not verified as the generation response model</dd></div>}
+          <div><dt>Pricing model</dt><dd>{analysis.accounting?.pricing?.model || "Unavailable in this saved result"}</dd></div>
+          {analysis.accounting?.pricingReason && <div><dt>Pricing note</dt><dd>{analysis.accounting.pricingReason}</dd></div>}
           <div><dt>Processing mode</dt><dd>{analysis.processingMode === "agentic" ? "Native agentic video (preview)" : "Native static video · see saved coverage"}</dd></div>
+          <div><dt>Temperature</dt><dd>{analysis.generation ? analysis.generation.temperature : "Unavailable in this saved result"}</dd></div>
+          <div><dt>Fixed seed</dt><dd>{analysis.generation ? `${analysis.generation.seedRequested} · ${analysis.generation.seedApplied ? "applied to request" : "not applied; unsupported by this mode"}` : "Unavailable in this saved result"}</dd></div>
+          <div><dt>Requested media resolution</dt><dd>{analysis.generation ? `${analysis.generation.mediaResolutionRequested === "low" ? "Low" : "Default"} · ${analysis.generation.mediaResolutionApplied ? "explicit provider setting" : "provider default; no override applied"}` : "Unavailable in this saved result"}</dd></div>
+          <div><dt>Provider-reported media resolution</dt><dd>{analysis.generation?.providerMediaResolution || "Not reported by provider"}</dd></div>
+          <div><dt>Stored video dimensions</dt><dd>{dimensions(analysis.normalization?.originalWidth, analysis.normalization?.originalHeight)}</dd></div>
+          <div><dt>Uploaded video dimensions</dt><dd>{dimensions(analysis.normalization?.uploadWidth, analysis.normalization?.uploadHeight)}</dd></div>
+          <div><dt>Requested sampling</dt><dd>{analysis.sampling?.requestedFps.length ? `${analysis.sampling.requestedFps.join(" / ")} FPS across the saved segments` : "No fixed FPS reported"}</dd></div>
+          <div><dt>Scheduled frame estimate</dt><dd>{analysis.sampling?.estimatedFrames == null ? "Unavailable" : `${analysis.sampling.estimatedFrames} frames · duration × requested FPS; not observed frames`}</dd></div>
+          <div><dt>Actual frames sampled</dt><dd>{analysis.sampling?.actualFrames == null ? "Not reported by provider" : analysis.sampling.actualFrames}</dd></div>
+          {analysis.sampling?.videoInputTokens != null && <div><dt>Video input tokens</dt><dd>{analysis.sampling.videoInputTokens.toLocaleString("en-GB")}</dd></div>}
           <div><dt>Prompt version</dt><dd>{analysis.promptVersion}</dd></div>
           <div><dt>Analysed</dt><dd>{new Date(analysis.createdAt).toLocaleString("en-GB", { timeZone: "Europe/London", timeZoneName: "short" })}</dd></div>
           <div><dt>Coverage</dt><dd>{analysis.coverage.fullVideo ? "Full video" : "Partial video"} · {seconds(analysis.coverage.durationSeconds)} seconds</dd></div>
           {analysis.coverage.segments.map((segment, index) => (
-            <div key={index}><dt>Segment {index + 1}</dt><dd>{timestamps([segment])} · {segment.processing}{segment.fps !== undefined ? ` · ${segment.fps} FPS` : ""}</dd></div>
+            <div key={index}><dt>Requested segment {index + 1}</dt><dd>{timestamps([segment])} · {segment.processing}{segment.fps !== undefined ? ` · ${segment.fps} FPS requested` : ""}</dd></div>
           ))}
           <div><dt>Stored media</dt><dd>{analysis.mediaId}</dd></div>
           <div><dt>Media SHA-256</dt><dd><code>{analysis.mediaSha256}</code></dd></div>

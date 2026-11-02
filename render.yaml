@@ -32,6 +32,12 @@ services:
         value: "3"
       - key: GEMINI_MAX_RETRIES
         value: "2"
+      - key: GEMINI_GENERATION_SEED
+        value: "42"
+      - key: GEMINI_MEDIA_RESOLUTION
+        value: default
+      # Optional: bind existing GBP rates to the served model with GEMINI_PRICING_MODEL,
+      # or add exact served-model rates in GEMINI_MODEL_PRICING_GBP_JSON.
       - key: CHROMIUM_PATH
         value: /usr/bin/chromium
       # Optional META_ACCESS_TOKEN: add securely after approval; not required to deploy.

@@ -16,13 +16,13 @@ const field = <T>(value: T, confidence = 0.95, startSeconds = 0, endSeconds = 3)
 function fields(): VideoAnalysisFields {
   return { hook: field("A product opens on a desk"), format: field("studio"), angle: field("Ease of use"), keyClaims: [field("Advertiser claims a long-lasting scent")], spokenTranscript: [field("Try it today", 0.95, 4, 6)], onScreenText: [field("Try it today", 0.95, 4, 6)], cta: field("Shop now", 0.95, 10, 12), personTalkingToCamera: field(false), creatorEvidence: [] };
 }
-test("video validation preserves false, abstains below threshold and requires timestamps", () => {
+test("video validation preserves uncalibrated confidence and false while requiring evidence timestamps", () => {
   const raw = fields(); raw.angle.confidence = 0.4; raw.cta.timestamps = [];
-  const result = normalizeVideoAnalysisFields(raw, { coverage });
+  const result = normalizeVideoAnalysisFields(raw, { coverage, threshold: 0.99 });
   assert.equal(result.personTalkingToCamera.value, false);
-  assert.equal(result.angle.value, "unknown");
+  assert.equal(result.angle.value, "Ease of use");
   assert.equal(result.cta.value, "unknown");
-  assert.deepEqual(result.angle.timestamps, []);
+  assert.deepEqual(result.angle.timestamps, raw.angle.timestamps);
   assert.equal(result.angle.confidence, 0.4);
 });
 test("UGC requires source-grounded creator evidence and excludes the brand watermark", () => {
@@ -109,6 +109,47 @@ test("native capability failure alone triggers the recorded static fallback", as
     assert.deepEqual(modes, ["agentic", "static-high-fps-hook"]);
     assert.deepEqual(service.job(brand.id, job.id)!.attempts.map((attempt) => attempt.status), ["failed", "succeeded"]);
     assert.equal(service.history(brand.id, sourceAd.id)[0].processingMode, "static-high-fps-hook");
+  } finally { db.close(); }
+});
+test("video cache identity includes generation settings and preserves served-model provenance without confidence filtering", async () => {
+  const { db, store } = fixture();
+  const seen: { mediaResolution: string; generationSeed: number }[] = [];
+  try {
+    const service = new VideoAnalysisService(db, { mediaStore: store, confidenceThreshold: 0.99, analyserFactory: () => provider(async input => {
+      assert.ok(input.inferenceSettings);
+      seen.push(input.inferenceSettings);
+      const raw = fields(); raw.angle.confidence = 0.05;
+      return { ...output(input.processingMode), fields: raw, model: "gemini-served-flash", requestedModel: "gemini-fixture-flash", servedModel: "gemini-served-flash", generation: { temperature: 0, seedRequested: input.inferenceSettings.generationSeed, seedApplied: true, mediaResolutionRequested: input.inferenceSettings.mediaResolution, mediaResolutionApplied: input.inferenceSettings.mediaResolution === "low", providerMediaResolution: null }, sampling: { requestedFps: [5, 1], estimatedFrames: 32, actualFrames: null, videoInputTokens: 2304 } };
+    }) });
+    const run = async (mediaResolution: "default" | "low", generationSeed: number) => {
+      const job = service.enqueue({ brandId: brand.id, adId: sourceAd.id, mediaResolution, generationSeed });
+      await service.idle();
+      const saved = service.job(brand.id, job.id)!;
+      assert.equal(saved.status, "complete");
+      return saved;
+    };
+    const first = await run("default", 7);
+    const original = service.history(brand.id, sourceAd.id)[0];
+    assert.equal(original.confidenceThreshold, 0);
+    assert.equal(original.confidencePolicy, "uncalibrated-not-filtered");
+    assert.equal(original.fields.angle.value, "Ease of use");
+    assert.equal(original.fields.angle.confidence, 0.05);
+    assert.equal(original.requestedModel, "gemini-fixture-flash");
+    assert.equal(original.servedModel, "gemini-served-flash");
+    assert.equal(original.model, "gemini-served-flash");
+    assert.deepEqual(original.inferenceSettings, { mediaResolution: "default", generationSeed: 7 });
+    assert.equal(original.generation?.temperature, 0);
+    assert.equal(original.sampling?.actualFrames, null);
+    assert.equal(original.sampling?.estimatedFrames, 32);
+    assert.equal((await run("default", 7)).cached, true);
+    const low = await run("low", 7);
+    const seed = await run("default", 8);
+    assert.notEqual(low.analysisConfigSha256, first.analysisConfigSha256);
+    assert.notEqual(seed.analysisConfigSha256, first.analysisConfigSha256);
+    assert.equal((await run("default", 7)).analysisId, original.id);
+    assert.deepEqual(seen, [{ mediaResolution: "default", generationSeed: 7 }, { mediaResolution: "low", generationSeed: 7 }, { mediaResolution: "default", generationSeed: 8 }]);
+    assert.equal(service.history(brand.id, sourceAd.id).length, 3);
+    assert.deepEqual(service.history(brand.id, sourceAd.id)[2], original, "comparison runs leave earlier saved JSON unchanged");
   } finally { db.close(); }
 });
 test("auth/quota errors never cause a second inference; existing results and media survive", async () => {
@@ -228,7 +269,7 @@ test("configured video concurrency bounds simultaneous inference and idle waits 
 test("Static is the service default and normalized upload provenance preserves the original media identity", async () => {
   const { db, store, events } = fixture();
   const upload = { ...media, sha256: "c".repeat(64), bytes: 120, absolutePath: "/tmp/normalized-fixture.mp4" };
-  const normalization = { version: "exter-video-normalize-v1" as const, applied: true, originalSha256: media.sha256, uploadSha256: upload.sha256, originalMimeType: media.mimeType, uploadMimeType: "video/mp4" as const, originalBytes: media.bytes, uploadBytes: upload.bytes, videoCodec: "h264" as const, audioCodec: "aac" as const, pixelFormat: "yuv420p" as const, durationSeconds: 12 };
+  const normalization = { version: "exter-video-normalize-v1" as const, applied: true, originalSha256: media.sha256, uploadSha256: upload.sha256, originalMimeType: media.mimeType, uploadMimeType: "video/mp4" as const, originalBytes: media.bytes, uploadBytes: upload.bytes, originalWidth: 720, originalHeight: 1280, originalFps: 30, uploadWidth: 720, uploadHeight: 1280, uploadFps: 30, videoCodec: "h264" as const, audioCodec: "aac" as const, pixelFormat: "yuv420p" as const, durationSeconds: 12 };
   try {
     const service = new VideoAnalysisService(db, {
       mediaStore: store,
@@ -237,6 +278,7 @@ test("Static is the service default and normalized upload provenance preserves t
         assert.equal(events.at(-1), "normalized");
         assert.equal(input.processingMode, "static-high-fps-hook");
         assert.equal(input.media.sha256, upload.sha256);
+        assert.deepEqual(input.normalization, normalization);
         return output(input.processingMode);
       }),
     });

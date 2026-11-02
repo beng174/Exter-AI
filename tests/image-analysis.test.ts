@@ -10,10 +10,17 @@ import { VideoProviderError } from "../server/video/types.js";
 import { openDatabase } from "../server/db.js";
 import type { StoredImageCreative, ImageAnalysisFields } from "../shared/image-analysis.js";
 import { IMAGE_PROMPT_VERSION } from "../shared/image-analysis.js";
+import { CREATIVE_BOOLEAN_TAGS } from "../shared/creative-taxonomy.js";
 
 const key = "fixture-image-credential";
 const field = (value: string) => ({ value,confidence: 0.95,imageIndices: [1] });
-const fields = (kind: "image" | "carousel" = "image"): ImageAnalysisFields => ({ format: field(kind === "image" ? "static" : "carousel"),hook: field("Room fragrance"),headline: field("Save on your gift set"),angle: field("Gifting"),keyClaims: [field("Publisher says long lasting")],onScreenText: [field("Gift set")],offer: field("Bundle"),cta: field("Shop now") });
+const fields = (_kind: "image" | "carousel" = "image"): ImageAnalysisFields => ({
+  format: field("static"), hook: field("Room fragrance"), hook_type: {...field("offer-led"),value:"offer-led"},
+  headline: field("Save on your gift set"), angle: field("gifting"), angle_explanation: field("Gifting"),
+  keyClaims: [{...field("Publisher says long lasting"),claim_type:["performance"]}], onScreenText: [field("Gift set")],
+  offer: field("Bundle"), offer_type:{...field("bundle"),value:"bundle"}, cta:field("Shop now"),
+  tags: Object.fromEntries(CREATIVE_BOOLEAN_TAGS.map(tag=>[tag,{...field("unknown"),value:false}])) as NonNullable<ImageAnalysisFields["tags"]>,
+});
 function payload(kind: "image" | "carousel" = "image") {
   return { modelVersion: "gemini-fixture-flash-001", candidates: [{ finishReason: "STOP",content: { parts: [{ text: JSON.stringify(fields(kind)) }] } }],usageMetadata: { promptTokenCount: 100,candidatesTokenCount: 20,thoughtsTokenCount: 5,totalTokenCount: 125 } };
 }
@@ -30,7 +37,7 @@ async function fixture(kind: "image" | "carousel" = "image") {
 test("Gemini analyses all retained carousel slides as image inputs and persists structured fields, token usage and safe raw response", async () => {
   const f=await fixture("carousel"); let reserves=0; const settled: number[]=[]; let calls=0;
   try {
-    const provider=new GeminiImageAnalyser({ apiKey:key,model:"gemini-fixture-flash",inputGbpPerMillion:1,outputGbpPerMillion:2,
+    const provider=new GeminiImageAnalyser({ apiKey:key,model:"gemini-fixture-flash",pricingModel:"gemini-fixture-flash-001",inputGbpPerMillion:1,outputGbpPerMillion:2,
       reserveCost:async()=>({reservationId:`attempt-${++reserves}`,reservedGbp:0.2}),settleCost:async(_id,cost)=>{settled.push(cost);},
       fetch:async(input,init)=>{
         calls++; const url=new URL(String(input)); assert.equal(url.hostname,"generativelanguage.googleapis.com"); assert.equal(url.search,""); assert.equal(new Headers(init?.headers).get("x-goog-api-key"),key); assert.equal(init?.redirect,"manual");
@@ -42,16 +49,44 @@ test("Gemini analyses all retained carousel slides as image inputs and persists 
         return json({...payload("carousel"),echo:key});
       }});
     const result=await provider.analyse({media:f.media,context:{brandName:"Brand",adCopy:"Original source copy"}});
-    assert.equal(calls,2); assert.equal(reserves,1); assert.equal(result.fields.format.value,"carousel"); assert.equal(result.fields.offer.value,"Bundle");
+    assert.equal(calls,2); assert.equal(reserves,1); assert.equal(result.fields.format.value,"static"); assert.equal(result.fields.offer.value,"Bundle");
     assert.equal(result.accounting.usage.outputTokens,25); assert.equal(result.accounting.usage.totalTokens,125);
     assert.equal(result.accounting.tokenCostGbp,0.00015); assert.equal(settled[0],0.00015); assert.equal(result.accounting.reservedCostGbp,0);
     assert.ok(!JSON.stringify(result).includes(key)); assert.match(JSON.stringify(result.accounting.rawResponse),/REDACTED/);
   } finally {await f.close();}
 });
+test("image requests apply low resolution and the fixed seed while reporting and pricing the served model",async()=>{
+  const f=await fixture();let settles=0;
+  try{
+    const provider=new GeminiImageAnalyser({apiKey:key,model:"gemini-3.7-flash",inputGbpPerMillion:10,outputGbpPerMillion:20,
+      modelPricingGbp:{"gemini-fixture-flash-001":{inputGbpPerMillion:1,outputGbpPerMillion:2}},
+      reserveCost:async()=>({reservationId:"low-image",reservedGbp:0.2}),settleCost:async()=>{settles++;},
+      fetch:async(_url,init)=>{
+        if(init?.method!=="POST")return json({name:"models/gemini-3.7-flash"});
+        const request=JSON.parse(String(init.body));assert.equal(request.generationConfig.temperature,0);assert.equal(request.generationConfig.seed,7);assert.equal(request.generationConfig.mediaResolution,"MEDIA_RESOLUTION_LOW");
+        return json(payload());
+      }});
+    const result=await provider.analyse({media:f.media,context:{brandName:"Brand",adCopy:"Copy"},inferenceSettings:{mediaResolution:"low",generationSeed:7}});
+    assert.equal(result.requestedModel,"gemini-3.7-flash");assert.equal(result.servedModel,"gemini-fixture-flash-001");assert.equal(result.modelVersion,"gemini-fixture-flash-001");
+    assert.deepEqual(result.generation,{temperature:0,seedRequested:7,seedApplied:true,mediaResolutionRequested:"low",mediaResolutionApplied:true,providerMediaResolution:null});
+    assert.equal(result.accounting.pricing?.model,"gemini-fixture-flash-001");assert.equal(result.accounting.tokenCostGbp,0.00015);assert.equal(settles,1);
+  }finally{await f.close();}
+});
+test("image alias changes retain conservative budget coverage until matching served-model rates exist",async()=>{
+  const f=await fixture();let settles=0;
+  try{
+    const provider=new GeminiImageAnalyser({apiKey:key,model:"gemini-fixture-flash",inputGbpPerMillion:1,outputGbpPerMillion:2,
+      reserveCost:async()=>({reservationId:"unpriced-image",reservedGbp:0.2}),settleCost:async()=>{settles++;},
+      fetch:async(_url,init)=>init?.method!=="POST"?json({name:"models/gemini-fixture-flash"}):json(payload())});
+    const result=await provider.analyse({media:f.media,context:{brandName:"Brand",adCopy:"Copy"}});
+    assert.equal(settles,0);assert.equal(result.accounting.tokenCostGbp,null);assert.equal(result.accounting.pricing,null);assert.equal(result.accounting.reservedCostGbp,0.2);
+    assert.match(result.accounting.pricingReason??"",/differs from pricing model/);assert.equal(result.accounting.billedCostGbp,null);
+  }finally{await f.close();}
+});
 test("image retries reuse the same reserve after a rejected server response and never double count settlement failures",async()=>{
   const f=await fixture(); let reserves=0,posts=0; const waits:number[]=[];
   try{
-    const provider=new GeminiImageAnalyser({apiKey:key,model:"gemini-fixture-flash",maxRetries:1,retryBaseMs:2,inputGbpPerMillion:1,outputGbpPerMillion:2,
+    const provider=new GeminiImageAnalyser({apiKey:key,model:"gemini-fixture-flash",maxRetries:1,retryBaseMs:2,pricingModel:"gemini-fixture-flash-001",inputGbpPerMillion:1,outputGbpPerMillion:2,
       reserveCost:async()=>({reservationId:`r-${++reserves}`,reservedGbp:0.2}),settleCost:async()=>{throw new Error("private details");},sleep:async ms=>{waits.push(ms);},
       fetch:async(_url,init)=>init?.method!=="POST"?json({name:"models/gemini-fixture-flash"}):++posts===1?json({error:{message:key}},503):json(payload())});
     const result=await provider.analyse({media:f.media,context:{brandName:"Brand",adCopy:"Copy"}});
@@ -68,7 +103,7 @@ test("image budget pause blocks dispatch and invalid structured outputs retain r
     await assert.rejects(()=>blocked.analyse({media:f.media,context:{brandName:"Brand",adCopy:"Copy"}}),(error:any)=>error instanceof VideoProviderError && error.code==="budget_paused" && error.accounting?.requestAttempts===0 && error.accounting.estimatedCostGbp===null && !error.message.includes(key));
     assert.equal(posts,0);
     const invalid=payload(); invalid.candidates[0].content.parts[0].text=JSON.stringify({...fields(),headline:{...field("Bad evidence"),imageIndices:[2]}});
-    const provider=new GeminiImageAnalyser({apiKey:key,model:"gemini-fixture-flash",inputGbpPerMillion:1,outputGbpPerMillion:2,fetch:async(_url,init)=>init?.method==="POST"?json(invalid):json({name:"models/gemini-fixture-flash"})});
+    const provider=new GeminiImageAnalyser({apiKey:key,model:"gemini-fixture-flash",pricingModel:"gemini-fixture-flash-001",inputGbpPerMillion:1,outputGbpPerMillion:2,fetch:async(_url,init)=>init?.method==="POST"?json(invalid):json({name:"models/gemini-fixture-flash"})});
     await assert.rejects(()=>provider.analyse({media:f.media,context:{brandName:"Brand",adCopy:"Copy"}}),(error:any)=>error instanceof VideoProviderError && error.code==="invalid_output" && error.accounting?.usage.totalTokens===125 && error.accounting.estimatedCostGbp===0.00015 && Boolean(error.accounting.rawResponse));
   }finally{await f.close();}
 });
@@ -136,7 +171,7 @@ test("final rejected image requests release one shared reserve and expose the sa
 test("ambiguous image timeouts retry with new coverage while retaining the original uncertain reserve",async()=>{
   const f=await fixture();let reserves=0,posts=0;const waits:number[]=[],settled:string[]=[];
   try{
-    const provider=new GeminiImageAnalyser({apiKey:key,model:"gemini-fixture-flash",retryBaseMs:3,inputGbpPerMillion:1,outputGbpPerMillion:2,
+    const provider=new GeminiImageAnalyser({apiKey:key,model:"gemini-fixture-flash",retryBaseMs:3,pricingModel:"gemini-fixture-flash-001",inputGbpPerMillion:1,outputGbpPerMillion:2,
       reserveCost:async()=>({reservationId:`timeout-${++reserves}`,reservedGbp:0.2}),settleCost:async id=>{settled.push(id);},sleep:async ms=>{waits.push(ms);},
       fetch:async(_url,init)=>{
         if(init?.method!=="POST")return json({name:"models/gemini-fixture-flash"});

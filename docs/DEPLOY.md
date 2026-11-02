@@ -123,6 +123,16 @@ collection worker and scheduler do not execute this smoke test and do not need i
    model available to your Google project. Redeploy after environment changes.
    Model availability is verified before uploading each input; an unavailable model
    produces a recorded failure, never a fabricated result.
+   The successful report requested `gemini-3.7-flash` but recorded served model
+   `gemini-3.8-flash`. To use the served model directly, set
+   `GEMINI_VIDEO_MODEL=gemini-3.8-flash`, verify that the existing input/output GBP
+   rates apply to it, and set `GEMINI_PRICING_MODEL=gemini-3.8-flash`. Alternatively
+   keep the requested alias and bind the rates to the actual served model, or add
+   exact served-model entries in `GEMINI_MODEL_PRICING_GBP_JSON` (see
+   [configuration](VIDEO-ANALYSIS.md)). No prices are guessed. If the served model
+   has no matching prices, the report shows an unavailable token estimate and
+   retains its conservative hold. Do not relabel earlier reports or clear their
+   reservations without reconciling actual provider usage.
 3. In **Budgets & tests**, keep your chosen inference cap. The same 90% budget
    guard applies to videos, still images and carousels. No new Render environment
    variables are needed for image analysis. Preparing public media makes no Gemini
@@ -164,12 +174,24 @@ collection worker and scheduler do not execute this smoke test and do not need i
    show **Image input** or **Carousel image inputs**, with no invented video FPS.
    Images use Gemini's native image input for format, hook/headline, angle, claims,
    on-screen text, offer and CTA. Retained images/slides can be opened from the table.
+   Choose **Default** or **Low** media resolution before a one-ad or batch run.
+   Default omits Google's override; Low explicitly requests lower media resolution
+   and requires Static. Run both settings on the same labelled set to compare.
+   Temperature `0` and seed `42` are defaults; optional `GEMINI_GENERATION_SEED`
+   changes the fixed seed. Seed support is recorded per result. No new secret or
+   manual database migration is required. Resume requires the saved mode and
+   resolution and preserves the run's seed.
 8. Download **gemini-live-report.md**. It records actual sample size and counts by
    format, per-ad tokens/costs, source diagnostics and up to five complete saved
    outputs covering available input types. A 12-video or mixed-media sample is
    exploratory and does not establish the original 24-of-25-video acceptance gate.
    Missing cost or usage is disclosed rather than filled with zero. Compare
    estimated costs with provider billing separately.
+   The new audit tables show requested/served/priced models, source/upload pixel
+   dimensions, requested FPS, estimated scheduled frames, actual frames only when
+   reported, taxonomy tags and audio/claim review fields. Confidence remains
+   uncalibrated and is not used to filter new outputs. Historical outputs keep their
+   original schema; start a new run to get the new fields.
 
 Before upload, ffprobe checks retained video encoding. Compatible MP4/H.264/AAC
 (or silent H.264) inputs pass through. Other supported videos are normalized with

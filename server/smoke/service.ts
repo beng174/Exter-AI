@@ -15,11 +15,21 @@ import { VideoProviderError } from "../video/types.js";
 import { PublicValentteVideoSource, SmokeSourceError, VALENTTE_PAGE_ID, type SmokeVideoSource } from "./source.js";
 import { ImageAnalysisService } from "../image/service.js";
 import type { GeminiDiagnostic } from "../../shared/gemini-diagnostic.js";
+import { resolveInferenceSettings, type InferenceSettings } from "../../shared/inference-config.js";
+import { CREATIVE_TAXONOMY_VERSION } from "../../shared/creative-taxonomy.js";
 
 const ACTIVE = new Set(["queued", "preparing", "analysing"]);
 const now = () => new Date().toISOString();
 export class SmokeRequestError extends Error {
   constructor(message: string, public status = 409) { super(message); }
+}
+function inferenceSettings(input: Partial<InferenceSettings>, mode: VideoProcessingMode, preparation = false): InferenceSettings {
+  let settings: InferenceSettings;
+  try { settings = resolveInferenceSettings(input); }
+  catch (error) { throw new SmokeRequestError(error instanceof Error ? error.message : "Choose Default or Low media resolution.", 400); }
+  if (!preparation && mode === "agentic" && settings.mediaResolution === "low")
+    throw new SmokeRequestError("Low media resolution requires Static mode. Agentic preview does not support this control.", 400);
+  return settings;
 }
 export interface SmokeOptions {
   sourceFactory?: (nativeIds: Set<string>) => SmokeVideoSource;
@@ -206,22 +216,24 @@ export class GeminiSmokeService {
     const items = await this.retainedCreatives();
     return { defaultVideoMode: "static-high-fps-hook" as const, creatives: items.map(({ brandId, adId, nativeId, mediaKind, imageCount, durationSeconds }) => ({ brandId, adId, nativeId, mediaKind, ...(imageCount ? { imageCount } : {}), ...(durationSeconds ? { durationSeconds } : {}) })) };
   }
-  async testOne(brandId: string, adId: string, requestedMode: VideoProcessingMode = "static-high-fps-hook") {
+  async testOne(brandId: string, adId: string, requestedMode: VideoProcessingMode = "static-high-fps-hook", options: Partial<InferenceSettings> = {}) {
     if (!["agentic", "static-high-fps-hook"].includes(requestedMode)) throw new SmokeRequestError("Choose Static or explicitly select Agentic preview.", 400);
+    const settings = inferenceSettings(options, requestedMode);
     const ready = await this.readiness();
     if (!ready.hosted || ready.errors.length) throw new SmokeRequestError(ready.errors.join(" ") || "Run this diagnostic in the deployed Render app.");
     const selected = (await this.retainedCreatives()).find(item => item.brandId === brandId && item.adId === adId);
     if (!selected) throw new SmokeRequestError("The selected creative is not retained and verified in this workspace. Prepare it first.", 404);
     const active = this.active();
     if (active) {
-      if (active.kind === "diagnostic" && active.requestedMode === requestedMode && active.items.length === 1 && active.items[0].brandId === brandId && active.items[0].adId === adId) return active;
+      if (active.kind === "diagnostic" && active.requestedMode === requestedMode && active.mediaResolution === settings.mediaResolution && active.generationSeed === settings.generationSeed && active.items.length === 1 && active.items[0].brandId === brandId && active.items[0].adId === adId) return active;
       throw new SmokeRequestError("Another test or preparation is active. Wait for it to finish before testing one ad.");
     }
-    const run: SmokeRun = { id: randomUUID(), kind: "diagnostic", status: "queued", requestedMode, createdAt: now(), updatedAt: now(), sampleSize: 1, sampleCounts: formatCounts([selected]), targetSampleSize: 1, minimumSampleSize: 1, items: [selected] };
+    const run: SmokeRun = { id: randomUUID(), kind: "diagnostic", status: "queued", requestedMode, ...settings, createdAt: now(), updatedAt: now(), sampleSize: 1, sampleCounts: formatCounts([selected]), targetSampleSize: 1, minimumSampleSize: 1, items: [selected] };
     this.save(run); this.launch(run); return structuredClone(run);
   }
-  async start(kind: "prepare" | "smoke", requestedMode: VideoProcessingMode = "static-high-fps-hook", options: { refreshFailed?: boolean } = {}) {
+  async start(kind: "prepare" | "smoke", requestedMode: VideoProcessingMode = "static-high-fps-hook", options: Partial<InferenceSettings> & { refreshFailed?: boolean } = {}) {
     if (!["agentic", "static-high-fps-hook"].includes(requestedMode)) throw new SmokeRequestError("Choose agentic or static video processing.", 400);
+    const settings = inferenceSettings(options, requestedMode, kind === "prepare");
     const current = this.active();
     if (current) return current;
     const ready = await this.readiness();
@@ -249,15 +261,18 @@ export class GeminiSmokeService {
     // Retained-media checks await disk reads. Recheck before claiming the active slot.
     const racingRun = this.active();
     if (racingRun) return racingRun;
-    const run: SmokeRun = { id: randomUUID(), kind, status: "queued", requestedMode, createdAt: now(), updatedAt: now(), sampleSize: kind === "smoke" ? items.length : 0, sampleCounts: kind === "smoke" ? formatCounts(items) : { video: 0, image: 0, carousel: 0 }, targetSampleSize: GEMINI_SMOKE_TARGET, minimumSampleSize: GEMINI_SMOKE_MIN_SAMPLE, ...(options.refreshFailed ? { refreshFailed: true } : {}), items };
+    const run: SmokeRun = { id: randomUUID(), kind, status: "queued", requestedMode, ...settings, createdAt: now(), updatedAt: now(), sampleSize: kind === "smoke" ? items.length : 0, sampleCounts: kind === "smoke" ? formatCounts(items) : { video: 0, image: 0, carousel: 0 }, targetSampleSize: GEMINI_SMOKE_TARGET, minimumSampleSize: GEMINI_SMOKE_MIN_SAMPLE, ...(options.refreshFailed ? { refreshFailed: true } : {}), items };
     this.save(run);
     this.launch(run);
     return structuredClone(run);
   }
-  async resume(id: string, requestedMode: VideoProcessingMode = "static-high-fps-hook") {
+  async resume(id: string, requestedMode: VideoProcessingMode = "static-high-fps-hook", options: Partial<InferenceSettings> = {}) {
     let run = this.run(id);
     if (!run) throw new SmokeRequestError("Gemini smoke test not found.", 404);
     if (!["agentic", "static-high-fps-hook"].includes(requestedMode)) throw new SmokeRequestError("Choose Static or explicitly select Agentic preview.", 400);
+    const settings = inferenceSettings({ ...options, generationSeed: run.generationSeed }, requestedMode, run.kind === "prepare");
+    if (run.kind !== "prepare" && (run.mediaResolution ?? "default") !== settings.mediaResolution)
+      throw new SmokeRequestError("This saved run uses a different media resolution. Select its recorded resolution to resume, or start a new comparison run.");
     if (run.kind !== "prepare" && run.requestedMode !== requestedMode)
       throw new SmokeRequestError("This saved run uses a different video mode. Select its recorded mode explicitly to resume it, or start a new Static test; earlier paid results will not be relabelled.");
     if (!["paused", "interrupted"].includes(run.status)) throw new SmokeRequestError("Only a paused or interrupted run can be resumed.");
@@ -275,7 +290,9 @@ export class GeminiSmokeService {
     if (otherActive && otherActive.id !== id) throw new SmokeRequestError("Another Gemini smoke run is already active.");
     run = fresh;
     if (run.kind !== "prepare" && run.requestedMode !== requestedMode) throw new SmokeRequestError("The saved run mode changed. Refresh its status before resuming.");
+    if (run.kind !== "prepare" && (run.mediaResolution ?? "default") !== settings.mediaResolution) throw new SmokeRequestError("The saved resolution changed. Refresh its status before resuming.");
     if (run.kind === "prepare") run.requestedMode = requestedMode;
+    run.mediaResolution = settings.mediaResolution; run.generationSeed ??= settings.generationSeed;
     if (run.kind === "smoke" && run.sampleSize === undefined) {
       // Legacy runs had no fixed sample metadata and sometimes retained all
       // preparation candidates. Resume only their retained or already-paid set.
@@ -404,11 +421,14 @@ export class GeminiSmokeService {
     delete item.error; delete item.errorCode;
     delete item.geminiDiagnostic;
     item.status = "complete"; item.analysisId = analysisId; item.model = analysis.model; item.processingMode = analysis.processingMode;
+    item.requestedModel = analysis.requestedModel; item.servedModel = analysis.servedModel;
+    item.generation = analysis.generation; item.sampling = analysis.sampling; item.normalization = analysis.normalization;
     this.applyAccounting(item, attempts);
     if (!item.accounting?.length && analysis.accounting) this.applyAccounting(item, [{ accounting: analysis.accounting }]);
   }
   private finishImageItem(item: SmokeItem, result: ReturnType<ImageAnalysisService["history"]>[number]) {
     item.status = "complete"; item.analysisId = result.id; item.model = result.model; item.processingMode = result.processingMode;
+    item.requestedModel = result.requestedModel; item.servedModel = result.servedModel; item.generation = result.generation;
     delete item.error; delete item.errorCode;
     delete item.geminiDiagnostic;
     this.applyAccounting(item, [{ accounting: result.accounting }]);
@@ -446,7 +466,7 @@ export class GeminiSmokeService {
         if (item.mediaKind === "image" || item.mediaKind === "carousel") {
           item.jobId = randomUUID(); this.save(run);
           imageCalls.push((async () => {
-            try { this.finishImageItem(item, await this.images.analyse(item.brandId, item.adId, item.mediaId!, item.jobId)); }
+            try { this.finishImageItem(item, await this.images.analyse(item.brandId, item.adId, item.mediaId!, item.jobId, { mediaResolution: run.mediaResolution ?? "default", generationSeed: run.generationSeed })); }
             catch (error) {
               const known = error instanceof VideoProviderError;
               if (this.inferenceFailure(item, known ? error.code : "unavailable", known ? error.message : "Image inference could not finish; retained inputs and earlier results were preserved.", known ? error.accounting : undefined, known ? error.diagnostic : undefined)) paused = true;
@@ -457,7 +477,7 @@ export class GeminiSmokeService {
         }
         this.save(run);
         try {
-          const job = this.video.enqueue({ brandId: item.brandId, adId: item.adId, provider: "gemini", processingMode: run.requestedMode, force: true });
+          const job = this.video.enqueue({ brandId: item.brandId, adId: item.adId, provider: "gemini", processingMode: run.requestedMode, mediaResolution: run.mediaResolution ?? "default", generationSeed: run.generationSeed, force: true });
           item.jobId = job.id; launched.push(item);
         } catch (error) {
           if (this.inferenceFailure(item, error instanceof VideoProviderError ? error.code : "unavailable", error instanceof VideoProviderError ? error.message : "The video analysis could not be queued; no provider response is available.", error instanceof VideoProviderError ? error.accounting : undefined, error instanceof VideoProviderError ? error.diagnostic : undefined)) paused = true;
@@ -519,11 +539,37 @@ export class GeminiSmokeService {
       : item.failureCategory === "expired_media_link" ? "Expired or removed media/source link"
       : item.failureCategory === "blocked_restricted" ? "Blocked/restricted" : item.failureCategory === "other" ? "Other" : "none";
     const mediaLabel = (item: SmokeItem) => item.mediaKind || (item.mediaId || item.jobId || item.analysisId ? "video (historical)" : "unknown (historical)");
+    const analyses = new Map(run.items.filter(item => item.analysisId).map(item => {
+      const history = item.mediaKind === "image" || item.mediaKind === "carousel" ? this.images.history(item.brandId, item.adId) : this.video.history(item.brandId, item.adId);
+      return [item.analysisId!, history.find(value => value.id === item.analysisId)] as const;
+    }));
+    const dimensions = (width: number | null | undefined, height: number | null | undefined) => width && height ? `${width} × ${height}` : "unavailable";
+    const modelRows = run.items.map(item => {
+      const analysis = item.analysisId ? analyses.get(item.analysisId) : undefined;
+      const generation = item.generation || analysis?.generation;
+      const videoAnalysis = analysis && "coverage" in analysis ? analysis : undefined;
+      const sampling = item.sampling || videoAnalysis?.sampling;
+      const normalization = item.normalization || videoAnalysis?.normalization;
+      const pricing = item.accounting?.flatMap(part => part.pricing?.model ? [part.pricing.model] : []) || [];
+      const pricingReasons = item.accounting?.flatMap(part => part.pricingReason ? [part.pricingReason] : []) || [];
+      return `| ${safe(item.nativeId)} | ${safe(item.requestedModel || analysis?.requestedModel || "unrecorded (historical)")} | ${safe(item.servedModel || analysis?.servedModel || "unrecorded (historical)")} | ${safe([...new Set(pricing)].join(", ") || "unbound / unavailable")} | ${generation ? `${generation.temperature}; ${generation.seedRequested} (${generation.seedApplied ? "applied" : "not supported / not applied"})` : "unavailable (historical)"} | ${generation ? `${generation.mediaResolutionRequested}${generation.providerMediaResolution ? `; reported ${safe(generation.providerMediaResolution)}` : "; provider resolution not reported"}` : "unavailable (historical)"} | ${normalization ? `${dimensions(normalization.originalWidth, normalization.originalHeight)} → ${dimensions(normalization.uploadWidth, normalization.uploadHeight)}` : "unavailable"} | ${sampling?.requestedFps.join(", ") || "unavailable"} | ${sampling?.estimatedFrames ?? "unavailable"} (estimated) | ${sampling?.actualFrames ?? "not reported"} | ${sampling?.videoInputTokens ?? "unavailable"} | ${safe([...new Set(pricingReasons)].join("; "))} |`;
+    });
+    const taxonomyRows = successes.map(item => {
+      const analysis = item.analysisId ? analyses.get(item.analysisId) : undefined;
+      const fields = analysis?.fields;
+      const audio = fields && "audio_type" in fields ? fields.audio_type?.value : undefined;
+      const lyrics = fields && "music_lyrics_present" in fields ? fields.music_lyrics_present?.value : undefined;
+      const licence = fields && "has_licensed_music_lyrics" in fields ? fields.has_licensed_music_lyrics?.value : undefined;
+      const claims = fields?.keyClaims.map(claim => `${claim.value}: ${(claim.claim_type || []).join(", ") || "historical / untagged"}${claim.may_need_substantiation_asa ? " — may need substantiation (ASA)" : ""}`).join("; ");
+      return `| ${safe(item.nativeId)} | ${safe(String(fields?.format.value ?? "unavailable"))} | ${safe(String(fields?.hook_type?.value ?? "historical / unavailable"))} | ${safe(String(fields?.angle.value ?? "unavailable"))} | ${safe(String(fields?.offer_type?.value ?? "historical / unavailable"))} | ${safe(String(audio ?? (item.mediaKind === "image" || item.mediaKind === "carousel" ? "not applicable" : "historical / unavailable")))} | ${lyrics ?? "unknown"} | ${licence ?? "unknown"} | ${safe(claims || "none recorded")} |`;
+    });
     const exploratory = counts.video !== GEMINI_SMOKE_TARGET || sampleSize !== GEMINI_SMOKE_TARGET;
     const sections = [
       "# Gemini live report", "", `Run: ${run.id}`, `Created: ${run.createdAt}`, `Updated: ${run.updatedAt}`,
       `Execution: Render web service; ${run.kind === "prepare" ? "media preparation only" : run.kind === "diagnostic" ? "one-ad diagnostic inference" : "live Gemini inference"}.`, `Status: ${run.status}`,
       `Requested video processing mode: ${run.requestedMode}. Image and carousel ads use native image input, independent of the video mode.`, "",
+      `Requested media resolution: ${run.mediaResolution ?? "unrecorded (historical)"}. Generation temperature: ${run.generationSeed === undefined ? "unrecorded (historical)" : "0"}. Fixed seed: ${run.generationSeed ?? "unrecorded (historical)"} where supported. A seed reduces variation but does not guarantee identical provider responses.`,
+      `Current creative taxonomy: ${CREATIVE_TAXONOMY_VERSION}; see research/LABELLING-GUIDE.md. Historical outputs retain their original prompt and vocabulary; a new deployment does not relabel earlier results.`,
       `Actual ${run.kind === "prepare" ? "retained input" : "sample"} size: ${sampleSize} ads — ${counts.video} videos, ${counts.image} static images, ${counts.carousel} carousels. Each carousel counts as one ad; every retained slide is supplied to Gemini.`,
       `Preparation target: ${GEMINI_SMOKE_TARGET} creatives. Minimum batch sample: ${GEMINI_SMOKE_MIN_SAMPLE}; one-ad diagnostics require only the selected retained creative. ${run.kind === "diagnostic" ? "This run tests exactly one ad and is not a batch or accuracy benchmark." : exploratory ? "This is an exploratory partial or mixed-media sample; it is not the original 25-video acceptance set." : "This sample contains the full 25-video target."}`,
       `Successful outputs: ${successes.length}/${sampleSize}. Failed/interrupted ads: ${failures.length}. Source-unavailable image/carousel ads: ${unavailable.length} (not format failures). Pending/stored ads: ${run.items.filter(item => ["pending", "preparing", "stored", "analysing"].includes(item.status)).length}.`,
@@ -536,8 +582,19 @@ export class GeminiSmokeService {
       `Average total tokens per successful ad with complete usage: ${tokens.length ? (totalTokens/tokens.length).toFixed(1) : "unavailable"} (${tokens.length}/${successes.length} outputs).`,
       "A logical request reuses its budget reservation when Google explicitly rejects a retryable request with 5xx. A final confirmed rejection releases that hold; ambiguous timeouts retain their hold and require a new reservation before another dispatch. Historical unknown holds are not automatically cleared. Estimates are not invoices. Incomplete accounting gives a known subtotal. Per-ad tokens remain unavailable if any retry has unknown usage.",
       "A missing media URL does not prove expiration. HTTP 403 means blocked/forbidden; HTTP 410 means expired or removed. Images and carousels are valid creative types and do not count as failures merely because they are not video.", "", run.message || "", "",
+      "Confidence scores are uncalibrated model self-assessments, not accuracy probabilities. New outputs are not filtered by confidence. Calibrate against human labels before using a threshold; historical outputs may already reflect an earlier threshold.",
+      "New v2 spoken transcripts exclude sung lyrics and background music; historical transcripts remain unchanged. Lyric presence is separate from licensing: a music licence cannot be determined from audio alone. Comparative and superlative claim tags mark claims that may need substantiation (ASA); this is a review cue, not a legal finding.", "",
       "## Per-ad results", "", "| Ad ID | Format | Status | Model | Actual mode | Input tokens | Output tokens | Total tokens | Reserved GBP | Token estimate GBP | Actually billed GBP | Estimated exposure GBP | Source/failure category | Reason / HTTP |", "| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |",
       ...run.items.map(item => `| ${safe(item.nativeId)} | ${mediaLabel(item)}${item.imageCount ? ` (${item.imageCount} images)` : ""} | ${item.status} | ${safe(item.model || "unavailable")} | ${run.kind === "prepare" ? "no inference" : item.processingMode || run.requestedMode} | ${item.usage?.inputTokens ?? "unavailable"} | ${item.usage?.outputTokens ?? "unavailable"} | ${item.usage?.totalTokens ?? "unavailable"} | ${money(costAmount(item,"reservedCostGbp"))} | ${money(costAmount(item,"tokenCostGbp"))} | ${money(costAmount(item,"billedCostGbp"))} | ${money(item.estimatedCostGbp)} | ${category(item)} | ${safe(item.error || "")}${item.sourceHttpStatus ? ` (HTTP ${item.sourceHttpStatus})` : ""} |`),
+      "", "## Model, pricing and sampling audit", "",
+      "Default omits the provider resolution override; it does not assert a particular pixel or token budget. Low explicitly requests MEDIA_RESOLUTION_LOW. Pixel dimensions describe the retained source and normalized upload, not Gemini's internal frame resolution. Scheduled frames are estimated from duration and requested FPS; actual sampled frames stay unknown unless the provider explicitly returns a count. Video input tokens are the VIDEO modality count where returned, not total input tokens divided by a guessed per-frame rate.", "",
+      "| Ad ID | Requested model | Served model / revision | Priced model | Temperature; seed | Resolution request | Source → upload pixels | Requested FPS | Scheduled frames | Actual provider frames | Video input tokens | Pricing note |",
+      "| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |",
+      ...modelRows,
+      "", "## Creative taxonomy and audio audit", "",
+      "The creative format below uses the guide vocabulary; the per-ad results table records the media container (video, image or carousel). Free-text explanations, boolean tags and evidence remain in the full saved outputs.", "",
+      "| Ad ID | Creative format | Hook type | Angle | Offer type | Audio type | Lyrics present | Licensed music lyrics | Claim types / review flags |",
+      "| --- | --- | --- | --- | --- | --- | --- | --- | --- |", ...taxonomyRows,
       "", "## Sanitised Gemini diagnostics", "", "Provider messages are retained for debugging with credentials and sensitive URL values redacted. No raw request headers are logged.",
       ...run.items.filter(item => item.geminiDiagnostic).flatMap(item => ["", `### Gemini error for ad ${safe(item.nativeId)}`, "", "```json", JSON.stringify(item.geminiDiagnostic,null,2), "```"]),
       "", "## Source preparation attempts", "", "Prior errors remain recorded when a fresh snapshot later succeeds. Signed source URLs are never included.",
@@ -551,8 +608,7 @@ export class GeminiSmokeService {
     }
     for (const item of successes) if (samples.length < 5 && !samples.includes(item)) samples.push(item);
     for (const item of samples) {
-      const history = item.mediaKind === "image" || item.mediaKind === "carousel" ? this.images.history(item.brandId, item.adId) : this.video.history(item.brandId, item.adId);
-      const analysis = history.find(value => value.id === item.analysisId);
+      const analysis = analyses.get(item.analysisId!);
       sections.push("", `### Ad ${item.nativeId} (${item.mediaKind || "video"})`, "", "```json", JSON.stringify(analysis, null, 2), "```");
     }
     return sections.join("\n") + "\n";

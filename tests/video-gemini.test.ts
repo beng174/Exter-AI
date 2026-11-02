@@ -7,11 +7,21 @@ import { join } from "node:path";
 import { GeminiVideoAnalyser } from "../server/video/gemini.js";
 import { TwelveLabsPegasusAnalyser } from "../server/video/twelvelabs.js";
 import { VideoProviderError, type VideoAnalyserInput } from "../server/video/types.js";
+import { CREATIVE_BOOLEAN_TAGS } from "../shared/creative-taxonomy.js";
+import { resolveInferenceSettings } from "../shared/inference-config.js";
+import { geminiPricingConfig } from "../server/gemini/config.js";
 
 const SECRET = "unit-test-api-key-never-exposed";
 const HOST = "https://generativelanguage.googleapis.com";
 const file = { name: "files/test-video", uri: `${HOST}/v1beta/files/test-video`, state: "ACTIVE" };
-const fields = { hook: { value: "A reed diffuser gift is unboxed", confidence: 0.9, timestamps: [{ startSeconds: 0, endSeconds: 2 }] } };
+const field = <T extends string | boolean>(value: T) => ({ value, confidence: 0.9, timestamps: [{ startSeconds: 0, endSeconds: 2 }] });
+const fields = {
+  hook: field("A reed diffuser gift is unboxed"), hook_type: field("demo"), format: field("studio"),
+  angle: field("gifting"), angle_explanation: field("Gift set"), offer_type: field("bundle"), offer_explanation: field("Two diffusers"),
+  keyClaims: [], spokenTranscript: [], onScreenText: [], cta: field("Shop now"), personTalkingToCamera: field(false), creatorEvidence: [],
+  tags: Object.fromEntries(CREATIVE_BOOLEAN_TAGS.map(tag => [tag, field(false)])),
+  audio_type: field("silent"), music_lyrics_present: field(false), has_licensed_music_lyrics: field("unknown"), audio_segments: [],
+};
 const response = (value: unknown, status = 200, headers: Record<string, string> = {}) =>
   new Response(JSON.stringify(value), { status, headers: { "Content-Type": "application/json", ...headers } });
 async function input(durationSeconds = 12) {
@@ -73,6 +83,71 @@ const interactions = (calls: Call[]) => calls.filter((call) => call.url.pathname
 const staticGenerations = (calls: Call[]) => calls.filter(call => call.url.pathname.endsWith(":generateContent"));
 const deletions = (calls: Call[]) => calls.filter((call) => call.init.method === "DELETE");
 
+test("inference settings use a fixed seed and validate operator configuration", () => {
+  assert.deepEqual(resolveInferenceSettings({}, {}), { mediaResolution: "default", generationSeed: 42 });
+  assert.deepEqual(resolveInferenceSettings({}, { GEMINI_MEDIA_RESOLUTION: "low", GEMINI_GENERATION_SEED: "7" }), { mediaResolution: "low", generationSeed: 7 });
+  assert.deepEqual(resolveInferenceSettings({mediaResolution:"default",generationSeed:0}, { GEMINI_MEDIA_RESOLUTION:"low",GEMINI_GENERATION_SEED:"7" }), {mediaResolution:"default",generationSeed:0});
+  assert.throws(() => resolveInferenceSettings({}, { GEMINI_GENERATION_SEED:"NaN" }), /generation seed/);
+  assert.throws(() => resolveInferenceSettings({}, { GEMINI_MEDIA_RESOLUTION:"high" }), /media resolution/);
+  assert.throws(() => geminiPricingConfig("gemini-3.7-flash",{}, { GEMINI_MODEL_PRICING_GBP_JSON:"invalid" }), /JSON model-to-GBP-rate map/);
+  assert.throws(() => geminiPricingConfig("gemini-3.7-flash",{}, { GEMINI_MODEL_PRICING_GBP_JSON:'{"gemini-3.8-flash":{"inputGbpPerMillion":-1,"outputGbpPerMillion":2}}' }), /non-negative/);
+  assert.equal(geminiPricingConfig("gemini-3.8-flash",{}, {GEMINI_INPUT_GBP_PER_MILLION_TOKENS:"",GEMINI_OUTPUT_GBP_PER_MILLION_TOKENS:""}).resolve("gemini-3.8-flash").pricing,null,"blank rate variables must never imply a free request");
+});
+
+test("Static low resolution records actual served-model rates and distinguishes scheduled frames from provider observations", async () => {
+  const fixture = await input(); const settled:number[]=[];
+  const mock = transport(call => call.url.pathname.endsWith(":generateContent") ? response({
+    model:"gemini-3.7-flash",modelVersion:"gemini-3.8-flash",mediaResolution:"MEDIA_RESOLUTION_LOW",
+    usageMetadata:{promptTokenCount:1000,candidatesTokenCount:100,totalTokenCount:1100,promptTokensDetails:[{modality:"VIDEO",tokenCount:864},{modality:"TEXT",tokenCount:136}]},
+    candidates:[{finishReason:"STOP",content:{parts:[{text:JSON.stringify(fields)}]}}],
+  }) : undefined);
+  try {
+    const result=await analyser(mock.fetcher, {model:"gemini-3.7-flash",inputGbpPerMillion:10,outputGbpPerMillion:20,
+      modelPricingGbp:{"gemini-3.8-flash":{inputGbpPerMillion:1,outputGbpPerMillion:2}},
+      reserveCost:async()=>({reservationId:"served-reserve",reservedGbp:0.2}),settleCost:async(_id:string,cost:number)=>{settled.push(cost);},
+    }).analyse({...fixture.value,processingMode:"static-high-fps-hook",inferenceSettings:{mediaResolution:"low",generationSeed:123}});
+    const body=JSON.parse(String(staticGenerations(mock.calls)[0].init.body));
+    assert.equal(body.generationConfig.temperature,0);assert.equal(body.generationConfig.seed,123);assert.equal(body.generationConfig.mediaResolution,"MEDIA_RESOLUTION_LOW");
+    assert.equal(result.requestedModel,"gemini-3.7-flash");assert.equal(result.servedModel,"gemini-3.8-flash");assert.equal(result.model,"gemini-3.8-flash");assert.equal(result.modelVersion,"gemini-3.8-flash");
+    assert.deepEqual(result.generation,{temperature:0,seedRequested:123,seedApplied:true,mediaResolutionRequested:"low",mediaResolutionApplied:true,providerMediaResolution:"MEDIA_RESOLUTION_LOW"});
+    assert.deepEqual(result.sampling,{requestedFps:[3],estimatedFrames:36,actualFrames:null,videoInputTokens:864});
+    assert.equal(result.accounting?.pricing?.model,"gemini-3.8-flash");assert.equal(result.accounting?.pricing?.source,"model-pricing-map");
+    assert.equal(result.accounting?.tokenCostGbp,0.0012);assert.deepEqual(settled,[0.0012]);assert.equal(result.accounting?.billedCostGbp,null);
+  } finally {await fixture.cleanup();}
+});
+
+test("a served-model mismatch without matching GBP rates keeps its hold rather than applying the requested-model price", async () => {
+  const fixture=await input();let settles=0;
+  const mock=transport(call=>call.url.pathname.endsWith(":generateContent")?response({modelVersion:"gemini-3.8-flash",usageMetadata:{promptTokenCount:100,candidatesTokenCount:25},candidates:[{content:{parts:[{text:JSON.stringify(fields)}]}}]}):undefined);
+  try {
+    const result=await analyser(mock.fetcher,{model:"gemini-3.7-flash",inputGbpPerMillion:1,outputGbpPerMillion:2,
+      reserveCost:async()=>({reservationId:"unknown-model-rate",reservedGbp:0.2}),settleCost:async()=>{settles++;},
+    }).analyse({...fixture.value,processingMode:"static-high-fps-hook"});
+    assert.equal(result.servedModel,"gemini-3.8-flash");assert.equal(result.requestedModel,"gemini-3.7-flash");assert.equal(settles,0);
+    assert.equal(result.accounting?.pricing,null);assert.equal(result.accounting?.tokenCostGbp,null);assert.equal(result.accounting?.reservedCostGbp,0.2);assert.equal(result.accounting?.estimatedCostGbp,0.2);
+    assert.match(result.accounting?.pricingReason??"",/differs from pricing model gemini-3.7-flash/);
+  } finally {await fixture.cleanup();}
+});
+
+test("Agentic preview rejects unsupported explicit low resolution before upload or budget reservation", async () => {
+  const fixture=await input();const mock=transport();let reserves=0;
+  try {
+    await assert.rejects(analyser(mock.fetcher,{reserveCost:async()=>{reserves++;return undefined;}}).analyse({...fixture.value,mediaResolution:"low"}),(error:unknown)=>error instanceof VideoProviderError&&error.code==="unsupported_mode"&&/no inference was dispatched/.test(error.message));
+    assert.equal(mock.calls.length,0);assert.equal(reserves,0);
+  } finally {await fixture.cleanup();}
+});
+
+test("model metadata alone cannot establish or price the model that served a generation",async()=>{
+  const fixture=await input();let settles=0;
+  const mock=transport(call=>call.url.pathname.endsWith(":generateContent")?response({usageMetadata:{promptTokenCount:100,candidatesTokenCount:25},candidates:[{content:{parts:[{text:JSON.stringify(fields)}]}}]}):undefined);
+  try{
+    const result=await analyser(mock.fetcher,{inputGbpPerMillion:1,outputGbpPerMillion:2,reserveCost:async()=>({reservationId:"unknown-served-model",reservedGbp:0.2}),settleCost:async()=>{settles++;}}).analyse({...fixture.value,processingMode:"static-high-fps-hook"});
+    assert.equal(result.model,"gemini-3.8-flash","legacy display retains the model metadata name");
+    assert.equal(result.servedModel,undefined);assert.equal(result.modelVersion,null);assert.equal(settles,0);
+    assert.equal(result.accounting?.tokenCostGbp,null);assert.equal(result.accounting?.reservedCostGbp,0.2);assert.match(result.accounting?.pricingReason??"",/has not reported the served model/);
+  }finally{await fixture.cleanup();}
+});
+
 test("Gemini uploads retained video and performs one genuine agentic Interactions request with version metadata", async () => {
   const fixture = await input();
   const mock = transport();
@@ -81,7 +156,7 @@ test("Gemini uploads retained video and performs one genuine agentic Interaction
     assert.deepEqual(result.fields, fields);
     assert.equal(result.providerRequestId, "interaction-one");
     assert.equal(result.model, "gemini-3.8-flash");
-    assert.equal(result.modelVersion, "3.8");
+    assert.equal(result.modelVersion, null, "model metadata is not a generation-serving revision");
     assert.equal(result.processingMode, "agentic");
     assert.match(result.promptVersion, /native-video/);
     assert.equal(interactions(mock.calls).length, 1);
@@ -92,6 +167,9 @@ test("Gemini uploads retained video and performs one genuine agentic Interaction
     assert.ok(body.response_format.schema);
     assert.equal(body.store, false);
     assert.equal(body.background, false);
+    assert.equal(body.generation_config.temperature, 0);
+    assert.equal("seed" in body.generation_config, false);
+    assert.equal(result.generation?.seedApplied, false, "preview Interactions does not support the fixed seed control");
     assert.ok(!String(interactions(mock.calls)[0].init.body).includes(fixture.value.media.sourceUrl));
     assert.equal(new Headers(interactions(mock.calls)[0].init.headers).get("x-goog-api-key"), SECRET);
     assert.equal(deletions(mock.calls).length, 1);
@@ -109,6 +187,12 @@ test("Static mode uses stable GenerateContent with 3 FPS throughout short ads an
     assert.ok(body.contents[0].parts[0].fileData.fileUri === file.uri);
     assert.ok(!JSON.stringify(body).toLowerCase().includes('agentic'));
     assert.equal(body.generationConfig.responseMimeType,"application/json");
+    assert.equal(body.generationConfig.temperature, 0);
+    assert.equal(body.generationConfig.seed, 42);
+    assert.equal("mediaResolution" in body.generationConfig, false, "default means the provider default is omitted");
+    assert.equal(result.generation?.seedApplied, true);
+    assert.equal(result.generation?.providerMediaResolution, null);
+    assert.deepEqual(result.sampling, { requestedFps:[3], estimatedFrames:36, actualFrames:null, videoInputTokens:null });
     assert.equal(result.processingMode,"static-high-fps-hook"); assert.equal(result.coverage.fullVideo,true);
     assert.deepEqual(result.fields,fields);
     for (const duration of [2.5,61]) {
@@ -229,7 +313,7 @@ test("explicit transient rejections reuse one reservation and settle the success
   let generationAttempts = 0, reservationCount = 0;
   const settlements: { id: string; value: number }[] = [];
   const sleeps: number[] = [];
-  const payload = { id: "accounting-result", status: "completed", model: "gemini-3.8-flash", usage: { total_input_tokens: 1200, total_output_tokens: 300, total_tokens: 1500 }, outputs: [{ type: "text", text: JSON.stringify({ ...fields, echoed: SECRET }) }], echoedHeader: SECRET };
+  const payload = { id: "accounting-result", status: "completed", model: "gemini-3.8-flash", usage: { total_input_tokens: 1200, total_output_tokens: 300, total_tokens: 1500 }, outputs: [{ type: "text", text: JSON.stringify(fields) }], echoedHeader: SECRET };
   const mock = transport(call => {
     if (call.url.pathname !== "/v1beta/interactions") return;
     generationAttempts++;
@@ -286,7 +370,7 @@ test("budget pause stops an ambiguous timeout retry while allowing temporary fil
 test("invalid structured output retains sanitised raw response and billed usage for the failed ad", async () => {
   const fixture = await input();
   const mock = transport(call => call.url.pathname === "/v1beta/interactions"
-    ? response({ status: "completed", usage: { total_input_tokens: 100, total_output_tokens: 50 }, outputs: [{ type: "text", text: `not JSON ${SECRET}` }] }) : undefined);
+    ? response({ status: "completed", model:"gemini-3.8-flash", usage: { total_input_tokens: 100, total_output_tokens: 50 }, outputs: [{ type: "text", text: `not JSON ${SECRET}` }] }) : undefined);
   try {
     await assert.rejects(analyser(mock.fetcher, { inputGbpPerMillion: 1, outputGbpPerMillion: 2 }).analyse(fixture.value), (error: unknown) => {
       assert.ok(error instanceof VideoProviderError);
@@ -320,7 +404,7 @@ test("failed ledger settlement counts one successful attempt once using the larg
     ]) {
       let settlements = 0;
       const mock = transport(call => call.url.pathname === "/v1beta/interactions"
-        ? response({ status: "completed", usage: { total_input_tokens: inputTokens, total_output_tokens: outputTokens }, outputs: [{ type: "text", text: JSON.stringify(fields) }] }) : undefined);
+        ? response({ status: "completed", model:"gemini-3.8-flash", usage: { total_input_tokens: inputTokens, total_output_tokens: outputTokens }, outputs: [{ type: "text", text: JSON.stringify(fields) }] }) : undefined);
       const result = await analyser(mock.fetcher, {
         inputGbpPerMillion: 1, outputGbpPerMillion: 2,
         reserveCost: async () => ({ reservationId: "retained-reserve", reservedGbp: 0.2 }),

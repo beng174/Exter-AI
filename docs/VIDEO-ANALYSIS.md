@@ -14,7 +14,11 @@ Install Node.js 24+, project dependencies and `ffmpeg`/`ffprobe`. Set `GEMINI_AP
 - `GEMINI_MAX_RETRIES`: extra attempts after 429/5xx responses or timeouts; default `2`, allowed range `0–5`.
 - `GEMINI_INPUT_GBP_PER_MILLION_TOKENS`, `GEMINI_OUTPUT_GBP_PER_MILLION_TOKENS`: positive GBP prices for the selected model. Set current paid-tier prices converted to GBP; no provider price is guessed.
 - `GEMINI_REQUEST_RESERVE_GBP`: conservative hold before inference. Explicit rejection retries reuse it; ambiguous timeout retries need separate holds. Production inference also requires `DATABASE_URL` and an enabled monthly inference budget.
-- `EXTER_VIDEO_CONFIDENCE`: confidence threshold; default `0.75`.
+- `GEMINI_PRICING_MODEL`: exact served model to which the two configured rates apply; defaults to the requested model. A requested/served alias mismatch does not reuse the wrong rates.
+- `GEMINI_MODEL_PRICING_GBP_JSON`: optional exact served-model rate map, with entries shaped `{ "model-id": { "inputGbpPerMillion": N, "outputGbpPerMillion": N } }`. Supply current prices converted to GBP; no rates or pinned model IDs are invented. If no matching served-model prices exist, the token estimate stays unavailable and the reservation remains held.
+- `GEMINI_GENERATION_SEED`: fixed seed for stable GenerateContent, default `42`. Agentic preview omits this unsupported setting and records that it was not applied. Temperature is always `0`; neither setting guarantees byte-identical responses.
+- `GEMINI_MEDIA_RESOLUTION`: default `default`, or `low`; the hosted selector overrides it per run. Default omits Google's resolution override, while Low sends `MEDIA_RESOLUTION_LOW`. Low requires Static; unsupported Agentic controls fail before inference.
+- `EXTER_VIDEO_CONFIDENCE`: obsolete; new analyses never use a confidence threshold. Existing values may remain in the environment without affecting new results.
 - `EXTER_MEDIA_ROOT`: persistent video directory; default `.data/media`.
 - `EXTER_MEDIA_ALLOWED_HOSTS`: comma-separated public media-host allowlist; default `*.fbcdn.net`. Add an actual source host when integrating another platform.
 - `EXTER_DB_PATH`: persistent SQLite path; default `.data/exter.db`.
@@ -55,24 +59,28 @@ ffprobe checks the source encoding before upload. Compatible MP4/H.264/yuv420p
 with AAC audio (or no audio) passes unchanged. Other supported inputs are converted
 locally with ffmpeg to MP4/H.264/AAC. Original retained bytes and their SHA remain
 unchanged; an immutable verified derivative is cached, with both source/upload
-hashes, sizes and codecs saved as normalization provenance. Conversion failure,
+hashes, sizes, source/upload pixel dimensions, FPS and codecs saved as normalization provenance. Conversion failure,
 truncation or checksum mismatch prevents paid dispatch.
 
 The returned fields are:
 
 - Hook description, restricted to seconds 0–3.
-- Format: `UGC`, `founder-led`, `studio`, `animation`, `mixed` or `unknown`.
-- Angle, advertiser key claims, spoken transcript segments and on-screen text segments.
+- Format: `UGC`, `founder-led`, `studio`, `animation`, `mixed`, `static` or `unsure`, from the same registry as the human labelling tool and [guide](../research/LABELLING-GUIDE.md). A carousel is a media container; its creative format is `static`.
+- Fixed `hook_type`, `angle` and `offer_type`, with free-text hook/angle/offer explanations and evidence; boolean urgency, social proof, review, provenance, values, price and discount tags.
+- Advertiser claims with `claim_type` tags. Comparative and superlative claims receive the server-derived review note **may need substantiation (ASA)**. This is not a legal determination.
+- Spoken transcript and on-screen text segments. `audio_type`, `music_lyrics_present` and typed `audio_segments` distinguish narration/on-camera speech from sung lyrics and instrumental music. Sung lyrics never enter the spoken transcript. `has_licensed_music_lyrics` stays unknown without trusted licensing evidence; audibility alone does not prove rights.
 - CTA and whether a person talks to camera (`true`, `false` or `unknown`).
 - Creator evidence: exact partnership-label or visible third-party handle, source and available timestamps.
 
-Each scalar field and each list item carries a confidence estimate and supporting timestamp ranges. Low-confidence or unsupported observations become `unknown`; missing fields do not become fabricated negative observations. Claims are what the advertiser said, not independently verified product facts. Confidence scores are model estimates and need empirical validation.
+Each scalar field and each list item carries a confidence estimate and supporting timestamp ranges. Scores are uncalibrated self-assessments, not accuracy probabilities, and never filter new outputs. Unsupported observations become `unknown`; missing fields do not become fabricated negative observations. Evidence validation still applies. Claims are what the advertiser said, not independently verified product facts. Calibrate confidence against human labels before using it for selection.
+
+Saved generation metadata records temperature, requested/applied seed, requested/provider-reported resolution, and per-video sampling. Duration × requested FPS gives an explicitly estimated scheduled frame count, not Google's observed sample count. Actual provider frame counts and VIDEO-modality tokens remain null when not returned; total tokens divided by an assumed rate cannot establish resolution. The report separates source/upload dimensions from internal provider resolution. Compare Low and Default on the same labelled media and taxonomy; each configuration has a distinct cache identity and evaluation group.
 
 A casual visual style, first-person voice or person talking to camera does not establish UGC or influencer origin. A UGC label requires recorded paid-partnership/creator-handle evidence. The brand's own handle is excluded. External ad-library evidence must match source-verified context; a model cannot manufacture it. Founder identity must come from explicit source information rather than facial identification.
 
 ## Versioned history and reruns
 
-Each saved analysis identifies its ad/workspace, retained media ID and SHA-256, provider, requested model, provider-reported model, provider-reported model version, processing mode, prompt version, creation time, confidence threshold and covered intervals. Unknown provider versions remain `null`; an unpinned model alias is not represented as an immutable model revision. Retain original predictions when changing models or prompts so comparisons use the same media.
+Each saved analysis identifies its ad/workspace, retained media ID and SHA-256, provider, requested model, served model/revision, priced model, processing mode, prompt version, generation settings, creation time, uncalibrated confidence policy and covered intervals. Unknown provider versions remain `null`; an unpinned model alias is not represented as an immutable model revision. Use an exact pinned model ID only if Google actually publishes/supports it for your project. Otherwise served-model pricing and metadata remain explicit. Retain original predictions when changing models or prompts so comparisons use the same media; historical outputs and human labels are not rewritten.
 
 The analysis and each job attempt also retain `accounting`: sanitised raw provider response, input/output/total tokens, model prices, token-based GBP estimate, conservative reserves for unknown retry charges, combined estimated cost and generation-attempt count. Missing token counts remain `null`. Failed field validation preserves the raw response and accounting in the job. Known token estimates settle their hold; explicit rejected requests release it, while ambiguous attempts keep their hold. Outstanding reservations, token estimates and provider-confirmed billing are separate fields. No billing feed is connected, so billed cost is null/unavailable, never a token estimate or assumed zero. If ledger settlement is unavailable, the larger existing reserve remains until reconciled.
 
@@ -113,6 +121,7 @@ Available options:
 | `--download-only` | Retain and verify media without calling the model. |
 | `--provider gemini\|twelvelabs` | Select Gemini or the explicit, non-operational Pegasus stub. Default: Gemini. |
 | `--mode agentic\|static-high-fps-hook` | Select the video mode. Default: Static (`static-high-fps-hook`); Agentic preview requires explicit `--mode agentic`. |
+| `--resolution default\|low` | Select the provider media-resolution request. Low requires Static. |
 | `--force` | Create a new inference run instead of reusing a matching saved result; prior runs remain. It does not force a new source download. |
 | `--output PATH` | Save JSON output; analysis output contains a `predictions` array suitable for the evaluator. |
 | `--recover-interrupted` | Mark unfinished jobs interrupted before proceeding. Use only when this process owns the worker and another worker is not running. |

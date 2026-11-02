@@ -95,8 +95,9 @@ export class GeminiSession {
   }
   setRawResponse(value: unknown) { this.raw = sanitiseGeminiValue(value, this.options.apiKey); }
   setUsage(value: VideoAnalysisAccounting["usage"]) { this.usage = value; }
-  async settle(inputGbpPerMillion: number, outputGbpPerMillion: number) {
-    if (!Number.isFinite(inputGbpPerMillion) || inputGbpPerMillion <= 0 || !Number.isFinite(outputGbpPerMillion) || outputGbpPerMillion <= 0 || this.usage.inputTokens === null || this.usage.outputTokens === null) return;
+  async settle(pricing: NonNullable<VideoAnalysisAccounting["pricing"]>) {
+    const { inputGbpPerMillion, outputGbpPerMillion } = pricing;
+    if (!Number.isFinite(inputGbpPerMillion) || inputGbpPerMillion < 0 || !Number.isFinite(outputGbpPerMillion) || outputGbpPerMillion < 0 || this.usage.inputTokens === null || this.usage.outputTokens === null) return;
     this.tokenCost = (this.usage.inputTokens * inputGbpPerMillion + this.usage.outputTokens * outputGbpPerMillion) / 1_000_000;
     if (this.active) {
       this.priced = this.active.reservationId;
@@ -106,7 +107,7 @@ export class GeminiSession {
       } catch { /* Keep the hold if the ledger cannot confirm settlement. */ }
     }
   }
-  accounting(pricing: VideoAnalysisAccounting["pricing"]): VideoAnalysisAccounting {
+  accounting(pricing: VideoAnalysisAccounting["pricing"], pricingReason?: string): VideoAnalysisAccounting {
     const remaining = this.holds.filter(hold => hold.reservationId !== this.settled && !this.released.has(hold.reservationId));
     const reservedCostGbp = this.holds.length ? remaining.reduce((sum, hold) => sum + hold.reservedGbp, 0) : null;
     const currentPriced = remaining.find(hold => hold.reservationId === this.priced)?.reservedGbp || 0;
@@ -114,7 +115,7 @@ export class GeminiSession {
     return { usage: this.usage, tokenCostGbp: this.tokenCost, reservedCostGbp,
       estimatedCostGbp: this.tokenCost === null ? reservedCostGbp : earlier + Math.max(this.tokenCost, currentPriced),
       costBasis: this.tokenCost !== null ? reservedCostGbp ? "token_and_reservation_estimate" : "token_estimate" : reservedCostGbp !== null ? "reservation_estimate" : "unavailable",
-      pricing, requestAttempts: this.attempts, retryAttempts: Math.max(0, this.attempts - 1), rejectedAttempts: this.rejected,
+      pricing, ...(pricingReason ? { pricingReason } : {}), requestAttempts: this.attempts, retryAttempts: Math.max(0, this.attempts - 1), rejectedAttempts: this.rejected,
       initialReservedCostGbp: this.holds.length ? this.holds.reduce((sum, hold) => sum + hold.reservedGbp, 0) : null,
       billedCostGbp: null, ...(this.raw !== undefined ? { rawResponse: this.raw } : {}) };
   }

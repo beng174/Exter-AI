@@ -1,11 +1,14 @@
 import type { GeminiReservation } from "../infrastructure/budget.js";
 import { GeminiSession } from "../gemini/transport.js";
+import { geminiPricingConfig, generationMetadata, servedGeminiModel, videoSamplingMetadata, type GeminiPricingOptions } from "../gemini/config.js";
+import { resolveInferenceSettings } from "../../shared/inference-config.js";
 import { createHash } from "node:crypto";
 import { createReadStream } from "node:fs";
 import { lstat } from "node:fs/promises";
 import { assertProxySupport } from "../connectors/http.js";
 import { VIDEO_PROMPT_VERSION, type VideoAnalysisAccounting, type VideoCoverage } from "../../shared/video-analysis.js";
 import { buildVideoPrompt, VIDEO_RESPONSE_JSON_SCHEMA } from "./prompt.js";
+import { assertVideoAnalysisV2 } from "./validation.js";
 import {
   VideoProviderError,
   type VideoAnalyser,
@@ -17,7 +20,7 @@ const HOST = "generativelanguage.googleapis.com";
 const API = `https://${HOST}`;
 export const DEFAULT_GEMINI_VIDEO_MODEL = "gemini-3.8-flash";
 
-export interface GeminiVideoOptions {
+export interface GeminiVideoOptions extends GeminiPricingOptions {
   apiKey?: string;
   model?: string;
   fetch?: typeof fetch;
@@ -146,19 +149,19 @@ export class GeminiVideoAnalyser implements VideoAnalyser {
       throw new VideoProviderError("configuration", "Gemini timeout or polling configuration is invalid.");
   }
 
-  private pricing(): VideoAnalysisAccounting["pricing"] {
-    const input = this.options.inputGbpPerMillion ?? Number(process.env.GEMINI_INPUT_GBP_PER_MILLION_TOKENS);
-    const output = this.options.outputGbpPerMillion ?? Number(process.env.GEMINI_OUTPUT_GBP_PER_MILLION_TOKENS);
-    return Number.isFinite(input) && input > 0 && Number.isFinite(output) && output > 0
-      ? { inputGbpPerMillion: input, outputGbpPerMillion: output } : null;
-  }
-
   async analyse(input: VideoAnalyserInput): Promise<VideoProviderResult> {
     const key = this.options.apiKey ?? process.env.GEMINI_API_KEY;
     if (!key?.trim() || /[\r\n]/.test(key))
       throw new VideoProviderError("configuration", "Set GEMINI_API_KEY in the server's secret configuration before running video analysis.");
     if (!["agentic", "static-high-fps-hook"].includes(input.processingMode))
       throw new VideoProviderError("configuration", "Unsupported video processing mode.");
+    let settings;
+    try { settings = resolveInferenceSettings(input.inferenceSettings ?? { mediaResolution: input.mediaResolution }); }
+    catch (error) { throw new VideoProviderError("configuration", error instanceof Error ? error.message : "Gemini inference settings are invalid."); }
+    if (input.processingMode === "agentic" && settings.mediaResolution === "low")
+      throw new VideoProviderError("unsupported_mode", "Low media resolution is supported by Static GenerateContent. Choose Static or provider-default resolution before using Agentic preview; no inference was dispatched.");
+    const pricingConfig = geminiPricingConfig(this.model, this.options);
+    let pricingResult = pricingConfig.resolve(null);
     if (input.media.sourceAdId !== input.adId || input.media.brandId !== input.brandId)
       throw new VideoProviderError("configuration", "Stored media belongs to another ad or workspace.");
     if (!Number.isFinite(input.media.durationSeconds) || input.media.durationSeconds <= 0 ||
@@ -183,7 +186,6 @@ export class GeminiVideoAnalyser implements VideoAnalyser {
     try {
       const modelInfo = await session.json(new URL(`${API}/v1beta/models/${this.model}`), { headers: authorization }, { stage: "model_metadata", signal: input.signal });
       const resolvedModel = text(modelInfo.name)?.replace(/^models\//, "") || this.model;
-      const version = text(modelInfo.version);
       const uploadStart = await session.request(new URL(`${API}/upload/v1beta/files`), {
         method: "POST",
         headers: {
@@ -252,15 +254,18 @@ export class GeminiVideoAnalyser implements VideoAnalyser {
         output = await session.json(new URL(`${API}/v1beta/models/${this.model}:generateContent`), {
           method: "POST", headers: { ...authorization, "Content-Type": "application/json" },
           body: JSON.stringify({ contents: [{ role: "user", parts: [...parts, { text: buildVideoPrompt(input, coverage) }] }],
-            generationConfig: { temperature: 0, maxOutputTokens: 16384, responseMimeType: "application/json", responseJsonSchema: VIDEO_RESPONSE_JSON_SCHEMA } }),
+            generationConfig: { temperature: 0, seed: settings.generationSeed,
+              ...(settings.mediaResolution === "low" ? { mediaResolution: "MEDIA_RESOLUTION_LOW" } : {}),
+              maxOutputTokens: 16384, responseMimeType: "application/json", responseJsonSchema: VIDEO_RESPONSE_JSON_SCHEMA } }),
         }, { stage: "static_generation", billable: true, signal: input.signal, beforeAttempt: awaitActive,
           onRaw: raw => session.setRawResponse({ unparsedText: raw }) });
       }
       // Preserve response/accounting even when structured field validation fails.
       session.setRawResponse(output);
       session.setUsage(usageOf(output));
-      const pricing = this.pricing();
-      if (pricing) await session.settle(pricing.inputGbpPerMillion, pricing.outputGbpPerMillion);
+      const servedModel = servedGeminiModel(output);
+      pricingResult = pricingConfig.resolve(servedModel);
+      if (pricingResult.pricing) await session.settle(pricingResult.pricing);
       let outputText = "";
       if (input.processingMode === "agentic") {
         if (output.status !== "completed") throw new VideoProviderError("invalid_output", "Gemini did not complete the structured video analysis.");
@@ -276,22 +281,28 @@ export class GeminiVideoAnalyser implements VideoAnalyser {
       let fields: unknown;
       try { fields = JSON.parse(outputText); }
       catch { throw new VideoProviderError("invalid_output", "Gemini did not return the required structured video JSON."); }
+      assertVideoAnalysisV2(fields);
       return {
         fields,
-        model: text(output.model) || text(output.modelVersion) || resolvedModel,
-        modelVersion: text(output.model_version) || text(output.modelVersion) || version,
+        model: servedModel || resolvedModel,
+        requestedModel: this.model,
+        ...(servedModel ? { servedModel } : {}),
+        modelVersion: text(output.model_version) || text(output.modelVersion),
         processingMode: input.processingMode,
         promptVersion: VIDEO_PROMPT_VERSION,
         coverage,
-        accounting: session.accounting(this.pricing()),
+        inferenceSettings: settings,
+        generation: generationMetadata(settings, output, input.processingMode === "agentic"),
+        sampling: videoSamplingMetadata(coverage, output),
+        accounting: session.accounting(pricingResult.pricing, pricingResult.pricingReason),
         ...(text(output.id, 500) ? { providerRequestId: output.id } : {}),
       };
     } catch (error) {
       if (error instanceof VideoProviderError) {
-        error.accounting = session.accounting(this.pricing());
+        error.accounting = session.accounting(pricingResult.pricing, pricingResult.pricingReason);
         throw error;
       }
-      throw new VideoProviderError("unavailable", "Gemini video analysis failed; retained media and earlier results were preserved.", session.accounting(this.pricing()));
+      throw new VideoProviderError("unavailable", "Gemini video analysis failed; retained media and earlier results were preserved.", session.accounting(pricingResult.pricing, pricingResult.pricingReason));
     } finally {
       if (uploadedName) {
         try {

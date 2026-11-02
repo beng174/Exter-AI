@@ -14,6 +14,8 @@ const HASH = /^[a-f0-9]{64}$/;
 const DEFAULT_MAX_BYTES = 250 * 1024 * 1024;
 interface Encoding {
   durationSeconds: number;
+  width: number;
+  height: number;
   videoCodec: string;
   audioCodec: string | null;
   pixelFormat: string;
@@ -29,6 +31,9 @@ interface CachedEncoding {
   uploadBytes: number;
   durationSeconds: number;
   audioCodec: "aac" | null;
+  uploadWidth: number;
+  uploadHeight: number;
+  uploadFps: number | null;
 }
 export interface PreparedGeminiVideo { media: StoredVideo; normalization?: VideoNormalization }
 export interface VideoNormalizationOptions {
@@ -64,10 +69,12 @@ async function probe(path: string): Promise<Encoding> {
     const durationSeconds = Number(info.format?.duration);
     const video = videos[0];
     if (!video || !Number.isFinite(durationSeconds) || durationSeconds <= 0 || durationSeconds > 601 || !Number.isInteger(video.width) || video.width <= 0 || !Number.isInteger(video.height) || video.height <= 0 || video.width * video.height > 40_000_000) throw new Error();
-    const [rateNumerator, rateDenominator] = String(video.avg_frame_rate || video.r_frame_rate || "0/0").split("/").map(Number);
-    const rate = rateNumerator / rateDenominator;
-    const frameRate = Number.isFinite(rate) && rate > 0 ? rate : null;
-    return { durationSeconds, frameRate, videoCodec: video.codec_name || "unknown", pixelFormat: video.pix_fmt || "unknown", audioCodec: audios[0]?.codec_name || null, mp4: String(info.format?.format_name || "").split(",").includes("mp4"), videoTracks: videos.length, audioTracks: audios.length };
+    const rates = [video.avg_frame_rate, video.r_frame_rate].map(value => {
+      const [numerator, denominator] = String(value || "0/0").split("/").map(Number);
+      return numerator / denominator;
+    });
+    const frameRate = rates.find(rate => Number.isFinite(rate) && rate > 0) ?? null;
+    return { durationSeconds, width: video.width, height: video.height, frameRate, videoCodec: video.codec_name || "unknown", pixelFormat: video.pix_fmt || "unknown", audioCodec: audios[0]?.codec_name || null, mp4: String(info.format?.format_name || "").split(",").includes("mp4"), videoTracks: videos.length, audioTracks: audios.length };
   } catch {
     throw new MediaStorageError("The stored video has unsupported dimensions, duration or stream metadata.", 422, "media_normalization_invalid");
   }
@@ -84,7 +91,9 @@ async function cached(path: string, manifestPath: string, media: StoredVideo, ma
     if (actual.sha256 !== metadata.uploadSha256 || actual.bytes !== metadata.uploadBytes) throw new Error();
     const encoding = await probe(path);
     if (!compatible(encoding) || Math.abs(encoding.durationSeconds - metadata.durationSeconds) > 0.05 || Math.abs(encoding.durationSeconds - media.durationSeconds) > durationTolerance || encoding.audioCodec !== metadata.audioCodec) throw new Error();
-    return metadata;
+    // Probe every reused derivative. Old manifests need not be rewritten to
+    // obtain trustworthy dimensions and frame rate for new analysis records.
+    return { ...metadata, uploadWidth: encoding.width, uploadHeight: encoding.height, uploadFps: encoding.frameRate };
   } catch (error) {
     if ((error as NodeJS.ErrnoException).code === "ENOENT") return null;
     if (error instanceof MediaStorageError) throw error;
@@ -109,7 +118,7 @@ async function transcode(media: StoredVideo, path: string, manifestPath: string,
     const digest = await checksum(temporary, maxBytes);
     if (!compatible(encoding) || Math.abs(encoding.durationSeconds - media.durationSeconds) > durationTolerance)
       throw new MediaStorageError("Normalized video did not preserve a playable complete ad. No Gemini inference was started.", 422, "media_normalization_invalid");
-    const metadata: CachedEncoding = { version: VERSION, originalSha256: media.sha256, uploadSha256: digest.sha256, uploadBytes: digest.bytes, durationSeconds: encoding.durationSeconds, audioCodec: encoding.audioCodec as "aac" | null };
+    const metadata: CachedEncoding = { version: VERSION, originalSha256: media.sha256, uploadSha256: digest.sha256, uploadBytes: digest.bytes, durationSeconds: encoding.durationSeconds, audioCodec: encoding.audioCodec as "aac" | null, uploadWidth: encoding.width, uploadHeight: encoding.height, uploadFps: encoding.frameRate };
     try { await link(temporary, path); }
     catch (error) {
       if ((error as NodeJS.ErrnoException).code !== "EEXIST") throw error;
@@ -140,7 +149,7 @@ export async function prepareGeminiVideo(media: StoredVideo, options: VideoNorma
   if (Math.abs(encoding.durationSeconds - media.durationSeconds) > durationTolerance)
     throw new MediaStorageError("The retained source duration changed before normalization.", 409, "media_corrupt");
   if (media.mimeType === "video/mp4" && compatible(encoding)) {
-    return { media, normalization: { version: VERSION, applied: false, originalSha256: media.sha256, uploadSha256: media.sha256, originalMimeType: media.mimeType, uploadMimeType: "video/mp4", originalBytes: media.bytes, uploadBytes: media.bytes, videoCodec: "h264", audioCodec: encoding.audioCodec as "aac" | null, pixelFormat: "yuv420p", durationSeconds: media.durationSeconds } };
+    return { media, normalization: { version: VERSION, applied: false, originalSha256: media.sha256, uploadSha256: media.sha256, originalMimeType: media.mimeType, uploadMimeType: "video/mp4", originalBytes: media.bytes, uploadBytes: media.bytes, originalWidth: encoding.width, originalHeight: encoding.height, originalFps: encoding.frameRate, uploadWidth: encoding.width, uploadHeight: encoding.height, uploadFps: encoding.frameRate, videoCodec: "h264", audioCodec: encoding.audioCodec as "aac" | null, pixelFormat: "yuv420p", durationSeconds: media.durationSeconds } };
   }
   const root = resolve(options.root || process.env.MEDIA_STORAGE_PATH || process.env.EXTER_MEDIA_ROOT || ".data/media", "normalized-videos", VERSION);
   const path = resolve(root, `${media.sha256}.mp4`);
@@ -156,6 +165,6 @@ export async function prepareGeminiVideo(media: StoredVideo, options: VideoNorma
     }
     normalized = await pending;
   }
-  const normalization: VideoNormalization = { version: VERSION, applied: true, originalSha256: media.sha256, uploadSha256: normalized.uploadSha256, originalMimeType: media.mimeType, uploadMimeType: "video/mp4", originalBytes: media.bytes, uploadBytes: normalized.uploadBytes, videoCodec: "h264", audioCodec: normalized.audioCodec, pixelFormat: "yuv420p", durationSeconds: normalized.durationSeconds };
+  const normalization: VideoNormalization = { version: VERSION, applied: true, originalSha256: media.sha256, uploadSha256: normalized.uploadSha256, originalMimeType: media.mimeType, uploadMimeType: "video/mp4", originalBytes: media.bytes, uploadBytes: normalized.uploadBytes, originalWidth: encoding.width, originalHeight: encoding.height, originalFps: encoding.frameRate, uploadWidth: normalized.uploadWidth, uploadHeight: normalized.uploadHeight, uploadFps: normalized.uploadFps, videoCodec: "h264", audioCodec: normalized.audioCodec, pixelFormat: "yuv420p", durationSeconds: normalized.durationSeconds };
   return { media: { ...media, absolutePath: path, relativePath: `normalized-videos/${VERSION}/${media.sha256}.mp4`, sha256: normalized.uploadSha256, bytes: normalized.uploadBytes, mimeType: "video/mp4", durationSeconds: normalized.durationSeconds }, normalization };
 }

@@ -9,6 +9,7 @@ import {
 } from "../shared/formats";
 import { answerResearchQuestion } from "../shared/research";
 import { analyzeRecords } from "../shared/analytics";
+import type { VideoAnalysisResult } from "../shared/video-analysis";
 
 const brand: Brand = {
   id: "test",
@@ -89,6 +90,20 @@ test("creative formats are explicitly annotated multi-label styles, distinct fro
     classifyCreativeFormats(row("explicit", "Meta", ["UGC", "reviews"])),
     ["UGC", "Reviews & testimonials"],
   );
+});
+
+test("native format evidence is retained at uncalibrated low confidence while UGC still requires creator provenance", () => {
+  const native = { confidenceThreshold: 0.95, fields: { format: { value: "studio", confidence: 0.1, timestamps: [{ startSeconds: 0, endSeconds: 2 }] }, creatorEvidence: [] } } as unknown as VideoAnalysisResult;
+  assert.deepEqual(classifyCreativeFormats(row("native", "Meta", [], { videoAnalysis: native })), ["Studio"]);
+  const ugc = { ...native, fields: { ...native.fields, format: { ...native.fields.format, value: "UGC" as const } } };
+  assert.deepEqual(classifyCreativeFormats(row("unsupported", "Meta", ["UGC"], { videoAnalysis: ugc })), ["Unclassified"]);
+  const supported = { ...ugc, fields: { ...ugc.fields, creatorEvidence: [{ kind: "visible-creator-handle" as const, source: "video" as const,
+    value: "@independent_creator", confidence: 0.01, timestamps: [{ startSeconds: 1, endSeconds: 2 }] }] } };
+  assert.deepEqual(classifyCreativeFormats(row("supported", "Meta", [], { videoAnalysis: supported })), ["UGC"]);
+  const missingTiming = { ...supported, fields: { ...supported.fields, creatorEvidence: [{ ...supported.fields.creatorEvidence[0], timestamps: [] }] } };
+  assert.deepEqual(classifyCreativeFormats(row("missing-proof", "Meta", [], { videoAnalysis: missingTiming })), ["Unclassified"]);
+  const staticVideo = { ...native, fields: { ...native.fields, format: { ...native.fields.format, value: "static" as const } } };
+  assert.deepEqual(classifyCreativeFormats(row("still-in-video", "Meta", [], { videoAnalysis: staticVideo })), ["Static"]);
 });
 
 test("format comparison ranks separate platform winners with correct weighted rates", () => {

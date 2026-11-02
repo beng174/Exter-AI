@@ -20,7 +20,7 @@ export function attachVideoAnalysis(app: Express, db: DatabaseSync, options: Vid
       if (!["gemini", "twelvelabs"].includes(provider) || !["agentic", "static-high-fps-hook"].includes(processingMode)) throw new VideoProviderError("configuration", "Choose a supported video provider and processing mode.");
       if (req.body?.sourceVideoUrl !== undefined && (typeof req.body.sourceVideoUrl !== "string" || req.body.sourceVideoUrl.length > 10000)) throw new VideoProviderError("configuration", "Provide a valid video source URL.");
       if (req.body?.force !== undefined && typeof req.body.force !== "boolean") throw new VideoProviderError("configuration", "force must be a boolean.");
-      const input: VideoJobInput = { brandId: identifier(req.body?.brandId), adId: identifier(req.body?.adId), provider, processingMode, sourceVideoUrl: req.body?.sourceVideoUrl, force: req.body?.force === true };
+      const input: VideoJobInput = { brandId: identifier(req.body?.brandId), adId: identifier(req.body?.adId), provider, processingMode, mediaResolution: req.body?.mediaResolution, sourceVideoUrl: req.body?.sourceVideoUrl, force: req.body?.force === true };
       res.status(202).json(service.enqueue(input));
     } catch (error) { failure(res, error); }
   });

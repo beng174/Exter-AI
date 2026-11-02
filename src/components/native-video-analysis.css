@@ -16,6 +16,15 @@
 .nva-section { margin-top: 24px; }
 .nva-section h4 { font-size: 11px; font-weight: 550; margin: 0 0 5px; }
 .nva-small-note { color: #94a284; font-size: 9px; line-height: 1.9; margin: 11px 0; }
+.nva-tags { display: flex; flex-wrap: wrap; gap: 5px; padding: 0; margin: 9px 0 0; list-style: none; }
+.nva-tags li { border: 1px solid #dce5d2; border-radius: 4px; background: #f1f5e9; padding: 3px 6px; color: #71875d; font-size: 9px; line-height: 1.5; }
+.nva-field dd > .nva-claim-review { padding: 7px 9px; margin: 8px 0 0; border-left: 2px solid #c8ad6f; color: #907846; background: #faf6e9; font-size: 10px; }
+.nva-details-note { padding: 0 14px 12px; margin: 0; font-size: 10px; line-height: 1.8; color: #94a284; }
+.nva-audio-timeline { list-style: none; padding: 0 14px 6px; margin: 0; }
+.nva-audio-timeline li { padding: 11px 0; border-top: 1px solid #e4ebdb; font-size: 10px; line-height: 1.8; }
+.nva-audio-timeline strong { display: block; font-weight: 500; }
+.nva-audio-timeline span { display: block; font-size: 9px; color: #8b9c7b; }
+.nva-audio-timeline p { margin: 7px 0 0; white-space: pre-wrap; overflow-wrap: anywhere; }
 .nva-details { margin-top: 18px; border: 1px solid #e1e9d6; border-radius: 6px; background: #f7f9f2; }
 .nva-details > summary { display: list-item; padding: 13px 14px; font-size: 11px; font-weight: 500; cursor: pointer; line-height: 1.7; }
 .nva-details > summary > span { color: #9aa78b; font-size: 9px; font-weight: 400; margin-left: 8px; }
