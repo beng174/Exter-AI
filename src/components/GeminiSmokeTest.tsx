@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from "react";
-import { Download, Film, RefreshCw } from "lucide-react";
+import { CircleHelp, Download, Film, RefreshCw } from "lucide-react";
 import type { SmokeItem, SmokeRun, SmokeStatus } from "../../shared/gemini-smoke";
 import type { MediaResolution } from "../../shared/inference-config";
 import type { VideoProcessingMode } from "../../shared/video-analysis";
@@ -175,7 +175,7 @@ export function GeminiSmokeTest() {
         setError(""); void refresh().catch(cause => setError(cause instanceof Error ? cause.message : "Status unavailable."));
       }}><RefreshCw size={13} /> Refresh</button>
     </div>
-    <p className="gemini-smoke-intro">Prepare up to {targetSampleSize} real Valentte creatives on Render, then run the smoke test on {minimumSampleSize} or more retained inputs. Videos, images and carousels are valid inputs. The API key stays in Render’s environment.</p>
+    <p className="gemini-smoke-intro">Prepare real Valentte creatives, then test at least {minimumSampleSize} stored inputs on Render.</p>
     <p><a href="#brand-demo-preparation">Go to website evidence & client demo controls</a></p>
     {!status && !error && <p role="status">Checking hosted test configuration…</p>}
     {status && <>
@@ -206,7 +206,7 @@ export function GeminiSmokeTest() {
         <button type="button" disabled={!status.hosted || busy || running} onClick={() => void submit("/api/gemini-smoke/prepare", { processingMode: mode, refreshFailed: true })}>Refresh failed media links</button>
         <button type="button" className="gemini-smoke-primary" disabled={!canRun} onClick={() => void submit("/api/gemini-smoke/runs", { processingMode: mode, mediaResolution })}>Run Gemini smoke test{availableSampleSize >= minimumSampleSize ? ` · ${availableSampleSize} stored inputs` : ""}</button>
       </div>
-      <p className="gemini-smoke-note">Mode and media resolution apply to the next test, including the one-ad test. Saved runs keep their submitted settings. Low resolution requires Static; the Agentic preview does not support this override. Default leaves resolution to the provider. Compare both settings on the same human-labelled set.</p>
+      <p className="gemini-smoke-note">The selected mode and resolution apply to the next batch or one-ad test.</p>
       <div className="gemini-smoke-single-test" aria-labelledby="gemini-smoke-single-heading">
         <div><h3 id="gemini-smoke-single-heading">Test one retained creative</h3><p>Check one input and read the full sanitised Gemini response before starting a batch.</p></div>
         <div className="gemini-smoke-single-controls">
@@ -218,11 +218,16 @@ export function GeminiSmokeTest() {
           </label>
           <button type="button" className="gemini-smoke-primary" disabled={!canTestOne} onClick={() => selectedCreative && void submit("/api/gemini-smoke/test-one", { adId: selectedCreative.adId, brandId: selectedCreative.brandId, processingMode: mode, mediaResolution })}>Test one ad</button>
         </div>
-        <p className="gemini-smoke-note">One verified input is enough for this diagnostic. It uses the selected mode, {resolutionLabel(mediaResolution)} media resolution and the same inference budget. Static is the default; Agentic preview runs only when explicitly chosen.</p>
       </div>
       {availableSampleSize < minimumSampleSize && <p className="gemini-smoke-note" role="status">At least {minimumSampleSize} verified stored inputs are required to run the test. {status.storedCount == null ? "Refresh to check the retained media." : `${status.storedCount} currently available.`}</p>}
-      {availableSampleSize >= minimumSampleSize && (availableSampleSize !== 25 || nextSampleIncludesImages) && <p className="gemini-smoke-sample-note" role="status">The next test will use {availableSampleSize} retained inputs. {nextSampleIncludesImages ? "Images and carousels are valid inputs; this mixed-format sample is exploratory and does not establish the original 25-video Phase 1 acceptance target." : "This sample size is exploratory and does not establish the original 25-video Phase 1 acceptance target."}</p>}
-      <p className="gemini-smoke-note">Preparation checks all {status.candidateCount} candidates until {targetSampleSize} verified inputs are retained, recording each failed download. Refresh failed media links reopens the ad snapshots for fresh media URLs and keeps existing stored inputs. Preparation makes no Gemini inference requests. The selected video mode applies only to videos; image and carousel inputs use their own modes. Static mode processes video ads up to 60 seconds at 3 fps throughout; longer ads use a higher frame rate for the opening hook. A live run reserves budget before dispatch and pauses when the next reservation would exceed the 90% threshold. Reserved budget and token estimates are shown separately from confirmed billing. Missing usage and billed charges remain unavailable.</p>
+      {availableSampleSize >= minimumSampleSize && (availableSampleSize !== 25 || nextSampleIncludesImages) && <p className="gemini-smoke-sample-note" role="status">The next test will use {availableSampleSize} retained inputs. Exploratory {nextSampleIncludesImages ? "mixed-format " : ""}sample.</p>}
+      <details className="gemini-smoke-data-note">
+        <summary><CircleHelp size={14} aria-hidden="true" /> About this data</summary>
+        <p>Preparation checks all {status.candidateCount} candidates until {targetSampleSize} verified inputs are retained, recording each failed download. Refresh failed media links reopens the ad snapshots for fresh media URLs and keeps existing stored inputs. Preparation makes no Gemini inference requests. Videos, images and carousels are valid inputs. The API key stays in Render’s environment.</p>
+        <p>Saved runs keep their submitted settings. Low resolution requires Static; the Agentic preview does not support this override. Default leaves resolution to the provider. Compare both settings on the same human-labelled set. Static is the default; Agentic preview runs only when explicitly chosen.</p>
+        <p>One verified input is enough for the one-ad diagnostic. It uses the selected mode, {resolutionLabel(mediaResolution)} media resolution and the same inference budget. The selected video mode applies only to videos; image and carousel inputs use their own modes. Static mode processes video ads up to 60 seconds at 3 fps throughout; longer ads use a higher frame rate for the opening hook.</p>
+        <p>A live run reserves budget before dispatch and pauses when the next reservation would exceed the 90% threshold. Reserved budget and token estimates are shown separately from confirmed billing. Missing usage and billed charges remain unavailable. Mixed-format runs and samples other than 25 videos remain exploratory and do not establish the original Phase 1 acceptance target.</p>
+      </details>
     </>}
     {error && <p className="gemini-smoke-error" role="alert">{error}</p>}
     {run && <div className="gemini-smoke-run">
@@ -239,7 +244,7 @@ export function GeminiSmokeTest() {
         <progress aria-label={run.kind === "prepare" ? "Creative inputs prepared" : "Smoke test progress"} max={progressMaximum} value={Math.min(progress, progressMaximum)} />
       </div>
       <p className="gemini-smoke-format-summary">{run.kind === "prepare" ? "Retained inputs" : "Actual sample by format"}: {formatCounts(run.sampleCounts)}</p>
-      {run.kind === "smoke" && (actualSampleSize !== 25 || mixedSample) && <p className="gemini-smoke-sample-note" role="status">Actual sample: {actualSampleSize} creative inputs. {mixedSample ? "This exploratory mixed-format run does not establish the original 25-video Phase 1 acceptance target." : "This exploratory run uses a different sample size and does not establish the original 25-video Phase 1 acceptance target."}</p>}
+      {run.kind === "smoke" && (actualSampleSize !== 25 || mixedSample) && <p className="gemini-smoke-sample-note" role="status">Actual sample: {actualSampleSize} creative inputs. Exploratory {mixedSample ? "mixed-format " : ""}sample.</p>}
       {run.message && <p className="gemini-smoke-notice" role="status">{run.message}</p>}
       {run.kind !== "prepare" && <>
         <dl className="gemini-smoke-costs" aria-label="Run cost summary">
@@ -247,7 +252,6 @@ export function GeminiSmokeTest() {
           <div><dt>Token-based estimate</dt><dd>{cost(costTotal(run.items, "tokenCostGbp"))}</dd></div>
           <div><dt>Actually billed</dt><dd>{cost(costTotal(run.items, "billedCostGbp"))}</dd></div>
         </dl>
-        <p className="gemini-smoke-note">A reservation holds budget; it is not a Google bill. Token costs are estimates. Confirmed billed cost is unavailable until provider billing data is reconciled.</p>
       </>}
       {["paused", "interrupted"].includes(run.status) && <div className="gemini-smoke-resume">
         <div><p>Resume continues pending items. An interrupted paid item is retained for review and will not be replayed.</p>
@@ -278,7 +282,11 @@ export function GeminiSmokeTest() {
           </tr>)}</tbody>
         </table>
       </div>
-      <p className="gemini-smoke-note">The original Phase 1 video acceptance target requires at least 24 successful video analyses from a 25-video sample, with cost accounting and stored raw responses. Mixed-format runs remain exploratory. The report states the actual sample size and format counts, includes source issues and up to five full successful outputs for review.</p>
+      <details className="gemini-smoke-data-note">
+        <summary><CircleHelp size={14} aria-hidden="true" /> About this data</summary>
+        {run.kind !== "prepare" && <p>A reservation holds budget; it is not a Google bill. Token costs are estimates. Confirmed billed cost is unavailable until provider billing data is reconciled.</p>}
+        <p>The original Phase 1 video acceptance target requires at least 24 successful video analyses from a 25-video sample, with cost accounting and stored raw responses. Mixed-format runs remain exploratory. The report states the actual sample size and format counts, includes source issues and up to five full successful outputs for review.</p>
+      </details>
     </div>}
   </section>;
 }

@@ -3,6 +3,7 @@ import type { Ad, Brand, Creator, Dashboard, Review } from "../shared/types.js";
 import { analyzeRecords } from "../shared/analytics.js";
 import { readJson } from "./db.js";
 import { hydrateAd } from "../shared/ad-records.js";
+import { isValentteBrand, linkedWorkspaceAnalyses, workspaceAds } from "./demo/reconcile.js";
 export { reportContent } from "../shared/analytics.js";
 
 export function getAds(
@@ -11,6 +12,15 @@ export function getAds(
   platform = "all",
   range = 30,
 ): Ad[] {
+  // A historical library observation is still evidence. Publication dates are
+  // not collection dates and must not hide the verified Valentte capture.
+  if (brand.mode === "imported" && isValentteBrand(brand)) {
+    return workspaceAds(db, brand.id).filter(ad => ad.source !== "sample" && (platform === "all" || ad.platform === platform))
+      .map(ad => {
+        const video = linkedWorkspaceAnalyses(db, brand.id, ad.id).find(value => value.mediaKind === "video");
+        return hydrateAd({ ...ad, ...(video ? { videoAnalysis: video.analysis as Ad["videoAnalysis"] } : {}) });
+      });
+  }
   const since = new Date(Date.now() - range * 86400000).toISOString();
   const rows = db.prepare(
     `SELECT data FROM ads WHERE brand_id=? AND ((?='demo' AND source='sample') OR (?!='demo' AND source!='sample')) AND published_at>=? ${platform !== "all" ? "AND platform=?" : ""} ORDER BY published_at DESC`,

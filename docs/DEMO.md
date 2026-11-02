@@ -18,15 +18,19 @@ Every section identifies its maturity as **Live**, **Beta** or **Preview**. Thes
 The report reads saved results. Existing Valentte results remain available without rerunning the successful Gemini batch. Trust the report's current sample counts rather than assuming a fixed total. Earlier analyses keep their original prompt/version and are not rewritten by deployment. Empty sections explain which saved evidence is missing; deployment does not fabricate a filled demo.
 
 The requested brands are **ION8**, `ion8.co.uk`, and **Valentte**, `valentte.com`,
-as separate workspaces. Startup adds missing workspaces without importing sample
-ads or changing existing results. Ion8 initially has only dated publisher
+as separate workspaces. Startup imports the verified 58-ad Valentte browser
+capture and deduplicates by the verified Meta advertiser and native ad ID. It
+links original workspace scopes to existing successful analyses and immutable
+media manifests without moving files or rewriting paid results. Library views
+use all saved observations, so an older delivery start does not hide an ad from
+the current collection. Ion8 initially has only dated publisher
 homepage headings, observed on 2 November 2026. It has no claimed ad capture,
 creator measurements or creative analyses until those actions actually succeed.
 Use the workspace's **Open read-only client view** link to get its exact URL.
 
 ## Prepare evidence in the app
 
-1. Open **Budgets & tests**. **Prepare the brand demo** is the first panel, above Monthly budgets and Gemini smoke test. Choose **Valentte** or **ION8** in its **Demo brand** dropdown. The **Website evidence & client demo** shortcut jumps directly to this panel.
+1. Open **Settings**. **Prepare the brand demo** is the first panel, above Monthly budgets and Gemini smoke test. Choose **Valentte** or **ION8** in its **Demo brand** dropdown. The **Website evidence & client demo** shortcut jumps directly to this panel.
 2. Click **Refresh website evidence** to save a bounded public homepage excerpt for that brand. This is a source request, with no model inference. A failed refresh preserves earlier evidence.
 3. Use the existing authenticated media/Gemini preparation controls when more creative analyses are needed. They run on Render, reuse stored media and respect the inference budget. Opening the demo itself does not start them.
 4. Configure the public creator provider as below, then explicitly click **Run budgeted creator search**. This uses the `data_providers` budget. Inspect the saved profile/post sources before choosing candidates.
@@ -39,10 +43,28 @@ These actions persist their results. Reloading the report or changing tabs does 
 
 1. Deploy the latest `exter-test-drive` commit to the existing **web service**. Keep its `/var/data` disk mounted, `EXTER_DB_PATH=/var/data/exter.db`, `MEDIA_STORAGE_TYPE=disk` and `MEDIA_STORAGE_PATH=/var/data/media`. Existing database/media must remain on that disk.
 2. Keep the existing administrator variables, `DATABASE_URL`, Gemini key, model and matching model-pricing settings. The demo adds no requirement to copy a secret into Codex. Existing Gemini pricing rules still apply to requested versus served models; see [DEPLOY.md](DEPLOY.md).
-3. No manual SQL migration is needed. New SQLite tables are created at startup. The existing worker/scheduler do not execute these explicit web-service demo actions.
+3. No manual SQL migration is needed. New SQLite tables and the source reconciliation are created at startup. On Render, startup also refreshes the existing Valentte website research once and starts the already authorized Aery Living, The White Company and NEOM collection, up to 25 usable creatives each. Native analysis uses the existing inference budget and Static mode. The existing worker/scheduler do not execute these web-service actions. Existing competitor runs are never automatically replayed by subsequent deployments.
 4. For public creator searches, configure `APIFY_TOKEN` in the **Render web-service environment only**, plus the approved `APIFY_INSTAGRAM_ACTOR_ID` and/or `APIFY_TIKTOK_ACTOR_ID` and a positive `APIFY_REQUEST_RESERVE_GBP`. An unconfigured platform remains unavailable. Actor selection, supported input/output and actual provider prices must be checked before running a paid search; no paid subscription or credit purchase is performed by the app.
 5. In **Budgets**, set a positive `data_providers` cap if creator search is wanted and retain the chosen positive `inference` cap for Gemini fit checks. The budget reservation guard applies before paid dispatch. A provider reservation is not an invoice.
-6. Redeploy after environment changes. Then use the explicit preparation buttons above. No action is required merely to read existing brand reports.
+6. Redeploy after environment changes. Open **Settings > Competitor collection** for actual progress, failures or budget pauses. **Continue unfinished work** is explicit and preserves completed results; uncertain interrupted paid requests are not silently replayed.
+7. Download **Page counts** from that panel, or open `/api/demo-readiness?brandId=valentte&download=1`, for actual saved counts and media verified on the hosted disk. Then check the six workspace pages and `/demo/valentte` in the browser. A successful local fixture test does not establish hosted data availability.
+
+## Explore the report
+
+The client report has sticky navigation for Overview, Creatives, Patterns,
+Competitors, Opportunities & briefs, Creators and Scores. The gallery retains
+all collected ads, including honest missing-media states. Available videos get
+a cached poster extracted near one second; retained images use the actual image.
+Filter by media/creative format, hook, angle, offer and UGC evidence, or search
+the transcript and on-screen text. Pattern bars apply their filter to the gallery.
+
+Click a card to open the retained video, image or carousel next to its analysis.
+Transcript and on-screen-text timestamps seek the video. Previous/Next buttons
+and the left/right arrow keys move through ads. **View in Meta Ad Library** uses
+the native ad ID. Retained files are served through authenticated scoped routes
+with HTTP range support; media paths and provider response bodies are not sent
+to the client. Source-listed running days stop at the recorded source endpoint,
+not today's date, and do not assert continuous delivery or effectiveness.
 
 Creator actors must support the built-in public-search inputs below; there are no additional JSON input-template environment variables. Actor IDs accept `user/actor` or `user~actor`. Common documented candidates are `apify/instagram-scraper` and `clockworks/tiktok-scraper`, but confirm your account's access, actor version, input schema and output before configuring them. These names are examples, not a claim that access has been tested or purchased.
 
@@ -91,6 +113,11 @@ The local CLI imports into the database named by `--db`; it does not silently mo
 | Action | Route | Paid work |
 | --- | --- | --- |
 | Read saved brand report | `GET /api/brands/:brandId/demo` | None |
+| Read creative gallery | `GET /api/brands/:brandId/demo/creatives` | None |
+| Play retained video or view poster/image | `GET /api/brands/:brandId/demo/creatives/:adId/video`, `/poster`, `/images/:index` | None |
+| Read actual page counts | `GET /api/demo-readiness?brandId=…` (`&download=1` for Markdown) | None |
+| Read competitor progress | `GET /api/demo-collection?brandId=…` | None |
+| Continue authorized competitor collection | `POST /api/demo-collection/start` | Inference budget for usable unanalysed creatives |
 | Refresh homepage evidence | `POST /api/brands/:brandId/demo/website` | None |
 | Read saved creator research | `GET /api/creator-research?brandId=…` | None |
 | Explicit public creator search | `POST /api/creator-research/search` | `data_providers` budget |

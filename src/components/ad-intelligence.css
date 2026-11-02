@@ -5,9 +5,9 @@
   width: min(1050px, 100%);
   max-height: 92dvh;
   background: #FFFFFF;
-  border: 1px solid #D1D5DB;
-  border-radius: 15px;
-  box-shadow: 0 25px 110px #D1D5DB;
+  border: 1px solid #E5E7EB;
+  border-radius: 12px;
+  box-shadow: 0 1px 2px rgba(17, 24, 39, 0.04);
   overflow: hidden;
   display: flex;
   flex-direction: column;
@@ -18,11 +18,11 @@
   justify-content: space-between;
   gap: 20px;
   padding: 24px 27px 21px;
-  border-bottom: 1px solid #D1D5DB;
+  border-bottom: 1px solid #E5E7EB;
   background: #FFFFFF;
 }
 .adi-eyebrow {
-  font-size: 16px;
+  font-size: 13px;
   letter-spacing: 1.5px;
   font-weight: 550;
   color: #6B7280;
@@ -31,8 +31,8 @@
   gap: 7px;
 }
 .adi-header h2 {
-  font-family: "Manrope", sans-serif;
-  font-size: 23px;
+  font-family: "Inter", sans-serif;
+  font-size: 20px;
   font-weight: 600;
   letter-spacing: -0.7px;
   margin: 12px 0 7px;
@@ -42,7 +42,7 @@
   display: flex;
   align-items: center;
   gap: 8px;
-  font-size: 16px;
+  font-size: 15px;
   color: #6B7280;
   margin: 0;
 }
@@ -50,7 +50,7 @@
   color: #6B7280;
 }
 .adi-close {
-  border: 1px solid #D1D5DB;
+  border: 1px solid #E5E7EB;
   background: #FFFFFF;
   border-radius: 6px;
   color: #6B7280;
@@ -63,7 +63,7 @@
 }
 .adi-close:hover {
   background: #F3F4F6;
-  color: #0C1F96;
+  color: #1F2937;
 }
 .adi-layout {
   display: grid;
@@ -74,7 +74,7 @@
 }
 .adi-context {
   background: #FFFFFF;
-  border-right: 1px solid #D1D5DB;
+  border-right: 1px solid #E5E7EB;
   overflow: auto;
 }
 .adi-visual {
@@ -93,11 +93,11 @@
   bottom: 12px;
   left: 13px;
   padding: 5px 7px;
-  border: 1px solid #D1D5DB;
+  border: 1px solid #E5E7EB;
   border-radius: 4px;
-  background: #00C0CB;
-  font-size: 16px;
-  color: #0C1F96;
+  background: #FFFFFF;
+  font-size: 13px;
+  color: #1F2937;
   backdrop-filter: blur(3px);
 }
 .adi-no-image {
@@ -107,19 +107,19 @@
   align-items: center;
   justify-content: center;
   gap: 10px;
-  background: linear-gradient(140deg, #F3F4F6, #00C0CB);
-  color: #0C1F96;
+  background: #FFFFFF;
+  color: #1F2937;
 }
 .adi-no-image p {
-  font-size: 16px;
+  font-size: 15px;
   margin: 0;
 }
 .adi-general {
   padding: 21px;
 }
 .adi-general h3 {
-  font-size: 16px;
-  font-weight: 550;
+  font-size: 15px;
+  font-weight: 600;
   color: #0C1F96;
   margin: 0 0 14px;
 }
@@ -131,10 +131,10 @@
   justify-content: space-between;
   align-items: flex-start;
   gap: 16px;
-  border-bottom: 1px solid #D1D5DB;
+  border-bottom: 1px solid #E5E7EB;
   padding: 10px 0;
-  font-size: 16px;
-  line-height: 1.7;
+  font-size: 15px;
+  line-height: 1.5;
 }
 .adi-general dt {
   color: #6B7280;
@@ -144,7 +144,7 @@
 .adi-general dd {
   text-align: right;
   margin: 0;
-  color: #0C1F96;
+  color: #1F2937;
   font-weight: 450;
   word-break: break-word;
 }
@@ -157,17 +157,17 @@
   width: 4px;
   height: 4px;
   border-radius: 50%;
-  background: #00C0CB;
+  background: #FFFFFF;
 }
 .adi-source-link {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  border: 1px solid #D1D5DB;
+  border: 1px solid #E5E7EB;
   background: #FFFFFF;
-  color: #0C1F96;
+  color: #1F2937;
   border-radius: 6px;
-  font-size: 16px;
+  font-size: 15px;
   padding: 10px 11px;
   margin-top: 16px;
 }
@@ -179,8 +179,8 @@
   align-items: flex-start;
   gap: 7px;
   color: #6B7280;
-  font-size: 16px;
-  line-height: 1.7;
+  font-size: 15px;
+  line-height: 1.5;
   margin: 16px 0 0;
 }
 .adi-source-unavailable svg {
@@ -188,9 +188,9 @@
   margin-top: 1px;
 }
 .adi-small-note {
-  font-size: 16px;
+  font-size: 13px;
   color: #6B7280;
-  line-height: 1.9;
+  line-height: 1.5;
   margin: 14px 0 0;
 }
 .adi-research {
@@ -207,8 +207,8 @@
   padding: 17px 24px;
   color: #6B7280;
   background: #FFFFFF;
-  border-bottom: 1px solid #D1D5DB;
-  font-size: 16px;
+  border-bottom: 1px solid #E5E7EB;
+  font-size: 15px;
 }
 .adi-provenance > span:first-child {
   width: 4px;
@@ -224,20 +224,20 @@
   display: flex;
   align-items: center;
   gap: 4px;
-  font-size: 16px;
+  font-size: 15px;
 }
 .adi-sample-dot {
-  background: #00C0CB;
+  background: #FFFFFF;
 }
 .adi-provided-dot {
-  background: #00C0CB;
+  background: #FFFFFF;
 }
 .adi-tabs {
   display: flex;
   align-items: stretch;
   gap: 18px;
   padding: 0 24px;
-  border-bottom: 1px solid #D1D5DB;
+  border-bottom: 1px solid #E5E7EB;
 }
 .adi-tabs > button {
   display: flex;
@@ -247,17 +247,17 @@
   border-bottom: 2px solid transparent;
   background: transparent;
   color: #6B7280;
-  font-size: 16px;
+  font-size: 15px;
   padding: 16px 0 14px;
   white-space: nowrap;
 }
 .adi-tabs > button.adi-tab-active {
-  color: #0C1F96;
-  border-bottom-color: #D1D5DB;
+  color: #1F2937;
+  border-bottom-color: #E5E7EB;
   font-weight: 500;
 }
 .adi-tabs > button:hover {
-  color: #0C1F96;
+  color: #1F2937;
 }
 .adi-panel {
   min-height: 340px;
@@ -288,14 +288,14 @@
   color: #6B7280;
 }
 .adi-panel-intro h3 {
-  font-size: 16px;
-  font-weight: 550;
+  font-size: 15px;
+  font-weight: 600;
   color: #0C1F96;
   margin: 0 0 6px;
 }
 .adi-panel-intro p {
-  font-size: 16px;
-  line-height: 1.8;
+  font-size: 15px;
+  line-height: 1.5;
   color: #6B7280;
   margin: 0;
 }
@@ -307,17 +307,17 @@
   grid-template-columns: 132px minmax(0, 1fr);
   gap: 17px;
   padding: 14px 0;
-  border-bottom: 1px solid #D1D5DB;
-  font-size: 16px;
-  line-height: 1.8;
+  border-bottom: 1px solid #E5E7EB;
+  font-size: 15px;
+  line-height: 1.5;
 }
 .adi-datum dt {
   color: #6B7280;
-  font-size: 16px;
+  font-size: 15px;
 }
 .adi-datum dt > span {
   display: block;
-  font-size: 16px;
+  font-size: 15px;
   text-transform: uppercase;
   letter-spacing: 0.7px;
   color: #6B7280;
@@ -326,13 +326,13 @@
 }
 .adi-datum dd {
   margin: 0;
-  color: #0C1F96;
+  color: #1F2937;
   overflow-wrap: anywhere;
 }
 .adi-missing dd {
   color: #6B7280;
   font-style: italic;
-  font-size: 16px;
+  font-size: 15px;
 }
 .adi-tags {
   display: flex;
@@ -341,30 +341,30 @@
   flex-wrap: wrap;
 }
 .adi-tags > span {
-  font-size: 16px;
+  font-size: 15px;
   color: #6B7280;
   background: #FFFFFF;
-  border: 1px solid #D1D5DB;
+  border: 1px solid #E5E7EB;
   border-radius: 4px;
   padding: 3px 7px;
 }
 .adi-copy {
-  border: 1px solid #D1D5DB;
+  border: 1px solid #E5E7EB;
   border-radius: 7px;
   background: #FFFFFF;
   padding: 14px 16px;
   margin-top: 22px;
 }
 .adi-copy h4 {
-  font-size: 16px;
+  font-size: 15px;
   letter-spacing: 0.2px;
   color: #6B7280;
-  font-weight: 550;
+  font-weight: 600;
   margin: 0 0 9px;
 }
 .adi-copy p {
-  font-size: 16px;
-  line-height: 1.9;
+  font-size: 15px;
+  line-height: 1.5;
   color: #6B7280;
   margin: 0;
   white-space: pre-wrap;
@@ -375,7 +375,7 @@
   align-items: flex-start;
   gap: 9px;
   background: #FFFFFF;
-  border: 1px solid #D1D5DB;
+  border: 1px solid #E5E7EB;
   border-radius: 7px;
   padding: 14px 15px;
   margin: 23px 0 0;
@@ -386,8 +386,8 @@
   margin-top: 2px;
 }
 .adi-explainer p {
-  font-size: 16px;
-  line-height: 1.9;
+  font-size: 15px;
+  line-height: 1.5;
   margin: 0;
   color: #6B7280;
 }
@@ -397,30 +397,30 @@
   justify-content: center;
   flex-direction: column;
   gap: 14px;
-  border: 1px dashed #D1D5DB;
-  border-radius: 8px;
+  border: 1px dashed #E5E7EB;
+  border-radius: 12px;
   min-height: 235px;
   background: radial-gradient(circle at center, #FFFFFF, #FFFFFF);
-  padding: 30px;
+  padding: 24px;
   color: #6B7280;
   text-align: center;
 }
 .adi-attention-empty h4 {
-  font-size: 16px;
-  font-weight: 500;
+  font-size: 15px;
+  font-weight: 600;
   color: #6B7280;
   margin: 0;
 }
 .adi-attention-empty p {
-  font-size: 16px;
-  line-height: 1.9;
+  font-size: 15px;
+  line-height: 1.5;
   color: #6B7280;
   max-width: 350px;
   margin: 0;
 }
 .adi-attention-figure {
   margin: 0;
-  border: 1px solid #D1D5DB;
+  border: 1px solid #E5E7EB;
   border-radius: 8px;
   background: #FFFFFF;
   overflow: hidden;
@@ -433,13 +433,13 @@
 }
 .adi-attention-figure figcaption {
   padding: 13px 15px;
-  font-size: 16px;
-  line-height: 1.8;
+  font-size: 15px;
+  line-height: 1.5;
   color: #6B7280;
 }
 .adi-method {
-  font-size: 16px;
-  line-height: 1.8;
+  font-size: 15px;
+  line-height: 1.5;
   color: #6B7280;
   margin: 16px 0 0;
 }
@@ -452,10 +452,10 @@
   align-items: flex-start;
   gap: 7px;
   padding: 13px 24px;
-  border-top: 1px solid #D1D5DB;
+  border-top: 1px solid #E5E7EB;
   background: #FFFFFF;
-  font-size: 16px;
-  line-height: 1.8;
+  font-size: 15px;
+  line-height: 1.5;
   color: #6B7280;
 }
 .adi-footer > svg {
@@ -467,7 +467,7 @@
 }
 .adi-footer > span:last-child:not(:nth-child(2)) {
   color: #6B7280;
-  font-size: 16px;
+  font-size: 15px;
   max-width: 130px;
 }
 @media (max-width: 800px) {
@@ -488,14 +488,14 @@
   }
   .adi-general dl > div {
     gap: 9px;
-    font-size: 16px;
+    font-size: 15px;
   }
   .adi-tabs {
     gap: 12px;
     padding: 0 18px;
   }
   .adi-tabs > button {
-    font-size: 16px;
+    font-size: 15px;
     gap: 5px;
   }
   .adi-tabs > button > svg {
@@ -503,27 +503,27 @@
   }
   .adi-provenance {
     padding: 14px 18px;
-    font-size: 16px;
+    font-size: 15px;
   }
   .adi-panel {
-    padding: 20px 18px;
+    padding: 24px;
   }
   .adi-datum {
     grid-template-columns: 95px minmax(0, 1fr);
     gap: 12px;
-    font-size: 16px;
+    font-size: 15px;
   }
   .adi-datum dt {
-    font-size: 16px;
+    font-size: 15px;
   }
   .adi-header h2 {
     font-size: 20px;
   }
   .adi-panel-intro h3 {
-    font-size: 16px;
+    font-size: 15px;
   }
   .adi-panel-intro p {
-    font-size: 16px;
+    font-size: 15px;
   }
   .adi-panel-intro {
     gap: 9px;
@@ -534,7 +534,7 @@
   }
   .adi-footer {
     padding: 12px 18px;
-    font-size: 16px;
+    font-size: 15px;
   }
 }
 @media (max-width: 600px) {
@@ -545,24 +545,24 @@
     max-height: 94dvh;
     overflow: auto;
     display: block;
-    border-radius: 11px;
+    border-radius: 12px;
   }
   .adi-header {
     padding: 18px 17px;
     position: relative;
   }
   .adi-header h2 {
-    font-size: 18px;
+    font-size: 20px;
     max-width: 260px;
     margin-top: 10px;
   }
   .adi-header p {
-    font-size: 16px;
+    font-size: 15px;
     gap: 6px;
     flex-wrap: wrap;
   }
   .adi-eyebrow {
-    font-size: 16px;
+    font-size: 13px;
     letter-spacing: 1.1px;
   }
   .adi-close {
@@ -576,7 +576,7 @@
   }
   .adi-context {
     border-right: 0;
-    border-bottom: 1px solid #D1D5DB;
+    border-bottom: 1px solid #E5E7EB;
     overflow: visible;
   }
   .adi-visual {
@@ -586,7 +586,7 @@
     padding: 18px;
   }
   .adi-general h3 {
-    font-size: 16px;
+    font-size: 15px;
   }
   .adi-general dl {
     display: grid;
@@ -598,27 +598,27 @@
     justify-content: flex-start;
     gap: 3px;
     padding: 9px 0;
-    font-size: 16px;
+    font-size: 15px;
   }
   .adi-general dt {
     max-width: 100%;
-    font-size: 16px;
+    font-size: 15px;
   }
   .adi-general dd {
     text-align: left;
   }
   .adi-source-link {
-    font-size: 16px;
+    font-size: 15px;
   }
   .adi-small-note {
-    font-size: 16px;
+    font-size: 13px;
   }
   .adi-research {
     display: block;
   }
   .adi-provenance {
     padding: 13px 17px;
-    font-size: 16px;
+    font-size: 15px;
   }
   .adi-tabs {
     padding: 0 17px;
@@ -626,11 +626,11 @@
     justify-content: space-between;
   }
   .adi-tabs > button {
-    font-size: 16px;
+    font-size: 15px;
     gap: 4px;
     white-space: normal;
     text-align: left;
-    line-height: 1.6;
+    line-height: 1.5;
     padding: 14px 0;
   }
   .adi-tabs > button > svg {
@@ -638,49 +638,49 @@
     flex-shrink: 0;
   }
   .adi-panel {
-    padding: 22px 17px;
+    padding: 24px;
     min-height: 300px;
     overflow: visible;
   }
   .adi-panel-intro h3 {
-    font-size: 16px;
+    font-size: 15px;
   }
   .adi-panel-intro p {
-    font-size: 16px;
+    font-size: 15px;
   }
   .adi-datum {
     grid-template-columns: 104px minmax(0, 1fr);
     gap: 13px;
-    font-size: 16px;
+    font-size: 15px;
     padding: 13px 0;
   }
   .adi-datum dt {
-    font-size: 16px;
+    font-size: 15px;
   }
   .adi-tags > span {
-    font-size: 16px;
+    font-size: 15px;
   }
   .adi-explainer p {
-    font-size: 16px;
+    font-size: 15px;
   }
   .adi-footer {
     padding: 14px 17px;
-    font-size: 16px;
+    font-size: 15px;
     flex-wrap: wrap;
   }
   .adi-footer > span:last-child:not(:nth-child(2)) {
     max-width: none;
     padding-left: 21px;
     width: 100%;
-    font-size: 16px;
+    font-size: 15px;
   }
   .adi-attention-empty {
-    padding: 25px 17px;
+    padding: 24px;
   }
   .adi-attention-empty p {
-    font-size: 16px;
+    font-size: 15px;
   }
   .adi-copy p {
-    font-size: 16px;
+    font-size: 15px;
   }
 }

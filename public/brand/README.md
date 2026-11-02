@@ -8,5 +8,6 @@ not been fabricated. Until they are supplied, the app shows a text wordmark and
 the existing generic icon recoloured to the requested palette. `/api/branding`
 detects the exact SVG files after they are added and deployed.
 
-`fonts/Manrope-variable.ttf` is self-hosted from Google Fonts, under the included
-SIL Open Font License. No external font service is required by the app.
+`fonts/Inter-variable.ttf` is the active self-hosted font from Google Fonts, under
+`fonts/Inter-OFL.txt` (SIL Open Font License). The older Manrope asset is retained
+for compatibility with earlier deployments. No external font service is required by the app.

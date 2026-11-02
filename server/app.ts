@@ -32,6 +32,9 @@ import { attachLabelling } from "./labelling/api.js";
 import { attachGeminiSmoke } from "./smoke/api.js";
 import { attachBrandDemo } from "./demo/api.js";
 import { attachCreatorResearch } from "./creators/api.js";
+import { attachDemoCollection } from "./demo/collection-api.js";
+import { attachDemoReadiness } from "./demo/readiness-api.js";
+import { canonicalWorkspaceBrands, resolveDemoBrandId, workspaceAd, linkedWorkspaceAnalyses } from "./demo/reconcile.js";
 import { existsSync } from "node:fs";
 import { resolve } from "node:path";
 import { plainDashes } from "../shared/presentation.js";
@@ -99,7 +102,7 @@ function nonnegative(
   return value;
 }
 function getBrand(db: DatabaseSync, id: unknown): Brand {
-  const brand = readBrand(db, text(id, "brandId", 120));
+  const brand = readBrand(db, resolveDemoBrandId(db, text(id, "brandId", 120)));
   if (!brand) {
     const error = new InputError("Brand not found.");
     error.status = 404;
@@ -240,7 +243,7 @@ export function createApp(db: DatabaseSync = openDatabase()) {
     res.setHeader("Cache-Control", "private, no-store");
     res.json({ name: "Exter Media", logoMark: existsSync(resolve("public/brand/exter-logo-mark.svg")) ? "/brand/exter-logo-mark.svg" : null, appIcon: existsSync(resolve("public/brand/exter-app-icon.svg")) ? "/brand/exter-app-icon.svg" : null });
   });
-  app.use(["/api/budgets", "/api/gemini-smoke", "/api/labelling", "/api/creator-research", "/api/brands"], protectSettingsMutation);
+  app.use(["/api/budgets", "/api/gemini-smoke", "/api/labelling", "/api/creator-research", "/api/brands", "/api/brand-research"], protectSettingsMutation);
   attachInfrastructure(app, db);
   attachConnections(app, db);
   attachPublicMonitor(app, db);
@@ -248,7 +251,9 @@ export function createApp(db: DatabaseSync = openDatabase()) {
   attachLabelling(app, db, video);
   attachGeminiSmoke(app, db, video);
   attachBrandDemo(app, db);
+  attachDemoCollection(app, db, video);
   attachCreatorResearch(app, db);
+  attachDemoReadiness(app, db);
   attachBrain(app, db);
   attachBrandResearch(app, db);
   app.get("/api/health", (_req, res) =>
@@ -262,9 +267,7 @@ export function createApp(db: DatabaseSync = openDatabase()) {
   );
   app.get("/api/brands", (_req, res) =>
     res.json(
-      readJson<Brand>(
-        db.prepare("SELECT data FROM brands ORDER BY rowid").all(),
-      ),
+      canonicalWorkspaceBrands(db),
     ),
   );
   app.post("/api/brands", (req, res) => {
@@ -302,7 +305,7 @@ export function createApp(db: DatabaseSync = openDatabase()) {
       name,
       domain,
       category,
-      color: "#8fae95",
+      color: "#0C1F96",
       initials: name.slice(0, 1).toUpperCase(),
       voice: [],
       competitors: [],
@@ -344,14 +347,13 @@ export function createApp(db: DatabaseSync = openDatabase()) {
   });
   app.get("/api/ads/:id", (req, res) => {
     const brand = getBrand(db, req.query.brandId);
-    const row = db
-      .prepare("SELECT data FROM ads WHERE id=? AND brand_id=?")
-      .get(req.params.id, brand.id) as { data: string } | undefined;
-    if (!row) {
+    const saved = workspaceAd(db, brand.id, req.params.id);
+    if (!saved) {
       res.status(404).json({ error: "Ad not found in this workspace." });
       return;
     }
-    const ad = hydrateAd(JSON.parse(row.data));
+    const linked = linkedWorkspaceAnalyses(db, brand.id, saved.id).find(value => value.mediaKind === "video");
+    const ad = hydrateAd({ ...saved, ...(linked ? { videoAnalysis: linked.analysis as Ad["videoAnalysis"] } : {}) });
     if ((brand.mode === "demo") !== (ad.source === "sample")) {
       res
         .status(404)

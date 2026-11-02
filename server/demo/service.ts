@@ -9,6 +9,7 @@ import { buildOpportunities } from "./briefs.js";
 import { buildPredictionPreview } from "./prediction.js";
 import { creativeEvidence, scoreCreative, supported, type DemoCreative } from "./scores.js";
 import { readWebsiteEvidence, refreshWebsiteEvidence, type DemoWebsiteOptions } from "./website.js";
+import { linkedWorkspaceAnalyses, resolveDemoBrandId, workspaceAds } from "./reconcile.js";
 
 export class BrandDemoError extends Error {
   constructor(message: string, public status = 400) { super(message); }
@@ -29,12 +30,10 @@ function validAnalysis(value: VideoAnalysisResult | ImageAnalysisResult | undefi
     Array.isArray(value.fields.keyClaims) && Array.isArray(value.fields.onScreenText);
 }
 export function analysedCreatives(db: DatabaseSync, brandId: string, ads: Ad[]): DemoCreative[] {
-  const video = dataRows<VideoAnalysisResult>(db, "video_analysis_runs", brandId);
-  const image = dataRows<ImageAnalysisResult>(db, "image_analysis_runs", brandId);
   return ads.filter(ad => ad.source !== "sample").flatMap(ad => {
+    const linked = linkedWorkspaceAnalyses(db, brandId, ad.id);
     const candidates: DemoCreative[] = [
-      ...video.filter(analysis => validAnalysis(analysis, ad)).map(analysis => ({ ad, analysis, mediaKind: "video" as const })),
-      ...image.filter(analysis => validAnalysis(analysis, ad) && ["image", "carousel"].includes(analysis.processingMode)).map(analysis => ({ ad, analysis, mediaKind: analysis.processingMode })),
+      ...linked.map(item => ({ ad, analysis: item.analysis, mediaKind: item.mediaKind })),
     ];
     // This is also a persisted successful native analysis, not legacy sample annotations.
     if (validAnalysis(ad.videoAnalysis, ad) && !candidates.some(item => item.analysis.id === ad.videoAnalysis!.id))
@@ -57,16 +56,14 @@ function patterns(creatives: DemoCreative[], field: "format" | "hook_type" | "an
 export class BrandDemoService {
   constructor(private readonly db: DatabaseSync, private readonly options: DemoWebsiteOptions = {}) {}
   private brand(brandId: string): Brand {
-    const brand = readBrand(this.db, brandId);
+    const brand = readBrand(this.db, resolveDemoBrandId(this.db, brandId));
     if (!brand) throw new BrandDemoError("Brand workspace not found.", 404);
     return brand;
   }
   report(brandId: string): BrandDemoReport {
     const brand = this.brand(brandId);
-    const allAds = (this.db.prepare("SELECT data FROM ads WHERE brand_id=? ORDER BY id").all(brandId) as { data: string }[]).flatMap(row => {
-      try { return [JSON.parse(row.data) as Ad]; } catch { return []; }
-    });
-    const realAds = allAds.filter(ad => ad.source !== "sample"), creatives = analysedCreatives(this.db, brandId, realAds);
+    const allAds = workspaceAds(this.db, brand.id);
+    const realAds = allAds.filter(ad => ad.source !== "sample"), creatives = analysedCreatives(this.db, brand.id, realAds);
     const website = readWebsiteEvidence(this.db, brand);
     const patternGroups = { format: patterns(creatives, "format", FORMAT_OPTIONS), hookType: patterns(creatives, "hook_type", HOOK_TYPE_OPTIONS), angle: patterns(creatives, "angle", ANGLE_OPTIONS), offerType: patterns(creatives, "offer_type", OFFER_TYPE_OPTIONS) };
     return {

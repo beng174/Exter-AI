@@ -10,7 +10,7 @@
   align-items: center;
   padding: 27px 28px;
   background: #FFFFFF;
-  border: 1px solid #D1D5DB;
+  border: 1px solid #E5E7EB;
   border-radius: 11px;
 }
 .fmt-intro-copy {
@@ -20,24 +20,24 @@
   display: flex;
   align-items: center;
   gap: 7px;
-  font-size: 16px;
+  font-size: 13px;
   letter-spacing: 1.4px;
   color: #6B7280;
   font-weight: 600;
 }
 .fmt-intro h2 {
-  font-family: var(--serif, Manrope, sans-serif);
-  font-size: 30px;
+  font-family: var(--serif, Inter, sans-serif);
+  font-size: 20px;
   line-height: 1.2;
-  font-weight: 400;
+  font-weight: 600;
   letter-spacing: -0.7px;
   color: #0C1F96;
   margin: 17px 0 12px;
 }
 .fmt-intro p {
-  font-size: 16px;
+  font-size: 15px;
   color: #6B7280;
-  line-height: 1.9;
+  line-height: 1.5;
   margin: 0;
   max-width: 570px;
 }
@@ -48,23 +48,23 @@
   min-width: 224px;
 }
 .fmt-metric-control > label {
-  font-size: 16px;
+  font-size: 13px;
   color: #6B7280;
 }
 .fmt-metric-control > select {
   width: 100%;
-  border: 1px solid #D1D5DB;
+  border: 1px solid #E5E7EB;
   border-radius: 7px;
   padding: 11px 12px;
   background: #FFFFFF;
-  color: #0C1F96;
-  font-size: 16px;
+  color: #1F2937;
+  font-size: 15px;
   outline-offset: 2px;
 }
 .fmt-metric-control > span {
-  font-size: 16px;
+  font-size: 15px;
   color: #6B7280;
-  line-height: 1.7;
+  line-height: 1.5;
 }
 .fmt-scope-bar {
   display: flex;
@@ -78,18 +78,18 @@
   align-items: center;
   gap: 10px;
   color: #6B7280;
-  font-size: 16px;
+  font-size: 15px;
   flex-wrap: wrap;
 }
 .fmt-scope-label {
-  font-size: 16px;
+  font-size: 13px;
   letter-spacing: 1px;
   color: #6B7280;
 }
 .fmt-scope-bar strong {
-  font-size: 16px;
+  font-size: 15px;
   font-weight: 550;
-  color: #0C1F96;
+  color: #1F2937;
 }
 .fmt-scope-divider {
   height: 12px;
@@ -104,7 +104,7 @@
   background: none;
   padding: 3px;
   color: #6B7280;
-  font-size: 16px;
+  font-size: 15px;
   white-space: nowrap;
 }
 .fmt-provenance {
@@ -113,12 +113,12 @@
   gap: 12px;
   padding: 15px 18px;
   background: #FFFFFF;
-  border: 1px solid #D1D5DB;
+  border: 1px solid #E5E7EB;
   border-radius: 8px;
 }
 .fmt-sample-provenance {
   background: #FFFFFF;
-  border-color: #D1D5DB;
+  border-color: #E5E7EB;
 }
 .fmt-provenance-icon {
   display: flex;
@@ -140,34 +140,34 @@
 }
 .fmt-provenance strong {
   display: block;
-  font-size: 16px;
+  font-size: 15px;
   font-weight: 550;
-  color: #0C1F96;
+  color: #1F2937;
   margin-bottom: 5px;
 }
 .fmt-sample-provenance strong {
   color: #6B7280;
 }
 .fmt-provenance p {
-  font-size: 16px;
-  line-height: 1.8;
+  font-size: 15px;
+  line-height: 1.5;
   color: #6B7280;
   margin: 0;
   max-width: 950px;
 }
 .fmt-provenance-badge {
   align-self: flex-start;
-  font-size: 16px;
+  font-size: 13px;
   letter-spacing: 0.8px;
   padding: 5px 7px;
-  border: 1px solid #D1D5DB;
+  border: 1px solid #E5E7EB;
   border-radius: 4px;
   color: #6B7280;
   white-space: nowrap;
 }
 .fmt-sample-provenance .fmt-provenance-badge {
   color: #6B7280;
-  border-color: #D1D5DB;
+  border-color: #E5E7EB;
 }
 .fmt-coverage-grid {
   display: grid;
@@ -175,17 +175,17 @@
   gap: 15px;
 }
 .fmt-coverage-card {
-  border: 1px solid #D1D5DB;
-  border-radius: 9px;
+  border: 1px solid #E5E7EB;
+  border-radius: 12px;
   background: #FFFFFF;
-  padding: 18px 20px;
+  padding: 24px;
   min-width: 0;
 }
 .fmt-coverage-card > span {
   display: flex;
   align-items: center;
   gap: 7px;
-  font-size: 16px;
+  font-size: 15px;
   color: #6B7280;
 }
 .fmt-coverage-card > span > svg {
@@ -195,23 +195,23 @@
   display: flex;
   align-items: baseline;
   gap: 9px;
-  font-family: Manrope, sans-serif;
-  font-size: 27px;
+  font-family: Inter, sans-serif;
+  font-size: 28px;
   letter-spacing: -0.7px;
   font-weight: 600;
-  color: #0C1F96;
+  color: #1F2937;
   margin: 13px 0 11px;
 }
 .fmt-coverage-card > strong > small {
-  font-family: "Manrope", sans-serif;
-  font-size: 16px;
+  font-family: "Inter", sans-serif;
+  font-size: 13px;
   font-weight: 400;
   letter-spacing: 0;
   color: #6B7280;
 }
 .fmt-coverage-card > p {
-  font-size: 16px;
-  line-height: 1.8;
+  font-size: 15px;
+  line-height: 1.5;
   color: #6B7280;
   margin: 0;
 }
@@ -226,11 +226,11 @@
   display: block;
   height: 100%;
   border-radius: 8px;
-  background: #00C0CB;
+  background: #FFFFFF;
 }
 .fmt-freshness-card > strong {
-  font-family: "Manrope", sans-serif;
-  font-size: 16px;
+  font-family: "Inter", sans-serif;
+  font-size: 15px;
   letter-spacing: -0.2px;
   margin: 20px 0 14px;
   font-weight: 500;
@@ -246,8 +246,8 @@
 }
 .fmt-platform-card {
   background: #FFFFFF;
-  border: 1px solid #D1D5DB;
-  border-radius: 11px;
+  border: 1px solid #E5E7EB;
+  border-radius: 12px;
   overflow: hidden;
   min-width: 0;
 }
@@ -257,7 +257,7 @@
   justify-content: space-between;
   gap: 15px;
   padding: 19px 22px;
-  border-bottom: 1px solid #D1D5DB;
+  border-bottom: 1px solid #E5E7EB;
 }
 .fmt-platform-name {
   display: flex;
@@ -267,7 +267,7 @@
 .fmt-platform-name > .platform-icon {
   width: 27px;
   height: 27px;
-  border: 1px solid #D1D5DB;
+  border: 1px solid #E5E7EB;
   background: #FFFFFF;
 }
 .fmt-platform-name > .platform-tiktok {
@@ -275,13 +275,13 @@
   color: #FFFFFF;
 }
 .fmt-platform-name h2 {
-  font-size: 16px;
+  font-size: 20px;
   font-weight: 600;
   margin: 0;
   color: #0C1F96;
 }
 .fmt-platform-header > span {
-  font-size: 16px;
+  font-size: 15px;
   color: #6B7280;
 }
 .fmt-platform-lead {
@@ -290,26 +290,26 @@
   justify-content: space-between;
   gap: 20px;
   padding: 23px 24px 21px;
-  background: linear-gradient(110deg, #FFFFFF, #FFFFFF);
-  border-bottom: 1px solid #D1D5DB;
+  background: #FFFFFF;
+  border-bottom: 1px solid #E5E7EB;
 }
 .fmt-lead-copy > .fmt-eyebrow {
-  font-size: 16px;
+  font-size: 13px;
   letter-spacing: 1.2px;
 }
 .fmt-lead-copy h3 {
-  font-family: var(--serif, Manrope, sans-serif);
-  font-size: 28px;
+  font-family: var(--serif, Inter, sans-serif);
+  font-size: 15px;
   line-height: 1.2;
   letter-spacing: -0.5px;
   color: #0C1F96;
-  font-weight: 400;
+  font-weight: 600;
   margin: 11px 0 9px;
 }
 .fmt-lead-copy p {
-  font-size: 16px;
+  font-size: 15px;
   color: #6B7280;
-  line-height: 1.8;
+  line-height: 1.5;
   margin: 0;
 }
 .fmt-leading-value {
@@ -320,22 +320,22 @@
   flex-shrink: 0;
 }
 .fmt-leading-value strong {
-  font-family: Manrope, sans-serif;
+  font-family: Inter, sans-serif;
   font-weight: 500;
   letter-spacing: -0.9px;
-  font-size: 33px;
+  font-size: 28px;
   line-height: 1.25;
-  color: #0C1F96;
+  color: #1F2937;
 }
 .fmt-leading-value span {
-  font-size: 16px;
+  font-size: 15px;
   color: #6B7280;
 }
 .fmt-no-winner {
   background: #FFFFFF;
 }
 .fmt-no-winner h3 {
-  font-size: 25px;
+  font-size: 15px;
   color: #6B7280;
 }
 .fmt-no-winner p {
@@ -348,9 +348,9 @@
   padding: 10px 24px;
   color: #6B7280;
   background: #FFFFFF;
-  font-size: 16px;
-  line-height: 1.8;
-  border-bottom: 1px solid #D1D5DB;
+  font-size: 13px;
+  line-height: 1.5;
+  border-bottom: 1px solid #E5E7EB;
 }
 .fmt-limited-note > svg {
   flex-shrink: 0;
@@ -369,13 +369,13 @@
 .fmt-table th,
 .fmt-table td {
   padding: 15px 12px;
-  font-size: 16px;
+  font-size: 15px;
   color: #6B7280;
-  line-height: 1.6;
-  border-bottom: 1px solid #D1D5DB;
+  line-height: 1.5;
+  border-bottom: 1px solid #E5E7EB;
 }
 .fmt-table thead th {
-  font-size: 16px;
+  font-size: 15px;
   color: #6B7280;
   letter-spacing: 0.6px;
   text-transform: uppercase;
@@ -393,13 +393,13 @@
 }
 .fmt-table tbody th {
   font-weight: 500;
-  color: #0C1F96;
+  color: #1F2937;
 }
 .fmt-table tbody tr:last-child > * {
   border-bottom: 0;
 }
 .fmt-table .fmt-active-column {
-  color: #0C1F96;
+  color: #1F2937;
   font-weight: 550;
 }
 .fmt-table thead .fmt-active-column {
@@ -420,12 +420,12 @@
   border-radius: 4px;
   background: #FFFFFF;
   color: #6B7280;
-  font-size: 16px;
+  font-size: 15px;
   font-weight: 450;
 }
 .fmt-format-name small {
   display: block;
-  font-size: 16px;
+  font-size: 13px;
   font-weight: 400;
   color: #6B7280;
   margin-top: 3px;
@@ -435,7 +435,7 @@
 }
 .fmt-winner-row .fmt-rank {
   background: #F3F4F6;
-  color: #0C1F96;
+  color: #1F2937;
 }
 .fmt-unranked-row th {
   color: #6B7280 !important;
@@ -448,11 +448,11 @@
   display: inline-flex;
   align-items: center;
   gap: 5px;
-  border: 1px solid #D1D5DB;
+  border: 1px solid #E5E7EB;
   border-radius: 5px;
   background: #FFFFFF;
   color: #6B7280;
-  font-size: 16px;
+  font-size: 15px;
   padding: 5px 7px;
 }
 .fmt-example-button:hover {
@@ -469,8 +469,8 @@
   gap: 15px;
   padding: 13px 24px;
   background: #FFFFFF;
-  border-top: 1px solid #D1D5DB;
-  font-size: 16px;
+  border-top: 1px solid #E5E7EB;
+  font-size: 15px;
   color: #6B7280;
 }
 .fmt-table-footer > span:first-child {
@@ -483,22 +483,22 @@
   align-items: center;
   justify-content: center;
   gap: 12px;
-  padding: 42px 22px;
+  padding: 24px;
   color: #6B7280;
 }
 .fmt-empty-platform > p {
-  font-size: 16px;
+  font-size: 15px;
   margin: 0;
-  line-height: 1.8;
+  line-height: 1.5;
 }
 .fmt-error {
-  border: 1px solid #D1D5DB;
+  border: 1px solid #E5E7EB;
   background: #FFFFFF;
   padding: 13px 17px;
   color: #6B7280;
   border-radius: 7px;
-  font-size: 16px;
-  line-height: 1.8;
+  font-size: 15px;
+  line-height: 1.5;
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -508,9 +508,9 @@
 .fmt-error > button {
   border: 0;
   background: none;
-  color: #0C1F96;
+  color: #1F2937;
   text-decoration: underline;
-  font-size: 16px;
+  font-size: 15px;
 }
 .fmt-platform-card > .fmt-error {
   margin: 14px 22px;
@@ -525,14 +525,14 @@
   color: #6B7280;
 }
 .fmt-loading p {
-  font-size: 16px;
+  font-size: 15px;
   color: #6B7280;
   margin: 0;
 }
 .fmt-method {
   padding: 23px 25px;
   background: #FFFFFF;
-  border: 1px solid #D1D5DB;
+  border: 1px solid #E5E7EB;
   border-radius: 10px;
 }
 .fmt-method > h2 {
@@ -540,8 +540,8 @@
   align-items: center;
   gap: 8px;
   color: #6B7280;
-  font-size: 16px;
-  font-weight: 550;
+  font-size: 20px;
+  font-weight: 600;
   margin-bottom: 17px;
 }
 .fmt-method > div {
@@ -550,13 +550,13 @@
   gap: 0 28px;
 }
 .fmt-method p {
-  font-size: 16px;
-  line-height: 1.9;
+  font-size: 15px;
+  line-height: 1.5;
   color: #6B7280;
   margin-bottom: 13px;
 }
 .fmt-method-foot {
-  border-top: 1px solid #D1D5DB;
+  border-top: 1px solid #E5E7EB;
   padding-top: 15px;
   margin-bottom: 0 !important;
   color: #6B7280 !important;
@@ -578,10 +578,10 @@
     gap: 23px;
   }
   .fmt-intro h2 {
-    font-size: 27px;
+    font-size: 20px;
   }
   .fmt-intro p {
-    font-size: 16px;
+    font-size: 15px;
   }
   .fmt-metric-control {
     min-width: 205px;
@@ -589,10 +589,10 @@
   .fmt-table th,
   .fmt-table td {
     padding: 13px 9px;
-    font-size: 16px;
+    font-size: 15px;
   }
   .fmt-table thead th {
-    font-size: 16px;
+    font-size: 15px;
   }
   .fmt-format-name {
     gap: 7px;
@@ -605,13 +605,13 @@
     padding-right: 18px;
   }
   .fmt-coverage-card {
-    padding: 17px;
+    padding: 24px;
   }
   .fmt-freshness-card > strong {
-    font-size: 16px;
+    font-size: 15px;
   }
   .fmt-coverage-card > strong > small {
-    font-size: 16px;
+    font-size: 13px;
   }
 }
 @media (max-width: 1000px) {
@@ -631,14 +631,14 @@
     grid-column: 1/-1;
   }
   .fmt-freshness-card > strong {
-    font-size: 16px;
+    font-size: 15px;
     margin: 15px 0 10px;
   }
   .fmt-method > div {
     grid-template-columns: 1fr;
   }
   .fmt-platform-header > span {
-    font-size: 16px;
+    font-size: 15px;
   }
   .fmt-platform-lead {
     padding: 21px;
@@ -656,15 +656,15 @@
     padding: 23px 20px;
   }
   .fmt-intro h2 {
-    font-size: 29px;
+    font-size: 20px;
     max-width: 320px;
   }
   .fmt-intro p {
-    font-size: 16px;
+    font-size: 15px;
     max-width: 400px;
   }
   .fmt-eyebrow {
-    font-size: 16px;
+    font-size: 13px;
     letter-spacing: 1px;
   }
   .fmt-metric-control {
@@ -672,7 +672,7 @@
     gap: 7px;
   }
   .fmt-metric-control > select {
-    font-size: 16px;
+    font-size: 15px;
     padding: 11px;
   }
   .fmt-scope-bar {
@@ -680,21 +680,21 @@
     gap: 10px;
   }
   .fmt-scope-bar > div {
-    font-size: 16px;
+    font-size: 15px;
     gap: 7px;
   }
   .fmt-scope-bar strong {
-    font-size: 16px;
+    font-size: 15px;
   }
   .fmt-scope-label {
-    font-size: 16px;
+    font-size: 13px;
   }
   .fmt-refresh {
     font-size: 0;
     gap: 0;
     margin-top: 2px;
     padding: 6px;
-    border: 1px solid #D1D5DB;
+    border: 1px solid #E5E7EB;
     background: #FFFFFF;
     border-radius: 5px;
   }
@@ -714,62 +714,62 @@
     border-radius: 6px;
   }
   .fmt-provenance strong {
-    font-size: 16px;
+    font-size: 15px;
     padding-right: 54px;
     min-height: 14px;
   }
   .fmt-provenance p {
-    font-size: 16px;
-    line-height: 1.9;
+    font-size: 15px;
+    line-height: 1.5;
   }
   .fmt-provenance-badge {
     position: absolute;
     right: 12px;
     top: 13px;
-    font-size: 16px;
+    font-size: 13px;
     padding: 4px 5px;
   }
   .fmt-coverage-grid {
     gap: 11px;
   }
   .fmt-coverage-card {
-    padding: 15px 13px;
+    padding: 24px;
   }
   .fmt-coverage-card > span {
-    font-size: 16px;
+    font-size: 15px;
     gap: 5px;
   }
   .fmt-coverage-card > span > svg {
     width: 13px;
   }
   .fmt-coverage-card > strong {
-    font-size: 27px;
+    font-size: 28px;
     gap: 5px;
     flex-wrap: wrap;
     line-height: 1.2;
     margin: 12px 0 8px;
   }
   .fmt-coverage-card > strong > small {
-    font-size: 16px;
+    font-size: 13px;
   }
   .fmt-coverage-card > p {
-    font-size: 16px;
-    line-height: 1.9;
+    font-size: 15px;
+    line-height: 1.5;
   }
   .fmt-freshness-card > strong {
-    font-size: 16px;
+    font-size: 15px;
   }
   .fmt-platform-header {
     padding: 16px;
   }
   .fmt-platform-header > span {
-    font-size: 16px;
+    font-size: 15px;
     max-width: 128px;
-    line-height: 1.7;
+    line-height: 1.5;
     text-align: right;
   }
   .fmt-platform-name h2 {
-    font-size: 16px;
+    font-size: 20px;
   }
   .fmt-platform-name > .platform-icon {
     width: 25px;
@@ -781,16 +781,16 @@
     align-items: flex-start;
   }
   .fmt-lead-copy h3 {
-    font-size: 24px;
+    font-size: 15px;
     margin: 11px 0 9px;
   }
   .fmt-lead-copy > .fmt-eyebrow {
-    font-size: 16px;
+    font-size: 13px;
     letter-spacing: 0.8px;
   }
   .fmt-lead-copy p {
-    font-size: 16px;
-    line-height: 1.9;
+    font-size: 15px;
+    line-height: 1.5;
   }
   .fmt-leading-value {
     padding-top: 12px;
@@ -799,21 +799,21 @@
     gap: 6px;
   }
   .fmt-leading-value strong {
-    font-size: 27px;
+    font-size: 28px;
     letter-spacing: -0.7px;
   }
   .fmt-leading-value span {
-    font-size: 16px;
-    line-height: 1.7;
+    font-size: 15px;
+    line-height: 1.5;
   }
   .fmt-limited-note {
     padding: 10px 16px;
-    font-size: 16px;
+    font-size: 13px;
   }
   .fmt-table th,
   .fmt-table td {
     padding: 13px 10px;
-    font-size: 16px;
+    font-size: 15px;
   }
   .fmt-table th:first-child {
     padding-left: 17px;
@@ -823,7 +823,7 @@
     padding-right: 17px;
   }
   .fmt-table thead th {
-    font-size: 16px;
+    font-size: 15px;
     letter-spacing: 0.3px;
   }
   .fmt-format-name {
@@ -832,19 +832,19 @@
   .fmt-rank {
     width: 18px;
     height: 18px;
-    font-size: 16px;
+    font-size: 15px;
   }
   .fmt-format-name small {
-    font-size: 16px;
+    font-size: 13px;
   }
   .fmt-example-button {
-    font-size: 16px;
+    font-size: 15px;
     padding: 5px 6px;
   }
   .fmt-table-footer {
     padding: 12px 16px;
-    font-size: 16px;
-    line-height: 1.7;
+    font-size: 15px;
+    line-height: 1.5;
     align-items: flex-start;
     flex-direction: column;
     gap: 5px;
@@ -857,23 +857,23 @@
     flex-shrink: 0;
   }
   .fmt-empty-platform {
-    padding: 33px 17px;
+    padding: 24px;
     gap: 10px;
   }
   .fmt-empty-platform > p {
-    font-size: 16px;
-    line-height: 1.9;
+    font-size: 15px;
+    line-height: 1.5;
   }
   .fmt-method {
     padding: 21px 18px;
   }
   .fmt-method > h2 {
-    font-size: 16px;
+    font-size: 20px;
     gap: 7px;
   }
   .fmt-method p {
-    font-size: 16px;
-    line-height: 1.9;
+    font-size: 15px;
+    line-height: 1.5;
   }
   .fmt-method-foot {
     padding-top: 13px;
@@ -882,7 +882,7 @@
     margin: 12px;
   }
   .fmt-error {
-    font-size: 16px;
+    font-size: 15px;
   }
 }
 .fmt-view,
@@ -909,16 +909,16 @@
   display: flex;
   align-items: center;
   gap: 8px;
-  font-size: 16px;
+  font-size: 15px;
   color: #6B7280;
 }
 .fmt-source-select select {
   padding: 7px;
   background: #FFFFFF;
-  border: 1px solid #D1D5DB;
+  border: 1px solid #E5E7EB;
   border-radius: 5px;
   color: #6B7280;
-  font-size: 16px;
+  font-size: 15px;
 }
 .library-toolbar {
   flex-wrap: wrap;

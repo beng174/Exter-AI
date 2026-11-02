@@ -1,5 +1,5 @@
 import { useEffect, useState, type FormEvent } from "react";
-import { RefreshCw, Wallet } from "lucide-react";
+import { CircleHelp, RefreshCw, Wallet } from "lucide-react";
 import { api } from "../lib/api";
 import "./budget-settings.css";
 
@@ -88,7 +88,9 @@ export function BudgetSettings() {
       <div><span className="budget-eyebrow"><Wallet size={14} aria-hidden="true" /> SETTINGS</span><h2 id="budget-settings-title">Monthly budgets</h2><p>Control the monthly GBP caps shared by this deployment.</p></div>
       <button className="budget-refresh" onClick={() => void refresh()} disabled={loading || saving !== null}><RefreshCw size={14} aria-hidden="true" />{loading ? "Loading…" : "Refresh usage"}</button>
     </div>
-    <div className="budget-policy"><strong>{month} · UTC</strong><p>Paid jobs pause at 90% of each cap, or earlier when the next request reserve would exceed it. Usage includes estimated charges and reservations for requests whose final cost is unknown. Budgets renew on the first day of each month in UTC.</p></div>
+    <div className="budget-period"><strong>{month} · UTC</strong>
+      <details className="budget-data-note"><summary><CircleHelp size={14} aria-hidden="true" /> About this data</summary><p>Paid jobs pause at 90% of each cap, or earlier when the next request reserve would exceed it. Usage includes estimated charges and reservations for requests whose final cost is unknown. Budgets renew on the first day of each month in UTC.</p></details>
+    </div>
     {error && <p className="budget-error" role="alert">{error}</p>}
     {message && <p className="budget-success" role="status">{message}</p>}
     {loading && !data && <p role="status">Loading budget settings…</p>}

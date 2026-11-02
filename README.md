@@ -115,9 +115,9 @@ See [architecture and coverage](docs/ARCHITECTURE.md), [Claude setup](docs/CLAUD
 
 ## Native video analysis
 
-Videos are downloaded and verified in Exter's media storage before analysis. Gemini receives that stored file through its Files API, rather than an expiring ad-library URL. Native agentic processing returns the hook, format, angle, claims, transcript, on-screen text, CTA and talking-to-camera observations in one structured inference response. A capability-specific fallback uses native static video processing at 5 FPS for the opening five seconds and 1 FPS for the remaining footage in the same inference request.
+Videos are downloaded and verified in Exter's media storage before analysis. Gemini receives the retained, compatible MP4 through its Files API and waits for ACTIVE processing state. Static is the default mode, using 3 FPS for short ads. Agentic is an explicitly selected preview. Transient rejected requests use bounded retries without taking a new reservation for each rejected attempt. The structured response records hook, format, angle, offer, claim types, speech separately from music, on-screen text, CTA and source-relative timestamps.
 
-Low-confidence values become `unknown`; UGC requires recorded partnership-label or visible third-party creator-handle evidence. Each result retains model/version, processing mode, prompt version, media hash and source-relative timestamps. See [setup, API and evaluation](docs/VIDEO-ANALYSIS.md). This replaces the planned separate frame-sampling/transcription/OCR pipeline; the existing still-image model remains available for still content.
+Unsupported observations remain `unknown`; confidence is uncalibrated and never filters evidence. UGC requires recorded partnership-label or visible third-party creator-handle evidence. Fixed taxonomies are shared with the human labelling tool. Each result retains requested/served model, mode, prompt version, media hash, resolution, fixed generation settings and token/cost accounting. Still images and carousels use native image input. See [setup, API and evaluation](docs/VIDEO-ANALYSIS.md) and the [explorable demo](docs/DEMO.md).
 
 ## Download the browser test version
 

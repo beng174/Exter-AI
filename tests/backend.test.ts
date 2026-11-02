@@ -53,9 +53,10 @@ let importedBrand: Brand;
 test("seeds thousands of ads once and exposes explicit sample provenance", async () => {
   const brands = await get<Brand[]>("/api/brands");
   assert.equal(brands.length, 6);
-  assert.equal(db.prepare("SELECT count(*) AS total FROM ads WHERE brand_id IN ('ion8','valentte')").get()!.total, 0, "Requested demo workspaces never receive fictional source ads");
+  assert.equal(db.prepare("SELECT count(*) AS total FROM ads WHERE brand_id='ion8'").get()!.total, 0, "Uncollected workspaces never receive fictional source ads");
+  assert.equal(db.prepare("SELECT count(*) AS total FROM ads WHERE brand_id='valentte' AND source='public'").get()!.total, 58, "Verified browser capture is imported once");
   const count = db.prepare("SELECT count(*) AS total FROM ads").get()!.total;
-  assert.equal(count, 2400);
+  assert.equal(count, 2458);
   const dash = await get<Dashboard>("/api/dashboard?brandId=rhode&range=90");
   assert.equal(dash.mode, "demo");
   assert.equal(dash.metrics.ads, 600);
@@ -284,7 +285,7 @@ test("stored imports, brands, reports and seed count survive reopening the datab
   const reopened = openDatabase(path);
   assert.equal(
     reopened.prepare("SELECT count(*) AS total FROM ads").get()!.total,
-    2406,
+    2464,
   );
   assert.ok(
     reopened
@@ -392,7 +393,7 @@ test("a 10,000-record import aggregates completely and paginates without truncat
     });
     assert.equal(rejected.status, 400);
     assert.equal(
-      scaleDb.prepare("SELECT count(*) AS total FROM ads").get()!.total,
+      scaleDb.prepare("SELECT count(*) AS total FROM ads WHERE brand_id=?").get(brand.id)!.total,
       10000,
     );
     t.diagnostic(

@@ -6,6 +6,7 @@ import { resolveInferenceSettings } from "../../shared/inference-config.js";
 import { readBrand } from "../db.js";
 import { readBrandResearch } from "../brand-research.js";
 import { readWebsiteEvidence } from "../demo/website.js";
+import { resolveDemoBrandId, workspaceAds } from "../demo/reconcile.js";
 import { GeminiSession } from "../gemini/transport.js";
 import { geminiPricingConfig, generationMetadata, servedGeminiModel } from "../gemini/config.js";
 import { DEFAULT_GEMINI_VIDEO_MODEL } from "../video/gemini.js";
@@ -124,7 +125,7 @@ export class CreatorResearchService {
       CREATE TABLE IF NOT EXISTS creator_research_fits (id TEXT PRIMARY KEY,brand_id TEXT NOT NULL REFERENCES brands(id),candidate_id TEXT NOT NULL,created_at TEXT NOT NULL,data TEXT NOT NULL);`);
   }
   private brand(value: unknown): Brand {
-    const brand = readBrand(this.db, identifier(value, "brandId"));
+    const brand = readBrand(this.db, resolveDemoBrandId(this.db, identifier(value, "brandId")));
     if (!brand) throw new CreatorResearchError("Brand workspace not found.", 404);
     if (brand.mode === "demo") throw new CreatorResearchError("Choose a real imported brand workspace for creator research.");
     return brand;
@@ -133,7 +134,7 @@ export class CreatorResearchService {
     return (this.db.prepare("SELECT data FROM creator_research_candidates WHERE brand_id=? ORDER BY rowid DESC").all(brandId) as { data: string }[]).map(row => JSON.parse(row.data));
   }
   private seeds(brand: Brand): CreatorCandidate[] {
-    const ads = (this.db.prepare("SELECT data FROM ads WHERE brand_id=? AND source='public'").all(brand.id) as { data: string }[]).map(row => JSON.parse(row.data) as Ad);
+    const ads = workspaceAds(this.db, brand.id).filter(ad => ad.source === "public");
     const candidates = new Map<string, CreatorCandidate>();
     for (const ad of ads) {
       const partner = ad.brandedContentPartner;

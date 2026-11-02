@@ -5,6 +5,7 @@ import { isIP } from "node:net";
 import { createHash } from "node:crypto";
 import { load } from "cheerio";
 import { readBrand } from "./db.js";
+import { resolveDemoBrandId } from "./demo/reconcile.js";
 import { analyseLocally, type BrainContentInput } from "./brain.js";
 import { assertProxySupport } from "./connectors/http.js";
 import type { Brand } from "../shared/types.js";
@@ -614,9 +615,10 @@ export function attachBrandResearch(
     try {
       if (typeof req.query.brandId !== "string")
         throw new ResearchError("brandId is required.");
-      if (!readBrand(db, req.query.brandId))
+      const brandId = resolveDemoBrandId(db, req.query.brandId);
+      if (!readBrand(db, brandId))
         throw new ResearchError("Brand workspace not found.", 404);
-      res.json(readBrandResearch(db, req.query.brandId));
+      res.json(readBrandResearch(db, brandId));
     } catch (error) {
       const e = error as ResearchError;
       res
@@ -637,7 +639,7 @@ export function attachBrandResearch(
         throw new ResearchError(
           "Research uses the saved brand domain; URL overrides are not accepted.",
         );
-      res.status(201).json(await researchBrand(db, req.body.brandId, options));
+      res.status(201).json(await researchBrand(db, resolveDemoBrandId(db, req.body.brandId), options));
     } catch (error) {
       const e = error as ResearchError;
       res

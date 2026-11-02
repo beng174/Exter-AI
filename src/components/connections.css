@@ -9,7 +9,7 @@
   gap: 14px;
   padding: 21px;
   background: #FFFFFF;
-  border: 1px solid #D1D5DB;
+  border: 1px solid #E5E7EB;
   border-radius: 10px;
 }
 .cx-intro > span:first-child {
@@ -20,19 +20,19 @@
   flex: 1;
 }
 .cx-intro h2 {
-  font-size: 16px;
+  font-size: 20px;
   margin: 0 0 7px;
 }
 .cx-intro p {
-  font-size: 16px;
+  font-size: 15px;
   color: #6B7280;
-  line-height: 1.8;
+  line-height: 1.5;
   margin: 0;
 }
 .cx-tag {
-  font-size: 16px;
+  font-size: 13px;
   padding: 5px 8px;
-  border: 1px solid #D1D5DB;
+  border: 1px solid #E5E7EB;
   border-radius: 5px;
   white-space: nowrap;
   color: #6B7280;
@@ -44,9 +44,9 @@
 }
 .cx-card {
   background: #FFFFFF;
-  border: 1px solid #D1D5DB;
-  border-radius: 10px;
-  padding: 21px;
+  border: 1px solid #E5E7EB;
+  border-radius: 12px;
+  padding: 24px;
   min-width: 0;
 }
 .cx-card-head {
@@ -57,14 +57,14 @@
   margin-bottom: 20px;
 }
 .cx-state {
-  font-size: 16px;
-  border: 1px solid #D1D5DB;
+  font-size: 15px;
+  border: 1px solid #E5E7EB;
   border-radius: 4px;
   padding: 4px 7px;
   color: #6B7280;
 }
 .cx-synced {
-  color: #0C1F96;
+  color: #1F2937;
   background: #FFFFFF;
 }
 .cx-error,
@@ -72,36 +72,36 @@
   color: #6B7280;
 }
 .cx-card h3 {
-  font-size: 18px;
+  font-size: 15px;
   margin-bottom: 10px;
 }
 .cx-card > p {
-  font-size: 16px;
-  line-height: 1.9;
+  font-size: 15px;
+  line-height: 1.5;
   color: #6B7280;
 }
 .cx-card dl {
-  padding: 10px 0;
+  padding: 24px;
   margin: 0;
 }
 .cx-card dl > div {
   display: flex;
   flex-direction: column;
   gap: 5px;
-  border-top: 1px solid #D1D5DB;
-  padding: 10px 0;
-  font-size: 16px;
+  border-top: 1px solid #E5E7EB;
+  padding: 24px;
+  font-size: 15px;
 }
 .cx-card dt {
   color: #6B7280;
 }
 .cx-card dd {
   margin: 0;
-  color: #0C1F96;
+  color: #1F2937;
 }
 .cx-card .cx-classification {
-  font-size: 16px;
-  line-height: 1.8;
+  font-size: 15px;
+  line-height: 1.5;
   min-height: 35px;
 }
 .cx-actions {
@@ -111,20 +111,20 @@
   margin-top: 15px;
 }
 .cx-actions .button {
-  font-size: 16px;
+  font-size: 15px;
   padding: 8px;
 }
 .cx-claude {
   display: flex;
   align-items: center;
   gap: 20px;
-  border: 1px solid #D1D5DB;
+  border: 1px solid #E5E7EB;
   background: #FFFFFF;
   padding: 27px;
   border-radius: 12px;
 }
 .cx-claude-mark {
-  font-size: 55px;
+  font-size: 28px;
   color: #6B7280;
   flex-shrink: 0;
 }
@@ -132,8 +132,7 @@
   flex: 1;
 }
 .cx-claude h2 {
-  font:
-    27px/1.2 Manrope, sans-serif;
+  font: 600 20px/1.5 Inter, sans-serif;
   letter-spacing: -0.4px;
   color: #0C1F96;
   margin: 0 0 12px;
@@ -143,15 +142,15 @@
   margin-bottom: 10px;
 }
 .cx-claude p {
-  font-size: 16px;
-  line-height: 1.9;
+  font-size: 15px;
+  line-height: 1.5;
   color: #6B7280;
   max-width: 570px;
   margin: 0 0 12px;
 }
 .cx-claude small {
-  font-size: 16px;
-  line-height: 1.8;
+  font-size: 13px;
+  line-height: 1.5;
   color: #6B7280;
   display: block;
 }
@@ -159,8 +158,8 @@
   display: flex;
   align-items: flex-start;
   gap: 8px;
-  font-size: 16px;
-  line-height: 1.8;
+  font-size: 15px;
+  line-height: 1.5;
   color: #6B7280;
 }
 .cx-footnote > svg {
@@ -168,31 +167,31 @@
   margin-top: 2px;
 }
 .cx-dialog > p {
-  line-height: 1.9;
-  font-size: 16px;
+  line-height: 1.5;
+  font-size: 15px;
   color: #6B7280;
 }
 .cx-dialog ol,
 .cx-dialog ul {
   padding-left: 20px;
-  font-size: 16px;
-  line-height: 2;
+  font-size: 15px;
+  line-height: 1.5;
   color: #6B7280;
 }
 .cx-dialog li {
-  padding: 4px 0;
+  padding: 24px;
   overflow-wrap: anywhere;
 }
 .cx-dialog h3 {
-  font-size: 16px;
+  font-size: 15px;
   margin-top: 20px;
 }
 .cx-dialog code {
-  font-size: 16px;
+  font-size: 15px;
 }
 .cx-dialog .inline-note {
-  font-size: 16px;
-  line-height: 1.8;
+  font-size: 13px;
+  line-height: 1.5;
 }
 @media (max-width: 1000px) {
   .cx-grid {
@@ -233,10 +232,10 @@
     min-width: 180px;
   }
   .cx-claude-mark {
-    font-size: 40px;
+    font-size: 28px;
   }
   .cx-claude h2 {
-    font-size: 25px;
+    font-size: 20px;
   }
   .cx-claude > .button {
     margin-left: 0;
@@ -246,7 +245,7 @@
   }
 }
 .public-monitor {
-  border: 1px solid #D1D5DB;
+  border: 1px solid #E5E7EB;
   border-radius: 12px;
   background: #FFFFFF;
   overflow: hidden;
@@ -265,20 +264,19 @@
   flex: 1;
 }
 .public-monitor-head h2 {
-  font:
-    27px/1.25 Manrope, sans-serif;
+  font: 600 20px/1.5 Inter, sans-serif;
   letter-spacing: -0.5px;
   margin: 0 0 10px;
   color: #0C1F96;
 }
 .public-monitor-head p {
-  font-size: 16px;
-  line-height: 1.8;
+  font-size: 15px;
+  line-height: 1.5;
   color: #6B7280;
   margin: 0;
 }
 .public-monitor-head .eyebrow {
-  font-size: 16px;
+  font-size: 13px;
   margin-bottom: 10px;
 }
 .public-monitor-body {
@@ -288,30 +286,30 @@
   padding: 26px;
 }
 .public-monitor-body h3 {
-  font-size: 16px;
+  font-size: 15px;
   margin-bottom: 12px;
 }
 .public-monitor-body p {
-  font-size: 16px;
+  font-size: 15px;
   color: #6B7280;
-  line-height: 1.9;
+  line-height: 1.5;
 }
 .public-monitor-body label {
   display: flex;
   flex-direction: column;
   gap: 8px;
   color: #6B7280;
-  font-size: 16px;
+  font-size: 13px;
   margin: 17px 0;
 }
 .public-monitor-body input,
 .public-monitor-body textarea,
 .public-monitor-body select {
-  border: 1px solid #D1D5DB;
+  border: 1px solid #E5E7EB;
   border-radius: 6px;
   padding: 10px;
   background: #FFFFFF;
-  font-size: 16px;
+  font-size: 15px;
   min-width: 0;
   max-width: 100%;
   resize: vertical;
@@ -322,7 +320,7 @@
 .public-brain {
   padding: 22px;
   background: #FFFFFF;
-  border: 1px solid #D1D5DB;
+  border: 1px solid #E5E7EB;
   border-radius: 9px;
   align-self: start;
 }
@@ -330,18 +328,18 @@
   display: flex;
   align-items: center;
   gap: 7px;
-  font-size: 16px;
+  font-size: 13px;
 }
 .public-brain ul {
   padding-left: 15px;
   color: #6B7280;
-  font-size: 16px;
-  line-height: 2.1;
+  font-size: 15px;
+  line-height: 1.5;
 }
 .public-monitor-note {
-  font-size: 16px !important;
+  font-size: 13px !important;
   color: #6B7280;
-  line-height: 1.9;
+  line-height: 1.5;
   margin: 0;
   padding: 0 26px 22px;
 }
@@ -354,23 +352,23 @@
   flex-wrap: wrap;
   align-items: center;
   gap: 7px;
-  font-size: 16px;
-  color: #0C1F96;
-  line-height: 1.8;
+  font-size: 15px;
+  color: #1F2937;
+  line-height: 1.5;
   padding-top: 18px;
 }
 .brain-job p {
-  font-size: 16px;
+  font-size: 15px;
   margin: 5px 0 0;
 }
 .optional-client-connections {
-  border: 1px solid #D1D5DB;
+  border: 1px solid #E5E7EB;
   padding: 19px 22px;
   border-radius: 9px;
   background: #FFFFFF;
 }
 .optional-client-connections > summary {
-  font-size: 16px;
+  font-size: 15px;
   color: #6B7280;
   cursor: pointer;
 }
@@ -383,7 +381,7 @@
     flex-wrap: wrap;
   }
   .public-monitor-head h2 {
-    font-size: 25px;
+    font-size: 20px;
   }
   .public-monitor-head > div {
     min-width: 180px;

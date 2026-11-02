@@ -5,7 +5,9 @@ import { GeminiSmokeTest } from "./components/GeminiSmokeTest";
 import { LabellingTool } from "./components/LabellingTool";
 import { BrandDemoReport } from "./components/BrandDemoReport";
 import { DemoPreparation } from "./components/DemoPreparation";
+import { DemoCollectionControls } from "./components/DemoCollectionControls";
 import { BrandLogo } from "./components/BrandLogo";
+import { RealWorkspaceView, type RealWorkspacePage } from "./components/RealWorkspaceViews";
 import { useEffect, useRef, useState } from "react";
 import {
   Activity,
@@ -70,58 +72,55 @@ const navigation: { id: Page; label: string; icon: typeof Compass }[] = [
   { id: "formats", label: "Creative formats", icon: Activity },
   { id: "competitors", label: "Competitors", icon: BarChart3 },
   { id: "audiences", label: "Audience & voice", icon: Target },
-  { id: "creators", label: "Creator discovery", icon: UsersRound },
+  { id: "creators", label: "Creators", icon: UsersRound },
   { id: "reports", label: "Reports", icon: FileChartColumnIncreasing },
   { id: "labelling", label: "Labelling", icon: ClipboardCheck },
 ];
 const headings: Record<Page, { title: string; subtitle: string }> = {
-  demo: { title: "Creative intelligence, with the evidence.", subtitle: "A read-only brand report from saved public sources." },
+  demo: { title: "Brand report", subtitle: "" },
   settings: {
-    title: "Budgets and live tests",
-    subtitle: "Set monthly GBP caps and run the hosted Gemini validation.",
+    title: "Settings",
+    subtitle: "Budgets, website evidence and live tests.",
   },
   labelling: {
-    title: "Review the creative. Record your labels.",
+    title: "Labelling",
     subtitle: "Human review of source ads, with model predictions hidden.",
   },
   brand: {
-    title: "Start with the brand. Follow the evidence.",
-    subtitle:
-      "A sourced public website test, with actual observations separated from creative hypotheses.",
+    title: "Brand research",
+    subtitle: "Website observations and source links.",
   },
   formats: {
-    title: "The format behind the performance.",
-    subtitle:
-      "Compare UGC, influencer, static, reviews and native creative formats within each platform.",
+    title: "Formats",
+    subtitle: "Creative formats in the collected sample.",
   },
   overview: {
-    title: "A wider lens. A clearer advantage.",
-    subtitle: "Your competitive landscape, brought into focus.",
+    title: "Overview",
+    subtitle: "Collected ads and creative analysis.",
   },
   ads: {
-    title: "Good creative leaves clues.",
-    subtitle: "Explore the ads, messages, and angles earning attention.",
+    title: "Content library",
+    subtitle: "Explore source ads and their analysis.",
   },
   competitors: {
-    title: "Know who’s setting the pace.",
-    subtitle: "Compare your brand with the rest of your landscape.",
+    title: "Competitors",
+    subtitle: "Collected competitor ads and source coverage.",
   },
   audiences: {
-    title: "Understand the people behind the numbers.",
-    subtitle:
-      "Turn audience angles and customer conversations into creative direction.",
+    title: "Audience & voice",
+    subtitle: "Available audience and customer evidence.",
   },
   creators: {
-    title: "The right voices. Your next chapter.",
-    subtitle: "Discover creators whose audience and style fit your brand.",
+    title: "Creators",
+    subtitle: "Attributed creators and public profile evidence.",
   },
   reports: {
-    title: "From intelligence to your next move.",
-    subtitle: "Clear, shareable snapshots of your competitive landscape.",
+    title: "Reports",
+    subtitle: "Saved reports and source snapshots.",
   },
   sources: {
-    title: "Better inputs. Sharper intelligence.",
-    subtitle: "Bring your authorised data into one connected workspace.",
+    title: "Data sources",
+    subtitle: "Public collection and authorised data connections.",
   },
 };
 
@@ -574,15 +573,20 @@ function AdLibrary({
 function WorkspaceApp() {
   const [brands, setBrands] = useState<Brand[]>([]),
     [brandId, setBrandId] = useState(
-      () => localStorage.getItem("exter-brand") || "rhode",
+      () => {
+        const requested = new URLSearchParams(window.location.search).get("brandId");
+        return requested && /^[a-zA-Z0-9][a-zA-Z0-9:_-]{0,119}$/.test(requested) ? requested : localStorage.getItem("exter-brand") || "valentte";
+      },
     ),
     [dashboard, setDashboard] = useState<Dashboard | null>(null),
-    [page, setPage] = useState<Page>(() =>
-      (window as Window & { __EXTER_RESEARCH_BRAND__?: string })
+    [page, setPage] = useState<Page>(() => {
+      const requested = new URLSearchParams(window.location.search).get("view");
+      if (requested && Object.hasOwn(headings, requested)) return requested as Page;
+      return (window as Window & { __EXTER_RESEARCH_BRAND__?: string })
         .__EXTER_RESEARCH_BRAND__ === localStorage.getItem("exter-brand")
         ? "brand"
-        : "overview",
-    ),
+        : "overview";
+    }),
     [platform, setPlatform] = useState("all"),
     [range, setRange] = useState("30"),
     [search, setSearch] = useState(""),
@@ -596,12 +600,14 @@ function WorkspaceApp() {
     [helpOpen, setHelpOpen] = useState(false),
     [exportBusy, setExportBusy] = useState(false);
   const searchRef = useRef<HTMLInputElement>(null);
+  const selectedBrand = brands.find(item => item.id === brandId);
+  const isRealWorkspacePage = selectedBrand?.mode === "imported" && ["overview", "ads", "formats", "brand", "creators", "competitors"].includes(page);
   useEffect(() => {
     api<Brand[]>("/api/brands")
       .then((list) => {
         setBrands(list);
         if (!list.some((b) => b.id === brandId) && list.length)
-          setBrandId(list[0].id);
+          setBrandId((list.find(item => item.mode === "imported" && item.domain.replace(/^www\./, "") === "valentte.com") || list[0]).id);
       })
       .catch((e) => {
         setError(e.message);
@@ -610,7 +616,8 @@ function WorkspaceApp() {
   }, []);
   useEffect(() => {
     let cancelled = false;
-    if (page === "demo") { setLoading(false); setError(""); return; }
+    localStorage.setItem("exter-brand", brandId);
+    if (page === "demo" || page === "settings" || page === "labelling" || isRealWorkspacePage) { setDashboard(null); setLoading(false); setError(""); return; }
     setLoading(true);
     setError("");
     api<Dashboard>(
@@ -625,11 +632,17 @@ function WorkspaceApp() {
       .finally(() => {
         if (!cancelled) setLoading(false);
       });
-    localStorage.setItem("exter-brand", brandId);
     return () => {
       cancelled = true;
     };
-  }, [brandId, platform, range, refresh, page]);
+  }, [brandId, platform, range, refresh, page, isRealWorkspacePage]);
+  useEffect(() => {
+    if (page !== "settings") return;
+    const id = window.location.hash.slice(1);
+    if (!["brand-demo-preparation", "demo-collection", "monthly-budgets", "gemini-smoke-test"].includes(id)) return;
+    const frame = requestAnimationFrame(() => document.getElementById(id)?.scrollIntoView({ block: "start" }));
+    return () => cancelAnimationFrame(frame);
+  }, [page, brandId]);
   useEffect(() => {
     function key(e: KeyboardEvent) {
       if ((e.metaKey || e.ctrlKey) && e.key === "k") {
@@ -680,7 +693,7 @@ function WorkspaceApp() {
       previous?.focus();
     };
   }, [modalIsOpen]);
-  const brand = dashboard?.brand || brands.find((b) => b.id === brandId);
+  const brand = selectedBrand || (dashboard?.brand.id === brandId ? dashboard.brand : undefined);
   function navigate(next: Page) {
     setPage(next);
     setMenuOpen(false);
@@ -740,25 +753,10 @@ function WorkspaceApp() {
             >
               <Icon size={18} />
               <span>{label}</span>
-              {id === "creators" && <span className="nav-new">NEW</span>}
             </button>
           ))}
         </nav>
         <div className="sidebar-bottom">
-          <div className="workspace-promo">
-            <span>
-              <Sparkles size={16} /> A little unfair advantage.
-            </span>
-            <p>
-              Big-picture thinking.
-              <br />
-              Grounded in the details.
-            </p>
-            <button onClick={() => setAskOpen(true)}>
-              Meet your research assistant
-              <ArrowUpRight size={14} />
-            </button>
-          </div>
           <button
             className={`nav-item ${page === "settings" ? "active" : ""}`}
             onClick={() => navigate("settings")}
@@ -859,8 +857,7 @@ function WorkspaceApp() {
           </div>
         </header>
         <main>
-          {page !== "demo" && <InfrastructureStatus />}
-          {page !== "settings" && page !== "labelling" && page !== "demo" && <MetaCollectionPanel key={brandId} workspaceId={brandId} />}
+          {page === "sources" && <MetaCollectionPanel key={brandId} workspaceId={brandId} />}
           {page !== "demo" && <div className="page-title-row">
             <div>
               <div className="page-eyebrow">
@@ -869,10 +866,10 @@ function WorkspaceApp() {
                 <span className="eyebrow-divider">/</span>
                 {brand?.name || "YOUR BRAND"}
               </div>
-              <h1>{title.title}</h1>
+              <h1>{page === "brand" && brand ? brand.name : title.title}</h1>
               <p>{title.subtitle}</p>
             </div>
-            {page !== "settings" && page !== "labelling" && <div className="title-actions">
+            {page !== "settings" && page !== "labelling" && !isRealWorkspacePage && <div className="title-actions">
               <button
                 className="button secondary export-button"
                 title="Generate a report covering the last 30 days across all platforms"
@@ -904,7 +901,7 @@ function WorkspaceApp() {
               <strong>{brand?.name || "Your brand"}</strong>
               <span className="vertical-rule" />
               <span>
-                {page === "brand"
+                {isRealWorkspacePage ? "Saved public evidence" : page === "brand"
                   ? "Website and source research"
                   : `${dashboard?.metrics.brands || 0} brands in landscape`}
               </span>
@@ -916,7 +913,7 @@ function WorkspaceApp() {
                 <ChevronDown size={14} />
               </button>
             </div>
-            {page !== "brand" && page !== "labelling" && (
+            {page !== "brand" && page !== "labelling" && !isRealWorkspacePage && (
               <div className="filter-group">
                 <label className="platform-select">
                   <Globe2 size={14} />
@@ -959,7 +956,7 @@ function WorkspaceApp() {
               </div>
             )}
           </div>}
-          {page !== "settings" && page !== "labelling" && page !== "demo" && <div className="data-status">
+          {page !== "settings" && page !== "labelling" && page !== "demo" && !isRealWorkspacePage && <div className="data-status">
             <span>
               <i className={brand?.mode === "imported" ? "green" : ""} />
               {page === "brand"
@@ -995,10 +992,12 @@ function WorkspaceApp() {
             <div className="page-content">
               <nav className="settings-shortcuts" aria-label="Settings sections">
                 <a href="#brand-demo-preparation">Website evidence & client demo</a>
+                <a href="#demo-collection">Competitor collection</a>
                 <a href="#monthly-budgets">Monthly budgets</a>
                 <a href="#gemini-smoke-test">Gemini smoke test</a>
               </nav>
               <DemoPreparation key={brandId} brandId={brandId} onBrandChange={setBrandId} />
+              <DemoCollectionControls key={`collection-${brandId}`} brandId={brandId} />
               <BudgetSettings />
               <GeminiSmokeTest />
             </div>
@@ -1006,6 +1005,8 @@ function WorkspaceApp() {
             <div key={brandId} className="page-content"><a className="button secondary" href={`/demo/${encodeURIComponent(brandId)}`} target="_blank" rel="noopener noreferrer">Open client demo view</a><BrandDemoReport brandId={brandId} /></div>
           ) : page === "labelling" ? (
             <div key={brandId} className="page-content"><LabellingTool brandId={brandId} /></div>
+          ) : isRealWorkspacePage ? (
+            <div key={`${brandId}:${page}:${refresh}`} className="page-content"><RealWorkspaceView brandId={brandId} view={page as RealWorkspacePage} onOpenSettings={() => navigate("settings")} /></div>
           ) : loading && !dashboard ? (
             <div className="loading-state main-loading">
               <LoaderCircle className="spin" size={23} />
@@ -1075,19 +1076,11 @@ function WorkspaceApp() {
             )
           )}
           {page !== "demo" && <footer className="main-footer">
-            <span>
-              <span className="footer-logo">Exter Media</span>A little perspective
-              changes everything.
-            </span>
-            <span>
-              {dashboard?.mode === "demo"
-                ? "Sample dataset"
-                : "Imported dataset"}
-              <span className="status-separator">·</span>
-              {dashboard?.sourceStatus?.connected
-                ? `Source last synced ${new Date(dashboard.sourceStatus.lastSuccessfulSyncAt!).toLocaleTimeString()}`
-                : "No verified live feeds connected"}
-            </span>
+            <span className="footer-logo">Exter Media</span>
+            <details className="workspace-data-note"><summary><CircleHelp size={14} /> About this data</summary>
+              <p>{brand?.mode === "imported" ? "Saved source observations. Missing data is shown as unavailable; ad counts and creative structure do not establish performance." : "Illustrative sample workspace. These records are not live market data."}</p>
+              <InfrastructureStatus />
+            </details>
           </footer>}
         </main>
       </div>

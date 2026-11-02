@@ -80,6 +80,10 @@ function creativeOf(snapshot: Record<string, any>, row: Record<string, any>): Sm
   if (imageUrls.length) return { kind: "unknown", candidateKind: "image", reason: "The verified dynamic snapshot exposes an incomplete image variant set; no partial set was selected." };
   return { kind: "unknown", reason: "The verified ad snapshot did not expose an approved source video, image or carousel." };
 }
+/** Caller must first verify the source advertiser, ad and snapshot identity. */
+export function creativeFromVerifiedSnapshot(snapshot: Record<string, any>, row: Record<string, any>): SmokeCreative {
+  return creativeOf(snapshot, row);
+}
 /** Only media inside a verified advertiser/ad snapshot is eligible. Temporary URLs stay in memory. */
 export function creativeSourcesFromScripts(scripts: string[], wanted: Set<string>): Map<string, SmokeCreative> {
   const found = new Map<string, SmokeCreative>();
