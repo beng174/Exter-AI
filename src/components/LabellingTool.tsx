@@ -102,7 +102,7 @@ export function LabellingTool({ brandId }: { brandId: string }) {
       </select></label>
       <div className="labelling-pagination">
         <button type="button" disabled={Boolean(session) || busy || offset === 0} onClick={() => setOffset(current => Math.max(0, current - 50))}>Previous page</button>
-        <span>{queue ? `${queue.total ? queue.offset + 1 : 0}–${Math.min(queue.offset + queue.limit, queue.total)} of ${queue.total}` : "Loading…"}</span>
+        <span>{queue ? `${queue.total ? queue.offset + 1 : 0}-${Math.min(queue.offset + queue.limit, queue.total)} of ${queue.total}` : "Loading…"}</span>
         <button type="button" disabled={Boolean(session) || busy || !queue || offset + queue.limit >= queue.total} onClick={() => setOffset(current => current + 50)}>Next page</button>
       </div>
     </div>

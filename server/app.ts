@@ -30,6 +30,11 @@ import { attachPublicMonitor } from "./public-monitor.js";
 import { attachVideoAnalysis } from "./video/api.js";
 import { attachLabelling } from "./labelling/api.js";
 import { attachGeminiSmoke } from "./smoke/api.js";
+import { attachBrandDemo } from "./demo/api.js";
+import { attachCreatorResearch } from "./creators/api.js";
+import { existsSync } from "node:fs";
+import { resolve } from "node:path";
+import { plainDashes } from "../shared/presentation.js";
 import type { FormatMetric } from "../shared/format-types.js";
 
 function formatMetric(value: unknown): FormatMetric {
@@ -224,13 +229,26 @@ export function createApp(db: DatabaseSync = openDatabase()) {
   app.use(basicAuth());
   app.disable("x-powered-by");
   app.use(express.json({ limit: "20mb" }));
-  app.use(["/api/budgets", "/api/gemini-smoke", "/api/labelling"], protectSettingsMutation);
+  app.use((_req, res, next) => {
+    const send = res.send;
+    res.send = function(body: unknown) {
+      return send.call(this, typeof body === "string" && /text\/(?:markdown|plain)/i.test(String(this.getHeader("Content-Type"))) ? plainDashes(body) : body);
+    };
+    next();
+  });
+  app.get("/api/branding", (_req, res) => {
+    res.setHeader("Cache-Control", "private, no-store");
+    res.json({ name: "Exter Media", logoMark: existsSync(resolve("public/brand/exter-logo-mark.svg")) ? "/brand/exter-logo-mark.svg" : null, appIcon: existsSync(resolve("public/brand/exter-app-icon.svg")) ? "/brand/exter-app-icon.svg" : null });
+  });
+  app.use(["/api/budgets", "/api/gemini-smoke", "/api/labelling", "/api/creator-research", "/api/brands"], protectSettingsMutation);
   attachInfrastructure(app, db);
   attachConnections(app, db);
   attachPublicMonitor(app, db);
   const video = attachVideoAnalysis(app, db);
   attachLabelling(app, db, video);
   attachGeminiSmoke(app, db, video);
+  attachBrandDemo(app, db);
+  attachCreatorResearch(app, db);
   attachBrain(app, db);
   attachBrandResearch(app, db);
   app.get("/api/health", (_req, res) =>
@@ -478,11 +496,11 @@ export function createApp(db: DatabaseSync = openDatabase()) {
       brandId: brand.id,
       title: `${brand.name} · Intelligence brief`,
       createdAt: new Date().toISOString(),
-      content:
+      content: plainDashes(
         reportContent(dashboard(db, brand)) +
         formatReportSummary(
           analyzeFormats(brand, getAds(db, brand, "all", 30), { range: 30 }),
-        ),
+        )),
       mode: brand.mode,
     };
     db.prepare("INSERT INTO reports VALUES (?, ?, ?, ?)").run(

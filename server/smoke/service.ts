@@ -611,6 +611,6 @@ export class GeminiSmokeService {
       const analysis = analyses.get(item.analysisId!);
       sections.push("", `### Ad ${item.nativeId} (${item.mediaKind || "video"})`, "", "```json", JSON.stringify(analysis, null, 2), "```");
     }
-    return sections.join("\n") + "\n";
+    return (sections.join("\n") + "\n").replace(/[\u2013\u2014]/g, "-");
   }
 }

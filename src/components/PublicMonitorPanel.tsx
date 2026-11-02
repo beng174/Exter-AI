@@ -146,7 +146,7 @@ export function PublicMonitorPanel({
             >
               <option value="organic">Organic posts</option>
               <option value="paid">
-                Paid ads — supplied source classification
+                Paid ads - supplied source classification
               </option>
             </select>
           </label>

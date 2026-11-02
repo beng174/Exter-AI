@@ -52,7 +52,8 @@ let importedBrand: Brand;
 
 test("seeds thousands of ads once and exposes explicit sample provenance", async () => {
   const brands = await get<Brand[]>("/api/brands");
-  assert.equal(brands.length, 4);
+  assert.equal(brands.length, 6);
+  assert.equal(db.prepare("SELECT count(*) AS total FROM ads WHERE brand_id IN ('ion8','valentte')").get()!.total, 0, "Requested demo workspaces never receive fictional source ads");
   const count = db.prepare("SELECT count(*) AS total FROM ads").get()!.total;
   assert.equal(count, 2400);
   const dash = await get<Dashboard>("/api/dashboard?brandId=rhode&range=90");
@@ -218,6 +219,7 @@ test("report generation, list and downloads retain provenance and measured resul
   const report: Report = await response.json();
   assert.equal(report.mode, "imported");
   assert.match(report.content, /USER-IMPORTED DATA/);
+  assert.doesNotMatch(report.content, /[\u2013\u2014]/);
   assert.match(report.content, /2 ads across 2 brands/);
   assert.match(report.content, /not a conversion ranking/);
   const list = await get<Report[]>(`/api/reports?brandId=${importedBrand.id}`);

@@ -1,3 +1,4 @@
+import { displayData, plainDashes } from "../../shared/presentation";
 export async function api<T>(url: string, body?: unknown): Promise<T> {
   const response = await fetch(
     url,
@@ -11,9 +12,9 @@ export async function api<T>(url: string, body?: unknown): Promise<T> {
   );
   if (!response.ok) {
     const data = await response.json().catch(() => null);
-    throw new Error(data?.error || `Request failed (${response.status})`);
+    throw new Error(plainDashes(data?.error || `Request failed (${response.status})`));
   }
-  return response.json();
+  return displayData(await response.json());
 }
 export const number = (value: number) =>
   new Intl.NumberFormat("en", {

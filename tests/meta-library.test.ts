@@ -66,6 +66,9 @@ test("Partnership cards retain only explicitly linked branded-content evidence",
     pageId: "922752257597312", name: "_sheisgreta", profileUrl: "https://www.instagram.com/_u/_sheisgreta",
   });
   assert.deepEqual(ad.creativeFormats, [], "partnership evidence alone does not classify a creative's style");
+  const numericProfile = normalizeMetaLibraryCapture(capture([{ ...partnership, snapshot: { ...partnership.snapshot,
+    page_profile_uri: "https://www.facebook.com/profile.php?id=922752257597312&tracking=DROP_THIS", } }]), brand).ads[0];
+  assert.equal(numericProfile.brandedContentPartner?.profileUrl, "https://www.facebook.com/profile.php?id=922752257597312", "Public profile identity survives while tracking parameters are removed");
   assert.throws(() => normalizeMetaLibraryCapture(capture([{ ...partnership, snapshot: {
     ...partnership.snapshot, branded_content: { page_id: "999999999999999", page_name: "Another brand" },
   } }]), brand), /identity/);

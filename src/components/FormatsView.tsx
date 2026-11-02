@@ -212,7 +212,7 @@ function PlatformFormats({
                       <span className="fmt-format-name">
                         <span className="fmt-rank">
                           {row.rank === null
-                            ? "—"
+                            ? "-"
                             : String(row.rank).padStart(2, "0")}
                         </span>
                         <span>
@@ -233,13 +233,13 @@ function PlatformFormats({
                     >
                       {row.engagementDenominator
                         ? percent(row.engagementRate)
-                        : "—"}
+                        : "-"}
                     </td>
                     <td>
-                      {row.conversions === null ? "—" : number(row.conversions)}
+                      {row.conversions === null ? "-" : number(row.conversions)}
                     </td>
                     <td className={metric === "cpa" ? "fmt-active-column" : ""}>
-                      {row.cpa === null ? "—" : row.cpa.toFixed(2)}
+                      {row.cpa === null ? "-" : row.cpa.toFixed(2)}
                     </td>
                     <td
                       className={
@@ -247,7 +247,7 @@ function PlatformFormats({
                       }
                     >
                       {row.conversionRate === null
-                        ? "—"
+                        ? "-"
                         : percent(row.conversionRate)}
                     </td>
                     {onAd && (

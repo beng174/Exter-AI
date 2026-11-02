@@ -155,7 +155,7 @@ export function BrandResearchView({
         .map((line) => `> ${line}`)
         .join("\n");
     const lines = [
-      `# ${profile.brandName} — public brand research`,
+      `# ${profile.brandName} - public brand research`,
       `Observed: ${profile.observedAt}`,
       `Category: ${profile.category}`,
       `Website: https://${profile.domain}`,
@@ -171,7 +171,7 @@ export function BrandResearchView({
             `Search source: ${source(library.queryUrl)}`,
             "Dates below are ad delivery dates supplied by the library, not original post publication dates. Status is as shown at capture, not a live delivery check. Engagement rate: N/A, counts and denominator not supplied.",
             ...library.records.flatMap((ad) => [
-              `### Ad ${ad.providerAdId || ad.id} — ${ad.format || "Media format not supplied"}`,
+              `### Ad ${ad.providerAdId || ad.id} - ${ad.format || "Media format not supplied"}`,
               `Status shown at capture: ${ad.deliveryStatus || "unknown"}. Delivery began: ${deliveryDate(ad.deliveryStartAt)}. Delivery ended: ${deliveryDate(ad.deliveryStopAt)}.`,
               ...(ad.brandedContentPartner
                 ? [
@@ -230,7 +230,7 @@ export function BrandResearchView({
       ),
       "## Creative hypotheses to test",
       ...profile.proposedTests.flatMap((test) => [
-        `### ${test.format} — hypothesis`,
+        `### ${test.format} - hypothesis`,
         test.hypothesis,
         ...test.evidenceSourceUrls.map((url) => `Evidence: ${source(url)}`),
       ]),
@@ -543,7 +543,7 @@ export function BrandResearchView({
                   <div>
                     <strong>{visual.description}</strong>
                     <p>
-                      Public website imagery — not a social ad or ad-performance
+                      Public website imagery - not a social ad or ad-performance
                       record.
                     </p>
                   </div>

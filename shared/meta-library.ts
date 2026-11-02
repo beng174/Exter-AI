@@ -112,7 +112,9 @@ function profileUrl(value: unknown): string | null {
     if (url.protocol !== "https:" || url.username || url.password || url.port ||
         !["www.facebook.com", "facebook.com", "www.instagram.com", "instagram.com"].includes(url.hostname))
       return null;
+    const profileId = url.pathname === "/profile.php" && ["www.facebook.com", "facebook.com"].includes(url.hostname) ? url.searchParams.get("id") : null;
     url.search = "";
+    if (profileId && /^\d{1,30}$/.test(profileId)) url.searchParams.set("id", profileId);
     url.hash = "";
     return url.href;
   } catch { return null; }

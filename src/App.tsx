@@ -3,6 +3,9 @@ import { InfrastructureStatus } from "./components/InfrastructureStatus";
 import { BudgetSettings } from "./components/BudgetSettings";
 import { GeminiSmokeTest } from "./components/GeminiSmokeTest";
 import { LabellingTool } from "./components/LabellingTool";
+import { BrandDemoReport } from "./components/BrandDemoReport";
+import { DemoPreparation } from "./components/DemoPreparation";
+import { BrandLogo } from "./components/BrandLogo";
 import { useEffect, useRef, useState } from "react";
 import {
   Activity,
@@ -60,6 +63,7 @@ import {
 } from "./components/ResearchViews";
 
 const navigation: { id: Page; label: string; icon: typeof Compass }[] = [
+  { id: "demo", label: "Brand demo", icon: FileChartColumnIncreasing },
   { id: "overview", label: "Overview", icon: Compass },
   { id: "brand", label: "Brand research", icon: Globe2 },
   { id: "ads", label: "Content library", icon: Layers },
@@ -71,6 +75,7 @@ const navigation: { id: Page; label: string; icon: typeof Compass }[] = [
   { id: "labelling", label: "Labelling", icon: ClipboardCheck },
 ];
 const headings: Record<Page, { title: string; subtitle: string }> = {
+  demo: { title: "Creative intelligence, with the evidence.", subtitle: "A read-only brand report from saved public sources." },
   settings: {
     title: "Budgets and live tests",
     subtitle: "Set monthly GBP caps and run the hosted Gemini validation.",
@@ -566,7 +571,7 @@ function AdLibrary({
   );
 }
 
-export default function App() {
+function WorkspaceApp() {
   const [brands, setBrands] = useState<Brand[]>([]),
     [brandId, setBrandId] = useState(
       () => localStorage.getItem("exter-brand") || "rhode",
@@ -605,6 +610,7 @@ export default function App() {
   }, []);
   useEffect(() => {
     let cancelled = false;
+    if (page === "demo") { setLoading(false); setError(""); return; }
     setLoading(true);
     setError("");
     api<Dashboard>(
@@ -623,7 +629,7 @@ export default function App() {
     return () => {
       cancelled = true;
     };
-  }, [brandId, platform, range, refresh]);
+  }, [brandId, platform, range, refresh, page]);
   useEffect(() => {
     function key(e: KeyboardEvent) {
       if ((e.metaKey || e.ctrlKey) && e.key === "k") {
@@ -707,14 +713,8 @@ export default function App() {
   return (
     <div className="app-shell">
       <aside className={`sidebar ${menuOpen ? "sidebar-open" : ""}`}>
-        <a className="wordmark" href="/" aria-label="Exter home">
-          <span className="logo-symbol">
-            <i />
-            <i />
-            <i />
-          </span>
-          exter<span className="logo-period">.</span>
-          <span className="ai-label">AI</span>
+        <a className="wordmark" href="/" aria-label="Exter Media home">
+          <BrandLogo />
         </a>
         <div className="workspace-label">WORKSPACE</div>
         <button className="workspace-switch" onClick={() => setBrandOpen(true)}>
@@ -819,7 +819,7 @@ export default function App() {
             </strong>
           </div>
           <div className="topbar-right">
-            <form
+            {page !== "demo" && <form
               className="global-search"
               onSubmit={(e) => {
                 e.preventDefault();
@@ -840,10 +840,10 @@ export default function App() {
               <kbd>
                 <Command size={10} /> K
               </kbd>
-            </form>
+            </form>}
             <span className="mode-badge">
               <i />
-              {page === "brand"
+              {page === "demo" ? "Read-only report" : page === "brand"
                 ? "Website research"
                 : brand?.mode === "imported"
                   ? "Imported workspace"
@@ -859,9 +859,9 @@ export default function App() {
           </div>
         </header>
         <main>
-          <InfrastructureStatus />
-          {page !== "settings" && page !== "labelling" && <MetaCollectionPanel key={brandId} workspaceId={brandId} />}
-          <div className="page-title-row">
+          {page !== "demo" && <InfrastructureStatus />}
+          {page !== "settings" && page !== "labelling" && page !== "demo" && <MetaCollectionPanel key={brandId} workspaceId={brandId} />}
+          {page !== "demo" && <div className="page-title-row">
             <div>
               <div className="page-eyebrow">
                 <span />
@@ -895,8 +895,8 @@ export default function App() {
                 Ask Exter
               </button>
             </div>}
-          </div>
-          {page !== "settings" && <div className="context-toolbar">
+          </div>}
+          {page !== "settings" && page !== "demo" && <div className="context-toolbar">
             <div className="brand-context">
               <span className="tiny-brand" style={{ background: brand?.color }}>
                 {brand?.initials || "R"}
@@ -959,7 +959,7 @@ export default function App() {
               </div>
             )}
           </div>}
-          {page !== "settings" && page !== "labelling" && <div className="data-status">
+          {page !== "settings" && page !== "labelling" && page !== "demo" && <div className="data-status">
             <span>
               <i className={brand?.mode === "imported" ? "green" : ""} />
               {page === "brand"
@@ -992,7 +992,9 @@ export default function App() {
             </div>
           )}
           {page === "settings" ? (
-            <div className="page-content"><BudgetSettings /><GeminiSmokeTest /></div>
+            <div className="page-content"><BudgetSettings /><GeminiSmokeTest /><DemoPreparation key={brandId} brandId={brandId} /></div>
+          ) : page === "demo" ? (
+            <div key={brandId} className="page-content"><a className="button secondary" href={`/demo/${encodeURIComponent(brandId)}`} target="_blank" rel="noopener noreferrer">Open client demo view</a><BrandDemoReport brandId={brandId} /></div>
           ) : page === "labelling" ? (
             <div key={brandId} className="page-content"><LabellingTool brandId={brandId} /></div>
           ) : loading && !dashboard ? (
@@ -1063,9 +1065,9 @@ export default function App() {
               </div>
             )
           )}
-          <footer className="main-footer">
+          {page !== "demo" && <footer className="main-footer">
             <span>
-              <span className="footer-logo">exter.</span>A little perspective
+              <span className="footer-logo">Exter Media</span>A little perspective
               changes everything.
             </span>
             <span>
@@ -1077,7 +1079,7 @@ export default function App() {
                 ? `Source last synced ${new Date(dashboard.sourceStatus.lastSuccessfulSyncAt!).toLocaleTimeString()}`
                 : "No verified live feeds connected"}
             </span>
-          </footer>
+          </footer>}
         </main>
       </div>
       {brandOpen && (
@@ -1171,4 +1173,14 @@ export default function App() {
       )}
     </div>
   );
+}
+
+export default function App() {
+  const match = /^\/demo\/([^/]+)\/?$/.exec(window.location.pathname);
+  if (match) {
+    let brandId: string;
+    try { brandId = decodeURIComponent(match[1]); } catch { return <main>Invalid brand report link.</main>; }
+    return <main className="client-demo-shell"><div className="client-demo-wordmark"><BrandLogo /></div><BrandDemoReport brandId={brandId} /></main>;
+  }
+  return <WorkspaceApp />;
 }

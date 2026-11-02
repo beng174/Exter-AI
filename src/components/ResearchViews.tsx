@@ -25,6 +25,7 @@ import {
 } from "lucide-react";
 import type { Brand, Creator, Dashboard, Report } from "../../shared/types";
 import "./research.css";
+import { displayData, plainDashes } from "../../shared/presentation";
 
 const count = (value: number) =>
   new Intl.NumberFormat("en", {
@@ -36,8 +37,8 @@ async function api<T>(url: string, options?: RequestInit): Promise<T> {
   const response = await fetch(url, options);
   const result = await response.json().catch(() => ({}));
   if (!response.ok)
-    throw new Error(result.error || "Something went wrong. Please try again.");
-  return result as T;
+    throw new Error(plainDashes(result.error || "Something went wrong. Please try again."));
+  return displayData(result) as T;
 }
 const post = (body: unknown) => ({
   method: "POST",
@@ -628,7 +629,7 @@ export function CreatorsView({
                 <Plus size={16} />
               )}
               {shortlist.includes(selected.id)
-                ? "Shortlisted — click to remove"
+                ? "Shortlisted - click to remove"
                 : "Add to shortlist"}
             </button>
           </div>

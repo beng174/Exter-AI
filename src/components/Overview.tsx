@@ -42,8 +42,8 @@ function TrendChart({ dashboard }: { dashboard: Dashboard }) {
       >
         <defs>
           <linearGradient id="chart-fill" x1="0" y1="0" x2="0" y2="1">
-            <stop offset="0%" stopColor="#7ca28a" stopOpacity=".23" />
-            <stop offset="100%" stopColor="#7ca28a" stopOpacity="0" />
+            <stop offset="0%" stopColor="#00C0CB" stopOpacity=".23" />
+            <stop offset="100%" stopColor="#00C0CB" stopOpacity="0" />
           </linearGradient>
         </defs>
         {[0, 0.25, 0.5, 0.75, 1].map((v, i) => (
@@ -53,7 +53,7 @@ function TrendChart({ dashboard }: { dashboard: Dashboard }) {
               x2="713"
               y1={y(max * v)}
               y2={y(max * v)}
-              stroke="#edf0eb"
+              stroke="#E5E7EB"
               strokeDasharray={v ? "3 5" : undefined}
             />
             <text x="35" y={y(max * v) + 4} textAnchor="end">
@@ -68,7 +68,7 @@ function TrendChart({ dashboard }: { dashboard: Dashboard }) {
         <path
           d={line("competitors")}
           fill="none"
-          stroke="#b8b3e3"
+          stroke="#0C1F96"
           strokeWidth="2.3"
           strokeDasharray="5 5"
           strokeLinejoin="round"
@@ -76,7 +76,7 @@ function TrendChart({ dashboard }: { dashboard: Dashboard }) {
         <path
           d={line("brand")}
           fill="none"
-          stroke="#3b7255"
+          stroke="#00C0CB"
           strokeWidth="2.8"
           strokeLinejoin="round"
           strokeLinecap="round"
@@ -115,13 +115,13 @@ function TrendChart({ dashboard }: { dashboard: Dashboard }) {
               x2={x(hover)}
               y1="22"
               y2="177"
-              stroke="#a6b4a9"
+              stroke="#6B7280"
             />
             <circle
               cx={x(hover)}
               cy={y(points[hover].brand)}
               r="5"
-              fill="#37684f"
+              fill="#00C0CB"
               stroke="white"
               strokeWidth="3"
             />

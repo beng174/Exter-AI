@@ -281,7 +281,7 @@ export function AdIntelligence({
                 <p className="adi-source-unavailable">
                   <Link2 size={13} />
                   {sample
-                    ? "No source URL — illustrative sample"
+                    ? "No source URL - illustrative sample"
                     : "Source URL not supplied"}
                 </p>
               )}
@@ -477,7 +477,7 @@ export function AdIntelligence({
                         referrerPolicy="no-referrer"
                       />
                       <figcaption>
-                        Provided attention visualisation — not validated gaze or
+                        Provided attention visualisation - not validated gaze or
                         eye-tracking data.
                       </figcaption>
                     </figure>

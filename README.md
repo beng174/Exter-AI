@@ -1,5 +1,11 @@
 # Exter AI
 
+The authenticated **Brand demo** view presents saved source evidence, Beta
+opportunities and briefs, creator research, best-practice scores and a Preview
+of future prediction work. Ion8 and Valentte have separate workspaces; missing
+evidence is never filled with sample numbers. See [demo setup](docs/DEMO.md) and
+[Exter Media branding](docs/BRANDING.md) for the client view and Render steps.
+
 The functional product benchmark is [Somin](https://somin.ai/): public category evidence → audience/tension/angle intelligence → strategy → creative briefs and creator-specific work. See [the product scope](docs/PRODUCT.md) and [source-backed reference](research/SOMIN-REFERENCE.md). Current implementation and remaining work are stated separately below.
 
 **Public-first, platform-owned intelligence.** Exter researches public paid and organic content before client access is available, runs local text/still-image inference and a provider-swappable native-video pipeline, stores structured findings, and computes creative-format comparisons. Native video uses the Gemini API; Claude is an optional read-only consumer of Exter's saved results. Client-account reporting is optional after winning an account. See the [implemented architecture and exact coverage limits](docs/ARCHITECTURE.md).

@@ -26,6 +26,7 @@ export type Page =
   | "reports"
   | "sources"
   | "settings"
+  | "demo"
   | "labelling";
 export interface Brand {
   id: string;

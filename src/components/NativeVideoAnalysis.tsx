@@ -24,7 +24,7 @@ function seconds(value: number) {
 
 function timestamps(ranges: VideoTimestamp[]) {
   return ranges.length
-    ? ranges.map((range) => `${seconds(range.startSeconds)}–${seconds(range.endSeconds)} s`).join(" · ")
+    ? ranges.map((range) => `${seconds(range.startSeconds)}-${seconds(range.endSeconds)} s`).join(" · ")
     : "No supported video interval";
 }
 
@@ -195,7 +195,7 @@ export function NativeVideoAnalysis({
 
       <dl className="nva-fields">
         {fields.hook_type && <Field label="Hook type" field={fields.hook_type} options={HOOK_TYPE_OPTIONS} />}
-        <Field label="Hook explanation · 0–3 seconds" field={fields.hook} />
+        <Field label="Hook explanation · 0-3 seconds" field={fields.hook} />
         <Field label="Format" field={fields.format} options={FORMAT_OPTIONS} />
         <Field label="Angle" field={fields.angle} options={ANGLE_OPTIONS} />
         {fields.angle_explanation && <Field label="Angle explanation" field={fields.angle_explanation} />}

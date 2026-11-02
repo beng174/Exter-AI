@@ -128,11 +128,11 @@ export function AdCard({ ad, onOpen }: { ad: Ad; onOpen: (ad: Ad) => void }) {
         <div className="ad-card-stats">
           <span>
             <Heart size={13} />
-            {ad.metricsAvailable===false?"—":number(ad.engagements)}
+            {ad.metricsAvailable===false?"-":number(ad.engagements)}
           </span>
           <span>
             <Eye size={13} />
-            {ad.metricsAvailable===false?"—":number(engagementObservation(ad).denominator)}
+            {ad.metricsAvailable===false?"-":number(engagementObservation(ad).denominator)}
           </span>
           <strong>
             {engagementObservation(ad).rate===null?'Unavailable':percent(engagementObservation(ad).rate!)}{" "}
