@@ -26,7 +26,7 @@ Use the workspace's **Open read-only client view** link to get its exact URL.
 
 ## Prepare evidence in the app
 
-1. Select the real brand workspace. Open **Budgets & tests → Prepare the brand demo**.
+1. Open **Budgets & tests**. **Prepare the brand demo** is the first panel, above Monthly budgets and Gemini smoke test. Choose **Valentte** or **ION8** in its **Demo brand** dropdown. The **Website evidence & client demo** shortcut jumps directly to this panel.
 2. Click **Refresh website evidence** to save a bounded public homepage excerpt for that brand. This is a source request, with no model inference. A failed refresh preserves earlier evidence.
 3. Use the existing authenticated media/Gemini preparation controls when more creative analyses are needed. They run on Render, reuse stored media and respect the inference budget. Opening the demo itself does not start them.
 4. Configure the public creator provider as below, then explicitly click **Run budgeted creator search**. This uses the `data_providers` budget. Inspect the saved profile/post sources before choosing candidates.

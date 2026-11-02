@@ -8,3 +8,6 @@ body,input,button,select,textarea{font-family:Manrope,sans-serif;line-height:1.5
 .bdr-table th:first-child{min-width:165px}.bdr-table tbody th>.bdr-source-link{display:inline;word-break:normal;overflow-wrap:normal}
 .brand-mini{background:#00C0CB!important;color:#0C1F96!important}.creative-brand,.creative-brand *,.rank{color:#0C1F96!important}
 .fmt-rank{color:#0C1F96!important}.rv-brand-square{background:#00C0CB!important;color:#0C1F96!important}.rv-match{background:#00DFB8;color:#0C1F96}
+.settings-shortcuts{display:flex;flex-wrap:wrap;gap:12px;margin-bottom:20px}.settings-shortcuts a{display:inline-flex;align-items:center;min-height:44px;padding:10px 16px;border:1px solid #0C1F96;border-radius:8px;background:#FFFFFF;color:#0C1F96;font-size:16px;font-weight:700}.settings-shortcuts a:first-child{background:#00C0CB;border-color:#00C0CB}.settings-shortcuts a:hover{background:#00DFB8;border-color:#00DFB8;text-decoration:none}#brand-demo-preparation,#monthly-budgets,#gemini-smoke-test{scroll-margin-top:110px}.settings-shortcuts+.demo-preparation{margin-top:0}
+@media(max-width:700px){.topbar-right .mode-badge{display:none}}
+.demo-preparation-brand{max-width:420px;margin:18px 0}

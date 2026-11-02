@@ -992,7 +992,16 @@ function WorkspaceApp() {
             </div>
           )}
           {page === "settings" ? (
-            <div className="page-content"><BudgetSettings /><GeminiSmokeTest /><DemoPreparation key={brandId} brandId={brandId} /></div>
+            <div className="page-content">
+              <nav className="settings-shortcuts" aria-label="Settings sections">
+                <a href="#brand-demo-preparation">Website evidence & client demo</a>
+                <a href="#monthly-budgets">Monthly budgets</a>
+                <a href="#gemini-smoke-test">Gemini smoke test</a>
+              </nav>
+              <DemoPreparation key={brandId} brandId={brandId} onBrandChange={setBrandId} />
+              <BudgetSettings />
+              <GeminiSmokeTest />
+            </div>
           ) : page === "demo" ? (
             <div key={brandId} className="page-content"><a className="button secondary" href={`/demo/${encodeURIComponent(brandId)}`} target="_blank" rel="noopener noreferrer">Open client demo view</a><BrandDemoReport brandId={brandId} /></div>
           ) : page === "labelling" ? (

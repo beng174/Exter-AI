@@ -6,7 +6,7 @@
 .budget-refresh, .budget-input-row button { display: inline-flex; align-items: center; justify-content: center; gap: 7px; border: 1px solid #D1D5DB; border-radius: 6px; color: #0C1F96; background: #FFFFFF; font: inherit; font-size: 16px; padding: 11px 14px; cursor: pointer; }
 .budget-settings button:hover { background: #F3F4F6; }
 .budget-settings button:disabled, .budget-settings input:disabled { opacity: .6; cursor: wait; }
-.budget-settings button:focus-visible, .budget-settings input:focus-visible { outline: 2px solid #D1D5DB; outline-offset: 3px; }
+.budget-settings button:focus-visible, .budget-settings input:focus-visible { outline: 3px solid #0C1F96; outline-offset: 3px; }
 .budget-policy { padding: 18px 20px; border: 1px solid #D1D5DB; background: #FFFFFF; border-radius: 8px; margin-bottom: 24px; }
 .budget-policy strong { font-size: 16px; font-weight: 550; }
 .budget-policy p { font-size: 16px; color: #6B7280; line-height: 1.8; margin: 8px 0 0; max-width: 900px; }

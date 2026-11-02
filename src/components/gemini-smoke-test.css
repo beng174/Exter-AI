@@ -10,13 +10,13 @@
 .gemini-smoke button, .gemini-smoke-download { display: inline-flex; align-items: center; justify-content: center; gap: 7px; min-height: 38px; padding: 9px 13px; border: 1px solid #D1D5DB; border-radius: 6px; color: #0C1F96; background: #FFFFFF; font: inherit; font-size: 16px; line-height: 1.5; cursor: pointer; text-decoration: none; }
 .gemini-smoke button:hover:not(:disabled), .gemini-smoke-download:hover { background: #F3F4F6; }
 .gemini-smoke button:disabled { cursor: not-allowed; opacity: 0.55; }
-.gemini-smoke .gemini-smoke-primary { background: #00C0CB; border-color: #D1D5DB; color: #FFFFFF; }
-.gemini-smoke .gemini-smoke-primary:hover:not(:disabled) { background: #0C1F96; }
+.gemini-smoke .gemini-smoke-primary { background: #00C0CB; border-color: #00C0CB; color: #0C1F96; font-weight: 700; }
+.gemini-smoke .gemini-smoke-primary:hover:not(:disabled) { background: #00DFB8; border-color: #00DFB8; color: #0C1F96; }
 .gemini-smoke .gemini-smoke-refresh { min-height: 32px; padding: 7px 10px; font-size: 16px; }
 .gemini-smoke-controls { display: flex; align-items: flex-end; flex-wrap: wrap; gap: 12px; }
 .gemini-smoke-controls label { display: flex; flex-direction: column; gap: 7px; min-width: 210px; font-size: 16px; color: #6B7280; }
 .gemini-smoke select { min-height: 38px; border: 1px solid #D1D5DB; border-radius: 6px; padding: 8px 11px; background: #FFFFFF; color: #0C1F96; font: inherit; font-size: 16px; }
-.gemini-smoke button:focus-visible, .gemini-smoke a:focus-visible, .gemini-smoke select:focus-visible { outline: 2px solid #D1D5DB; outline-offset: 3px; }
+.gemini-smoke button:focus-visible, .gemini-smoke a:focus-visible, .gemini-smoke select:focus-visible { outline: 3px solid #0C1F96; outline-offset: 3px; }
 .gemini-smoke-note { color: #6B7280; font-size: 16px; line-height: 1.8; margin: 15px 0 0; }
 .gemini-smoke-notice { padding: 13px 15px; background: #FFFFFF; border: 1px solid #D1D5DB; border-radius: 6px; color: #0C1F96; font-size: 16px; line-height: 1.8; margin: 0 0 18px; }
 .gemini-smoke-notice ul { margin: 7px 0 0; padding-left: 20px; }
@@ -27,7 +27,7 @@
 .gemini-smoke-paused, .gemini-smoke-interrupted { background: #F3F4F6; color: #0C1F96; }
 .gemini-smoke-failed { background: #FFFFFF; color: #0C1F96; }
 .gemini-smoke-progress { display: flex; align-items: center; gap: 20px; flex-wrap: wrap; margin: 20px 0; font-size: 16px; }
-.gemini-smoke-progress progress { width: 220px; max-width: 100%; height: 8px; accent-color: #6f8c58; }
+.gemini-smoke-progress progress { width: 220px; max-width: 100%; height: 8px; accent-color: #00C0CB; }
 .gemini-smoke-resume { display: flex; align-items: center; justify-content: space-between; gap: 16px; margin-bottom: 18px; padding: 13px 15px; border: 1px solid #D1D5DB; background: #FFFFFF; border-radius: 6px; }
 .gemini-smoke-resume p { margin: 0; font-size: 16px; line-height: 1.8; }
 .gemini-smoke-resume .gemini-smoke-resume-mode { margin-top: 8px; color: #0C1F96; }

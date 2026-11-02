@@ -83,7 +83,7 @@ export function BudgetSettings() {
   }
 
   const month = data ? new Date(`${data.month}-01T00:00:00Z`).toLocaleDateString("en-GB", { month: "long", year: "numeric", timeZone: "UTC" }) : "Current month";
-  return <section className="budget-settings" aria-labelledby="budget-settings-title">
+  return <section id="monthly-budgets" className="budget-settings" aria-labelledby="budget-settings-title">
     <div className="budget-heading">
       <div><span className="budget-eyebrow"><Wallet size={14} aria-hidden="true" /> SETTINGS</span><h2 id="budget-settings-title">Monthly budgets</h2><p>Control the monthly GBP caps shared by this deployment.</p></div>
       <button className="budget-refresh" onClick={() => void refresh()} disabled={loading || saving !== null}><RefreshCw size={14} aria-hidden="true" />{loading ? "Loading…" : "Refresh usage"}</button>

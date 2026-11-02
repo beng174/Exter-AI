@@ -13,10 +13,11 @@
 .labelling-toolbar { display: grid; grid-template-columns: minmax(130px, 1fr) minmax(200px, 2fr); gap: 14px; align-items: end; }
 .labelling-tool label { display: grid; gap: 7px; color: #0C1F96; font-size: 16px; font-weight: 600; }
 .labelling-tool input, .labelling-tool select, .labelling-tool textarea { box-sizing: border-box; width: 100%; min-height: 39px; padding: 9px 10px; border: 1px solid #D1D5DB; border-radius: 6px; background: #FFFFFF; color: #0C1F96; font: inherit; font-weight: 400; }
-.labelling-tool input:focus-visible, .labelling-tool select:focus-visible, .labelling-tool textarea:focus-visible, .labelling-tool button:focus-visible, .labelling-tool a:focus-visible { outline: 3px solid #D1D5DB; outline-offset: 2px; }
+.labelling-tool input:focus-visible, .labelling-tool select:focus-visible, .labelling-tool textarea:focus-visible, .labelling-tool button:focus-visible, .labelling-tool a:focus-visible { outline: 3px solid #0C1F96; outline-offset: 3px; }
 .labelling-tool button { border: 1px solid #D1D5DB; border-radius: 6px; background: #FFFFFF; padding: 9px 12px; font: inherit; font-size: 16px; color: #0C1F96; cursor: pointer; }
 .labelling-tool button:disabled { opacity: .55; cursor: default; }
-.labelling-tool button.labelling-primary { border-color: #D1D5DB; background: #0C1F96; color: #FFFFFF; }
+.labelling-tool button.labelling-primary { border-color: #00C0CB; background: #00C0CB; color: #0C1F96; font-weight: 700; }
+.labelling-tool button.labelling-primary:hover:not(:disabled) { border-color: #00DFB8; background: #00DFB8; }
 .labelling-pagination { grid-column: 1 / -1; display: flex; gap: 12px; align-items: center; color: #0C1F96; font-size: 16px; }
 .labelling-layout { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.15fr); gap: 22px; align-items: start; }
 .labelling-source, .labelling-review { min-width: 0; border: 1px solid #D1D5DB; border-radius: 10px; padding: 21px; background: #FFFFFF; }

@@ -165,7 +165,7 @@ export function GeminiSmokeTest() {
   const progress = run?.kind === "prepare" ? stored : completed + failed + unavailable;
   const progressMaximum = run?.kind === "prepare" ? targetSampleSize : Math.max(1, actualSampleSize);
 
-  return <section className="gemini-smoke" aria-labelledby="gemini-smoke-heading">
+  return <section id="gemini-smoke-test" className="gemini-smoke" aria-labelledby="gemini-smoke-heading">
     <div className="gemini-smoke-heading">
       <div>
         <span className="gemini-smoke-eyebrow"><Film size={14} /> PHASE 1 · LIVE VALIDATION</span>
@@ -176,6 +176,7 @@ export function GeminiSmokeTest() {
       }}><RefreshCw size={13} /> Refresh</button>
     </div>
     <p className="gemini-smoke-intro">Prepare up to {targetSampleSize} real Valentte creatives on Render, then run the smoke test on {minimumSampleSize} or more retained inputs. Videos, images and carousels are valid inputs. The API key stays in Render’s environment.</p>
+    <p><a href="#brand-demo-preparation">Go to website evidence & client demo controls</a></p>
     {!status && !error && <p role="status">Checking hosted test configuration…</p>}
     {status && <>
       <dl className="gemini-smoke-facts">

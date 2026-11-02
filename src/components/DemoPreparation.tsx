@@ -5,7 +5,8 @@ import type { CreatorResearchSnapshot, CreatorPlatform } from "../../shared/crea
 import "./demo-preparation.css";
 
 /** Explicit operator actions live here; the client report never starts paid work. */
-export function DemoPreparation({ brandId }: { brandId: string }) {
+export function DemoPreparation({ brandId, onBrandChange }: { brandId: string; onBrandChange?: (brandId: string) => void }) {
+  const [brands, setBrands] = useState<Brand[]>([]);
   const [snapshot, setSnapshot] = useState<CreatorResearchSnapshot | null>(null);
   const [category, setCategory] = useState("");
   const [country, setCountry] = useState("GB");
@@ -18,7 +19,7 @@ export function DemoPreparation({ brandId }: { brandId: string }) {
   useEffect(() => {
     let active = true;
     Promise.all([api<Brand[]>("/api/brands"), api<CreatorResearchSnapshot>(`/api/creator-research?${new URLSearchParams({ brandId })}`)])
-      .then(([brands, result]) => { if (active) { const brand = brands.find(brand => brand.id === brandId); setCategory(brand?.domain.replace(/^www\./, "") === "ion8.co.uk" ? "Reusable bottles & hydration" : brand?.category || ""); setSnapshot(result); } })
+      .then(([brands, result]) => { if (active) { setBrands(brands); const brand = brands.find(brand => brand.id === brandId); setCategory(brand?.domain.replace(/^www\./, "") === "ion8.co.uk" ? "Reusable bottles & hydration" : brand?.category || ""); setSnapshot(result); } })
       .catch(() => { if (active) setError("Demo preparation is unavailable. Try refreshing the page."); });
     return () => { active = false; };
   }, [brandId]);
@@ -33,12 +34,16 @@ export function DemoPreparation({ brandId }: { brandId: string }) {
     event.preventDefault();
     void action("search", "/api/creator-research/search", { brandId, platform, country, category, ...(query.trim() ? { query: query.trim() } : {}) }, "Public creator search saved. Review actual profile evidence before shortlisting.");
   }
-  return <section className="demo-preparation" aria-labelledby="demo-preparation-title">
+  return <section id="brand-demo-preparation" className="demo-preparation" aria-labelledby="demo-preparation-title">
     <header><div><span className="demo-preparation-badge">Beta</span><h2 id="demo-preparation-title">Prepare the brand demo</h2></div><a className="button secondary" href={`/demo/${encodeURIComponent(brandId)}`} target="_blank" rel="noopener noreferrer">Open read-only client view</a></header>
+    {onBrandChange && <label className="demo-preparation-brand">Demo brand<select aria-label="Demo brand" value={brandId} disabled={Boolean(busy)} onChange={event => onBrandChange(event.target.value)}>
+      {!brands.some(brand => brand.id === brandId && brand.mode === "imported") && <option value={brandId} disabled>Choose a real brand workspace</option>}
+      {brands.filter(brand => brand.mode === "imported").map(brand => <option key={brand.id} value={brand.id}>{brand.name}</option>)}
+    </select></label>}
     <p>For {snapshot?.brandName || "the selected brand"}. The client view reads saved evidence. These buttons explicitly collect sources or run budgeted research.</p>
     {error && <p className="demo-preparation-error" role="alert">{error}</p>}
     {message && <p role="status">{message}</p>}
-    <div className="demo-preparation-website"><div><strong>Brand website evidence</strong><p>Refresh the saved homepage excerpt used to ground opportunity briefs.</p></div><button className="button secondary" disabled={Boolean(busy)} onClick={() => void action("website", `/api/brands/${encodeURIComponent(brandId)}/demo/website`, {}, "Website evidence refreshed. Open the report to see the saved sources.")}>{busy === "website" ? "Refreshing…" : "Refresh website evidence"}</button></div>
+    <div className="demo-preparation-website"><div><strong>Brand website evidence</strong><p>Refresh the saved homepage excerpt used to ground opportunity briefs.</p></div><button className="button primary" disabled={Boolean(busy) || Boolean(onBrandChange && !brands.some(brand => brand.id === brandId && brand.mode === "imported"))} onClick={() => void action("website", `/api/brands/${encodeURIComponent(brandId)}/demo/website`, {}, "Website evidence refreshed. Open the report to see the saved sources.")}>{busy === "website" ? "Refreshing…" : "Refresh website evidence"}</button></div>
     <form onSubmit={search}>
       <h3>Search public creators</h3>
       <p>Uses the data providers budget. Gemini fit checks below use the inference budget. Country/category are search criteria; they do not prove audience location.</p>
