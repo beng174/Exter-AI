@@ -11,6 +11,11 @@ RUN python3 -m venv /opt/exter-worker
 RUN --mount=type=secret,id=proxy_ca \
     if [ -f /run/secrets/proxy_ca ]; then export PIP_CERT=/run/secrets/proxy_ca; fi; \
     /opt/exter-worker/bin/pip install --no-cache-dir -r worker/requirements-scenes.txt
+COPY worker/requirements-audio.txt /app/worker/requirements-audio.txt
+ARG EXTER_BUILD_AUDIO=false
+RUN --mount=type=secret,id=proxy_ca \
+    if [ -f /run/secrets/proxy_ca ]; then export PIP_CERT=/run/secrets/proxy_ca; fi; \
+    if [ "$EXTER_BUILD_AUDIO" = true ]; then /opt/exter-worker/bin/pip install --no-cache-dir -r worker/requirements-audio.txt; fi
 COPY . .
 ENV EXTER_KERNEL_PYTHON=/opt/exter-worker/bin/python OMP_NUM_THREADS=1 OPENBLAS_NUM_THREADS=1
 CMD ["npm", "run", "worker"]

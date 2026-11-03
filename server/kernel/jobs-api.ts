@@ -9,8 +9,10 @@ import { ARTIFACT_STAGE_PIPELINE } from "./worker.js";
 
 import { SCENE_STAGE_PIPELINE } from "./scenes.js";
 
+import { AUDIO_STAGE_PIPELINE } from "./audio.js";
+
 const input = z.object({ workspaceId: z.string().min(1).max(200), adId: z.string().min(1).max(200), kind: z.enum(["video", "image", "carousel"]),
-  stage: z.enum(["media", "scenes"]).optional(), mediaId: z.string().regex(/^[a-f0-9]{64}$/).optional(), imageIndex: z.number().int().min(0).max(9).optional() }).strict();
+  stage: z.enum(["media", "scenes", "audio"]).optional(), mediaId: z.string().regex(/^[a-f0-9]{64}$/).optional(), imageIndex: z.number().int().min(0).max(9).optional() }).strict();
 const scope = z.object({ workspaceId: z.string().regex(/^[A-Za-z0-9][A-Za-z0-9._:-]{0,199}$/) }).strict();
 
 export function attachKernelJobs(app: Express, broker: KernelMediaBroker, resolveWorkspace: (id: string) => string, database = infrastructureDatabase) {
@@ -27,10 +29,10 @@ export function attachKernelJobs(app: Express, broker: KernelMediaBroker, resolv
       // Verify PostgreSQL availability before creating a safe local export reference.
       const pool = database();
       await pool.query("SELECT 1 FROM kernel_jobs LIMIT 0");
-      if (request.stage === "scenes" && request.kind !== "video") throw new KernelBrokerError("Scene extraction requires a retained video.");
+      if (["scenes", "audio"].includes(request.stage || "") && request.kind !== "video") throw new KernelBrokerError("Scene extraction requires a retained video.");
       const record = await broker.register({ ...request, workspaceId });
-      const job = await enqueueKernelJob(pool, { scope: record.scope, artifact: record.ref, pipelineVersion: request.stage === "scenes" ? SCENE_STAGE_PIPELINE : ARTIFACT_STAGE_PIPELINE,
-        config: { stage: request.stage === "scenes" ? "extract-scenes" : "stage-media" }, contextHash: createHash("sha256").update(JSON.stringify(record.scope)).digest("hex") });
+      const job = await enqueueKernelJob(pool, { scope: record.scope, artifact: record.ref, pipelineVersion: request.stage === "audio" ? AUDIO_STAGE_PIPELINE : request.stage === "scenes" ? SCENE_STAGE_PIPELINE : ARTIFACT_STAGE_PIPELINE,
+        config: { stage: request.stage === "audio" ? "extract-audio" : request.stage === "scenes" ? "extract-scenes" : "stage-media" }, contextHash: createHash("sha256").update(JSON.stringify(record.scope)).digest("hex") });
       res.status(202).json(job);
     } catch (error) { fail(res, error); }
   });

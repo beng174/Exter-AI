@@ -398,3 +398,17 @@ Each process has a ten-minute watchdog; ffmpeg commands use one thread and a
 three-minute timeout. Videos are limited to ten minutes and 250MiB. Up to eight
 frames carry source times; missing audio stays absent. Near-duplicate media never
 reuses an exact-match result. No model weights are downloaded by this stage.
+
+## K04 offline audio adapters (validation pending)
+
+No Render changes are required for this release. Keep EXTER_KERNEL_AUDIO_ENABLED
+unset or false. The audio stage is not model-quality or capacity verified.
+To prepare a later trial, the optional worker image can include audio libraries
+with build argument EXTER_BUILD_AUDIO=true. Install a reviewed offline model pack
+following worker/AUDIO-MODELS.md, then set EXTER_KERNEL_AUDIO_MODELS_PATH on that
+worker. Do not add model dependencies or weights to the web service. Enable
+EXTER_KERNEL_AUDIO_ENABLED only after the actual model and peak-memory checks.
+POST /api/kernel/jobs accepts stage="audio" for retained videos, but queues it
+without dispatch while the worker flag is disabled. It runs cached scene/audio
+preparation and then local models; it never calls Gemini. Full timed audio
+features are stored with the worker scene cache, and the job returns a summary.

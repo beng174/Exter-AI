@@ -1,23 +1,21 @@
 # Current handoff
 
-Priority: stable low-cost kernel; UI/scoring deferred. Use npm run kernel:next.
+Priority: stable low-cost kernel. Use npm run kernel:next and one listed task.
 
-- Baseline before K03: a343af1 (K02 jobs and scoped media broker).
-- K03 implements worker-only ffmpeg normalisation, PySceneDetect, up to eight
-  timestamped frames and optional 16kHz mono audio. Exact scope/media/config/tool
-  hashes control reuse. Paid labels and ML extraction remain disabled.
-- Features have lock-based serialisation, verified cache files, seven-day
-  retention, quota/headroom checks, output limits and subprocess timeouts.
-- Next implementation: K04 faster-whisper/YAMNet. Select weights/licences and
-  measure memory before rollout. Minimal-thinking Flash-Lite remains the plan.
-- K01-LIVE, K02-LIVE and K03-LIVE remain blocked by approved API credentials,
-  broker configuration and Render worker capacity/restart checks. No live source
-  API, Gemini or new paid inference ran for K03.
-- New optional Dockerfile.worker carries scene dependencies. Default web image
-  and default worker behavior do not enable Python extraction. Keep scene flag off.
-- Validate combined source/feature cache disk retention and peak RSS on Render;
-  local fixture success is not deployment verification.
-- Full revised product document and genuine Meta recordings remain absent.
-- Paused scoring/export draft remains local branch wip/winning-workflow-before-kernel.
-
-Local validation evidence is recorded in KERNEL-BACKLOG.json and CI.
+- Baseline before K04: 1ce9f2b. K03 CI passed all jobs, including Python scenes.
+- K04 audio code is implemented behind EXTER_KERNEL_AUDIO_ENABLED, default off.
+  CPU int8 faster-whisper and local YAMNet SavedModel adapters require a verified
+  offline pack; no weights/providers are downloaded/called at startup or by reads.
+- Speech, music-lyric candidates and ambiguous words stay separate. Licensing is
+  null; no audio-only claim of on-camera vs voiceover. Thresholds are uncalibrated.
+- Fixtures test policy/PCM plumbing only, not actual model accuracy. K04 remains
+  blocked until a reviewed model pack, labelled audio evaluation and real worker
+  peak-memory benchmark pass. Do not mark those gates complete from fixtures.
+- Independent next task: K05 OCR and visual presence. K06 still depends on K04/K05.
+- Full model requirements and provenance contract: worker/AUDIO-MODELS.md.
+- K01-LIVE/K02-LIVE/K03-LIVE remain blocked; API keys, live broker configuration,
+  worker image/capacity and combined source/feature cache checks remain pending.
+- Keep scene/audio/full-label stages disabled for normal Render deployment.
+  No new paid inference or hosted model run took place for this change.
+- Full revised product document/genuine Meta recordings were not supplied.
+- Paused scoring/export draft remains local wip/winning-workflow-before-kernel.

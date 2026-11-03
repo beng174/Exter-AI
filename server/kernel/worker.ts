@@ -5,6 +5,8 @@ import { checkpointKernelJob, claimKernelJob, completeKernelJob, failKernelJob, 
 
 import { extractKernelScenes, SCENE_STAGE_PIPELINE } from "./scenes.js";
 
+import { extractKernelAudio, AUDIO_STAGE_PIPELINE } from "./audio.js";
+
 export const ARTIFACT_STAGE_PIPELINE = "exter-artifact-stage-v1";
 
 export function configuredKernelArtifactClient(env: Record<string, string | undefined> = process.env) {
@@ -17,7 +19,7 @@ export function configuredKernelArtifactClient(env: Record<string, string | unde
 
 /** K02 transfers verified media only. It does not call Gemini or load extractors. */
 export async function workKernelOnce(pool: pg.Pool, client: Pick<KernelArtifactBrokerClient, "retrieve">, options: { signal?: AbortSignal; heartbeatMs?: number } = {}) {
-  const job = await claimKernelJob(pool, randomUUID(), { pipelineVersions: [ARTIFACT_STAGE_PIPELINE, ...(process.env.EXTER_KERNEL_SCENES_ENABLED === "true" ? [SCENE_STAGE_PIPELINE] : [])] });
+  const job = await claimKernelJob(pool, randomUUID(), { pipelineVersions: [ARTIFACT_STAGE_PIPELINE, ...(process.env.EXTER_KERNEL_SCENES_ENABLED === "true" ? [SCENE_STAGE_PIPELINE] : []), ...(process.env.EXTER_KERNEL_AUDIO_ENABLED === "true" ? [AUDIO_STAGE_PIPELINE] : [])] });
   if (!job?.lease) return false;
   const controller = new AbortController(), lease = job.lease;
   const signal = options.signal ? AbortSignal.any([options.signal, controller.signal]) : controller.signal;
@@ -32,7 +34,7 @@ export async function workKernelOnce(pool: pg.Pool, client: Pick<KernelArtifactB
   try {
     const stored = await client.retrieve(job.artifact, { signal });
     if (signal.aborted || !leaseAlive) return true;
-    const checkpoint = job.pipelineVersion === SCENE_STAGE_PIPELINE ? await extractKernelScenes(stored, signal) : { stage: "media-ready", artifact: { ...stored.ref } };
+    const checkpoint = job.pipelineVersion === AUDIO_STAGE_PIPELINE ? await extractKernelAudio(stored, signal) : job.pipelineVersion === SCENE_STAGE_PIPELINE ? await extractKernelScenes(stored, signal) : { stage: "media-ready", artifact: { ...stored.ref } };
     if (await checkpointKernelJob(pool, lease, checkpoint)) await completeKernelJob(pool, lease, checkpoint);
   } catch (error) {
     if (leaseAlive) {

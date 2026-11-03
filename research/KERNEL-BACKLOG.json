@@ -218,11 +218,14 @@
       "dependsOn": [
         "K03"
       ],
-      "status": "ready",
+      "status": "blocked",
       "goal": "Integrate pinned faster-whisper and YAMNet stages on the worker.",
       "files": [
-        "worker",
-        "research/LABELLING-GUIDE.md"
+        "worker/audio_features.py",
+        "worker/test_audio_features.py",
+        "worker/requirements-audio.txt",
+        "worker/AUDIO-MODELS.md",
+        "server/kernel/audio.ts"
       ],
       "acceptance": [
         "Spoken voiceover is separated from music/lyrics.",
@@ -234,9 +237,13 @@
         "worker memory benchmark"
       ],
       "blockers": [
-        "Model weights/licences and the worker memory limit need explicit selection."
+        "Reviewed actual model pack with immutable revisions/hashes is not installed. Real Whisper/YAMNet predictions on labelled audio and a Render memory benchmark are still required."
       ],
-      "evidence": []
+      "evidence": [
+        "Offline CPU faster-whisper and local YAMNet SavedModel adapters implemented; pinned runtime dependencies and hash-verified model-pack contract.",
+        "Opt-in audio jobs preserve speech, lyric candidates and ambiguous transcripts with source times; no provider calls or automatic weight downloads.",
+        "Policy fixtures and real PCM plumbing pass; these are not actual model-accuracy tests. Peak RSS records the running process, not a claimed Render capacity benchmark."
+      ]
     },
     {
       "id": "K05",
