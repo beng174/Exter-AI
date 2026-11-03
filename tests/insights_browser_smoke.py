@@ -44,6 +44,15 @@ def main():
                     expect(chart).to_contain_text('14 ads in this sample')
                     expect(chart.get_by_role('button', name='Product reveal & demo', exact=True)).to_be_visible()
                     assert '0% classified' not in page.inner_text('body')
+                    assert 'Beta' not in page.inner_text('body')
+                    expect(page.get_by_role('heading', name='Where the scores come from', exact=True)).to_be_visible()
+                    report = page.request.get(base + '/api/brands/valentte/demo').json()
+                    first = report['scores'][0]
+                    earned = sum(c['weight'] for c in first['criteria'] if c['status'] == 'met')
+                    assessed = sum(c['weight'] for c in first['criteria'] if c['status'] != 'unknown')
+                    expect(page.locator('.score-calculation')).to_contain_text(f'{earned} ÷ {assessed} × 100')
+                    assert page.locator('.score-criterion').count() == 5
+                    expect(page.locator('.score-population-track')).to_have_count(5)
                     expect(chart.locator('.population-map')).to_be_visible()
                     page.get_by_role('button', name='Offers', exact=True).click()
                     offers = page.get_by_role('article', name='Offers', exact=True)

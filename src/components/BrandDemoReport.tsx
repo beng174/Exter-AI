@@ -10,6 +10,7 @@ import { api } from "../lib/api";
 import { creatorEligibility } from "../../shared/creator-eligibility";
 import { CreatorEvidenceCharts, ObservationDatesChart, PatternDistribution, SampleEvidenceCharts, ScoreDistributionChart } from "./EvidenceCharts";
 import { AudienceVoiceInsights, CompetitorComparison, CreativeLandscape, OwnedResults } from "./WorkspaceInsights";
+import { ScoreBreakdown } from "./ScoreBreakdown";
 import "./brand-demo-report.css";
 
 const count = (value: number | null | undefined) => value == null ? "Unavailable" : value.toLocaleString("en-GB", { maximumFractionDigits: 1 });
@@ -24,7 +25,8 @@ function nativeId(id?: string, sourceUrl?: string | null) {
   try { const url = new URL(sourceUrl || ""); if (/(^|\.)facebook\.com$/.test(url.hostname) && /^\d+$/.test(url.searchParams.get("id") || "")) return url.searchParams.get("id")!; } catch { /* An unsourced reference keeps its supplied identifier. */ }
   return id || "source";
 }
-function Status({ value }: { value: "Live" | "Beta" | "Preview" }) { return <span className={`bdr-pill bdr-pill-${value.toLowerCase()}`}>{value}</span>; }
+function Status(_props: { value: "Live" | "Beta" | "Preview" }) { return null; }
+
 function SourceLink({ url, children }: { url?: string | null; children: ReactNode }) {
   const href = safeSource(url);
   return href ? <a className="bdr-source-link" href={href} target="_blank" rel="noopener noreferrer">{children}<ArrowUpRight size={12} /></a> : <span className="bdr-source-unavailable">{children} · source unavailable</span>;
@@ -88,15 +90,20 @@ export function BrandDemoReport({ brandId, onBrandChange }: { brandId: string; o
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
   const [reload, setReload] = useState(0);
+  useEffect(()=>{const timer=window.setInterval(()=>{if(document.visibilityState==="visible")setReload(value=>value+1);},60000);return()=>window.clearInterval(timer);},[]);
   const [filters, setFilters] = useState<CreativeGalleryFilters>({});
   const [evidenceAdIds, setEvidenceAdIds] = useState<string[] | null>(null);
   const [openAdId, setOpenAdId] = useState<string | null>(null);
   const [activeSection, setActiveSection] = useState("overview");
   const beforeDetailHash = useRef("");
+  const loadedBrand = useRef<string | null>(null);
   useEffect(() => { setSelectedBrandId(brandId); }, [brandId]);
   useEffect(() => {
     let current = true;
-    setReport(null); setGallery(null); setCreators(null); setCompetition(null); setLoading(true); setError(false); setFilters({}); setEvidenceAdIds(null); setOpenAdId(null);
+    if(loadedBrand.current !== selectedBrandId) {
+      setReport(null); setGallery(null); setCreators(null); setCompetition(null); setLoading(true); setError(false); setFilters({}); setEvidenceAdIds(null); setOpenAdId(null);
+      loadedBrand.current = selectedBrandId;
+    }
     Promise.allSettled([
       api<DemoReport>(`/api/brands/${encodeURIComponent(selectedBrandId)}/demo`),
       api<CreativeGalleryResponse>(`/api/brands/${encodeURIComponent(selectedBrandId)}/demo/creatives`),
@@ -224,7 +231,7 @@ export function BrandDemoReport({ brandId, onBrandChange }: { brandId: string; o
     <section id="bdr-scores" data-report-section="scores" aria-labelledby="bdr-scores-title" className="bdr-section">
       <SectionTitle id="bdr-scores-title" title="Scores" status="Beta" description="Best-practice score, not a performance prediction." />
       {report && <div className="bdr-score-chart"><ScoreDistributionChart scores={report.scores} onSelect={scores => showSupportingAds(creativeList.filter(creative => scores.some(score => score.adId === creative.adId || score.nativeId === creative.nativeId)))} /></div>}
-      {report?.scores.length ? <div className="bdr-table-wrap"><table className="bdr-table"><thead><tr><th>Creative</th><th>Score / 100</th><th>Coverage</th><th>Assessment</th></tr></thead><tbody>{report.scores.map(score => <tr key={score.analysisId}><th scope="row"><AdLink adId={score.adId} sourceUrl={score.sourceUrl}>Ad {score.nativeId}</AdLink><span className="bdr-cell-note">{score.mediaKind === "video" ? "Video" : score.mediaKind === "carousel" ? "Carousel" : "Image"}</span></th><td><strong className="bdr-score">{score.score == null ? "Unavailable" : Math.round(score.score)}</strong>{score.provisional && <span className="bdr-cell-note">Provisional</span>}</td><td>{Math.round(score.coverage * 100)}%<span className="bdr-cell-note">{score.assessedWeight} / {score.totalWeight} rubric weight</span></td><td><details className="bdr-assessment"><summary>View criteria</summary><p>{score.method}</p><ul>{score.criteria.map(criterion => <li key={criterion.id}><strong>{criterion.label}</strong><span>{criterion.status === "met" ? "Observed" : criterion.status === "not-met" ? "Not observed" : "Unknown"}</span><p>{galleryDisplayText(criterion.explanation)}</p><Evidence evidence={criterion.evidence} /></li>)}</ul></details></td></tr>)}</tbody></table></div> : empty("No scores available yet", "Scores require a completed analysis of a real creative.", { label: "Analyse stored creatives", href: adminLink("gemini-smoke-test") })}
+      {report && <ScoreBreakdown scores={report.scores} onAd={id=>openCreative(id)} />}
       <details className="bdr-about"><summary><Info size={14} /> About scores and prediction preview</summary><div><p>Scores measure an explicit creative checklist. Unknown checks are excluded and coverage is shown, so a high partial score is not a complete assessment. No conversion, sales or performance outcome is inferred.</p><div className="bdr-heading-line"><h3>Future proven-ad likelihood</h3><Status value="Preview" /></div><p>Trains as collection history builds.</p>{report?.prediction.observations.length ? <><p>The spans below record source capture endpoints. They do not establish continuous delivery or a proven winner.</p><ul>{report.prediction.observations.slice(0, 10).map(observation => <li key={observation.adId}><AdLink adId={observation.adId} sourceUrl={observation.sourceUrl} /> · {date(observation.firstObservedAt)} to {date(observation.lastObservedAt)} · {count(observation.observedSpanDays)} observed days</li>)}</ul></> : <p>Repeated source observations are needed before longevity can be described.</p>}</div></details>
     </section>
     <footer className="bdr-footer"><span>{currentBrand.name} · Saved source evidence</span><span>Prepared {date(report?.generatedAt, true)}</span></footer>

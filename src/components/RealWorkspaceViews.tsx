@@ -12,6 +12,7 @@ import { CreativeAdDetail, CreativeGallery } from "./CreativeGallery";
 import { creatorEligibility } from "../../shared/creator-eligibility";
 import { CreatorEvidenceCharts, ObservationDatesChart, PatternDistribution, SampleEvidenceCharts, ScoreDistributionChart } from "./EvidenceCharts";
 import { AudienceVoiceInsights, CompetitorComparison, CreativeLandscape, CreativeNextSteps, OwnedResults } from "./WorkspaceInsights";
+import { ScoreBreakdown } from "./ScoreBreakdown";
 import "./real-workspace-views.css";
 
 export type RealWorkspacePage = "overview" | "ads" | "formats" | "brand" | "creators" | "competitors" | "audiences";
@@ -43,9 +44,8 @@ function ExternalSource({ url, children }: { url: string | null | undefined; chi
   const href = safeHref(url);
   return href ? <a className="rws-source" href={href} target="_blank" rel="noopener noreferrer">{children}<ArrowUpRight size={13} /></a> : <span className="rws-secondary">{children}</span>;
 }
-function Maturity({ children = "Live" }: { children?: "Live" | "Beta" | "Preview" }) {
-  return <span className={`rws-status rws-status-${children.toLowerCase()}`}>{children}</span>;
-}
+function Maturity(_props: { children?: "Live" | "Beta" | "Preview" }) { return null; }
+
 function Empty({ title, children, action, actionLabel }: { title: string; children?: ReactNode; action?: () => void; actionLabel?: string }) {
   return <div className="rws-empty"><h3>{title}</h3>{children && <p>{children}</p>}{action && actionLabel && <button className="rws-secondary-button" type="button" onClick={action}>{actionLabel}<ChevronRight size={14} /></button>}</div>;
 }
@@ -80,6 +80,9 @@ export function RealWorkspaceView({ brandId, view, onOpenSettings, onOpenSources
   const [openAdId, setOpenAdId] = useState<string | null>(null);
   const [competitorBrandId, setCompetitorBrandId] = useState<string | null>(null);
   const [competitorGallery, setCompetitorGallery] = useState<CreativeGalleryResponse | null>(null);
+  const [checkedAt,setCheckedAt] = useState<string | null>(null);
+  useEffect(()=>{const timer=window.setInterval(()=>{if(document.visibilityState==="visible")setRefresh(value=>value+1);},60000);return()=>window.clearInterval(timer);},[]);
+  const loadedBrand = useRef<string | null>(null);
   const currentBrand = useRef(brandId);
   const galleryRef = useRef<HTMLElement>(null);
   currentBrand.current = brandId;
@@ -88,8 +91,11 @@ export function RealWorkspaceView({ brandId, view, onOpenSettings, onOpenSources
 
   useEffect(() => {
     let current = true;
-    setLoading(true); setData(emptyEvidence()); setUnavailable([]); setNotice(""); setActionError("");
-    setFilters({}); setEvidenceAdIds(null); setShowGallery(false); setOpenAdId(null); setCompetitorBrandId(null); setCompetitorGallery(null);
+    if (loadedBrand.current !== brandId) {
+      setLoading(true); setData(emptyEvidence()); setUnavailable([]); setNotice(""); setActionError("");
+      setFilters({}); setEvidenceAdIds(null); setShowGallery(false); setOpenAdId(null); setCompetitorBrandId(null); setCompetitorGallery(null);
+      loadedBrand.current = brandId;
+    }
     const base = `/api/brands/${encodeURIComponent(brandId)}/demo`;
     void Promise.allSettled([
       api<BrandDemoReport>(base), api<CreativeGalleryResponse>(`${base}/creatives`),
@@ -101,7 +107,7 @@ export function RealWorkspaceView({ brandId, view, onOpenSettings, onOpenSources
       const value = <T,>(result: PromiseSettledResult<T>): T | null => result.status === "fulfilled" ? result.value : null;
       setData({ report: value(results[0]), gallery: value(results[1]), creators: value(results[2]), research: value(results[3]), competitors: value(results[4]) });
       setUnavailable(results.flatMap((result, index) => result.status === "rejected" ? [["report", "creatives", "creators", "website", "competitors"][index]] : []));
-      setLoading(false);
+      setCheckedAt(new Date().toISOString()); setLoading(false);
     });
     return () => { current = false; };
   }, [brandId, refresh]);
@@ -196,7 +202,7 @@ export function RealWorkspaceView({ brandId, view, onOpenSettings, onOpenSources
 
   if (loading) return <div className="rws-loading" role="status"><LoaderCircle size={18} className="spin" />Loading saved source evidence…</div>;
   return <div className="real-workspace-view">
-    <div className="rws-page-tools"><span className="rws-source-note">Saved source evidence · all collection dates</span><button type="button" className="rws-secondary-button" onClick={() => setRefresh(value => value + 1)} disabled={Boolean(busy)}><RefreshCw size={14} />Refresh</button></div>
+    <div className="rws-page-tools"><span className="rws-source-note">Auto-refresh every minute{checkedAt ? ` · checked ${new Date(checkedAt).toLocaleTimeString("en-GB",{timeZone:"Europe/London",hour:"2-digit",minute:"2-digit"})}` : ""} · source dates retained</span><button type="button" className="rws-secondary-button" onClick={() => setRefresh(value => value + 1)} disabled={Boolean(busy)}><RefreshCw size={14} />Refresh</button></div>
     {notice && <p className="rws-notice" role="status">{notice}</p>}
     {actionError && <p className="rws-error" role="alert">{actionError}</p>}
 
@@ -216,7 +222,7 @@ export function RealWorkspaceView({ brandId, view, onOpenSettings, onOpenSources
       <details className="rws-coverage-disclosure"><summary>Source coverage, media & collection dates</summary><section className="rws-section"><p>{data.gallery?.dateRange.from || data.gallery?.dateRange.to ? `Source observations: ${date(data.gallery?.dateRange.from)} to ${date(data.gallery?.dateRange.to)}.` : "Capture dates are not available yet."}</p>
         {data.gallery ? <><SampleEvidenceCharts gallery={data.gallery} onSelect={ads => revealGallery({}, ads)} /><ObservationDatesChart creatives={creatives} onSelect={ads => revealGallery({}, ads)} /></> : <p className="rws-secondary">Source coverage is unavailable. Refresh the saved data to retry.</p>}
       </section></details>
-      {data.report && <details className="rws-coverage-disclosure"><summary>Creative checklist scores</summary><p className="rws-secondary">These scores assess creative structure. Conversion results appear in the measured-results panel.</p><ScoreDistributionChart scores={data.report.scores} onSelect={scores => revealGallery({}, creatives.filter(creative => scores.some(score => score.adId === creative.adId || score.nativeId === creative.nativeId)))} /></details>}
+      {data.report && <section className="rws-section" id="creative-scores"><SectionTitle title="Scores & subscore explanations" /><ScoreBreakdown scores={data.report.scores} onAd={openCreative} /></section>}
       {showGallery && gallerySection()}
     </>}
 

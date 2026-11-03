@@ -1,0 +1,21 @@
+import {useState} from "react";
+import type {DemoAdScore} from "../../shared/brand-demo";
+import {explainScore,scoreCriterionPopulation} from "../../shared/score-explanation";
+import "./score-breakdown.css";
+export function ScoreBreakdown({scores,onAd}:{scores:DemoAdScore[];onAd?:(id:string)=>void}) {
+  const [selected,setSelected]=useState("");
+  const score=scores.find(item=>item.analysisId===selected)||scores[0];
+  if(!score)return <div className="score-explainer-empty"><h3>No completed creative assessments yet</h3><p>Saved ad analyses are required to score the five checks. Unanalysed ads stay in the content library.</p></div>;
+  const explanation=explainScore(score),population=scoreCriterionPopulation(scores);
+  return <div className="score-explainer">
+    <header><h3>Where the scores come from</h3><p>Five checks, worth 20 points each. A passed check earns its full weight; a failed check earns zero. Unknown checks are excluded from the score and reduce coverage.</p></header>
+    <article className="score-population"><h3>Subscore breakdown across {scores.length} analysed ads</h3><div className="score-population-legend"><span><i className="score-met"/>Passed</span><span><i className="score-failed"/>Not met</span><span><i className="score-unknown"/>Unknown</span></div>
+      {population.map(row=><div className="score-population-row" key={row.id}><div><strong>{row.label}</strong><span>{row.met} passed · {row.failed} not met · {row.unknown} unknown</span></div><div className="score-population-track" role="img" aria-label={`${row.label}: ${row.met} passed, ${row.failed} not met, ${row.unknown} unknown out of ${row.total} ads`}><span className="score-met" style={{width:`${100*row.met/row.total}%`}}/><span className="score-failed" style={{width:`${100*row.failed/row.total}%`}}/><span className="score-unknown" style={{width:`${100*row.unknown/row.total}%`}}/></div></div>)}
+    </article>
+    <label className="score-ad-select">Inspect an ad's exact calculation<select aria-label="Choose ad for score breakdown" value={score.analysisId} onChange={event=>setSelected(event.target.value)}>{scores.map(item=><option key={item.analysisId} value={item.analysisId}>Ad {item.nativeId} · {item.score===null?"Unscored":`${item.score}/100`} · {Math.round(item.coverage*100)}% coverage</option>)}</select></label>
+    <div className="score-calculation"><div><span>Creative checklist score</span><strong>{explanation.percent===null?"Unavailable":`${explanation.percent}/100`}</strong></div><div><span>Calculation</span><strong>{explanation.earned} ÷ {explanation.assessed} × 100</strong></div><div><span>Evidence coverage</span><strong>{explanation.assessed}/{explanation.total} points assessed</strong></div></div>
+    <p className="score-calculation-note">{explanation.assessed<explanation.total?`${explanation.total-explanation.assessed} points cannot be assessed from the saved evidence. A high partial score is not a complete assessment.`:"All five checks have assessable evidence."} This checklist does not predict conversions or sales.</p>
+    {onAd&&<button type="button" className="rws-source" onClick={()=>onAd(score.adId)}>Open ad {score.nativeId} and its analysis</button>}
+    <div className="score-criteria">{explanation.rows.map((criterion,index)=><article key={criterion.id} className="score-criterion"><header><div><span className="score-criterion-number">0{index+1}</span><h4>{criterion.label}</h4></div><strong>{criterion.earned===null?"Not assessed":`${criterion.earned}/${criterion.weight} points`}</strong></header><span className={`score-criterion-status ${criterion.status}`}>{criterion.status==="met"?"Passed":criterion.status==="not-met"?"Not met":"Unknown evidence"}</span><p>{criterion.explanation}</p>{criterion.evidence.length>0&&<details><summary>Evidence used for this subscore ({criterion.evidence.length})</summary>{criterion.evidence.map((evidence,i)=><blockquote key={i}><p>“{evidence.quote}”</p><small>{evidence.field}{evidence.timestamps?.map(time=>` · ${time.startSeconds}-${time.endSeconds}s`).join("")}{evidence.imageIndices?.length?` · Image ${evidence.imageIndices.join(", ")}`:""}</small></blockquote>)}</details>}</article>)}</div>
+  </div>;
+}

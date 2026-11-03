@@ -42,3 +42,14 @@ Priority: stable low-cost kernel. Use npm run kernel:next and one listed task.
   client report and 1024px/390px overflow at 1.25 device scale.
 - The UI is prepared for review. Render publication and actual production-data
   verification remain rollout steps, not completed by the fixture tests.
+
+## Call-readiness update
+
+- Added five-check subscore population charts and per-ad explanations: earned
+  points, excluded unknowns, exact score formula, reasons, quotes and timestamps.
+- Removed feature-maturity pills from workspace/report; read-only saved evidence
+  refreshes every minute while preserving filters. No live-feed claim is added.
+- Verified 58 distinct retained Valentte Meta IDs from 30 October. Fresh all/active
+  browser captures were attempted on 3 November but failed without new output.
+- Production build, 331 existing tests, seven scoring tests and browser regression
+  passed, including five visible subscores and absence of Beta labels.
