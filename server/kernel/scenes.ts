@@ -17,5 +17,5 @@ export async function extractKernelScenes(stored: StoredKernelArtifact, signal?:
   if (!/^[a-f0-9]{64}$/.test(result.cacheKey) || result.sourceSha256 !== stored.ref.sha256 || !Array.isArray(result.sampleTimes) || result.sampleTimes.length > 8)
     throw new Error("Invalid scene manifest.");
   return { stage: "scenes-ready", cacheKey: result.cacheKey, sourceSha256: result.sourceSha256, durationSeconds: result.durationSeconds,
-    audioAvailable: result.audioAvailable, scenes: result.scenes, sampleTimes: result.sampleTimes, cacheHit: result.cacheHit };
+    audioAvailable: result.audioAvailable, sceneCount: result.scenes.length, sampleTimes: result.sampleTimes, cacheHit: result.cacheHit };
 }
