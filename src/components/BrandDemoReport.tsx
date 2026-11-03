@@ -9,6 +9,8 @@ import { CreativeGallery, galleryDisplayText, metaAdUrl } from "./CreativeGaller
 import { api } from "../lib/api";
 import { creatorEligibility } from "../../shared/creator-eligibility";
 import { CreatorEvidenceCharts, ObservationDatesChart, PatternDistribution, SampleEvidenceCharts, ScoreDistributionChart } from "./EvidenceCharts";
+import { AudienceVoiceInsights, CompetitorComparison, CreativeLandscape, OwnedResults } from "./WorkspaceInsights";
+import { ScoreBreakdown } from "./ScoreBreakdown";
 import "./brand-demo-report.css";
 
 const count = (value: number | null | undefined) => value == null ? "Unavailable" : value.toLocaleString("en-GB", { maximumFractionDigits: 1 });
@@ -23,7 +25,8 @@ function nativeId(id?: string, sourceUrl?: string | null) {
   try { const url = new URL(sourceUrl || ""); if (/(^|\.)facebook\.com$/.test(url.hostname) && /^\d+$/.test(url.searchParams.get("id") || "")) return url.searchParams.get("id")!; } catch { /* An unsourced reference keeps its supplied identifier. */ }
   return id || "source";
 }
-function Status({ value }: { value: "Live" | "Beta" | "Preview" }) { return <span className={`bdr-pill bdr-pill-${value.toLowerCase()}`}>{value}</span>; }
+function Status(_props: { value: "Live" | "Beta" | "Preview" }) { return null; }
+
 function SourceLink({ url, children }: { url?: string | null; children: ReactNode }) {
   const href = safeSource(url);
   return href ? <a className="bdr-source-link" href={href} target="_blank" rel="noopener noreferrer">{children}<ArrowUpRight size={12} /></a> : <span className="bdr-source-unavailable">{children} · source unavailable</span>;
@@ -74,7 +77,7 @@ function overviewFindings(report: DemoReport | null, gallery: CreativeGalleryRes
 }
 const sections = [
   ["overview", "Overview", "Live"], ["creatives", "Creatives", "Live"], ["patterns", "Patterns", "Beta"],
-  ["competitors", "Competitors", "Beta"], ["opportunities", "Opportunities & briefs", "Beta"], ["creators", "Creators", "Beta"], ["scores", "Scores", "Beta"],
+  ["competitors", "Competitors", "Beta"], ["audiences", "Audience & voice", "Beta"], ["results", "Owned results", "Live"], ["opportunities", "Opportunities & briefs", "Beta"], ["creators", "Creators", "Beta"], ["scores", "Scores", "Beta"],
 ] as const;
 
 export function BrandDemoReport({ brandId, onBrandChange }: { brandId: string; onBrandChange?: (brandId: string) => void }) {
@@ -87,15 +90,20 @@ export function BrandDemoReport({ brandId, onBrandChange }: { brandId: string; o
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
   const [reload, setReload] = useState(0);
+  useEffect(()=>{const timer=window.setInterval(()=>{if(document.visibilityState==="visible")setReload(value=>value+1);},60000);return()=>window.clearInterval(timer);},[]);
   const [filters, setFilters] = useState<CreativeGalleryFilters>({});
   const [evidenceAdIds, setEvidenceAdIds] = useState<string[] | null>(null);
   const [openAdId, setOpenAdId] = useState<string | null>(null);
   const [activeSection, setActiveSection] = useState("overview");
   const beforeDetailHash = useRef("");
+  const loadedBrand = useRef<string | null>(null);
   useEffect(() => { setSelectedBrandId(brandId); }, [brandId]);
   useEffect(() => {
     let current = true;
-    setReport(null); setGallery(null); setCreators(null); setCompetition(null); setLoading(true); setError(false); setFilters({}); setEvidenceAdIds(null); setOpenAdId(null);
+    if(loadedBrand.current !== selectedBrandId) {
+      setReport(null); setGallery(null); setCreators(null); setCompetition(null); setLoading(true); setError(false); setFilters({}); setEvidenceAdIds(null); setOpenAdId(null);
+      loadedBrand.current = selectedBrandId;
+    }
     Promise.allSettled([
       api<DemoReport>(`/api/brands/${encodeURIComponent(selectedBrandId)}/demo`),
       api<CreativeGalleryResponse>(`/api/brands/${encodeURIComponent(selectedBrandId)}/demo/creatives`),
@@ -192,16 +200,19 @@ export function BrandDemoReport({ brandId, onBrandChange }: { brandId: string; o
 
     <section id="bdr-patterns" data-report-section="patterns" aria-labelledby="bdr-patterns-title" className="bdr-section">
       <SectionTitle id="bdr-patterns-title" title="Patterns" status="Beta" description="Counts show their sample and label coverage. Click a bar to open the ads behind it; earlier descriptions remain separate from fixed labels." />
-      {report && analysedCount ? <div className="evidence-pattern-grid">{([
-        ["hookType", "Hook type", "hookType"], ["angle", "Angle", "angle"], ["offerType", "Offer type", "offerType"], ["format", "Creative format", "format"],
-      ] as const).map(([dimension, title, filter]) => <PatternDistribution key={dimension} title={title} patterns={report.patterns[dimension]} legacyPatterns={report.legacyPatterns?.[dimension]} coverage={report.patternCoverage?.[dimension]} totalAnalysed={report.analysedAdsCount} onSelect={(pattern, basis) => basis === "legacy" ? showPatternEvidence(pattern) : filterFromPattern(filter, pattern.value)} renderSources={pattern => <Evidence evidence={pattern.evidence} />} action={<a className="evidence-pattern-action" href={adminLink("pattern-labels")}>Update pattern labels</a>} />)}</div> : empty("Pattern labels are not available yet", "Analyse retained creatives to compare hooks, angles, offers and formats.", { label: "Analyse stored creatives", href: adminLink("gemini-smoke-test") })}
+      {report && analysedCount ? <CreativeLandscape report={report} onSelect={(pattern,basis,dimension)=>basis==="legacy"?showPatternEvidence(pattern):filterFromPattern(dimension,pattern.value)} /> : empty("Pattern labels are not available yet", "Analyse retained creatives to compare hooks, angles, offers and formats.", { label: "Analyse stored creatives", href: adminLink("gemini-smoke-test") })}
+
       {gallery && <div className="evidence-date-chart"><ObservationDatesChart creatives={creativeList} onSelect={showSupportingAds} /></div>}
     </section>
 
     <section id="bdr-competitors" data-report-section="competitors" aria-labelledby="bdr-competitors-title" className="bdr-section">
       <SectionTitle id="bdr-competitors-title" title="Competitors" status="Beta" description="Source-backed competitor collections. Missing evidence is shown explicitly." />
+      <CompetitorComparison brandId={selectedBrandId} report={report} competition={competition} onExplore={changeBrand} />
       {competition?.competitors.length ? <div className="bdr-competitor-grid">{competition.competitors.map(competitor => <article key={competitor.id} className="bdr-competitor-card"><h3>{competitor.name}</h3><SourceLink url={`https://${competitor.domain}`}>{competitor.domain}</SourceLink><dl><div><dt>Collected</dt><dd>{competitor.collectedCount}</dd></div><div><dt>Stored</dt><dd>{competitor.storedCount}</dd></div><div><dt>Analysed</dt><dd>{competitor.analysedCount}</dd></div></dl>{competitor.collectedCount && competitor.brandId ? <button type="button" onClick={() => changeBrand(competitor.brandId!)}>Explore creatives <ArrowRight size={14} /></button> : <><p>Competitor ads have not been collected yet.</p><a href={adminLink("demo-collection")}>Collect competitor ads <ArrowRight size={14} /></a></>}{competitor.lastRun?.sourceUrl && <div className="bdr-competitor-source"><SourceLink url={competitor.lastRun.sourceUrl}>Collection source</SourceLink><span>{date(competitor.lastRun.observedAt)}</span></div>}</article>)}</div> : empty("No competitor collections yet", "Collect Aery Living, The White Company and NEOM to compare their actual creatives.", { label: "Collect competitor ads", href: adminLink("demo-collection") })}
     </section>
+
+    <section id="bdr-audiences" data-report-section="audiences" aria-label="Audience & voice" className="bdr-section"><AudienceVoiceInsights brandId={selectedBrandId} creatives={creativeList} onSelect={showSupportingAds} /></section>
+    <section id="bdr-results" data-report-section="results" aria-label="Owned ad results" className="bdr-section"><OwnedResults brandId={selectedBrandId} onSources={()=>{window.location.href=`/?${new URLSearchParams({view:"sources",brandId:selectedBrandId})}`;}} /></section>
 
     <section id="bdr-opportunities" data-report-section="opportunities" aria-labelledby="bdr-opportunities-title" className="bdr-section">
       <SectionTitle id="bdr-opportunities-title" title="Opportunities & briefs" status="Beta" description="Draft directions to test, with the source ads that motivate each point." />
@@ -220,7 +231,7 @@ export function BrandDemoReport({ brandId, onBrandChange }: { brandId: string; o
     <section id="bdr-scores" data-report-section="scores" aria-labelledby="bdr-scores-title" className="bdr-section">
       <SectionTitle id="bdr-scores-title" title="Scores" status="Beta" description="Best-practice score, not a performance prediction." />
       {report && <div className="bdr-score-chart"><ScoreDistributionChart scores={report.scores} onSelect={scores => showSupportingAds(creativeList.filter(creative => scores.some(score => score.adId === creative.adId || score.nativeId === creative.nativeId)))} /></div>}
-      {report?.scores.length ? <div className="bdr-table-wrap"><table className="bdr-table"><thead><tr><th>Creative</th><th>Score / 100</th><th>Coverage</th><th>Assessment</th></tr></thead><tbody>{report.scores.map(score => <tr key={score.analysisId}><th scope="row"><AdLink adId={score.adId} sourceUrl={score.sourceUrl}>Ad {score.nativeId}</AdLink><span className="bdr-cell-note">{score.mediaKind === "video" ? "Video" : score.mediaKind === "carousel" ? "Carousel" : "Image"}</span></th><td><strong className="bdr-score">{score.score == null ? "Unavailable" : Math.round(score.score)}</strong>{score.provisional && <span className="bdr-cell-note">Provisional</span>}</td><td>{Math.round(score.coverage * 100)}%<span className="bdr-cell-note">{score.assessedWeight} / {score.totalWeight} rubric weight</span></td><td><details className="bdr-assessment"><summary>View criteria</summary><p>{score.method}</p><ul>{score.criteria.map(criterion => <li key={criterion.id}><strong>{criterion.label}</strong><span>{criterion.status === "met" ? "Observed" : criterion.status === "not-met" ? "Not observed" : "Unknown"}</span><p>{galleryDisplayText(criterion.explanation)}</p><Evidence evidence={criterion.evidence} /></li>)}</ul></details></td></tr>)}</tbody></table></div> : empty("No scores available yet", "Scores require a completed analysis of a real creative.", { label: "Analyse stored creatives", href: adminLink("gemini-smoke-test") })}
+      {report && <ScoreBreakdown scores={report.scores} onAd={id=>openCreative(id)} />}
       <details className="bdr-about"><summary><Info size={14} /> About scores and prediction preview</summary><div><p>Scores measure an explicit creative checklist. Unknown checks are excluded and coverage is shown, so a high partial score is not a complete assessment. No conversion, sales or performance outcome is inferred.</p><div className="bdr-heading-line"><h3>Future proven-ad likelihood</h3><Status value="Preview" /></div><p>Trains as collection history builds.</p>{report?.prediction.observations.length ? <><p>The spans below record source capture endpoints. They do not establish continuous delivery or a proven winner.</p><ul>{report.prediction.observations.slice(0, 10).map(observation => <li key={observation.adId}><AdLink adId={observation.adId} sourceUrl={observation.sourceUrl} /> · {date(observation.firstObservedAt)} to {date(observation.lastObservedAt)} · {count(observation.observedSpanDays)} observed days</li>)}</ul></> : <p>Repeated source observations are needed before longevity can be described.</p>}</div></details>
     </section>
     <footer className="bdr-footer"><span>{currentBrand.name} · Saved source evidence</span><span>Prepared {date(report?.generatedAt, true)}</span></footer>

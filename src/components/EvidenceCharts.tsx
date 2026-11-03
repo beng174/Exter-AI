@@ -4,6 +4,9 @@ import type { CreativeGalleryResponse, DemoGalleryCreative } from "../../shared/
 import type { CreatorCandidate, CreatorResearchSnapshot } from "../../shared/creator-research";
 import { galleryDisplayText } from "./CreativeGallery";
 import { creatorEligibility } from "../../shared/creator-eligibility";
+import { patternPopulation } from "../../shared/creative-insights";
+import type { PatternDimension } from "../../shared/demo-patterns";
+import { PopulationChart } from "./PopulationChart";
 import "./evidence-charts.css";
 
 const number = (value: number) => value.toLocaleString("en-GB", { maximumFractionDigits: 1 });
@@ -59,22 +62,31 @@ export function EvidenceCoverage({ title, classified, total, legacy = 0, onClass
   </div>;
 }
 
-export function PatternDistribution({ title, patterns, legacyPatterns = [], coverage, totalAnalysed, onSelect, renderSources, action }: {
+export function PatternDistribution({ title, patterns, legacyPatterns = [], coverage, totalAnalysed, onSelect, renderSources, action, dimension, compact = true }: {
   title: string; patterns: DemoPattern[]; legacyPatterns?: DemoPattern[]; coverage?: DemoPatternCoverage; totalAnalysed: number;
   onSelect?: (pattern: DemoPattern, basis: "canonical" | "legacy") => void; renderSources?: (pattern: DemoPattern) => ReactNode; action?: ReactNode;
+  dimension?: PatternDimension; compact?: boolean;
 }) {
-  const observed = patterns.filter(pattern => pattern.count > 0);
-  const classified = coverage?.classified ?? patterns[0]?.denominator ?? 0;
-  const total = coverage?.totalAnalysed ?? totalAnalysed;
-  const recorded = legacyPatterns.filter(pattern => pattern.count > 0);
-  const legacyTitle = title === "Hook type" || title === "Hook types" ? "Recorded opening messages" : title === "Angle" || title === "Angles" ? "Recorded angle descriptions" : title === "Offer type" || title === "Offers" ? "Recorded offer descriptions" : "Recorded format descriptions";
-  const rows = (items: DemoPattern[], basis: "canonical" | "legacy") => items.map(pattern => ({ id: pattern.value, label: pattern.label, value: pattern.count, denominator: pattern.denominator, onSelect: onSelect ? () => onSelect(pattern, basis) : undefined, sources: renderSources?.(pattern) }));
+  const field = dimension || (/hook/i.test(title) ? "hookType" : /angle/i.test(title) ? "angle" : /offer/i.test(title) ? "offerType" : "format");
+  const population = patternPopulation(field, patterns, legacyPatterns, coverage, totalAnalysed);
   return <div className="evidence-pattern">
-    <EvidenceCoverage title={title} classified={classified} total={total} legacy={coverage?.legacy ?? (recorded[0]?.denominator || 0)} />
-    {observed.length > 0 ? <EvidenceBarChart title="Fixed taxonomy" rows={rows(observed, "canonical")} description={`Observed counts of modelled labels. Shares use ${number(classified)} classified ads; missing labels are excluded.`} />
-      : <div className="evidence-chart-empty"><p>No fixed {title.toLowerCase()} labels have been saved for these {number(total)} analysed ads.</p>{action}</div>}
-    {recorded.length > 0 && <details className="evidence-legacy" open={observed.length === 0}><summary>{legacyTitle}<span>{number(recorded[0].denominator)} ads</span></summary><EvidenceBarChart title={legacyTitle} rows={rows(recorded, "legacy")} description="Observed counts of exact descriptions from earlier model analyses. These are not grouped into the current taxonomy." initialLimit={5} /></details>}
-    {!observed.length && !recorded.length && total > 0 && <p className="evidence-chart-description">The creative can still be opened and reviewed. A missing label is not evidence that this pattern is absent.</p>}
+    <PopulationChart title={title} total={population.total} compact={compact}
+      description="Share of the analysed sample. Select a segment to see its source ads."
+      rows={population.groups.map(group => ({ id: group.id, label: group.label, value: group.count, muted: group.basis === "missing",
+        detail: group.basis === "description-theme" ? "Grouped from saved descriptions" : group.basis === "saved-label" ? "Saved model label" : "No supported label or description",
+        onSelect: onSelect && group.patterns.length ? () => onSelect(group.basis === "saved-label" ? group.patterns[0] : {
+          value: group.id, label: group.label, count: group.count, denominator: population.total, totalAnalysed: population.total,
+          share: population.total ? group.count / population.total : null, evidence: group.evidence,
+        }, group.basis === "saved-label" ? "canonical" : "legacy") : undefined,
+      }))}
+      footer={<><div className="pattern-evidence-counts"><span><strong>{number(population.labelled)}</strong> saved labels</span><span><strong>{number(population.described)}</strong> described</span><span><strong>{number(population.missing)}</strong> not recorded</span></div>
+        {population.described > 0 && <p>Description themes are automatic text groupings for navigation. Original model labels and analyses are preserved. They are not conversion results.</p>}</>}
+      emptyText="Analyse saved creatives to populate this chart. No sample observations are substituted." />
+    {(legacyPatterns.length > 0 || patterns.some(p => p.count > 0)) && <details className="evidence-legacy"><summary>Original descriptions & sources<span>{number(population.labelled + population.described)} ads</span></summary>
+      <EvidenceBarChart title="Saved observations" rows={[...patterns.filter(p => p.count > 0), ...legacyPatterns.filter(p => p.count > 0)].map(pattern => ({ id: `${legacyPatterns.includes(pattern) ? "description" : "label"}:${pattern.value}`, label: pattern.label, value: pattern.count, denominator: population.total, onSelect: onSelect ? () => onSelect(pattern, legacyPatterns.includes(pattern) ? "legacy" : "canonical") : undefined, sources: renderSources?.(pattern) }))}
+        description="Exact saved observations. Every percentage uses the full analysed sample." initialLimit={5} />
+    </details>}
+    {population.missing > 0 && action && <div className="pattern-update-action">{action}</div>}
   </div>;
 }
 

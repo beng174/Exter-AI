@@ -36,6 +36,16 @@ test("demo reads are authenticated and do not collect, infer, fabricate samples 
       } else if (path.startsWith("/api/creator-research")) { assert.deepEqual(body.candidates, []); assert.deepEqual(body.searches, []); }
       else { assert.equal(body.pages.overview.adsCollected, 0); assert.equal(body.pages.contentLibrary.mediaVerifiedOnDisk, 0); assert.equal(body.pages.brandResearch.available, false); assert.equal(body.pages.creators.attributedCreators, 0); }
     }
+    const intelligencePath = `/api/brands/${brand.id}/demo/intelligence`;
+    assert.equal((await fetch(base + intelligencePath)).status, 401);
+    const intelligenceResponse = await fetch(base + intelligencePath, { headers });
+    assert.equal(intelligenceResponse.status, 200);
+    assert.match(intelligenceResponse.headers.get("cache-control") || "", /no-store/);
+    const intelligence = await intelligenceResponse.json();
+    assert.deepEqual(intelligence.audienceLabels, []);
+    assert.deepEqual(intelligence.voice, []);
+    assert.equal(intelligence.performance.status, "unavailable");
+    assert.equal((await fetch(base + "/api/brands/missing/demo/intelligence", { headers })).status, 404);
     const verified = await (await fetch(`${base}/api/demo-readiness?brandId=valentte`, { headers })).json();
     assert.equal(verified.pages.overview.adsCollected, 58);
     assert.equal(verified.pages.overview.adsAnalysed, 0, "A source import never invents missing paid outputs");

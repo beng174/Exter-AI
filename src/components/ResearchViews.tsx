@@ -843,6 +843,10 @@ export function SourcesView({
       brand: brand.name,
       platform: "Meta",
       title: "Your campaign creative",
+      providerAdId: "REPLACE_WITH_ACCOUNT_AD_ID",
+      metricDate: new Date().toISOString().slice(0, 10),
+      currency: "GBP",
+      conversionEvent: "purchase",
       format: "Video",
       creativeFormats: ["UGC", "Reviews & testimonials"],
       analysis: {
@@ -1003,7 +1007,8 @@ export function SourcesView({
             <p className="rv-footnote">
               Required: brand, platform, title, angle, audience, impressions,
               engagements and publishedAt (ISO date). See the template for
-              optional owned-account metrics.
+              optional owned-account metrics. Include providerAdId, metricDate, currency and conversionEvent
+              to compare owned conversions and CPA. Replace the illustrative template values with your account results.
             </p>
             <button
               type="button"
