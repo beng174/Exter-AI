@@ -251,11 +251,14 @@
       "dependsOn": [
         "K03"
       ],
-      "status": "ready",
+      "status": "blocked",
       "goal": "Integrate RapidOCR and versioned face/product detectors.",
       "files": [
-        "worker",
-        "shared/analysis-kernel.ts"
+        "worker/visual_features.py",
+        "worker/test_visual_features.py",
+        "worker/smoke_rapidocr.py",
+        "worker/VISUAL-MODELS.md",
+        "server/kernel/visual.ts"
       ],
       "acceptance": [
         "OCR is source-timed and deduplicated.",
@@ -267,9 +270,14 @@
         "worker memory benchmark"
       ],
       "blockers": [
-        "Pin model weights and verify licences before production."
+        "Reviewed complete visual model pack and actual face/product predictions on annotated fixtures are pending; Render peak-memory and restart validation is required."
       ],
-      "evidence": []
+      "evidence": [
+        "Offline RapidOCR, YuNet and decoded-YOLOX adapters with explicit model-pack hashes/provenance and opt-in worker jobs.",
+        "Timestamped OCR dedup retains observed frames only; static/carousel timestamps are null. Faces have no identity/demographics; generic object candidates do not verify brand/product identity.",
+        "12 Python fixture tests and real RapidOCR generated-text smoke pass. Face/product actual-model and labelled-ad quality checks are not claimed.",
+        "324 regression tests, 12 Python tests, production build and typecheck pass; actual RapidOCR smoke recognises generated SAVE 20% text."
+      ]
     },
     {
       "id": "K06",

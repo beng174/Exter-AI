@@ -412,3 +412,20 @@ POST /api/kernel/jobs accepts stage="audio" for retained videos, but queues it
 without dispatch while the worker flag is disabled. It runs cached scene/audio
 preparation and then local models; it never calls Gemini. Full timed audio
 features are stored with the worker scene cache, and the job returns a summary.
+
+## K05 visual evidence (validation pending)
+
+Normal deployment requires no settings changes. Keep EXTER_KERNEL_VISUAL_ENABLED
+unset or false. The optional worker image can include visual libraries with build
+argument EXTER_BUILD_VISUAL=true; it installs headless OpenCV, not GUI libraries.
+The pinned RapidOCR package contains OCR assets, but production adapters use only
+the reviewed local pack described in worker/VISUAL-MODELS.md. No models download
+at worker startup or from a web request. Set EXTER_KERNEL_VISUAL_MODELS_PATH only
+on a capacity-verified worker with that pack installed, then enable the flag.
+
+POST /api/kernel/jobs accepts stage="visual" for retained videos, images and
+individual carousel slides. Videos reuse the verified scene samples; stills use
+one untimed frame. The result is visual-ready with a small summary. Full timed
+OCR and generic presence evidence remains in the worker cache. No Gemini call or
+provider budget reservation occurs. Real OCR synthetic-text smoke passed; actual
+face/product models, labelled-set accuracy and Render capacity remain unverified.

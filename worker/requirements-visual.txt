@@ -1,0 +1,2 @@
+# Install with --no-deps AFTER requirements-visual-runtime.txt to keep headless OpenCV.
+rapidocr-onnxruntime==1.4.4
