@@ -1,24 +1,29 @@
 # Current handoff
 
-Priority: stable low-cost kernel. UI and scoring expansion are deferred.
-Read one active item with `npm run kernel:next`.
+Priority: stable low-cost kernel. UI and scoring expansion remain deferred.
+Read one ready item with `npm run kernel:next`.
 
-- Latest pushed baseline: `7e052b8` (pattern coverage + verified Instagram >40k).
-  Last explicitly confirmed hosted commit before this work: `8f09f82`.
-- Current change: product requirements, pinned public skills, narrow backlog,
-  connector protocol tests and compact labels-only pipeline contracts.
-- Completed locally: K00 and fixture-tested K01 protocol foundation. Next ready
-  code task: K02. Live API sign-off is separately blocked as K01-LIVE.
+- Baseline before this slice: `7da3071`, pushed with green CI. Hosted deployment
+  of this new slice has not been verified.
+- K00/K01 protocol foundation and K02 durable jobs/artifact transport are done.
+  Next code task: K03 dedupe, normalisation and scene extraction.
+- K02 uses a scoped authenticated web broker and a separate worker cache. It
+  transfers retained original files; no ffmpeg, browser or ML runs on web reads.
+- Staging is opt-in (`EXTER_KERNEL_WORKER_ENABLED=true` only on worker). Normal
+  deployment requires no new resources or secrets and starts no new jobs.
+- Local end-to-end HTTP/PG/worker staging passes. K02-LIVE remains blocked until
+  secure Render broker settings and transfer/restart verification are completed.
+- Permission/budget failures pause both queues; transient attempts are bounded.
+  Uncertain paid dispatches retain their hold and require review, with no replay.
+- The full extraction candidate remains disabled. K03 must bound worker cache
+  quota/headroom/retention before production. Later ML weights/capacity and paired
+  labelled-set evaluation are still pending.
 - User chose Gemini 3.1 Flash-Lite with minimal thinking and thought-token accounting.
-- Full updated product document and genuine recorded Meta API responses are not
-  attached. Fixtures are identified by provenance; no live validation is claimed.
-- TikTok keys are not set. Do not request credentials in chat or fake connection.
-- Worker artifact transport and capacity remain rollout gates. No heavy model
-  downloads or new paid inference are started by this foundation.
-- Paused draft: `wip/winning-workflow-before-kernel` at `fa9c8ed`; not deployed.
+- API live sign-off K01-LIVE is blocked. TikTok keys and genuine recorded Meta
+  responses are absent; fixtures are not live verification. Full product document
+  was not attached; PRODUCT-SPEC.md records only supplied requirements.
+- Paused scoring/export draft: local `wip/winning-workflow-before-kernel` at
+  `fa9c8ed`; not deployed or part of the kernel.
 
-Update this file with the next bounded task and test evidence; do not append a
-chronological transcript.
-
-Validation for this foundation: 305 tests pass, production build/type check pass,
-pinned skill integrity and secret scan pass. No live provider or local ML run.
+Validation: 324 unit/regression tests, 20 disposable PostgreSQL tests and production
+build pass. No live provider or new paid inference was run. Keep this handoff short.

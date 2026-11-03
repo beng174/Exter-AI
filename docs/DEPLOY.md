@@ -1,10 +1,10 @@
 # Deploying Exter on Render
 
-## Low-cost kernel foundation release
+## Low-cost kernel release
 
-This release adds the kernel plan, fixture-tested connector contracts and an
-authenticated `/api/kernel/status` route. It does not enable the new extraction
-pipeline or start a worker job. Deploy the latest `exter-test-drive` commit using
+This release adds durable kernel jobs, a scoped authenticated artifact broker,
+an opt-in media staging worker and `/api/kernel/status`. It does not enable the
+new extraction pipeline or automatically enqueue a worker job. Deploy the latest `exter-test-drive` commit using
 the existing service configuration. Keep the current persistent disk, credentials
 and reference Gemini model setting. No new Render resources or model downloads
 are required for this release; do not apply the blueprint just for this change.
@@ -13,9 +13,55 @@ TikTok remains `not_connected` while either `TIKTOK_CLIENT_KEY` or
 `TIKTOK_CLIENT_SECRET` is absent. Meta remains `not_connected` without
 `META_ACCESS_TOKEN`. Configured credentials are not evidence of API approval.
 Enter future credentials only in secure Render environment settings. The
-candidate pipeline stays `not_ready` until shared artifact transport, worker
+candidate pipeline stays `not_ready` until live artifact transport, worker
 capacity and labelled-set evaluation pass the gates in
 [the kernel plan](../research/KERNEL-REBUILD-PLAN.md).
+
+### Optional K02 media staging setup
+
+Keep `EXTER_KERNEL_WORKER_ENABLED` unset or `false` for a normal deployment.
+The following setup is only for checking the new media transport on an existing
+worker; it does not analyse a creative or make an inference reservation.
+
+1. Use the same existing `DATABASE_URL` on web and worker. Startup applies the
+   additive `kernel_jobs` and `kernel_dispatches` schema under the migration lock.
+   Existing SQLite ads, media and paid analyses are preserved.
+2. Create a dedicated random 64-character hexadecimal service token using a
+   password manager. Enter it directly as `EXTER_ARTIFACT_BROKER_TOKEN` in secure
+   Render settings on web and worker. Do not put the value in chat or logs.
+3. On web, set `EXTER_ARTIFACT_BROKER_WORKSPACES` to the canonical workspace IDs
+   permitted for transfer, separated by commas. Find the actual IDs through the
+   authenticated `/api/brands` response; do not assume a display name is an ID.
+4. On worker, set `EXTER_ARTIFACT_BROKER_ORIGIN=https://exter-ai.onrender.com`,
+   `EXTER_KERNEL_CACHE_PATH=/tmp/exter-kernel-cache`, and
+   `EXTER_KERNEL_WORKER_ENABLED=true`. The cache belongs to this worker, and is
+   allowed to be ephemeral. No additional disk is required for this transport
+   check. A later extraction job must retrieve/reverify media after cache loss.
+5. Redeploy the affected existing services. Check `/api/kernel/status` while
+   signed in. `configured` describes settings, not a successful worker transfer.
+6. Submit a same-origin authenticated JSON `POST /api/kernel/jobs` with
+   `workspaceId`, `adId`, and `kind` (`video`, `image`, or `carousel`). Optional
+   `mediaId` selects an immutable retained version; `imageIndex` is a zero-based
+   carousel slide. Each image/slide uses its own file hash. Only already retained,
+   verified media is accepted. This endpoint cannot select a model or start inference.
+7. Read `GET /api/kernel/jobs/{id}?workspaceId={workspaceId}`. Success is
+   `complete` with result stage `media-ready`. Repeating the same request returns
+   the same job. A worker restart or stale lease must not create another job.
+   Scoped JSON `POST /api/kernel/jobs/{id}/cancel` cancels active work;
+   `.../resume` only resumes paused work. `review_required` paid work never
+   resumes through this endpoint.
+
+The broker accepts its machine token only for exact artifact download routes,
+and only for the configured workspace allowlist. It grants no access to ordinary
+app pages, health, status, job mutation or admin settings. The browser continues
+to use the existing Basic Auth. Transport references contain hashes and scope,
+never file paths, source URLs or provider credentials. The original retained file
+is streamed without running ffmpeg, a browser or a local model on the web service.
+
+Meta collection now pauses on permission, missing-key and budget errors until an
+explicit manual collect request. Scheduled jobs do not resume those pauses.
+Transient failures stop after five failed attempts for the current page; a
+successful committed page resets that allowance and preserves the saved cursor.
 
 ## Current deployment and the new blueprint
 

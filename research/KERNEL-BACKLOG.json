@@ -94,13 +94,17 @@
       "dependsOn": [
         "K01"
       ],
-      "status": "ready",
+      "status": "done",
       "goal": "Separate web, PostgreSQL queue and extraction worker; implement scoped artifact transport.",
       "files": [
-        "server/infrastructure/jobs.ts",
-        "server/video/media.ts",
-        "render.yaml",
-        "research/KERNEL-REBUILD-PLAN.md"
+        "server/kernel/jobs.ts",
+        "server/kernel/schema.sql",
+        "server/kernel/artifacts.ts",
+        "server/kernel/broker.ts",
+        "server/kernel/worker.ts",
+        "server/kernel/jobs-api.ts",
+        "server/infrastructure/runtime.ts",
+        "docs/DEPLOY.md"
       ],
       "acceptance": [
         "A worker never assumes access to the web service private disk.",
@@ -112,8 +116,39 @@
         "npm run test:infrastructure",
         "npm run check"
       ],
+      "blockers": [],
+      "evidence": [
+        "Scoped authenticated web broker and separate verified worker cache implemented; no shared disk assumption.",
+        "Additive PostgreSQL queue uses canonical native IDs, idempotency keys, fenced leases, checkpoints, cancellation and bounded retries.",
+        "Staging is opt-in and makes no paid calls; candidate extraction remains disabled.",
+        "Existing Meta queue now pauses on permission/budget errors and caps transient failures per page.",
+        "324 unit/regression tests and 20 disposable PostgreSQL integration tests pass; production build passes.",
+        "Real loopback API -> PostgreSQL -> authenticated broker -> separate worker cache -> media-ready result passes without provider calls or inference reservations."
+      ]
+    },
+    {
+      "id": "K02-LIVE",
+      "title": "Verify broker and worker staging on Render",
+      "dependsOn": [
+        "K02"
+      ],
+      "status": "blocked",
+      "goal": "Check one retained creative transfer and worker restart using secure service configuration.",
+      "files": [
+        "docs/DEPLOY.md",
+        "server/kernel/api.ts",
+        "server/kernel/worker.ts"
+      ],
+      "acceptance": [
+        "Only permitted canonical workspaces are readable with the dedicated service token.",
+        "A retained file stages as media-ready; repeat/restart does not duplicate the job or paid work.",
+        "No ML/model/browser work starts on web or status reads."
+      ],
+      "checks": [
+        "Render-only staged-media transfer and restart check"
+      ],
       "blockers": [
-        "Choose/configure shared object storage or an authenticated artifact broker before a live cross-service run."
+        "Dedicated broker token, workspace allowlist and worker cache/origin are not yet configured in Render."
       ],
       "evidence": []
     },
@@ -133,7 +168,8 @@
       "acceptance": [
         "Identical media and stage versions reuse features.",
         "Frame/audio byte and duration limits are enforced.",
-        "Near-duplicate similarity never silently reuses labels as an exact match."
+        "Near-duplicate similarity never silently reuses labels as an exact match.",
+        "Worker cache quota, disk headroom and artifact retention are bounded before production extraction."
       ],
       "checks": [
         "npm test",
@@ -282,7 +318,8 @@
       "title": "Controlled Render rollout",
       "dependsOn": [
         "K08",
-        "K01-LIVE"
+        "K01-LIVE",
+        "K02-LIVE"
       ],
       "status": "ready",
       "goal": "Enable the candidate only after worker resource and recovery gates pass.",

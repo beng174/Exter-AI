@@ -62,6 +62,11 @@ services:
     envVars:
       - key: NODE_ENV
         value: production
+      - key: EXTER_KERNEL_WORKER_ENABLED
+        value: "false"
+      # Optional artifact staging is configured separately. The web disk is not shared.
+      # Web+worker: EXTER_ARTIFACT_BROKER_TOKEN (secure); web: EXTER_ARTIFACT_BROKER_WORKSPACES.
+      # Worker: EXTER_ARTIFACT_BROKER_ORIGIN and EXTER_KERNEL_CACHE_PATH.
       # Optional META_ACCESS_TOKEN: add securely after approval; not required to deploy.
       - key: META_API_VERSION
         value: v25.0

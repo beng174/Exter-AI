@@ -21,7 +21,7 @@
     "scheduler": "NODE_USE_ENV_PROXY=1 node --env-file-if-exists=.env --import tsx server/infrastructure/runtime.ts scheduler",
     "db:migrate": "node --env-file-if-exists=.env --import tsx server/infrastructure/runtime.ts migrate",
     "secrets:check": "node scripts/check-secrets.mjs",
-    "test:infrastructure": "tsx --test tests/infrastructure.integration.ts",
+    "test:infrastructure": "tsx --test --test-concurrency=1 tests/infrastructure.integration.ts tests/kernel-*.integration.ts",
     "kernel:next": "node scripts/kernel-backlog.mjs next",
     "kernel:task": "node scripts/kernel-backlog.mjs show",
     "kernel:skills:verify": "node --import tsx --test tests/kernel-skills.test.ts"

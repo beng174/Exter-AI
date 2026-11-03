@@ -1,7 +1,7 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
-import { MetaLibraryConnector, META_FIELDS, metaStatus } from "../server/connectors/meta-library.js";
+import { MetaLibraryConnector, MetaCollectionError, META_FIELDS, metaStatus } from "../server/connectors/meta-library.js";
 const fakeToken = "test-fixture-token";
 test("Meta fixture pages preserve exact IDs, observed zero and missing reach without claiming live verification",async()=>{
   const fixture=readFileSync(new URL("./fixtures/connectors/meta-page.json",import.meta.url),"utf8");
@@ -52,4 +52,14 @@ test("unsafe numeric IDs and token-bearing cursors are rejected before persisten
     const connector = new MetaLibraryConnector({ token: fakeToken, fetch: async () => Response.json(body) });
     await assert.rejects(connector.page({ pageIds: ["12"], countries: ["GB"] }));
   }
+});
+test("Graph application errors classify known permission, rate and transient codes without exposing provider text", async () => {
+  for (const status of [200,400]) for (const [code,reason] of [[190,"permission"],[102,"permission"],[10,"permission"],[200,"permission"],[294,"permission"],[4,"rate_limited"],[17,"rate_limited"],[32,"rate_limited"],[613,"rate_limited"],[80004,"rate_limited"],[2,"unavailable"],[100,"schema"]] as const) {
+    const connector = new MetaLibraryConnector({ token: fakeToken, fetch: async () => Response.json({ error: { code,message: fakeToken,error_user_msg: `private ${fakeToken}` } },{ status }) });
+    await assert.rejects(connector.page({ pageIds: ["12"],countries: ["GB"] }), (error: unknown) => error instanceof MetaCollectionError && error.reason === reason && !error.message.includes(fakeToken));
+  }
+  const transient = new MetaLibraryConnector({ token: fakeToken, fetch: async () => Response.json({ error: { code: 999,is_transient: true,message: fakeToken } }) });
+  await assert.rejects(transient.page({ pageIds: ["12"],countries: ["GB"] }), (error: unknown) => error instanceof MetaCollectionError && error.reason === "unavailable" && !error.message.includes(fakeToken));
+  const malformed = new MetaLibraryConnector({ token: fakeToken, fetch: async () => Response.json(null) });
+  await assert.rejects(malformed.page({ pageIds: ["12"],countries: ["GB"] }), (error: unknown) => error instanceof MetaCollectionError && error.reason === "schema");
 });

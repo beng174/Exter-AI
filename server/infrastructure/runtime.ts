@@ -1,5 +1,6 @@
 import { infrastructureDatabase, migrate } from "./database.js";
 import { schedule, workOnce } from "./jobs.js";
+import { configuredKernelArtifactClient, workKernelOnce } from "../kernel/worker.js";
 const role = process.argv[2];
 const pool = infrastructureDatabase();
 try {
@@ -7,11 +8,15 @@ try {
   if (role === "scheduler") await schedule(pool);
   else if (role === "migrate") { /* schema is ready */ }
   else if (role === "worker") {
+    const artifactClient = configuredKernelArtifactClient();
     let stopping = false;
-    process.once("SIGTERM", () => { stopping = true; });
-    process.once("SIGINT", () => { stopping = true; });
+    const shutdown = new AbortController();
+    process.once("SIGTERM", () => { stopping = true; shutdown.abort(); });
+    process.once("SIGINT", () => { stopping = true; shutdown.abort(); });
     while (!stopping) {
-      if (!await workOnce(pool)) await new Promise(resolve => setTimeout(resolve,1000));
+      const collected = await workOnce(pool);
+      const staged = artifactClient && !stopping ? await workKernelOnce(pool, artifactClient, { signal: shutdown.signal }) : false;
+      if (!collected && !staged && !stopping) await new Promise(resolve => setTimeout(resolve,1000));
     }
   } else throw new Error("Unknown runtime role.");
 } catch {

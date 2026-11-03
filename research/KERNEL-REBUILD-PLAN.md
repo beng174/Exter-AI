@@ -39,10 +39,14 @@ It never imports or loads Python ML models. The PostgreSQL job kernel owns lease
 idempotency keys, stage progress, budgets and cancellation. A separate Render
 worker owns local extraction; only the final labels/escalations call Gemini.
 
-Artifact transport must be decided first. The existing web disk is not shared
-with the worker. Prefer a storage interface with scoped immutable object keys,
-hash verification and short-lived transport access. Keep local disk for tests and
-single-process development; do not assume identical absolute paths on two services.
+Artifact transport uses a scoped authenticated broker over the existing web
+disk, with a separate verified worker cache. The disk itself is not shared.
+Only an explicit admin staging request registers an immutable reference and
+queues work; status reads never enqueue. A dedicated service token plus workspace
+allowlist protects the exact download route and grants no access to other APIs.
+Original files are streamed without web-side normalisation or ML. Object storage
+can implement the same portable reference interface later if measured load
+warrants it. Do not assume identical absolute paths on two services.
 
 Stage caches are keyed by tenant scope, media hash, stage/model revision and
 configuration. Label caches add ad-copy/context, prompt, schema and served-model
@@ -59,6 +63,10 @@ Render environment variables are scoped per service. The existing worker does
 not automatically receive the web service's Gemini key or media mount. Worker
 rollout needs its own secure model/storage settings and a persistent model-cache
 decision. The current web-only deployment needs none of those changes yet.
+K02 staging is opt-in and performs no paid inference. Its `media-ready` result is
+a stage result, not a completed creative analysis or proof that an ephemeral
+cache still exists. The extraction candidate remains disabled. See docs/DEPLOY.md
+for optional staging setup and restart verification.
 
 ## Prompt and context discipline
 

@@ -36,6 +36,8 @@ import { attachDemoCollection } from "./demo/collection-api.js";
 import { attachDemoReadiness } from "./demo/readiness-api.js";
 import { attachPatternLabelling } from "./demo/pattern-labelling-api.js";
 import { attachKernelStatus } from "./kernel/api.js";
+import { KernelMediaBroker, attachKernelArtifactDownload } from "./kernel/broker.js";
+import { attachKernelJobs } from "./kernel/jobs-api.js";
 import { canonicalWorkspaceBrands, resolveDemoBrandId, workspaceAd, linkedWorkspaceAnalyses } from "./demo/reconcile.js";
 import { existsSync } from "node:fs";
 import { resolve } from "node:path";
@@ -231,7 +233,10 @@ function parseImportRow(row: unknown, brand: Brand): Ad {
 }
 export function createApp(db: DatabaseSync = openDatabase()) {
   const app = express();
-  app.use(basicAuth());
+  const authenticate = basicAuth();
+  const broker = new KernelMediaBroker(db, { video: () => app.locals.videoAnalysis, images: () => app.locals.geminiSmoke.images });
+  attachKernelArtifactDownload(app, broker);
+  app.use(authenticate);
   app.disable("x-powered-by");
   app.use(express.json({ limit: "20mb" }));
   app.use((_req, res, next) => {
@@ -253,6 +258,7 @@ export function createApp(db: DatabaseSync = openDatabase()) {
   const video = attachVideoAnalysis(app, db);
   attachLabelling(app, db, video);
   attachGeminiSmoke(app, db, video);
+  attachKernelJobs(app, broker, id => resolveDemoBrandId(db, id));
   attachBrandDemo(app, db);
   attachPatternLabelling(app, db);
   attachDemoCollection(app, db, video);

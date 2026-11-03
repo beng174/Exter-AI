@@ -10,6 +10,22 @@ export function metaStatus(env:Record<string,string|undefined>=process.env) {
 export class MetaCollectionError extends Error {
   constructor(public reason: "rate_limited" | "permission" | "unavailable" | "schema", message: string) { super(message); }
 }
+function httpFailure(status: number) {
+  return new MetaCollectionError(status === 429 ? "rate_limited" : [401,403].includes(status) ? "permission" : status === 400 ? "schema" : "unavailable", `Meta collection failed (HTTP ${status}). Check app approval, request configuration and provider availability.`);
+}
+function graphFailure(error: unknown, status: number) {
+  const detail = error && typeof error === "object" ? error as Record<string,unknown> : {};
+  const code = typeof detail.code === "number" ? detail.code : typeof detail.code === "string" && /^\d{1,8}$/.test(detail.code) ? Number(detail.code) : null;
+  // Graph can return application errors inside HTTP 200 or HTTP 400 bodies.
+  // Interpret only known codes; never persist its message, trace or request URLs.
+  if ([10,102,190,200,294].includes(code!))
+    return new MetaCollectionError("permission", `Meta approval, permission or token was rejected (HTTP ${status}). Correct approved credentials and permissions before resuming.`);
+  if ([4,17,32,613,80000,80001,80003,80004].includes(code!))
+    return new MetaCollectionError("rate_limited", `Meta collection was rate-limited (HTTP ${status}). Retry later from the saved cursor.`);
+  if ([1,2].includes(code!) || detail.is_transient === true)
+    return new MetaCollectionError("unavailable", `Meta collection is temporarily unavailable (HTTP ${status}).`);
+  return status >= 400 ? httpFailure(status) : new MetaCollectionError("schema", "Meta returned an unsupported application error.");
+}
 export interface MetaQuery { pageIds?: string[]; searchTerm?: string; countries: string[]; after?: string | null }
 export class MetaLibraryConnector {
   constructor(private readonly options: { token?: string; version?: string; fetch?: typeof fetch } = {}) {}
@@ -31,15 +47,17 @@ export class MetaLibraryConnector {
     let response: Response;
     try { response = await (this.options.fetch ?? fetch)(url, { headers: { Authorization: `Bearer ${token}` }, redirect: "error", signal: AbortSignal.timeout(30000) }); }
     catch { throw new MetaCollectionError("unavailable", "Meta request unavailable; collection will resume from its saved cursor."); }
-    if (!response.ok) throw new MetaCollectionError(response.status === 429 ? "rate_limited" : [400,401,403].includes(response.status) ? "permission" : "unavailable", `Meta collection failed (HTTP ${response.status}). Check app approval and permissions.`);
     // Never store paging URLs or provider error messages: they may contain credentials.
-    if (Number(response.headers.get("content-length")) > 10000000) throw new MetaCollectionError("schema", "Meta page exceeds size limit.");
+    if (Number(response.headers.get("content-length")) > 10000000) throw response.ok ? new MetaCollectionError("schema", "Meta page exceeds size limit.") : httpFailure(response.status);
     let raw:string;
     try { raw = await boundedPublicBody(response,10000000); }
-    catch { throw new MetaCollectionError("schema", "Meta page could not be read within the size and request limits."); }
+    catch { throw response.ok ? new MetaCollectionError("schema", "Meta page could not be read within the size and request limits.") : httpFailure(response.status); }
     let body: any;
-    try { body = JSON.parse(raw); } catch { throw new MetaCollectionError("schema", "Meta returned invalid JSON."); }
-    if (body.error || !Array.isArray(body.data) || body.data.length > 100 || body.data.some((r: any) => !r || typeof r.id !== "string" || !/^\d+$/.test(r.id))) throw new MetaCollectionError("schema", "Meta returned an unsupported ad schema.");
+    try { body = JSON.parse(raw); } catch { throw response.ok ? new MetaCollectionError("schema", "Meta returned invalid JSON.") : httpFailure(response.status); }
+    if (!body || typeof body !== "object" || Array.isArray(body)) throw response.ok ? new MetaCollectionError("schema", "Meta returned an unsupported ad schema.") : httpFailure(response.status);
+    if (body.error) throw graphFailure(body.error,response.status);
+    if (!response.ok) throw httpFailure(response.status);
+    if (!Array.isArray(body.data) || body.data.length > 100 || body.data.some((r: any) => !r || typeof r.id !== "string" || !/^\d+$/.test(r.id))) throw new MetaCollectionError("schema", "Meta returned an unsupported ad schema.");
     const after = body.paging?.next ? body.paging?.cursors?.after : null;
     if (body.paging?.next && (typeof after !== "string" || !after || after === query.after || after.length > 2000 || after.includes(token))) throw new MetaCollectionError("schema", "Meta pagination cursor is invalid.");
     // Explicit allowlist; recursively remove the token even from an unexpected source field.
@@ -108,6 +126,7 @@ export async function collectMetaPage(pool: pg.Pool, runId: string, connector = 
     await client.query(`UPDATE collection_runs SET records_new=records_new+$2,records_updated=records_updated+$3,cursor=$4,query_index=$5,
       status=$6,finished_at=CASE WHEN $7 THEN now() ELSE NULL END,last_successful_check=CASE WHEN $7 THEN now() ELSE last_successful_check END,errors='[]' WHERE id=$1`,
       [runId,added,updated,page.after,nextIndex,complete ? "complete" : "running",complete]);
+    if (leaseOwner) await client.query("UPDATE collection_jobs SET attempts=0 WHERE id=$1 AND lease_owner=$2", [runId,leaseOwner]);
     await client.query("COMMIT");
     return { complete, backoffMs: page.backoffMs };
   } catch (error) { await client.query("ROLLBACK"); throw error; }

@@ -84,8 +84,8 @@ The reference method and prior results remain available for rollback/comparison.
 - Supply or locate sanitised recorded Meta responses; documented examples and
   synthetic tests must not be described as live recordings.
 - Worker artifact access: the existing Render worker cannot read the web service's
-  private `/var/data` disk. Choose shared object storage or another authenticated
-  artifact transport before implementing cross-service extraction.
+  private `/var/data` disk. The scoped authenticated broker and worker cache now implement transport;
+  verify secure Render configuration and restart behavior before live extraction.
 - Select and pin speech/audio/OCR/face/product model weights and verify licences.
 - Calibrate quality/escalation thresholds against human labels. Existing model
   confidence values are not calibrated.

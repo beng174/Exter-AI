@@ -29,7 +29,7 @@ test("Postgres budgets, idempotent scheduling, append-only observations and cras
     await migrate(pool);
     const legacy = (await pool.query("SELECT id,initial_reserved_gbp::float8 FROM cost_ledger ORDER BY id")).rows;
     assert.deepEqual(legacy,[{ id: "legacy-released",initial_reserved_gbp: null },{ id: "legacy-reserved",initial_reserved_gbp: 1 },{ id: "legacy-settled",initial_reserved_gbp: null }],"migration backfills only still-reserved holds; historical settled/released amounts cannot establish their original reserve");
-    await pool.query("TRUNCATE cost_ledger");
+    await pool.query("TRUNCATE cost_ledger CASCADE");
     await pool.query("UPDATE budget_settings SET monthly_budget_gbp=10");
     const charges = await Promise.allSettled([reserveCost(pool,"inference","fixture",5),reserveCost(pool,"inference","fixture",5)]);
     assert.equal(charges.filter(r => r.status === "fulfilled").length,1,"parallel calls cannot overspend reservation cap");
@@ -102,12 +102,22 @@ test("Postgres budgets, idempotent scheduling, append-only observations and cras
     await collectMetaPage(pool,secondRun,connector);
     assert.equal((await pool.query("SELECT * FROM ad_observations")).rowCount,4,"replaying completed run cannot duplicate history");
     const thirdRun = await enqueueCollection(pool,"watch-test");
-    const failing = new MetaLibraryConnector({ token: "test-only-token", fetch: async () => { throw new Error("private remote details"); } });
+    let failedCalls = 0;
+    const failing = new MetaLibraryConnector({ token: "test-only-token", fetch: async () => { failedCalls++; throw new Error("private remote details"); } });
     await workOnce(pool,failing);
+    assert.equal((await pool.query("SELECT status FROM collection_runs WHERE id=$1",[thirdRun])).rows[0].status,"queued","transient errors receive a bounded retry");
+    for (let attempt = 2; attempt <= 5; attempt++) {
+      await pool.query("UPDATE collection_jobs SET available_at=now()-interval '1 second' WHERE id=$1",[thirdRun]);
+      await workOnce(pool,failing);
+    }
     const failed = (await pool.query("SELECT status,errors FROM collection_runs WHERE id=$1",[thirdRun])).rows[0];
     assert.equal(failed.status,"failed");
+    assert.equal(failedCalls,5,"transient provider requests stop after five attempts");
+    assert.equal((await pool.query("SELECT status,attempts FROM collection_jobs WHERE id=$1",[thirdRun])).rows[0].status,"failed");
+    assert.equal(await workOnce(pool,failing),false,"terminal failures are not automatically reclaimed");
     assert.ok(!JSON.stringify(failed).includes("private remote details"));
     const killRun = await enqueueCollection(pool,"watch-test");
+    await pool.query("UPDATE collection_jobs SET attempts=4 WHERE id=$1",[killRun]);
     const child = fork("tests/fixtures/meta-worker-crash.ts",[], { execArgv: ["--import","tsx"], env: { ...process.env, TEST_DATABASE_URL: connectionString }, stdio: ["ignore","ignore","ignore","ipc"] });
     try {
       const checkpoint = await Promise.race([
@@ -122,12 +132,97 @@ test("Postgres budgets, idempotent scheduling, append-only observations and cras
       const [,signal] = await exited;
       assert.equal(signal,"SIGKILL");
       assert.equal((await pool.query("SELECT cursor FROM collection_runs WHERE id=$1",[killRun])).rows[0].cursor,"page-two");
+      assert.equal((await pool.query("SELECT attempts FROM collection_jobs WHERE id=$1",[killRun])).rows[0].attempts,0,"a fifth-attempt page checkpoint atomically resets the next page retry count before worker finalisation");
       // Advance the test lease instead of waiting two minutes of wall-clock time.
       await pool.query("UPDATE collection_jobs SET lease_until=now()-interval '1 second' WHERE id=$1",[killRun]);
       await workOnce(pool,connector);
       assert.equal((await pool.query("SELECT status FROM collection_runs WHERE id=$1",[killRun])).rows[0].status,"complete");
       assert.equal((await pool.query("SELECT count(*)::int AS n FROM ad_observations WHERE run_id=$1",[killRun])).rows[0].n,2);
     } finally { if (child.exitCode === null && child.signalCode === null) child.kill("SIGKILL"); }
+  } finally { await pool.end(); }
+});
+
+test("collection permission and budget pauses require manual resume while scheduler slots and saved pages remain intact", async () => {
+  const connectionString = process.env.TEST_DATABASE_URL;
+  assert.ok(connectionString,"TEST_DATABASE_URL must point to a dedicated disposable test database.");
+  const pool = new pg.Pool({ connectionString });
+  try {
+    await migrate(pool);
+    await pool.query("TRUNCATE schedule_slots,ad_observations,public_ads,collection_jobs,collection_runs,watchlists,cost_ledger CASCADE");
+    await pool.query("UPDATE budget_settings SET monthly_budget_gbp=10 WHERE cost_type='data_providers'");
+    await pool.query("INSERT INTO watchlists(id,workspace_id,page_ids) VALUES('watch-pauses','workspace-pauses','[\"12\"]')");
+    const runId = await enqueueCollection(pool,"watch-pauses","2026-10-28");
+    let providerCalls = 0;
+    const disconnected = new MetaLibraryConnector({ token: "", fetch: async () => { providerCalls++; throw new Error("must not call"); } });
+    await workOnce(pool,disconnected);
+    assert.equal((await pool.query("SELECT status FROM collection_jobs WHERE id=$1",[runId])).rows[0].status,"not_connected");
+    assert.equal((await pool.query("SELECT status FROM collection_runs WHERE id=$1",[runId])).rows[0].status,"not_connected");
+    assert.equal(await workOnce(pool,disconnected),false);
+    assert.equal(providerCalls,0,"disconnected work never calls Meta");
+    await pool.query("UPDATE collection_jobs SET status='queued' WHERE id=$1",[runId]);
+    await workOnce(pool,disconnected);
+    assert.equal((await pool.query("SELECT status FROM collection_jobs WHERE id=$1",[runId])).rows[0].status,"not_connected","legacy queued jobs do not silently resume a previously blocked run");
+    assert.equal(providerCalls,0);
+    assert.equal(await enqueueCollection(pool,"watch-pauses","2026-10-29"),runId);
+    assert.equal((await pool.query("SELECT attempts,status FROM collection_jobs WHERE id=$1",[runId])).rows[0].status,"not_connected","scheduling does not resume credentials-paused work");
+    assert.equal((await pool.query("SELECT count(*)::int AS n FROM schedule_slots WHERE watchlist_id='watch-pauses'")).rows[0].n,2,"new days preserve their idempotent slot even when an existing paused run is reused");
+
+    const healthy = new MetaLibraryConnector({ token: "test-only-token", fetch: async target => {
+      providerCalls++;
+      const after = new URL(String(target)).searchParams.get("after");
+      return Response.json({ data: [{ id: after ? "702" : "701", page_id: "12" }], ...(!after ? { paging: { next: "https://graph.facebook.com/next", cursors: { after: "retained-page-two" } } } : {}) });
+    } });
+    assert.equal(await enqueueCollection(pool,"watch-pauses"),runId);
+    assert.deepEqual((await pool.query("SELECT status,attempts FROM collection_jobs WHERE id=$1",[runId])).rows[0],{ status: "queued",attempts: 0 });
+    await workOnce(pool,healthy);
+    assert.equal((await pool.query("SELECT cursor FROM collection_runs WHERE id=$1",[runId])).rows[0].cursor,"retained-page-two");
+    assert.equal((await pool.query("SELECT attempts FROM collection_jobs WHERE id=$1",[runId])).rows[0].attempts,0,"success resets the per-page retry count");
+
+    const denied = new MetaLibraryConnector({ token: "test-only-token", fetch: async () => { providerCalls++; return new Response("fixture-private-provider-detail",{ status: 403 }); } });
+    await workOnce(pool,denied);
+    assert.equal((await pool.query("SELECT status FROM collection_jobs WHERE id=$1",[runId])).rows[0].status,"paused");
+    const saved = (await pool.query("SELECT status,cursor,records_new,errors FROM collection_runs WHERE id=$1",[runId])).rows[0];
+    assert.equal(saved.status,"paused");
+    assert.equal(saved.cursor,"retained-page-two");
+    assert.equal(saved.records_new,1);
+    assert.ok(!JSON.stringify(saved).includes("fixture-private-provider-detail"));
+    const beforeSchedule = providerCalls;
+    await schedule(pool,new Date("2026-10-30T03:00:00Z"));
+    assert.equal(await workOnce(pool,healthy),false,"a daily scheduler cannot retry denied permissions");
+    assert.equal(providerCalls,beforeSchedule);
+
+    assert.equal(await enqueueCollection(pool,"watch-pauses"),runId);
+    await pool.query("UPDATE budget_settings SET monthly_budget_gbp=0 WHERE cost_type='data_providers'");
+    await workOnce(pool,healthy);
+    assert.equal(providerCalls,beforeSchedule,"budget pause happens before provider dispatch");
+    assert.equal((await pool.query("SELECT status FROM collection_jobs WHERE id=$1",[runId])).rows[0].status,"paused");
+    await pool.query("UPDATE budget_settings SET monthly_budget_gbp=10 WHERE cost_type='data_providers'");
+    await schedule(pool,new Date("2026-10-31T03:00:00Z"));
+    assert.equal(await workOnce(pool,healthy),false,"raising a budget alone does not silently resume a paused request");
+    assert.equal(await enqueueCollection(pool,"watch-pauses"),runId);
+    await workOnce(pool,healthy);
+    assert.equal((await pool.query("SELECT status FROM collection_runs WHERE id=$1",[runId])).rows[0].status,"complete");
+    assert.equal((await pool.query("SELECT count(*)::int AS n FROM ad_observations WHERE run_id=$1",[runId])).rows[0].n,2,"explicit resume retains the first page and continues at its saved cursor");
+    assert.equal(await enqueueCollection(pool,"watch-pauses","2026-10-31"),runId,"replaying a scheduler day cannot duplicate a now-completed reused run");
+
+    const invalidRun = await enqueueCollection(pool,"watch-pauses");
+    const invalid = new MetaLibraryConnector({ token: "test-only-token", fetch: async () => { providerCalls++; return new Response("not valid JSON",{ status: 200 }); } });
+    await workOnce(pool,invalid);
+    assert.equal((await pool.query("SELECT status,attempts FROM collection_jobs WHERE id=$1",[invalidRun])).rows[0].status,"failed","invalid schemas fail without automatic retries");
+    assert.equal(await workOnce(pool,invalid),false);
+
+    const limitedRun = await enqueueCollection(pool,"watch-pauses");
+    const rateLimited = new MetaLibraryConnector({ token: "test-only-token", fetch: async () => new Response("fixture-private-rate-detail",{ status: 429 }) });
+    await workOnce(pool,rateLimited);
+    const delayOne = (await pool.query("SELECT status,attempts,extract(epoch FROM (available_at-now()))::float8 AS delay FROM collection_jobs WHERE id=$1",[limitedRun])).rows[0];
+    assert.equal(delayOne.status,"queued"); assert.equal(delayOne.attempts,1);
+    assert.ok(delayOne.delay > 50 && delayOne.delay <= 60,"first transient retry waits roughly one minute");
+    await pool.query("UPDATE collection_jobs SET available_at=now()-interval '1 second' WHERE id=$1",[limitedRun]);
+    await workOnce(pool,rateLimited);
+    const delayTwo = (await pool.query("SELECT attempts,extract(epoch FROM (available_at-now()))::float8 AS delay FROM collection_jobs WHERE id=$1",[limitedRun])).rows[0];
+    assert.equal(delayTwo.attempts,2); assert.ok(delayTwo.delay > 110 && delayTwo.delay <= 120,"retry backoff increases exponentially");
+    await pool.query("UPDATE collection_jobs SET available_at=now()-interval '1 second' WHERE id=$1",[limitedRun]);
+    await workOnce(pool,invalid);
   } finally { await pool.end(); }
 });
 
@@ -139,7 +234,7 @@ test("authenticated budget settings persist in PostgreSQL and immediately govern
   let server: ReturnType<typeof createServer> | undefined;
   try {
     await migrate(pool);
-    await pool.query("TRUNCATE cost_ledger");
+    await pool.query("TRUNCATE cost_ledger CASCADE");
     await pool.query("UPDATE budget_settings SET monthly_budget_gbp=10");
     process.env.GEMINI_REQUEST_RESERVE_GBP = "0.1";
     const app = express();
