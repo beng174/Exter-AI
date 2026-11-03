@@ -375,3 +375,26 @@ The integration test truncates its test tables: never point it at production.
 Neither CI nor fixture tests prove Meta approval, Gemini model availability or live
 accuracy. Live reports must record real results and costs after secure credentials,
 budgets, media, and labels are available.
+
+## K03 scene extraction worker
+
+Normal deployments require no configuration changes. Scene extraction remains
+opt-in and never runs on the web service. The full labels pipeline stays disabled.
+After the K02 live transfer check, build the optional `Dockerfile.worker` for the
+existing worker and measure its peak memory before enabling scene work. This image
+has pinned PySceneDetect/OpenCV dependencies; the ordinary web image is unchanged.
+Set EXTER_KERNEL_SCENES_PATH to a separate worker cache directory and
+EXTER_KERNEL_SCENES_ENABLED=true only on that worker. Existing staging settings
+are also required. POST /api/kernel/jobs accepts stage="scenes" for retained videos;
+its result is scenes-ready, not a completed analysis. Other requests still stage
+media only. No inference or provider budget is reserved by either operation.
+
+Feature cache entries expire after seven days; exact scope/hash/tool versions
+control reuse. A root lock serialises extraction and crash cleanup. Feature output
+is bounded to 128MiB per video and the feature cache to 2GiB, with 256MiB disk
+headroom. Source downloads remain in the separate K02 cache; provision headroom
+for both caches and validate overall retention on Render before production use.
+Each process has a ten-minute watchdog; ffmpeg commands use one thread and a
+three-minute timeout. Videos are limited to ten minutes and 250MiB. Up to eight
+frames carry source times; missing audio stays absent. Near-duplicate media never
+reuses an exact-match result. No model weights are downloaded by this stage.

@@ -158,12 +158,15 @@
       "dependsOn": [
         "K02"
       ],
-      "status": "ready",
+      "status": "done",
       "goal": "Cache exact media features and extract bounded source-timed frames using ffmpeg/PySceneDetect.",
       "files": [
-        "server/video/normalize.ts",
-        "worker",
-        "shared/analysis-kernel.ts"
+        "worker/extract_scenes.py",
+        "worker/requirements-scenes.txt",
+        "worker/test_extract_scenes.py",
+        "server/kernel/scenes.ts",
+        "server/kernel/worker.ts",
+        "Dockerfile.worker"
       ],
       "acceptance": [
         "Identical media and stage versions reuse features.",
@@ -176,6 +179,37 @@
         "worker extraction fixture tests"
       ],
       "blockers": [],
+      "evidence": [
+        "Real ffmpeg/PySceneDetect fixtures verify cuts, audio, timed samples, exact scoped cache reuse, corruption rejection, quota/headroom and cleanup.",
+        "Worker-only opt-in scene jobs; no paid inference, model downloads or web extraction.",
+        "Feature cache lock, seven-day retention, 2GiB quota, 128MiB output limit, thread bounds and subprocess watchdog. Live capacity and combined source/feature disk verification remain rollout gates.",
+        "324 regression tests, build/typecheck and Python extraction fixture pass. Real Node-to-Python adapter also passes on silent media."
+      ]
+    },
+    {
+      "id": "K03-LIVE",
+      "title": "Measure scene worker capacity and overall disk retention",
+      "dependsOn": [
+        "K03",
+        "K02-LIVE"
+      ],
+      "status": "blocked",
+      "goal": "Validate worker image, peak RSS, restart and total source/feature cache usage on Render before production extraction.",
+      "files": [
+        "Dockerfile.worker",
+        "docs/DEPLOY.md"
+      ],
+      "acceptance": [
+        "Worker image builds and fits the approved memory limit.",
+        "Source plus feature cache disk use, cleanup and headroom are measured under repeated runs.",
+        "Interrupted scene jobs recover without paid inference or duplicated results."
+      ],
+      "checks": [
+        "Render worker capacity/restart checks"
+      ],
+      "blockers": [
+        "Live broker setup and worker resource verification pending."
+      ],
       "evidence": []
     },
     {
@@ -319,7 +353,8 @@
       "dependsOn": [
         "K08",
         "K01-LIVE",
-        "K02-LIVE"
+        "K02-LIVE",
+        "K03-LIVE"
       ],
       "status": "ready",
       "goal": "Enable the candidate only after worker resource and recovery gates pass.",
