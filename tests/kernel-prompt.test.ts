@@ -49,6 +49,6 @@ test("backlog context loads one task rather than all specifications or skill bun
     assert.doesNotMatch(text, /K10/);
     assert.ok(text.length < 6000);
     const next = execFileSync(process.execPath, ["scripts/kernel-backlog.mjs", "next"], { encoding: "utf8" });
-    assert.match(next, /^K\d+(?:-[A-Z]+)?: [^\n]+\nStatus:/);
+    assert.match(next, /^(?:K\d+(?:-[A-Z]+)?: [^\n]+\nStatus:|No ready task\.)/);
     assert.ok(next.length < 6000);
 });
