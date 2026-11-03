@@ -78,13 +78,13 @@ export function providerConfig(
     );
   const apiVersion =
     platform === "Meta"
-      ? env.EXTER_META_GRAPH_VERSION || "v23.0"
+      ? env.EXTER_META_GRAPH_VERSION || "v25.0"
       : platform === "Google"
         ? env.EXTER_GOOGLE_API_VERSION!
         : "v1.3";
   if (platform === "Meta" && !/^v\d+\.0$/.test(apiVersion))
     throw new ConnectorError(
-      "EXTER_META_GRAPH_VERSION must use the form v23.0.",
+      "EXTER_META_GRAPH_VERSION must use the form v25.0.",
       409,
     );
   if (platform === "Google" && !/^v\d+$/.test(apiVersion))
