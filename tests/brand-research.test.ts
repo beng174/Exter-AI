@@ -60,6 +60,34 @@ const fetcher = (
   (async (input: URL | RequestInfo, init?: RequestInit) =>
     fn(new URL(String(input)), init || {})) as typeof fetch;
 
+test("Render website refresh saves source facts without loading local text or vision models", async () => {
+  const { db, brand } = setup();
+  const previousRender = process.env.RENDER;
+  let modelCalls = 0;
+  try {
+    const initial = await researchBrand(db, brand.id, {
+      resolve: publicDns, fetch: fetcher(url => html(url.pathname === "/" ? homepage : programme)), analyse,
+    });
+    saveBrandResearch(db, { ...initial, visualEvidence: [{ kind: "website_image", imagePath: "/images/valentte-home.webp", sourceUrl: "https://valentte.com/", description: "Previously captured website image" }] });
+    process.env.RENDER = "true";
+    const result = await researchBrand(db, brand.id, {
+      resolve: publicDns, fetch: fetcher(url => html(url.pathname === "/" ? homepage : programme)),
+      analyse: async input => { modelCalls++; return analyse(input); },
+    });
+    assert.equal(modelCalls, 0, "Neither local model may be called during hosted website refresh");
+    assert.ok(result.facts.length > 0);
+    assert.equal(result.sources.filter(source => source.status === "available").length, 3);
+    assert.equal(result.analysis, null);
+    assert.equal(result.analysisStatus, "analysis_unavailable");
+    assert.match(result.analysisError || "", /without local model interpretation/);
+    assert.equal(result.visualEvidence?.[0].imagePath, "/images/valentte-home.webp");
+    assert.equal(readBrandResearch(db, brand.id)?.facts.length, result.facts.length);
+  } finally {
+    if (previousRender === undefined) delete process.env.RENDER; else process.env.RENDER = previousRender;
+    db.close();
+  }
+});
+
 test("website research preserves observed facts, publisher claims and creator evidence separately from ads", async () => {
   const { db, brand } = setup();
   const visited: string[] = [];

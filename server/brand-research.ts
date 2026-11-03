@@ -24,6 +24,8 @@ export interface BrandResearchOptions {
   fetch?: typeof fetch;
   resolve?: DnsResolver;
   analyse?: (input: BrainContentInput) => Promise<{ analysis: AdAnalysis }>;
+  /** Save public source facts without loading local ONNX models. */
+  sourceOnly?: boolean;
 }
 class ResearchError extends Error {
   constructor(
@@ -508,23 +510,28 @@ export async function researchBrand(
   });
   let analysis: AdAnalysis | null = null,
     analysisStatus: BrandResearch["analysisStatus"] = "analysis_unavailable";
+  // Render's small web instances must not load MiniLM and CLIP just to refresh
+  // a website. Native creative analysis remains an explicit budgeted Gemini job.
+  const sourceOnly = options.sourceOnly ?? Boolean(process.env.RENDER === "true" || process.env.RENDER_SERVICE_ID);
   const localVisual =
     previous?.visualEvidence
       ?.map((item) => item.imagePath)
       .find((path) =>
         /^\/images\/[a-zA-Z0-9_-]+\.(jpg|png|webp)$/.test(path),
       ) || "";
-  try {
-    const result = await (options.analyse || analyseLocally)({
-      title: data.title,
-      copy: clean([data.description, ...data.blocks].join("\n"), 3500),
-      brand: brand.name,
-      image: localVisual,
-      creativeFormats: [],
-    });
-    analysis = result.analysis;
-    analysisStatus = "complete";
-  } catch {}
+  if (!sourceOnly) {
+    try {
+      const result = await (options.analyse || analyseLocally)({
+        title: data.title,
+        copy: clean([data.description, ...data.blocks].join("\n"), 3500),
+        brand: brand.name,
+        image: localVisual,
+        creativeFormats: [],
+      });
+      analysis = result.analysis;
+      analysisStatus = "complete";
+    } catch {}
+  }
   const proposedTests: BrandResearch["proposedTests"] = [];
   const creatorSources = sources.filter(
     (item) => item.kind === "creator_programme" && item.status === "available",
@@ -568,7 +575,7 @@ export async function researchBrand(
   ];
   if (analysisStatus === "analysis_unavailable")
     limitations.push(
-      "Local model analysis is unavailable. Source facts were preserved; check model runtime/cache before retrying.",
+      sourceOnly ? "Website source facts were refreshed without local model interpretation." : "Local model analysis is unavailable. Source facts were preserved; check model runtime/cache before retrying.",
     );
   if (retainedSources.length)
     limitations.push(
@@ -594,7 +601,7 @@ export async function researchBrand(
     analysisError:
       analysisStatus === "complete"
         ? null
-        : "Local inference was unavailable. Source facts were preserved; check the model runtime/cache before retrying.",
+        : sourceOnly ? "Website source facts were refreshed without local model interpretation." : "Local inference was unavailable. Source facts were preserved; check the model runtime/cache before retrying.",
     socialProfiles: data.socialProfiles,
     creatorFeatures: data.creatorFeatures,
     competitorCandidates: previous?.competitorCandidates || [],

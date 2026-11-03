@@ -260,6 +260,15 @@ export function hostedValentteResearchState(db: DatabaseSync): HostedResearchSta
   const state = row && parse<HostedResearchState>(row.value);
   return state || { status: "not-started", brandId: canonicalValentteBrand(db)?.id || "valentte" };
 }
+/** Recover status after restart without relaunching models or network work. */
+export function recoverHostedValentteResearch(db: DatabaseSync): HostedResearchState {
+  const previous = hostedValentteResearchState(db);
+  if (previous.status !== "running") return previous;
+  const state: HostedResearchState = { ...previous, status: "failed", finishedAt: new Date().toISOString(), recoveredInterruptedAttempt: true,
+    error: "The previous website refresh was interrupted by a service restart. Saved evidence remains available. Refresh website research explicitly in the app." };
+  db.prepare("UPDATE metadata SET value=? WHERE key=?").run(JSON.stringify(state), RESEARCH_KEY);
+  return state;
+}
 /** Call explicitly from the hosted startup controller, never a GET handler. */
 export async function startHostedValentteResearch(db: DatabaseSync, options: BrandResearchOptions & {
   env?: Record<string,string|undefined>;

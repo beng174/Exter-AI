@@ -260,6 +260,7 @@ export function createApp(db: DatabaseSync = openDatabase()) {
     res.json({
       status: "ok",
       service: "exter-ai",
+      demoReconciliation: app.locals.demoReconciliation,
       liveFeeds: false,
       liveConnectorsImplemented: true,
       connectionStatusEndpoint: "/api/connections?brandId=YOUR_WORKSPACE",

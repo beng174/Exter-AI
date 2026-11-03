@@ -9,7 +9,15 @@ import { attachCreativeGallery } from "./gallery.js";
 
 export function attachBrandDemo(app: Express, db: DatabaseSync) {
   ensureRequestedDemoWorkspaces(db);
-  reconcileValentteWorkspace(db);
+  try {
+    reconcileValentteWorkspace(db);
+    app.locals.demoReconciliation = "complete";
+  } catch {
+    // Optional source preparation cannot take down the authenticated app.
+    // The reconciliation savepoint preserves existing records on failure.
+    app.locals.demoReconciliation = "unavailable";
+    console.error("Valentte source preparation could not finish; saved records were preserved. Review the authenticated report status.");
+  }
   attachCreativeGallery(app, db);
   const service = new BrandDemoService(db);
   app.locals.brandDemo = service;

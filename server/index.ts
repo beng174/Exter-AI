@@ -7,7 +7,7 @@ import express from "express";
 import { createApp } from "./app.js";
 import { openDatabase } from "./db.js";
 import { startConnectionPolling } from "./connections.js";
-import { canonicalValentteBrand, startHostedValentteResearch } from "./demo/reconcile.js";
+import { recoverHostedValentteResearch } from "./demo/reconcile.js";
 
 basicAuth(); // Validate the production access gate before opening any databases.
 for (const name of ["GEMINI_API_KEY","META_ACCESS_TOKEN","APIFY_TOKEN","YOUTUBE_API_KEY","DATABASE_URL"])
@@ -19,11 +19,10 @@ if (process.env.DATABASE_URL) {
 const db = openDatabase();
 const app = createApp(db);
 app.locals.videoAnalysis.recoverInterruptedJobs();
-// Explicitly authorized hosted preparation. Each controller persists progress,
-// preserves previous evidence, and never runs Gemini in the Codex environment.
-void startHostedValentteResearch(db).catch(() => console.error("Hosted website research could not start; saved evidence remains available."));
-void app.locals.demoCollection.startAuthorizedOnce(canonicalValentteBrand(db)?.id)
-  .catch(() => console.error("Hosted competitor preparation could not start. Review collection status and inference budget in Settings."));
+recoverHostedValentteResearch(db);
+// Keep boot limited to serving saved evidence. Browsers and model cold starts
+// must be explicit operator actions, never competing with the web server for
+// memory during deploy or restarting automatically after a process is killed.
 const stopPolling = startConnectionPolling(db);
 const stopBackups = startDailyBackups(db);
 process.once("SIGTERM", () => {
