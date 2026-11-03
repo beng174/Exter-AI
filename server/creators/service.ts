@@ -7,6 +7,7 @@ import { readBrand } from "../db.js";
 import { readBrandResearch } from "../brand-research.js";
 import { readWebsiteEvidence } from "../demo/website.js";
 import { resolveDemoBrandId, workspaceAds } from "../demo/reconcile.js";
+import { creatorEligibility, creatorEligibilitySummary } from "../../shared/creator-eligibility.js";
 import { GeminiSession } from "../gemini/transport.js";
 import { geminiPricingConfig, generationMetadata, servedGeminiModel } from "../gemini/config.js";
 import { DEFAULT_GEMINI_VIDEO_MODEL } from "../video/gemini.js";
@@ -158,27 +159,40 @@ export class CreatorResearchService {
       const existing = byId.get(seed.id);
       byId.set(seed.id, existing ? { ...existing, seedEvidence: seed.seedEvidence } : seed);
     }
-    return [...byId.values()];
+    return [...byId.values()].map(candidate => {
+      const eligibility = creatorEligibility(candidate);
+      return { ...candidate, metrics: creatorMetrics(candidate.profile), eligibility,
+        shortlisted: eligibility.status === "eligible" && candidate.shortlisted };
+    });
   }
   snapshot(brandId: unknown): CreatorResearchSnapshot {
     const brand = this.brand(brandId);
     const all = this.all(brand);
-    const ranked = [...all].sort((a, b) => Number(b.shortlisted) - Number(a.shortlisted) || Number(Boolean(b.profile)) - Number(Boolean(a.profile)) || a.displayName.localeCompare(b.displayName));
+    const eligible = all.filter(candidate => candidate.eligibility.status === "eligible");
+    const ranked = [...eligible].sort((a, b) => Number(b.shortlisted) - Number(a.shortlisted) || (b.metrics.followers ?? 0) - (a.metrics.followers ?? 0) || a.displayName.localeCompare(b.displayName));
     const searches = (this.db.prepare("SELECT data FROM creator_research_searches WHERE brand_id=? ORDER BY created_at DESC,rowid DESC LIMIT 10").all(brand.id) as { data: string }[]).map(row => JSON.parse(row.data) as CreatorSearchObservation);
-    return { brandId: brand.id, brandName: brand.name, candidates: ranked.slice(0, 5), totalCandidates: all.length, seeds: all.filter(candidate => candidate.seedEvidence.length), searches, providerStatus: this.discovery.status(), limitations: ["Seed attribution comes only from saved Meta branded-content partner labels, with source ad IDs and URLs. It does not establish audience fit or current contract terms.", "Instagram/TikTok profiles appear only after an explicit budgeted public search. Search country/category are query context, not verified creator or audience location.", "Missing metrics remain null. Public engagement rates describe a bounded observed post sample and do not establish conversions.", "Gemini fit is available only after an explicit request using public post captions and saved brand context; unknown fit is never replaced by a sample score."] };
+    const provider = this.discovery.status();
+    const instagramConfigured = provider.configured && provider.platforms.includes("instagram");
+    return { brandId: brand.id, brandName: brand.name, candidates: ranked.slice(0, 5), totalCandidates: eligible.length,
+      totalObservedCandidates: all.length, eligibility: creatorEligibilitySummary(all),
+      seeds: all.filter(candidate => candidate.seedEvidence.length), searches,
+      providerStatus: { ...provider, configured: instagramConfigured, platforms: instagramConfigured ? ["instagram"] : [],
+        ...(!instagramConfigured ? { message: "Configure public Instagram creator discovery before searching for creators with observed follower counts above 40,000." } : {}) },
+      limitations: ["Recommendations require a dated public Instagram profile observation with more than 40,000 followers. Exactly 40,000, smaller accounts, TikTok profiles and unverified or missing counts do not qualify. Counts are observed as of their saved source date, not a promise of current follower totals.", "Meta branded-content credits are retained separately as attribution evidence. A credit does not verify an Instagram profile, follower count, audience fit or current contract terms.", "Instagram profiles appear only after an explicit budgeted public search. Search country/category are query context, not verified creator or audience location. No repeated searches run automatically to fill a shortlist.", "Missing metrics remain null. Public engagement rates describe a bounded observed post sample and do not establish conversions.", "Gemini fit is available only after an explicit request for an eligible Instagram profile using public post captions and saved brand context; unknown fit is never replaced by a sample score."] };
   }
   private save(candidate: CreatorCandidate) {
     this.db.prepare("INSERT INTO creator_research_candidates VALUES (?,?,?) ON CONFLICT(id) DO UPDATE SET data=excluded.data").run(candidate.id, candidate.brandId, JSON.stringify(candidate));
   }
-  async search(input: { brandId: unknown; platform: unknown; country: unknown; category: unknown; query?: unknown }) {
+  async search(input: { brandId: unknown; platform?: unknown; country: unknown; category: unknown; query?: unknown }) {
     const brand = this.brand(input.brandId);
-    if (input.platform !== "instagram" && input.platform !== "tiktok") throw new CreatorResearchError("Choose Instagram or TikTok.");
+    const platform = input.platform ?? "instagram";
+    if (platform !== "instagram") throw new CreatorResearchError("Creator recommendations require Instagram profiles with more than 40,000 observed followers. Choose Instagram.");
     const country = identifier(input.country, "country", 80), category = identifier(input.category, "category", 160), query = input.query == null || input.query === "" ? "" : identifier(input.query, "query", 200);
-    const activeKey = `search:${brand.id}:${input.platform}`;
+    const activeKey = `search:${brand.id}:${platform}`;
     if (this.active.has(activeKey)) throw new CreatorResearchError("A creator search is already running for this workspace and platform.", 409);
     this.active.add(activeKey);
     try {
-      const result = await this.discovery.search({ platform: input.platform, country, category, query, maxProfiles: 5, maxPostsPerProfile: 12 });
+      const result = await this.discovery.search({ platform, country, category, query, maxProfiles: 5, maxPostsPerProfile: 12 });
       const searchedAt = new Date().toISOString();
       const searchId = randomUUID();
       const seeds = this.seeds(brand), existing = this.all(brand);
@@ -194,14 +208,14 @@ export class CreatorResearchService {
           this.db.prepare("INSERT INTO creator_research_profiles VALUES (?,?,?,?,?)").run(randomUUID(), brand.id, id, searchedAt, JSON.stringify({ searchId, profile, metrics, searchContext }));
           this.save({ id, brandId: brand.id, displayName: profile.displayName, handle: profile.handle, platform: profile.platform, profileUrl: profile.profileUrl, source: seed ? "meta-branded-content" : "apify-public", seedEvidence: seed?.seedEvidence || [], profile, metrics, fit: null, shortlisted: prior?.shortlisted || false, searchContext });
         }
-        const observation: CreatorSearchObservation = { id: searchId, createdAt: searchedAt, platform: input.platform, country, category, query, profilesReturned: result.profiles.length, accounting: result.accounting, warnings: result.warnings, status: "complete" };
+        const observation: CreatorSearchObservation = { id: searchId, createdAt: searchedAt, platform, country, category, query, profilesReturned: result.profiles.length, accounting: result.accounting, warnings: result.warnings, status: "complete" };
         this.db.prepare("INSERT INTO creator_research_searches VALUES (?,?,?,?)").run(observation.id, brand.id, searchedAt, JSON.stringify(observation));
         this.db.exec("COMMIT");
       } catch (error) { this.db.exec("ROLLBACK"); throw error; }
       return this.snapshot(brand.id);
     } catch (error) {
       if (error instanceof CreatorProviderError && error.accounting) {
-        const observation: CreatorSearchObservation = { id: randomUUID(), createdAt: new Date().toISOString(), platform: input.platform, country, category, query, profilesReturned: 0, accounting: error.accounting, warnings: [], status: "failed", error: error.message };
+        const observation: CreatorSearchObservation = { id: randomUUID(), createdAt: new Date().toISOString(), platform, country, category, query, profilesReturned: 0, accounting: error.accounting, warnings: [], status: "failed", error: error.message };
         this.db.prepare("INSERT INTO creator_research_searches VALUES (?,?,?,?)").run(observation.id, brand.id, observation.createdAt, JSON.stringify(observation));
       }
       throw error;
@@ -212,6 +226,7 @@ export class CreatorResearchService {
     if (typeof selected !== "boolean") throw new CreatorResearchError("selected must be a boolean.");
     const candidate = this.all(brand).find(item => item.id === identifier(candidateId, "candidateId"));
     if (!candidate) throw new CreatorResearchError("Creator candidate not found in this workspace.", 404);
+    if (selected && candidate.eligibility.status !== "eligible") throw new CreatorResearchError("Only sourced Instagram profiles with more than 40,000 observed followers can be shortlisted.", 409);
     this.save({ ...candidate, shortlisted: selected });
     return this.snapshot(brand.id);
   }
@@ -219,6 +234,7 @@ export class CreatorResearchService {
     const brand = this.brand(brandId);
     const candidate = this.all(brand).find(item => item.id === identifier(candidateId, "candidateId"));
     if (!candidate) throw new CreatorResearchError("Creator candidate not found in this workspace.", 404);
+    if (candidate.eligibility.status !== "eligible") throw new CreatorResearchError("Verify a public Instagram profile with more than 40,000 observed followers before requesting Gemini fit.", 409);
     const activeKey = `fit:${brand.id}:${candidate.id}`;
     if (this.active.has(activeKey)) throw new CreatorResearchError("A fit assessment is already running for this candidate.", 409);
     const research = readBrandResearch(this.db, brand.id);
@@ -255,7 +271,8 @@ export class CreatorResearchService {
   }
   report(brandId: unknown) {
     const snapshot = this.snapshot(brandId);
-    const rows = snapshot.candidates.map(candidate => `## ${candidate.displayName}${candidate.handle ? ` (${candidate.handle})` : ""}\n\nSource: ${candidate.source}; profile: ${candidate.profileUrl || "unavailable"}.\nFollowers: ${candidate.metrics.followers ?? "unavailable"}. Posts sampled: ${candidate.metrics.postsSampled}; window: ${candidate.metrics.windowStart || "unknown"} to ${candidate.metrics.windowEnd || "unknown"}.\nEngagement per view: ${candidate.metrics.engagementPerView.valuePercent === null ? "unavailable" : candidate.metrics.engagementPerView.valuePercent.toFixed(2) + "%"} (likes + comments / eligible views; ${candidate.metrics.engagementPerView.eligiblePosts} eligible, ${candidate.metrics.engagementPerView.excludedPosts} excluded).\nEngagement per follower: ${candidate.metrics.engagementPerFollower.valuePercent === null ? "unavailable" : candidate.metrics.engagementPerFollower.valuePercent.toFixed(2) + "%"} (likes + comments / current followers × eligible posts; ${candidate.metrics.engagementPerFollower.eligiblePosts} eligible, ${candidate.metrics.engagementPerFollower.excludedPosts} excluded).\n\n${candidate.fit ? `Category relevance: ${candidate.fit.categoryRelevance}; tone fit: ${candidate.fit.toneFit}. ${candidate.fit.reason}\n${candidate.fit.evidencePostUrls.map(url => `- Example post: ${url}`).join("\n")}` : "Fit: unknown; no explicit Gemini assessment has been completed."}\n\n${candidate.seedEvidence.map(evidence => `- Meta partner label: ad ${evidence.providerAdId || evidence.adId}; ${evidence.adUrl}`).join("\n")}\n${candidate.profile?.recentPosts.map(post => `- Public post ${post.id}: ${post.url}; views ${post.views ?? "unknown"}, likes ${post.likes ?? "unknown"}, comments ${post.comments ?? "unknown"}, shares ${post.shares ?? "unknown"}; observed ${post.observedAt}`).join("\n") || ""}`);
-    return (`# ${snapshot.brandName} — creator research beta\n\n${rows.join("\n\n") || "No source-backed creator candidates are available."}\n\n## Limits\n\n${snapshot.limitations.map(value => `- ${value}`).join("\n")}\n`).replace(/[\u2013\u2014]/g, "-");
+    const rows = snapshot.candidates.map(candidate => `## ${candidate.displayName}${candidate.handle ? ` (${candidate.handle})` : ""}\n\nSource: ${candidate.source}; profile: ${candidate.profileUrl || "unavailable"}.\nObserved followers: ${candidate.metrics.followers ?? "unavailable"}; as of ${candidate.eligibility?.observedAt || "unavailable"}; source ${candidate.eligibility?.evidenceUrl || "unavailable"}. Posts sampled: ${candidate.metrics.postsSampled}; window: ${candidate.metrics.windowStart || "unknown"} to ${candidate.metrics.windowEnd || "unknown"}.\nEngagement per view: ${candidate.metrics.engagementPerView.valuePercent === null ? "unavailable" : candidate.metrics.engagementPerView.valuePercent.toFixed(2) + "%"} (likes + comments / eligible views; ${candidate.metrics.engagementPerView.eligiblePosts} eligible, ${candidate.metrics.engagementPerView.excludedPosts} excluded).\nEngagement per follower: ${candidate.metrics.engagementPerFollower.valuePercent === null ? "unavailable" : candidate.metrics.engagementPerFollower.valuePercent.toFixed(2) + "%"} (likes + comments / current followers × eligible posts; ${candidate.metrics.engagementPerFollower.eligiblePosts} eligible, ${candidate.metrics.engagementPerFollower.excludedPosts} excluded).\n\n${candidate.fit ? `Category relevance: ${candidate.fit.categoryRelevance}; tone fit: ${candidate.fit.toneFit}. ${candidate.fit.reason}\n${candidate.fit.evidencePostUrls.map(url => `- Example post: ${url}`).join("\n")}` : "Fit: unknown; no explicit Gemini assessment has been completed."}\n\n${candidate.seedEvidence.map(evidence => `- Meta partner label: ad ${evidence.providerAdId || evidence.adId}; ${evidence.adUrl}`).join("\n")}\n${candidate.profile?.recentPosts.map(post => `- Public post ${post.id}: ${post.url}; views ${post.views ?? "unknown"}, likes ${post.likes ?? "unknown"}, comments ${post.comments ?? "unknown"}, shares ${post.shares ?? "unknown"}; observed ${post.observedAt}`).join("\n") || ""}`);
+    const attribution = snapshot.seeds.map(seed => `### ${seed.displayName}\n\nAttribution evidence only. Instagram recommendation eligibility: ${seed.eligibility?.status || "unverified"}.\n${seed.seedEvidence.map(evidence => `- Meta partner label: ad ${evidence.providerAdId || evidence.adId}; ${evidence.adUrl}; observed ${evidence.observedAt || "unavailable"}`).join("\n")}`).join("\n\n");
+    return (`# ${snapshot.brandName} — creator research beta\n\nRecommendation rule: observed Instagram followers must exceed 40,000.\nEligible profiles: ${snapshot.totalCandidates}; saved source candidates: ${snapshot.totalObservedCandidates ?? "unavailable"}.\n\n${rows.join("\n\n") || "No sourced Instagram profiles above 40,000 observed followers are available."}\n\n## Meta ad attribution\n\n${attribution || "No branded-content credits are saved."}\n\n## Limits\n\n${snapshot.limitations.map(value => `- ${value}`).join("\n")}\n`).replace(/[\u2013\u2014]/g, "-");
   }
 }

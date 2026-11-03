@@ -27,6 +27,20 @@ export interface DemoPattern {
   share: number | null;
   evidence: DemoEvidence[];
 }
+export interface DemoPatternCoverage {
+  classified: number;
+  totalAnalysed: number;
+  unclassified: number;
+  /** Supported original descriptions that have not become fixed taxonomy labels. */
+  legacy: number;
+  /** Neither a supported taxonomy label nor a supported original description. */
+  missing: number;
+  basis: "modelled";
+  countBasis: "observed";
+  classificationBasis: "modelled";
+  definition: string;
+}
+export type DemoPatternGroups<T> = { format: T; hookType: T; angle: T; offerType: T };
 export interface DemoBrief {
   label: "Draft recommendation - review before production";
   hooks: DemoPoint[];
@@ -96,6 +110,9 @@ export interface BrandDemoReport {
   analysedAdsCount: number;
   sample: { video: number; image: number; carousel: number; excludedUnanalysed: number; excludedSampleAds: number };
   patterns: { format: DemoPattern[]; hookType: DemoPattern[]; angle: DemoPattern[]; offerType: DemoPattern[] };
+  patternCoverage?: DemoPatternGroups<DemoPatternCoverage>;
+  /** Exact retained descriptions, separate from fixed taxonomy classifications. */
+  legacyPatterns?: DemoPatternGroups<DemoPattern[]>;
   opportunities: DemoOpportunity[];
   scores: DemoAdScore[];
   website: DemoWebsiteEvidence;

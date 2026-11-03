@@ -752,6 +752,7 @@
   color:#6B7280;
   font-size:13px
 }
+.bdr-data-dates{display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap;color:#6B7280;font-size:13px;line-height:1.5;margin:16px 0 24px}.bdr-evidence-filter{display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap;margin:0 0 20px;font-size:14px;color:#6B7280}.bdr-evidence-filter button{padding:0;border:0;background:none;font:inherit;font-size:13px;color:#1F2937;text-decoration:underline;text-decoration-color:#00C0CB;text-underline-offset:3px}.bdr-attribution-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:24px}.bdr-attribution-grid article{min-width:0;padding:20px;border:1px solid #E5E7EB;border-radius:12px;background:#FFF}.bdr-attribution-grid h4{margin:0 0 8px}.bdr-attribution-grid article>p{font-size:13px;color:#6B7280;margin:16px 0 0}.bdr-score-chart{margin:0 0 24px}.bdr-section .evidence-pattern-grid{grid-template-columns:repeat(2,minmax(0,1fr))}@media(max-width:900px){.bdr-attribution-grid{grid-template-columns:1fr}.bdr-section .evidence-pattern-grid{grid-template-columns:1fr}}
 @media(max-width:1250px) {
   .bdr-pattern-grid {
     grid-template-columns:repeat(2,minmax(0,1fr))

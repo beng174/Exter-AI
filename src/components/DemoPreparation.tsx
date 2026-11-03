@@ -49,7 +49,7 @@ export function DemoPreparation({ brandId, onBrandChange }: { brandId: string; o
       <p>Uses the data providers budget. Gemini fit checks below use the inference budget. Country/category are search criteria; they do not prove audience location.</p>
       {snapshot?.providerStatus.message && <p className="demo-preparation-note">{snapshot.providerStatus.message}</p>}
       <div className="demo-preparation-fields">
-        <label>Platform<select value={platform} onChange={event => setPlatform(event.target.value as CreatorPlatform)}><option value="instagram">Instagram</option><option value="tiktok">TikTok</option></select></label>
+        <label>Platform<select value={platform} onChange={event => setPlatform(event.target.value as CreatorPlatform)}><option value="instagram">Instagram</option></select></label>
         <label>Country<input value={country} onChange={event => setCountry(event.target.value.toUpperCase())} minLength={2} maxLength={2} required placeholder="GB" /></label>
         <label>Category<input value={category} onChange={event => setCategory(event.target.value)} maxLength={160} required /></label>
         <label>Search terms (optional)<input value={query} onChange={event => setQuery(event.target.value)} maxLength={300} /></label>
@@ -57,9 +57,10 @@ export function DemoPreparation({ brandId, onBrandChange }: { brandId: string; o
       <button className="button primary" disabled={Boolean(busy) || !snapshot?.providerStatus.configured}>{busy === "search" ? "Searching public profiles…" : "Run budgeted creator search"}</button>
     </form>
     <div className="demo-preparation-candidates">
-      <h3>Saved candidates and Meta attribution seeds</h3>
-      {!snapshot?.candidates.length && <p>No public creator profiles or attributed partners have been saved yet.</p>}
+      <h3>Instagram recommendations above 40,000 followers</h3>
+      {!snapshot?.candidates.length && <p>No saved profiles meet the verified Instagram follower requirement yet. Run a public creator search to verify profiles.</p>}
       {snapshot?.candidates.map(candidate => <article key={candidate.id}><div><strong>{candidate.displayName}</strong><p>{candidate.platform} · {candidate.profile?.followers === null || !candidate.profile ? "Followers unavailable" : `${candidate.profile.followers.toLocaleString()} observed followers`}</p>{candidate.profileUrl && <a href={candidate.profileUrl} target="_blank" rel="noopener noreferrer">Public profile</a>}</div><div className="demo-preparation-candidate-actions"><button className="button secondary" disabled={Boolean(busy) || !candidate.profile?.recentPosts.some(post => post.caption)} onClick={() => void action(`fit:${candidate.id}`, "/api/creator-research/fit", { brandId, candidateId: candidate.id }, "Fit assessment saved with example post evidence.")}>{busy === `fit:${candidate.id}` ? "Assessing…" : "Run Gemini fit check"}</button><button className="button secondary" disabled={Boolean(busy)} onClick={() => void action(`shortlist:${candidate.id}`, "/api/creator-research/shortlist", { brandId, candidateId: candidate.id, selected: !candidate.shortlisted }, "Shortlist updated.")}>{candidate.shortlisted ? "Remove from shortlist" : "Shortlist"}</button></div></article>)}
     </div>
+    {!!snapshot?.seeds.length && <details><summary>Source ad attributions ({snapshot.seeds.length})</summary><p>These are recorded Meta credits. A credit alone does not establish Instagram followers or shortlist eligibility.</p>{snapshot.seeds.map(seed => <p key={seed.id}><strong>{seed.displayName}</strong>{seed.seedEvidence.map(source => <span key={source.adId}> · <a href={source.adUrl} target="_blank" rel="noopener noreferrer">Ad {source.providerAdId || source.adId}</a></span>)}</p>)}</details>}
   </section>;
 }

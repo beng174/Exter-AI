@@ -25,7 +25,7 @@ function fixture() {
   return { db, brand };
 }
 const observedAt = "2026-11-02T00:00:00.000Z";
-const profile = (): CreatorPublicProfile => ({ platform: "instagram", handle: "real_creator", displayName: "Real Creator", profileUrl: "https://www.instagram.com/real_creator/", sourceUrl: "https://www.instagram.com/real_creator/", evidenceUrl: "https://www.instagram.com/real_creator/", bio: "Public home fragrance posts", followers: 1000, following: null, postsCount: null, country: null, category: null, observedAt,
+const profile = (followers = 50000): CreatorPublicProfile => ({ platform: "instagram", handle: "real_creator", displayName: "Real Creator", profileUrl: "https://www.instagram.com/real_creator/", sourceUrl: "https://www.instagram.com/real_creator/", evidenceUrl: "https://www.instagram.com/real_creator/", bio: "Public home fragrance posts", followers, following: null, postsCount: null, country: null, category: null, observedAt,
   recentPosts: [
     { id: "one", url: "https://www.instagram.com/p/one/", publishedAt: "2026-10-01", caption: "An accessible scent gift set", views: 100, likes: 10, comments: 2, shares: null, observedAt, evidenceUrl: "https://www.instagram.com/p/one/" },
     { id: "two", url: "https://www.instagram.com/p/two/", publishedAt: "2026-10-02", caption: "At home", views: 50, likes: 5, comments: null, shares: 1, observedAt, evidenceUrl: "https://www.instagram.com/p/two/" },
@@ -41,14 +41,15 @@ test("creator read derives only Meta partner-label seeds and changes no stored d
     const service = new CreatorResearchService(db, { discovery: discovery(async () => { calls++; throw new Error("No read may search"); }) });
     const before = db.prepare("SELECT total_changes() AS changes").get();
     const snapshot = service.snapshot("brand");
-    assert.equal(snapshot.candidates.length, 1);
+    assert.equal(snapshot.candidates.length, 0, "Attribution without Instagram follower evidence is not a recommendation");
     assert.equal(snapshot.seeds[0].displayName, "Public Partner");
     assert.equal(snapshot.seeds[0].profileUrl, "https://www.facebook.com/profile.php?id=222");
     assert.deepEqual(snapshot.seeds[0].seedEvidence.map(evidence => evidence.providerAdId), ["1001", "1002"]);
     assert.equal(snapshot.seeds[0].seedEvidence[0].adUrl, "https://www.facebook.com/ads/library/?id=1001");
-    assert.equal(snapshot.candidates[0].profile, null);
-    assert.equal(snapshot.candidates[0].fit, null);
-    assert.equal(snapshot.candidates[0].metrics.followers, null);
+    assert.equal(snapshot.seeds[0].profile, null);
+    assert.equal(snapshot.seeds[0].fit, null);
+    assert.equal(snapshot.seeds[0].metrics.followers, null);
+    assert.equal(snapshot.eligibility?.unverifiedCount, 1);
     service.snapshot("brand"); service.report("brand");
     assert.deepEqual(db.prepare("SELECT total_changes() AS changes").get(), before);
     assert.equal(calls, 0);
@@ -56,7 +57,7 @@ test("creator read derives only Meta partner-label seeds and changes no stored d
   } finally { db.close(); }
 });
 test("creator public metrics preserve missing counts and explicitly exclude unknown denominators", () => {
-  const metrics = creatorMetrics(profile());
+  const metrics = creatorMetrics(profile(1000));
   assert.equal(metrics.engagementPerView.valuePercent, 12);
   assert.equal(metrics.engagementPerView.eligiblePosts, 1);
   assert.equal(metrics.engagementPerView.excludedPosts, 3);
@@ -71,6 +72,42 @@ test("creator public metrics preserve missing counts and explicitly exclude unkn
   assert.equal(metrics.windowEnd, "2026-10-03T00:00:00.000Z");
   assert.equal(creatorMetrics({ ...profile(), followers: null }).engagementPerFollower.valuePercent, null);
   assert.equal(creatorMetrics(null).engagementPerView.valuePercent, null);
+});
+test("only sourced Instagram profiles above 40,000 enter recommendations or paid fit, while all source observations remain saved", async () => {
+  const { db } = fixture(); let searches = 0, fits = 0;
+  const observed = (handle: string, followers: number | null, platform: "instagram" | "tiktok" = "instagram"): CreatorPublicProfile => {
+    const url = platform === "instagram" ? `https://www.instagram.com/${handle}/` : `https://www.tiktok.com/@${handle}`;
+    return { ...profile(), platform, handle, profileUrl: url, sourceUrl: url, evidenceUrl: url, followers };
+  };
+  try {
+    const service = new CreatorResearchService(db, { discovery: discovery(async input => {
+      searches++; assert.equal(input.platform, "instagram"); assert.equal(input.maxProfiles, 5);
+      return { profiles: [observed("below", 39999), observed("at_minimum", 40000), observed("above", 40001), observed("unknown", null), observed("other_platform", 90000, "tiktok")], accounting: { ...providerAccounting, runIds: [...providerAccounting.runIds] }, warnings: [] };
+    }), fitAnalyser: async () => { fits++; throw new Error("Ineligible fit must not dispatch"); } });
+    const snapshot = await service.search({ brandId: "brand", country: "GB", category: "Home fragrance" });
+    assert.equal(searches, 1, "No extra paid searches run to fill a shortlist");
+    assert.deepEqual(snapshot.candidates.map(candidate => candidate.handle), ["above"]);
+    assert.equal(snapshot.candidates[0].metrics.followers, 40001);
+    assert.equal(snapshot.totalCandidates, 1);
+    assert.equal(snapshot.totalObservedCandidates, 6);
+    assert.deepEqual({ eligible: snapshot.eligibility?.eligibleCount, excluded: snapshot.eligibility?.excludedCount, unknown: snapshot.eligibility?.unverifiedCount }, { eligible: 1, excluded: 3, unknown: 2 });
+    assert.equal(snapshot.seeds.length, 1, "Real attribution evidence stays separate and available");
+    const saved = (db.prepare("SELECT data FROM creator_research_candidates").all() as { data: string }[]).map(row => JSON.parse(row.data));
+    assert.equal(saved.length, 5, "Filtering never deletes source observations");
+    for (const item of saved.filter(candidate => candidate.handle !== "above")) {
+      assert.throws(() => service.shortlist("brand", item.id, true), /more than 40,000 observed followers/);
+      await assert.rejects(service.fit("brand", item.id), /more than 40,000 observed followers/);
+    }
+    const below = saved.find(candidate => candidate.handle === "below");
+    db.prepare("UPDATE creator_research_candidates SET data=? WHERE id=?").run(JSON.stringify({ ...below, shortlisted: true, metrics: { ...below.metrics, followers: 500000 } }), below.id);
+    assert.ok(!service.snapshot("brand").candidates.some(candidate => candidate.id === below.id), "A stale shortlist or cached count cannot override source eligibility");
+    service.shortlist("brand", below.id, false);
+    assert.equal(JSON.parse(String(db.prepare("SELECT data FROM creator_research_candidates WHERE id=?").get(below.id)!.data)).shortlisted, false);
+    assert.equal(fits, 0);
+    assert.equal(db.prepare("SELECT count(*) AS n FROM creator_research_fits").get()!.n, 0);
+    await assert.rejects(service.search({ brandId: "brand", platform: "tiktok", country: "GB", category: "Fragrance" }), /Choose Instagram/);
+    assert.equal(searches, 1, "An unsupported recommendation platform fails before spending");
+  } finally { db.close(); }
 });
 test("explicit search persists nullable public observations and fit cites stored examples without inventing Meta identity", async () => {
   const { db } = fixture(); let searches = 0, fits = 0;
@@ -108,8 +145,8 @@ test("missing posts and unsupported citations leave unknown fit, while failed pr
   try {
     const service = new CreatorResearchService(db, { discovery: discovery(async () => { throw new CreatorProviderError("unavailable", "Public provider timed out.", { ...providerAccounting, runIds: [...providerAccounting.runIds] }); }), fitAnalyser: async () => { fits++; throw new Error("No missing-post inference"); } });
     const seed = service.snapshot("brand").seeds[0];
-    const fit = await service.fit("brand", seed.id);
-    assert.equal(fit.assessment.status, "unavailable"); assert.equal(fit.assessment.toneFit, "unknown"); assert.equal(fits, 0);
+    await assert.rejects(service.fit("brand", seed.id), /more than 40,000 observed followers/);
+    assert.equal(fits, 0);
     await assert.rejects(service.search({ brandId: "brand", platform: "instagram", country: "GB", category: "Fragrance" }), /timed out/);
     assert.equal(service.snapshot("brand").searches[0].status, "failed");
     assert.equal(service.snapshot("brand").searches[0].accounting.reservedCostGbp, 0.5);

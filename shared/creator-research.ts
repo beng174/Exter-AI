@@ -49,6 +49,24 @@ export interface CreatorCandidate {
   seedEvidence: CreatorSeedEvidence[]; profile: CreatorPublicProfile | null;
   metrics: CreatorResearchMetrics; fit: CreatorFitAssessment | null; shortlisted: boolean;
   searchContext?: { country: string; category: string; query: string; searchedAt: string };
+  eligibility?: CreatorEligibility;
+}
+export type CreatorEligibilityReason = "eligible" | "instagram-required" | "profile-unavailable" | "followers-unavailable" | "followers-at-or-below-minimum" | "source-unverified" | "observation-date-unavailable";
+export interface CreatorEligibility {
+  status: "eligible" | "excluded" | "unverified";
+  reason: CreatorEligibilityReason;
+  followers: number | null;
+  observedAt: string | null;
+  evidenceUrl: string | null;
+}
+export interface CreatorEligibilitySummary {
+  platform: "instagram";
+  minFollowersExclusive: 40000;
+  eligibleCount: number;
+  excludedCount: number;
+  unverifiedCount: number;
+  observedCount: number;
+  reasonCounts: Partial<Record<CreatorEligibilityReason, number>>;
 }
 export interface CreatorProviderAccounting {
   reservedCostGbp: number | null; billedCostGbp: null; requestAttempts: number; runIds: string[];
@@ -60,8 +78,11 @@ export interface CreatorSearchObservation {
   error?: string;
 }
 export interface CreatorResearchSnapshot {
+  /** Recommendations only. Attribution seeds remain separate evidence. */
   brandId: string; brandName: string; candidates: CreatorCandidate[]; totalCandidates: number;
   seeds: CreatorCandidate[]; searches: CreatorSearchObservation[];
   providerStatus: { configured: boolean; platforms: CreatorPlatform[]; message?: string };
   limitations: string[];
+  totalObservedCandidates?: number;
+  eligibility?: CreatorEligibilitySummary;
 }

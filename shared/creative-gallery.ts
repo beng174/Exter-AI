@@ -1,10 +1,11 @@
 import type { CreatorEvidence, VideoAnalysisFields } from "./video-analysis.js";
 import type { ImageAnalysisFields } from "./image-analysis.js";
+import type { PatternLabelProjection } from "./pattern-labelling.js";
 
 export type GalleryMediaKind = "video" | "image" | "carousel" | "unknown";
 export type DemoGalleryAnalysis =
-  | { id: string; mediaKind: "video"; createdAt: string; promptVersion: string; fields: VideoAnalysisFields }
-  | { id: string; mediaKind: "image" | "carousel"; createdAt: string; promptVersion: string; fields: ImageAnalysisFields };
+  | { id: string; mediaKind: "video"; createdAt: string; promptVersion: string; fields: VideoAnalysisFields; patternLabels?: PatternLabelProjection }
+  | { id: string; mediaKind: "image" | "carousel"; createdAt: string; promptVersion: string; fields: ImageAnalysisFields; patternLabels?: PatternLabelProjection };
 
 /** A presentation projection; stored media, paid runs and their source IDs remain immutable. */
 export interface DemoGalleryCreative {

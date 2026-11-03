@@ -13,6 +13,7 @@ import type { StoredVideo } from "../video/types.js";
 import { prepareGeminiVideo } from "../video/normalize.js";
 import { videoPoster } from "./gallery-media.js";
 import { resolveDemoBrandId, workspaceAd, workspaceAdAliases, workspaceAds } from "./reconcile.js";
+import { applyPatternLabelOverlay } from "./pattern-labelling.js";
 
 type Scope = { brandId: string; adId: string; nativeId: string };
 type Analysis = VideoAnalysisResult | ImageAnalysisResult;
@@ -64,7 +65,8 @@ const safeCreatorEvidence = (values: CreatorEvidence[] = []) => values.map(({ so
 });
 function safeAnalysis(ref: AnalysisRef | null): DemoGalleryAnalysis | null {
   if (!ref) return null;
-  const common = { id: ref.value.id, createdAt: ref.value.createdAt, promptVersion: ref.value.promptVersion };
+  const projection = ref.value as typeof ref.value & { patternLabels?: import("../../shared/pattern-labelling.js").PatternLabelProjection };
+  const common = { id: ref.value.id, createdAt: ref.value.createdAt, promptVersion: ref.value.promptVersion, ...(projection.patternLabels ? { patternLabels: projection.patternLabels } : {}) };
   return ref.kind === "video" ? { ...common, mediaKind: "video", fields: { ...(ref.value as VideoAnalysisResult).fields, creatorEvidence: safeCreatorEvidence((ref.value as VideoAnalysisResult).fields.creatorEvidence) } }
     : { ...common, mediaKind: ref.kind, fields: (ref.value as ImageAnalysisResult).fields };
 }
@@ -118,7 +120,8 @@ export class CreativeGalleryService {
         if (value && value.adId === scope.adId && value.brandId === scope.brandId && value.fields && value.mediaId && iso(value.createdAt) && !found.some(item => item.value.id === value.id)) found.push({ value, scope, kind: "video" });
       } catch { /* A malformed historical annotation cannot fabricate an analysis. */ }
     }
-    return found.sort((a, b) => Date.parse(b.value.createdAt) - Date.parse(a.value.createdAt) || b.value.id.localeCompare(a.value.id))[0] || null;
+    const latest = found.sort((a, b) => Date.parse(b.value.createdAt) - Date.parse(a.value.createdAt) || b.value.id.localeCompare(a.value.id))[0];
+    return latest ? { ...latest, value: applyPatternLabelOverlay(this.db, ad, latest.value) } : null;
   }
   private async load(scope: Scope, mediaId: string, kind: "video" | "image" | "carousel"): Promise<Media | null> {
     const key = JSON.stringify([scope.brandId, scope.adId, mediaId, kind]);

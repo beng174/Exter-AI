@@ -7,6 +7,8 @@ import type { DemoCollectionSnapshot } from "../../shared/demo-collection";
 import type { Brand } from "../../shared/types";
 import { CreativeGallery, galleryDisplayText, metaAdUrl } from "./CreativeGallery";
 import { api } from "../lib/api";
+import { creatorEligibility } from "../../shared/creator-eligibility";
+import { CreatorEvidenceCharts, ObservationDatesChart, PatternDistribution, SampleEvidenceCharts, ScoreDistributionChart } from "./EvidenceCharts";
 import "./brand-demo-report.css";
 
 const count = (value: number | null | undefined) => value == null ? "Unavailable" : value.toLocaleString("en-GB", { maximumFractionDigits: 1 });
@@ -55,11 +57,6 @@ function Creator({ candidate }: { candidate: CreatorCandidate }) {
   const evidence: DemoEvidence[] = candidate.seedEvidence.map(item => ({ kind: "ad", adId: item.adId, sourceUrl: item.adUrl, quote: `Branded-content credit: ${item.partnerName}` }));
   return <tr><th scope="row"><SourceLink url={candidate.profile?.profileUrl || candidate.profileUrl}>{candidate.handle ? `@${candidate.handle.replace(/^@/, "")}` : candidate.displayName}</SourceLink><span className="bdr-cell-note">{candidate.platform === "meta" ? "Meta attribution" : candidate.platform === "instagram" ? "Instagram" : "TikTok"}{candidate.shortlisted ? " · Shortlisted" : ""}</span></th><td>{count(metrics.followers)}<span className="bdr-cell-note">Observed {date(metrics.observedAt)}</span></td><td>{evidence.length ? <><span>Branded-content credit</span><Evidence evidence={evidence} /></> : candidate.profile ? <SourceLink url={candidate.profile.evidenceUrl}>Public profile</SourceLink> : "No linked profile measurements"}</td><td>{fit ? <><span>Relevance: {fit.categoryRelevance}</span><span className="bdr-cell-note">Tone: {fit.toneFit}</span><p className="bdr-cell-reason">{galleryDisplayText(fit.reason)}</p><div className="bdr-source-list">{fit.evidencePostUrls.map((url, index) => <SourceLink key={url} url={url}>Example post {index + 1}</SourceLink>)}</div></> : <span className="bdr-cell-note">Not assessed</span>}<details className="bdr-creator-posts"><summary>{metrics.postsSampled ? `${metrics.postsSampled} observed posts and metrics` : "Public post measurements"}</summary><p>{metrics.windowStart && metrics.windowEnd ? `${date(metrics.windowStart)} to ${date(metrics.windowEnd)}` : "Post date range unavailable"}</p><p>{metrics.engagementPerView.valuePercent == null ? "Engagement per view unavailable" : `${metrics.engagementPerView.valuePercent.toFixed(2)}% engagement per view`}: sum(likes + comments) / sum(views) across {metrics.engagementPerView.eligiblePosts} eligible posts.</p><p>{metrics.engagementPerFollower.valuePercent == null ? "Engagement per follower unavailable" : `${metrics.engagementPerFollower.valuePercent.toFixed(2)}% engagement per follower`}: sum(likes + comments) / (current observed followers × {metrics.engagementPerFollower.eligiblePosts} eligible posts).</p><p>{metrics.caveat}</p>{candidate.profile?.recentPosts.slice(0, 3).map(post => <div className="bdr-post" key={post.id}><SourceLink url={post.evidenceUrl || post.url}>Post {post.id}</SourceLink><p>{post.caption ? galleryDisplayText(post.caption) : "Caption unavailable"}</p><span className="bdr-cell-note">Views {count(post.views)} · Likes {count(post.likes)} · Comments {count(post.comments)}</span></div>)}</details></td></tr>;
 }
-function Pattern({ title, patterns, onFilter }: { title: string; patterns: DemoPattern[]; onFilter: (value: string) => void }) {
-  const observed = patterns.filter(pattern => pattern.count > 0);
-  const highest = Math.max(1, ...observed.map(pattern => pattern.count));
-  return <div className="bdr-distribution"><h3>{title}</h3>{observed.length ? <><p className="bdr-chart-basis">{observed[0].denominator} classified creatives</p><ul>{observed.map(pattern => <li key={pattern.value}><button type="button" className="bdr-pattern-button" onClick={() => onFilter(pattern.value)} aria-label={`Filter creatives by ${title.toLowerCase()}: ${pattern.label}`}><span className="bdr-pattern-label">{galleryDisplayText(pattern.label)}</span><span className="bdr-pattern-value">{pattern.count}</span><span className="bdr-chart-track" aria-hidden="true"><span style={{ width: `${100 * pattern.count / highest}%` }} /></span></button><Evidence evidence={pattern.evidence} /></li>)}</ul></> : <p className="bdr-empty-inline">No consistent labels are available for this field yet.</p>}</div>;
-}
 function evidenceFor(creative: DemoGalleryCreative): DemoEvidence { return { kind: "ad", adId: creative.adId, sourceUrl: creative.sourceUrl, quote: creative.title || `Ad ${creative.nativeId}` }; }
 function overviewFindings(report: DemoReport | null, gallery: CreativeGalleryResponse | null): DemoPoint[] {
   if (!gallery?.creatives.length) return [];
@@ -91,13 +88,14 @@ export function BrandDemoReport({ brandId, onBrandChange }: { brandId: string; o
   const [error, setError] = useState(false);
   const [reload, setReload] = useState(0);
   const [filters, setFilters] = useState<CreativeGalleryFilters>({});
+  const [evidenceAdIds, setEvidenceAdIds] = useState<string[] | null>(null);
   const [openAdId, setOpenAdId] = useState<string | null>(null);
   const [activeSection, setActiveSection] = useState("overview");
   const beforeDetailHash = useRef("");
   useEffect(() => { setSelectedBrandId(brandId); }, [brandId]);
   useEffect(() => {
     let current = true;
-    setReport(null); setGallery(null); setCreators(null); setCompetition(null); setLoading(true); setError(false); setFilters({}); setOpenAdId(null);
+    setReport(null); setGallery(null); setCreators(null); setCompetition(null); setLoading(true); setError(false); setFilters({}); setEvidenceAdIds(null); setOpenAdId(null);
     Promise.allSettled([
       api<DemoReport>(`/api/brands/${encodeURIComponent(selectedBrandId)}/demo`),
       api<CreativeGalleryResponse>(`/api/brands/${encodeURIComponent(selectedBrandId)}/demo/creatives`),
@@ -143,14 +141,21 @@ export function BrandDemoReport({ brandId, onBrandChange }: { brandId: string; o
     } else { setOpenAdId(null); window.history.replaceState(null, "", `${window.location.pathname}${window.location.search}${beforeDetailHash.current}`); }
   }
   function changeBrand(id: string) {
-    setSelectedBrandId(id); setOpenAdId(null); setFilters({}); onBrandChange?.(id);
+    setSelectedBrandId(id); setOpenAdId(null); setFilters({}); setEvidenceAdIds(null); onBrandChange?.(id);
     if (window.location.pathname.startsWith("/demo/")) window.history.replaceState(null, "", `/demo/${encodeURIComponent(id)}`);
   }
   function filterFromPattern(key: keyof CreativeGalleryFilters, value: string) {
-    setFilters({ [key]: value }); setActiveSection("creatives");
+    setFilters({ [key]: value }); setEvidenceAdIds(null); setActiveSection("creatives");
     document.getElementById("bdr-creatives")?.scrollIntoView({ behavior: "smooth", block: "start" });
   }
-  const candidates = useMemo(() => [...(creators?.candidates || []), ...(creators?.seeds.filter(seed => !creators.candidates.some(candidate => candidate.id === seed.id)) || [])].slice(0, 10), [creators]);
+  function showSupportingAds(ads: DemoGalleryCreative[]) {
+    setFilters({}); setEvidenceAdIds([...new Set(ads.map(ad => ad.adId))]); setActiveSection("creatives");
+    document.getElementById("bdr-creatives")?.scrollIntoView({ behavior: "smooth", block: "start" });
+  }
+  function showPatternEvidence(pattern: DemoPattern) {
+    showSupportingAds(pattern.evidence.flatMap(item => { const creative = findCreative(item); return creative ? [creative] : []; }));
+  }
+  const candidates = useMemo(() => (creators?.candidates || []).filter(candidate => creatorEligibility(candidate).status === "eligible"), [creators]);
   const findings = useMemo(() => overviewFindings(report, gallery), [report, gallery]);
   const currentBrand = gallery?.brand || report?.brand;
   const importedBrands = currentBrand && !brands.some(brand => brand.id === currentBrand.id) ? [...brands, { ...currentBrand, mode: "imported" } as Brand] : brands;
@@ -162,6 +167,7 @@ export function BrandDemoReport({ brandId, onBrandChange }: { brandId: string; o
   const analysedCount = gallery?.analysedAdsCount ?? report?.analysedAdsCount ?? 0;
   const retainedCount = gallery?.storedMediaCount ?? null;
   const attributedCount = gallery ? gallery.creatives.filter(creative => creative.partnershipAttribution).length : null;
+  const visibleCreatives = evidenceAdIds ? creativeList.filter(creative => evidenceAdIds.includes(creative.adId)) : creativeList;
   const brandControl = <label>Brand<select aria-label="Filter brand" value={currentBrand.id} onChange={event => changeBrand(event.target.value)}>{importedBrands.map(brand => <option key={brand.id} value={brand.id}>{brand.name}</option>)}</select></label>;
   const empty = (title: string, text: string, action?: { label: string; href: string }) => <div className="bdr-empty"><h3>{title}</h3><p>{text}</p>{action && <a href={action.href}>{action.label} <ArrowRight size={14} /></a>}</div>;
 
@@ -171,20 +177,25 @@ export function BrandDemoReport({ brandId, onBrandChange }: { brandId: string; o
 
     <section id="bdr-overview" data-report-section="overview" aria-labelledby="bdr-overview-title" className="bdr-section">
       <SectionTitle id="bdr-overview-title" title="Overview" status="Live" />
-      <div className="bdr-kpi-grid"><div className="bdr-kpi"><span>Ads collected</span><strong>{count(collectedCount)}</strong><a href="#bdr-creatives" onClick={() => setFilters({})}>Browse source ads</a></div><div className="bdr-kpi"><span>Ads analysed</span><strong>{count(analysedCount)}</strong><span>Completed creative reviews</span></div><div className="bdr-kpi"><span>Stored creatives</span><strong>{count(retainedCount)}</strong><span>Available to watch or view</span></div><div className="bdr-kpi"><span>Ads with creator credits</span><strong>{count(attributedCount)}</strong><span>Source attribution recorded</span></div></div>
-      {gallery && <div className="bdr-format-summary"><span>Collected formats</span>{(["video", "image", "carousel", "unknown"] as const).filter(kind => gallery.mediaCounts[kind] > 0).map(kind => <button key={kind} type="button" onClick={() => filterFromPattern("mediaKind", kind)}><span className={`bdr-format-dot bdr-format-${kind}`} />{kind === "unknown" ? "Unconfirmed" : kind === "video" ? "Video" : kind === "image" ? "Image" : "Carousel"} <strong>{gallery.mediaCounts[kind]}</strong></button>)}{gallery.dateRange.from && <span className="bdr-range">Source dates {date(gallery.dateRange.from)} to {date(gallery.dateRange.to)}</span>}</div>}
+      <div className="bdr-kpi-grid"><div className="bdr-kpi"><span>Ads collected</span><strong>{count(collectedCount)}</strong><a href="#bdr-creatives" onClick={() => { setFilters({}); setEvidenceAdIds(null); }}>Browse source ads</a></div><div className="bdr-kpi"><span>Ads analysed</span><strong>{count(analysedCount)}</strong><span>Completed creative reviews</span></div><div className="bdr-kpi"><span>Stored creatives</span><strong>{count(retainedCount)}</strong><span>Available to watch or view</span></div><div className="bdr-kpi"><span>Ads with creator credits</span><strong>{count(attributedCount)}</strong><span>Source attribution recorded</span></div></div>
+      {gallery && <><SampleEvidenceCharts gallery={gallery} onSelect={showSupportingAds} /><div className="bdr-data-dates"><span>Source observations: {date(gallery.dateRange.from)} to {date(gallery.dateRange.to)}.</span><span>Observed saved sample, not total market reach.</span></div></>}
+
       {findings.length ? <div className="bdr-findings">{findings.map((finding, index) => <div key={index} className="bdr-finding"><span className="bdr-finding-number">0{index + 1}</span><Point point={finding} /></div>)}</div> : empty("Creative findings are still building", "Collect and analyse the brand's ads to create source-backed findings.", { label: "Prepare brand evidence", href: adminLink("brand-demo-preparation") })}
       <details className="bdr-about"><summary><Info size={14} /> About this data</summary><div><p>This is a bounded sample of collected ads. Counts describe the saved evidence, not the complete market. Running days use the source-listed start and observed date; continuous delivery and ad performance are unconfirmed.</p><p>Labels and transcripts are model interpretations. Confidence scores are uncalibrated and do not filter these findings.</p>{report?.website.status === "available" ? <><h3>Brand website evidence</h3><p>Observed {date(report.website.fetchedAt, true)} · <SourceLink url={report.website.url}>{report.website.title || currentBrand.domain}</SourceLink></p>{report.website.excerpts.slice(0, 5).map((item, index) => <blockquote key={index}>{galleryDisplayText(item.quote)}<SourceLink url={item.sourceUrl}>Website source</SourceLink></blockquote>)}<p>Website statements are publisher claims, not independently verified facts.</p></> : <p>Website evidence has not been added. <a href={adminLink("brand-demo-preparation")}>Refresh website evidence</a></p>}</div></details>
     </section>
 
     <section id="bdr-creatives" data-report-section="creatives" aria-labelledby="bdr-creatives-title" className="bdr-section">
       <SectionTitle id="bdr-creatives-title" title="Creatives" status="Live" description="Open any ad to watch or view its creative, read the analysis and follow its original source." />
-      <CreativeGallery creatives={creativeList} filters={filters} onFiltersChange={setFilters} openAdId={openAdId} onOpenAd={openCreative} brandControl={brandControl} emptyAction={{ label: "Collect brand ads", href: adminLink("brand-demo-preparation") }} />
+      {evidenceAdIds && <div className="bdr-evidence-filter"><span>Showing {count(visibleCreatives.length)} supporting ads.</span><button type="button" onClick={() => { setEvidenceAdIds(null); setFilters({}); }}>Show all collected ads</button></div>}
+      <CreativeGallery creatives={visibleCreatives} filters={filters} onFiltersChange={setFilters} openAdId={openAdId} onOpenAd={openCreative} brandControl={brandControl} emptyAction={{ label: "Collect brand ads", href: adminLink("brand-demo-preparation") }} />
     </section>
 
     <section id="bdr-patterns" data-report-section="patterns" aria-labelledby="bdr-patterns-title" className="bdr-section">
-      <SectionTitle id="bdr-patterns-title" title="Patterns" status="Beta" description="Click a bar to explore the creatives behind it. Unknown labels stay outside that field's denominator." />
-      {report && analysedCount ? <div className="bdr-pattern-grid"><Pattern title="Hook type" patterns={report.patterns.hookType} onFilter={value => filterFromPattern("hookType", value)} /><Pattern title="Angle" patterns={report.patterns.angle} onFilter={value => filterFromPattern("angle", value)} /><Pattern title="Offer type" patterns={report.patterns.offerType} onFilter={value => filterFromPattern("offerType", value)} /><Pattern title="Creative format" patterns={report.patterns.format} onFilter={value => filterFromPattern("format", value)} /></div> : empty("Pattern labels are not available yet", "Analyse retained creatives to compare hooks, angles, offers and formats.", { label: "Analyse stored creatives", href: adminLink("gemini-smoke-test") })}
+      <SectionTitle id="bdr-patterns-title" title="Patterns" status="Beta" description="Counts show their sample and label coverage. Click a bar to open the ads behind it; earlier descriptions remain separate from fixed labels." />
+      {report && analysedCount ? <div className="evidence-pattern-grid">{([
+        ["hookType", "Hook type", "hookType"], ["angle", "Angle", "angle"], ["offerType", "Offer type", "offerType"], ["format", "Creative format", "format"],
+      ] as const).map(([dimension, title, filter]) => <PatternDistribution key={dimension} title={title} patterns={report.patterns[dimension]} legacyPatterns={report.legacyPatterns?.[dimension]} coverage={report.patternCoverage?.[dimension]} totalAnalysed={report.analysedAdsCount} onSelect={(pattern, basis) => basis === "legacy" ? showPatternEvidence(pattern) : filterFromPattern(filter, pattern.value)} renderSources={pattern => <Evidence evidence={pattern.evidence} />} action={<a className="evidence-pattern-action" href={adminLink("pattern-labels")}>Update pattern labels</a>} />)}</div> : empty("Pattern labels are not available yet", "Analyse retained creatives to compare hooks, angles, offers and formats.", { label: "Analyse stored creatives", href: adminLink("gemini-smoke-test") })}
+      {gallery && <div className="evidence-date-chart"><ObservationDatesChart creatives={creativeList} onSelect={showSupportingAds} /></div>}
     </section>
 
     <section id="bdr-competitors" data-report-section="competitors" aria-labelledby="bdr-competitors-title" className="bdr-section">
@@ -198,13 +209,17 @@ export function BrandDemoReport({ brandId, onBrandChange }: { brandId: string; o
     </section>
 
     <section id="bdr-creators" data-report-section="creators" aria-labelledby="bdr-creators-title" className="bdr-section">
-      <SectionTitle id="bdr-creators-title" title="Creators" status="Beta" description="Branded-content credits and public creator evidence, linked to their source ads." />
-      {candidates.length ? <div className="bdr-table-wrap"><table className="bdr-table"><thead><tr><th>Creator</th><th>Followers</th><th>Source ads</th><th>Public evidence & fit</th></tr></thead><tbody>{candidates.map(candidate => <Creator key={candidate.id} candidate={candidate} />)}</tbody></table></div> : empty("No creator credits or profiles collected yet", "Creator candidates appear from Meta branded-content credits and explicit public profile research.", { label: "Collect creator evidence", href: adminLink("brand-demo-preparation") })}
-      {candidates.length > 0 && <details className="bdr-about"><summary><Info size={14} /> About creator measurements</summary><div><p>Public engagement uses declared denominators and excludes posts with missing required counts. Search country and category are research criteria, not verified audience demographics. Creator fit uses the cited public captions and brand context; it does not predict ad results.</p></div></details>}
+      <SectionTitle id="bdr-creators-title" title="Creators" status="Beta" description="Recommendations require a dated Instagram profile with more than 40,000 observed followers. Ad credits are kept as separate source evidence." />
+      {creators && <CreatorEvidenceCharts snapshot={creators} />}
+      <div className="evidence-creator-section"><h3>Eligible Instagram recommendations</h3><p>Only verified profiles above 40,000 followers enter this shortlist. Unknown follower counts and profiles at or below the threshold are excluded.</p>
+      {candidates.length ? <div className="bdr-table-wrap"><table className="bdr-table"><thead><tr><th>Creator</th><th>Observed followers</th><th>Sources</th><th>Public evidence & fit</th></tr></thead><tbody>{candidates.map(candidate => <Creator key={candidate.id} candidate={candidate} />)}</tbody></table></div> : empty("No verified Instagram recommendations yet", "Collect public Instagram profiles to check their actual follower counts and recent posts.", { label: "Research Instagram creators", href: adminLink("brand-demo-preparation") })}</div>
+      {Boolean(creators?.seeds.length) && <div className="evidence-creator-section"><h3>Source ad attributions</h3><p>These credits show who appears in saved ads. A credit alone does not verify an Instagram account or establish follower eligibility.</p><div className="bdr-attribution-grid">{creators!.seeds.map(candidate => <article key={candidate.id}><h4>{candidate.displayName}</h4>{candidate.profileUrl && <SourceLink url={candidate.profileUrl}>Attributed public profile</SourceLink>}<Evidence evidence={candidate.seedEvidence.map(item => ({ kind: "ad", adId: item.adId, sourceUrl: item.adUrl, quote: `Branded-content credit: ${item.partnerName}` }))} /><p>{creatorEligibility(candidate).status === "eligible" ? "Instagram follower requirement verified." : "Instagram follower eligibility not verified by this ad credit."}</p></article>)}</div></div>}
+      <details className="bdr-about"><summary><Info size={14} /> About creator measurements</summary><div><p>Public engagement uses declared denominators and excludes posts with missing required counts. Follower counts are dated source observations, not audience population estimates. Search country and category are research criteria, not verified audience demographics. Creator fit uses cited public captions and brand context; it does not predict ad results.</p></div></details>
     </section>
 
     <section id="bdr-scores" data-report-section="scores" aria-labelledby="bdr-scores-title" className="bdr-section">
       <SectionTitle id="bdr-scores-title" title="Scores" status="Beta" description="Best-practice score, not a performance prediction." />
+      {report && <div className="bdr-score-chart"><ScoreDistributionChart scores={report.scores} onSelect={scores => showSupportingAds(creativeList.filter(creative => scores.some(score => score.adId === creative.adId || score.nativeId === creative.nativeId)))} /></div>}
       {report?.scores.length ? <div className="bdr-table-wrap"><table className="bdr-table"><thead><tr><th>Creative</th><th>Score / 100</th><th>Coverage</th><th>Assessment</th></tr></thead><tbody>{report.scores.map(score => <tr key={score.analysisId}><th scope="row"><AdLink adId={score.adId} sourceUrl={score.sourceUrl}>Ad {score.nativeId}</AdLink><span className="bdr-cell-note">{score.mediaKind === "video" ? "Video" : score.mediaKind === "carousel" ? "Carousel" : "Image"}</span></th><td><strong className="bdr-score">{score.score == null ? "Unavailable" : Math.round(score.score)}</strong>{score.provisional && <span className="bdr-cell-note">Provisional</span>}</td><td>{Math.round(score.coverage * 100)}%<span className="bdr-cell-note">{score.assessedWeight} / {score.totalWeight} rubric weight</span></td><td><details className="bdr-assessment"><summary>View criteria</summary><p>{score.method}</p><ul>{score.criteria.map(criterion => <li key={criterion.id}><strong>{criterion.label}</strong><span>{criterion.status === "met" ? "Observed" : criterion.status === "not-met" ? "Not observed" : "Unknown"}</span><p>{galleryDisplayText(criterion.explanation)}</p><Evidence evidence={criterion.evidence} /></li>)}</ul></details></td></tr>)}</tbody></table></div> : empty("No scores available yet", "Scores require a completed analysis of a real creative.", { label: "Analyse stored creatives", href: adminLink("gemini-smoke-test") })}
       <details className="bdr-about"><summary><Info size={14} /> About scores and prediction preview</summary><div><p>Scores measure an explicit creative checklist. Unknown checks are excluded and coverage is shown, so a high partial score is not a complete assessment. No conversion, sales or performance outcome is inferred.</p><div className="bdr-heading-line"><h3>Future proven-ad likelihood</h3><Status value="Preview" /></div><p>Trains as collection history builds.</p>{report?.prediction.observations.length ? <><p>The spans below record source capture endpoints. They do not establish continuous delivery or a proven winner.</p><ul>{report.prediction.observations.slice(0, 10).map(observation => <li key={observation.adId}><AdLink adId={observation.adId} sourceUrl={observation.sourceUrl} /> · {date(observation.firstObservedAt)} to {date(observation.lastObservedAt)} · {count(observation.observedSpanDays)} observed days</li>)}</ul></> : <p>Repeated source observations are needed before longevity can be described.</p>}</div></details>
     </section>

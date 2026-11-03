@@ -51,6 +51,18 @@ These actions persist their results. Reloading the report or changing tabs does 
 
 ## Explore the report
 
+Pattern charts now show actual classified, legacy-description and missing counts.
+An earlier free-text description is shown verbatim with ad citations, rather than
+silently guessed into a fixed taxonomy. In **Settings > Pattern labels**, click
+**Update pattern labels** to run a serial, budgeted text-only Gemini update from
+the saved analyses. Media is not re-uploaded. Original paid analyses remain
+immutable, and uncertain interrupted requests are not silently replayed.
+
+Creator recommendations require a dated, sourced Instagram profile with strictly
+more than 40,000 observed followers. Exactly 40,000, smaller, unknown and TikTok
+profiles are ineligible. Source ad attributions remain visible separately as
+credits; they do not establish Instagram followers or shortlist eligibility.
+
 The client report has sticky navigation for Overview, Creatives, Patterns,
 Competitors, Opportunities & briefs, Creators and Scores. The gallery retains
 all collected ads, including honest missing-media states. Available videos get

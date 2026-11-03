@@ -121,7 +121,7 @@ export function CreativeAdDetail({ creative, creatives, onClose, onSelect }: Cre
         </div>
         <div className="cg-detail-analysis">
           {!fields ? <div className="cg-analysis-empty"><h3>Analysis not available yet</h3><p>This ad has been collected. Creative findings will appear after it is analysed.</p>{source && <a href={source} target="_blank" rel="noopener noreferrer">Open the original ad <ArrowUpRight size={14} /></a>}</div> : <>
-            <div className="cg-analysis-overview"><h3>Creative analysis</h3><dl>
+            <div className="cg-analysis-overview"><h3>Creative analysis</h3>{analysis?.patternLabels && <p className="cg-muted">Category labels were modelled from saved analysis text on {date(analysis.patternLabels.createdAt)}. Original media analysis is retained.</p>}<dl>
               <div><dt>Hook</dt><dd>{annotation(fields.hook)}{fields.hook_type && <span className="cg-chip">{galleryFieldLabel(String(fields.hook_type.value), HOOK_TYPE_OPTIONS)}</span>}</dd></div>
               <div><dt>Creative format</dt><dd>{galleryFieldLabel(String(fields.format.value), FORMAT_OPTIONS)}</dd></div>
               <div><dt>Angle</dt><dd>{galleryFieldLabel(String(fields.angle.value), ANGLE_OPTIONS)}{fields.angle_explanation && <p className="cg-muted">{fieldText(fields.angle_explanation)}</p>}</dd></div>

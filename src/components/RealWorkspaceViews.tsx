@@ -9,6 +9,8 @@ import type { DemoCollectionSnapshot } from "../../shared/demo-collection";
 import { ANGLE_OPTIONS, FORMAT_OPTIONS, HOOK_TYPE_OPTIONS, OFFER_TYPE_OPTIONS } from "../../shared/creative-taxonomy";
 import { api } from "../lib/api";
 import { CreativeAdDetail, CreativeGallery } from "./CreativeGallery";
+import { creatorEligibility } from "../../shared/creator-eligibility";
+import { CreatorEvidenceCharts, ObservationDatesChart, PatternDistribution, SampleEvidenceCharts, ScoreDistributionChart } from "./EvidenceCharts";
 import "./real-workspace-views.css";
 
 export type RealWorkspacePage = "overview" | "ads" | "formats" | "brand" | "creators" | "competitors";
@@ -129,7 +131,8 @@ export function RealWorkspaceView({ brandId, view, onOpenSettings }: RealWorkspa
   const collected = data.gallery?.collectedAdsCount ?? (data.report ? data.report.analysedAdsCount + data.report.sample.excludedUnanalysed : null);
   const analysed = data.gallery?.analysedAdsCount ?? data.report?.analysedAdsCount ?? null;
   const stored = data.gallery?.storedMediaCount ?? null;
-  const creators = useMemo(() => [...new Map([...(data.creators?.seeds || []), ...(data.creators?.candidates || [])].map(creator => [creator.id, creator])).values()], [data.creators]);
+  const creators = useMemo(() => (data.creators?.candidates || []).filter(creator => creatorEligibility(creator).status === "eligible"), [data.creators]);
+  const attributedCreators = data.creators?.seeds || [];
   const detail = creatives.find(creative => creative.adId === openAdId) || null;
 
   function revealGallery(next: CreativeGalleryFilters = {}, supporting?: DemoGalleryCreative[]) {
@@ -143,13 +146,13 @@ export function RealWorkspaceView({ brandId, view, onOpenSettings }: RealWorkspa
   function AdReferences({ ads, limit = 5 }: { ads: DemoGalleryCreative[]; limit?: number }) {
     return <div className="rws-ad-references">{ads.slice(0, limit).map(ad => <button key={ad.adId} className="rws-source" type="button" onClick={() => openCreative(ad.adId)}>Ad {ad.nativeId}</button>)}{ads.length > limit && <button className="rws-source" type="button" onClick={() => revealGallery({}, ads)}>View all {ads.length} supporting ads</button>}</div>;
   }
-  function PatternSummary({ title, patterns, field, options }: { title: string; patterns: DemoPattern[]; field: "hookType" | "angle" | "offerType" | "format"; options: readonly (readonly [string, string])[] }) {
-    const observed = patterns.filter(pattern => pattern.count > 0).slice(0, 5);
-    return <article className="rws-pattern"><h3>{title}</h3>{observed.length ? <div className="rws-bars">{observed.map(pattern => <button key={pattern.value} type="button" className="rws-bar" onClick={() => revealGallery({ [field]: pattern.value })}>
-      <span className="rws-bar-label"><span>{categoryLabel(pattern.value, options)}</span><strong>{pattern.count} / {pattern.denominator}</strong></span>
-      <span className="rws-bar-track" aria-hidden="true"><span style={{ width: `${100 * pattern.count / Math.max(1, pattern.denominator)}%` }} /></span>
-    </button>)}</div> : <p className="rws-secondary">No supported categories yet. Review the analysed ads or analyse more creatives.</p>}</article>;
+  function PatternSummary({ title, patterns, field }: { title: string; patterns: DemoPattern[]; field: "hookType" | "angle" | "offerType" | "format"; options?: readonly (readonly [string, string])[] }) {
+    return <PatternDistribution title={title} patterns={patterns} legacyPatterns={data.report?.legacyPatterns?.[field]} coverage={data.report?.patternCoverage?.[field]} totalAnalysed={data.report?.analysedAdsCount || 0} onSelect={(pattern, basis) => {
+      const matching = creatives.filter(creative => pattern.evidence.some(source => source.adId === creative.adId || source.adId === creative.nativeId || source.sourceUrl === creative.sourceUrl));
+      if (basis === "legacy") revealGallery({}, matching); else revealGallery({ [field]: pattern.value });
+    }} renderSources={pattern => <AdReferences ads={creatives.filter(creative => pattern.evidence.some(source => source.adId === creative.adId || source.adId === creative.nativeId || source.sourceUrl === creative.sourceUrl))} limit={3} />} action={onOpenSettings && <a className="evidence-pattern-action" href={`/?${new URLSearchParams({ view: "settings", brandId })}#pattern-labels`}>Update pattern labels</a>} />;
   }
+
   async function runWebsiteResearch() {
     const requestedBrand = brandId;
     setBusy("website"); setActionError(""); setNotice("");
@@ -198,7 +201,7 @@ export function RealWorkspaceView({ brandId, view, onOpenSettings }: RealWorkspa
         ].map(([label, value, action]) => <article className="rws-kpi" key={String(label)}><span>{String(label)}</span><strong>{numeric(value as number | null)}</strong>{typeof action === "function" && <button type="button" className="rws-source" onClick={action as () => void}>View evidence<ChevronRight size={13} /></button>}</article>)}
       </section>
       <section className="rws-section"><SectionTitle title="Source coverage" /><p>{data.gallery?.dateRange.from || data.gallery?.dateRange.to ? `Source observations: ${date(data.gallery?.dateRange.from)} to ${date(data.gallery?.dateRange.to)}.` : "Capture dates are not available yet."}</p>
-        <div className="rws-inline-counts">{(["video", "image", "carousel", "unknown"] as const).map(kind => <button type="button" key={kind} onClick={() => revealGallery({ mediaKind: kind })}><strong>{numeric(data.gallery?.mediaCounts[kind])}</strong><span>{mediaLabels[kind]}</span></button>)}</div>
+        {data.gallery ? <><SampleEvidenceCharts gallery={data.gallery} onSelect={ads => revealGallery({}, ads)} /><ObservationDatesChart creatives={creatives} onSelect={ads => revealGallery({}, ads)} /></> : <p className="rws-secondary">Source coverage is unavailable. Refresh the saved data to retry.</p>}
       </section>
       <section className="rws-section"><SectionTitle title="What the sample shows" maturity="Beta" />{creatives.length ? <div className="rws-findings">
         <article><h3>{numeric(analysed)} of {numeric(collected)} collected ads have completed creative analyses.</h3><AdReferences ads={creatives.filter(creative => Boolean(creative.analysis))} /><button type="button" className="rws-source" onClick={() => revealGallery({})}>Explore the collected ads<ChevronRight size={13} /></button></article>
@@ -210,14 +213,15 @@ export function RealWorkspaceView({ brandId, view, onOpenSettings }: RealWorkspa
           return <article key={field}><h3>{leading ? `${categoryLabel(leading.value, options)} appears in ${leading.count} of ${leading.denominator} supported ${field === "hookType" ? "hook" : "angle"} labels.` : `Consistent ${field === "hookType" ? "hook" : "angle"} categories are not available for this sample yet.`}</h3><AdReferences ads={matching} />{leading ? <button type="button" className="rws-source" onClick={() => revealGallery({ [field]: leading.value })}>View matching creatives<ChevronRight size={13} /></button> : onOpenSettings && <button type="button" className="rws-source" onClick={onOpenSettings}>Analyse collected ads<ChevronRight size={13} /></button>}</article>;
         })}
       </div> : <Empty title="No source ads collected yet" action={onOpenSettings} actionLabel="Collect or prepare source ads">Collect the brand's public ads to populate this workspace.</Empty>}</section>
-      {data.report && <section className="rws-section"><SectionTitle title="Creative patterns" maturity="Beta" /><div className="rws-pattern-grid"><PatternSummary title="Hook types" patterns={data.report.patterns.hookType} field="hookType" options={HOOK_TYPE_OPTIONS} /><PatternSummary title="Angles" patterns={data.report.patterns.angle} field="angle" options={ANGLE_OPTIONS} /><PatternSummary title="Offers" patterns={data.report.patterns.offerType} field="offerType" options={OFFER_TYPE_OPTIONS} /></div></section>}
+      {data.report && <section className="rws-section"><SectionTitle title="Creative patterns" maturity="Beta" /><div className="evidence-pattern-grid"><PatternSummary title="Hook types" patterns={data.report.patterns.hookType} field="hookType" options={HOOK_TYPE_OPTIONS} /><PatternSummary title="Angles" patterns={data.report.patterns.angle} field="angle" options={ANGLE_OPTIONS} /><PatternSummary title="Offers" patterns={data.report.patterns.offerType} field="offerType" options={OFFER_TYPE_OPTIONS} /></div></section>}
+      {data.report && <section className="rws-section"><SectionTitle title="Creative assessment" maturity="Beta" /><ScoreDistributionChart scores={data.report.scores} onSelect={scores => revealGallery({}, creatives.filter(creative => scores.some(score => score.adId === creative.adId || score.nativeId === creative.nativeId)))} /></section>}
       {showGallery && gallerySection()}
     </>}
 
     {view === "ads" && gallerySection()}
 
     {view === "formats" && <>
-      <section className="rws-section"><SectionTitle title="Formats" /><div className="rws-media-formats">{(["video", "image", "carousel", "unknown"] as const).map(kind => {
+      <section className="rws-section"><SectionTitle title="Formats" />{data.gallery && <SampleEvidenceCharts gallery={data.gallery} onSelect={ads => revealGallery({}, ads)} />}<div className="rws-media-formats">{(["video", "image", "carousel", "unknown"] as const).map(kind => {
         const matches = creatives.filter(creative => creative.mediaKind === kind);
         return <article key={kind}><h3>{mediaLabels[kind]}</h3><strong className="rws-format-count">{data.gallery ? matches.length : "Not available"}</strong><p>{matches.filter(creative => creative.analysis).length} analysed</p>{matches.length > 0 && <><AdReferences ads={matches} limit={2} /><button type="button" className="rws-source" onClick={() => revealGallery({ mediaKind: kind })}>View {matches.length} {kind === "unknown" ? "source ads" : `${kind} ads`}<ChevronRight size={13} /></button></>}</article>;
       })}</div></section>
@@ -236,18 +240,21 @@ export function RealWorkspaceView({ brandId, view, onOpenSettings }: RealWorkspa
       {data.research && <section className="rws-section"><SectionTitle title="Research sources" /><div className="rws-source-cards">{data.research.sources.map(source => <article key={source.id}><h3>{source.title}</h3><p>{source.textExcerpt || "No public excerpt was retained."}</p><ExternalSource url={source.url}>Open source</ExternalSource><small>Observed {date(source.observedAt)}</small></article>)}</div></section>}
     </>}
 
-    {view === "creators" && <section className="rws-section"><SectionTitle title="Creators" maturity="Beta"><p className="rws-secondary">Creators attributed in source ads and profiles collected from public sources.</p></SectionTitle>
+    {view === "creators" && <section className="rws-section"><SectionTitle title="Creators" maturity="Beta"><p className="rws-secondary">Instagram recommendations require more than 40,000 observed followers. Ad attributions are separate evidence.</p></SectionTitle>
+      {data.creators && <CreatorEvidenceCharts snapshot={data.creators} />}
+      <div className="evidence-creator-section"><h3>Eligible Instagram recommendations</h3><p>Only dated, verified Instagram profiles above 40,000 followers appear here.</p></div>
       {creators.length ? <div className="rws-creator-list">{creators.map(creator => <article key={creator.id} className="rws-creator"><div className="rws-creator-heading"><div><h3>{creator.handle ? `@${creator.handle.replace(/^@/, "")}` : creator.displayName}</h3><p className="rws-secondary">{creator.seedEvidence.length ? "Meta branded-content attribution" : "Collected public profile"}{creator.shortlisted ? " · Shortlisted" : ""}</p></div><ExternalSource url={creator.profile?.profileUrl || creator.profileUrl}>Open profile</ExternalSource></div>
         {creator.seedEvidence.length > 0 && <div className="rws-creator-ads"><h4>Appears in these ads</h4>{creator.seedEvidence.map(source => {
           const match = creatives.find(creative => creative.adId === source.adId || creative.nativeId === source.providerAdId);
           return match ? <button className="rws-source" type="button" key={`${source.adId}:${source.partnerPageId}`} onClick={() => openCreative(match.adId)}>Ad {source.providerAdId || source.adId}</button>
             : <ExternalSource key={`${source.adId}:${source.partnerPageId}`} url={source.adUrl}>Ad {source.providerAdId || source.adId}</ExternalSource>;
         })}</div>}
-        <dl className="rws-creator-metrics"><div><dt>Observed followers</dt><dd>{numeric(creator.metrics.followers)}</dd></div><div><dt>Public posts sampled</dt><dd>{creator.profile ? creator.metrics.postsSampled : "Not collected"}</dd></div><div><dt>Observed</dt><dd>{date(creator.metrics.observedAt)}</dd></div></dl>
+        <dl className="rws-creator-metrics"><div><dt>Observed followers</dt><dd>{numeric(creator.profile?.followers)}</dd></div><div><dt>Public posts sampled</dt><dd>{creator.profile ? creator.metrics.postsSampled : "Not collected"}</dd></div><div><dt>Observed</dt><dd>{date(creator.metrics.observedAt)}</dd></div></dl>
         {creator.fit?.status === "complete" ? <div><p>Category relevance: <strong>{creator.fit.categoryRelevance}</strong>. Tone fit: <strong>{creator.fit.toneFit}</strong>.</p><p>{creator.fit.reason}</p><div className="rws-ad-references">{creator.fit.evidencePostUrls.map((url, index) => <ExternalSource key={url} url={url}>Example post {index + 1}</ExternalSource>)}</div></div> : <p className="rws-secondary">Fit has not been assessed.</p>}
         {creator.profile && <><CreatorRates creator={creator} /><ul className="rws-recent-posts">{creator.profile.recentPosts.slice(0, 3).map(post => <li key={post.id}><ExternalSource url={post.url}>Post {post.id}</ExternalSource><p>{post.caption || "Caption unavailable"}</p><small>Views {numeric(post.views)} · Likes {numeric(post.likes)} · Comments {numeric(post.comments)}</small></li>)}</ul></>}
-      </article>)}</div> : <Empty title="No creator attributions collected yet" action={onOpenSettings} actionLabel="Collect creator profiles">Branded-content credits and public creator searches will appear here when source evidence is available.</Empty>}
-      {creators.length > 0 && onOpenSettings && <button className="rws-secondary-button" type="button" onClick={onOpenSettings}>Research public profiles<ChevronRight size={14} /></button>}
+      </article>)}</div> : <Empty title="No verified Instagram recommendations yet" action={onOpenSettings} actionLabel="Research Instagram creators">Collect public Instagram profiles to verify follower counts. Unknown counts and profiles at 40,000 or below do not meet the requirement.</Empty>}
+      {onOpenSettings && creators.length > 0 && <button className="rws-secondary-button" type="button" onClick={onOpenSettings}>Research public profiles<ChevronRight size={14} /></button>}
+      {attributedCreators.length > 0 && <div className="evidence-creator-section"><h3>Source ad attributions</h3><p>These credits confirm appearances in collected ads. They do not by themselves verify Instagram follower counts.</p><div className="rws-source-cards">{attributedCreators.map(creator => <article key={creator.id}><h4>{creator.displayName}</h4><ExternalSource url={creator.profileUrl}>Attributed public profile</ExternalSource><div className="rws-ad-references">{creator.seedEvidence.map(source => { const match = creatives.find(creative => creative.adId === source.adId || creative.nativeId === source.providerAdId); return match ? <button className="rws-source" type="button" key={source.adId} onClick={() => openCreative(match.adId)}>Ad {source.providerAdId || source.adId}</button> : <ExternalSource key={source.adId} url={source.adUrl}>Ad {source.providerAdId || source.adId}</ExternalSource>; })}</div><p className="rws-secondary">{creatorEligibility(creator).status === "eligible" ? "Instagram follower requirement verified." : "Instagram follower eligibility remains unverified by this ad credit."}</p></article>)}</div></div>}
     </section>}
 
     {view === "competitors" && <>

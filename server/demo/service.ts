@@ -3,13 +3,15 @@ import type { Ad, Brand } from "../../shared/types.js";
 import type { VideoAnalysisResult } from "../../shared/video-analysis.js";
 import type { ImageAnalysisResult } from "../../shared/image-analysis.js";
 import { ANGLE_OPTIONS, FORMAT_OPTIONS, HOOK_TYPE_OPTIONS, OFFER_TYPE_OPTIONS } from "../../shared/creative-taxonomy.js";
-import type { BrandDemoReport, DemoPattern } from "../../shared/brand-demo.js";
+import type { BrandDemoReport, DemoPattern, DemoPatternCoverage } from "../../shared/brand-demo.js";
+import { patternCoverage, projectPatternLabel, type PatternDimension } from "../../shared/demo-patterns.js";
 import { readBrand } from "../db.js";
 import { buildOpportunities } from "./briefs.js";
 import { buildPredictionPreview } from "./prediction.js";
 import { creativeEvidence, scoreCreative, supported, type DemoCreative } from "./scores.js";
 import { readWebsiteEvidence, refreshWebsiteEvidence, type DemoWebsiteOptions } from "./website.js";
 import { linkedWorkspaceAnalyses, resolveDemoBrandId, workspaceAds } from "./reconcile.js";
+import { applyPatternLabelOverlay } from "./pattern-labelling.js";
 
 export class BrandDemoError extends Error {
   constructor(message: string, public status = 400) { super(message); }
@@ -39,7 +41,7 @@ export function analysedCreatives(db: DatabaseSync, brandId: string, ads: Ad[]):
     if (validAnalysis(ad.videoAnalysis, ad) && !candidates.some(item => item.analysis.id === ad.videoAnalysis!.id))
       candidates.push({ ad, analysis: ad.videoAnalysis!, mediaKind: "video" });
     candidates.sort((a, b) => Date.parse(b.analysis.createdAt) - Date.parse(a.analysis.createdAt) || b.analysis.id.localeCompare(a.analysis.id));
-    return candidates.length ? [candidates[0]] : [];
+    return candidates.length ? [{ ...candidates[0], analysis: applyPatternLabelOverlay(db, ad, candidates[0].analysis) }] : [];
   });
 }
 function patterns(creatives: DemoCreative[], field: "format" | "hook_type" | "angle" | "offer_type", options: readonly (readonly [string, string])[]): DemoPattern[] {
@@ -52,6 +54,17 @@ function patterns(creatives: DemoCreative[], field: "format" | "hook_type" | "an
     const matches = eligible.filter(item => item.annotation.value === value);
     return { value, label, count: matches.length, denominator: eligible.length, totalAnalysed: creatives.length, share: eligible.length ? matches.length / eligible.length : null, evidence: matches.map(item => creativeEvidence(item.creative, field, item.annotation)) };
   }).sort((a, b) => b.count - a.count || a.value.localeCompare(b.value));
+}
+function originalPatternDescriptions(creatives: DemoCreative[], dimension: PatternDimension): { coverage: DemoPatternCoverage; patterns: DemoPattern[] } {
+  const projected = creatives.map(creative => ({ creative, label: projectPatternLabel(creative.analysis.fields, dimension) }));
+  const legacy = projected.filter(item => item.label.legacy !== null && item.label.annotation !== null);
+  const values = [...new Set(legacy.map(item => item.label.legacy!))];
+  return { coverage: patternCoverage(projected.map(item => item.label)), patterns: values.map(value => {
+    const matches = legacy.filter(item => item.label.legacy === value);
+    return { value, label: value, count: matches.length, denominator: legacy.length, totalAnalysed: creatives.length,
+      share: legacy.length ? matches.length / legacy.length : null,
+      evidence: matches.map(item => creativeEvidence(item.creative, item.label.sourceField, item.label.annotation!)) };
+  }).sort((a,b) => b.count - a.count || a.value.localeCompare(b.value)) };
 }
 export class BrandDemoService {
   constructor(private readonly db: DatabaseSync, private readonly options: DemoWebsiteOptions = {}) {}
@@ -66,11 +79,14 @@ export class BrandDemoService {
     const realAds = allAds.filter(ad => ad.source !== "sample"), creatives = analysedCreatives(this.db, brand.id, realAds);
     const website = readWebsiteEvidence(this.db, brand);
     const patternGroups = { format: patterns(creatives, "format", FORMAT_OPTIONS), hookType: patterns(creatives, "hook_type", HOOK_TYPE_OPTIONS), angle: patterns(creatives, "angle", ANGLE_OPTIONS), offerType: patterns(creatives, "offer_type", OFFER_TYPE_OPTIONS) };
+    const descriptions = { format: originalPatternDescriptions(creatives, "format"), hookType: originalPatternDescriptions(creatives, "hookType"), angle: originalPatternDescriptions(creatives, "angle"), offerType: originalPatternDescriptions(creatives, "offerType") };
     return {
       version: "exter-brand-demo-v1", brand: { id: brand.id, name: brand.name, domain: brand.domain }, generatedAt: (this.options.now?.() || new Date()).toISOString(),
       analysedAdsCount: creatives.length,
       sample: { video: creatives.filter(item => item.mediaKind === "video").length, image: creatives.filter(item => item.mediaKind === "image").length, carousel: creatives.filter(item => item.mediaKind === "carousel").length, excludedUnanalysed: realAds.length - creatives.length, excludedSampleAds: allAds.length - realAds.length },
       patterns: patternGroups, opportunities: buildOpportunities(creatives, patternGroups.angle, website),
+      patternCoverage: { format: descriptions.format.coverage, hookType: descriptions.hookType.coverage, angle: descriptions.angle.coverage, offerType: descriptions.offerType.coverage },
+      legacyPatterns: { format: descriptions.format.patterns, hookType: descriptions.hookType.patterns, angle: descriptions.angle.patterns, offerType: descriptions.offerType.patterns },
       scores: creatives.map(scoreCreative).sort((a, b) => (b.score ?? -1) - (a.score ?? -1) || b.coverage - a.coverage || a.adId.localeCompare(b.adId)),
       website, prediction: buildPredictionPreview(realAds, this.options.now?.() || new Date()),
       limitations: [

@@ -5,6 +5,7 @@ import { GeminiSmokeTest } from "./components/GeminiSmokeTest";
 import { LabellingTool } from "./components/LabellingTool";
 import { BrandDemoReport } from "./components/BrandDemoReport";
 import { DemoPreparation } from "./components/DemoPreparation";
+import { PatternLabelControls } from "./components/PatternLabelControls";
 import { DemoCollectionControls } from "./components/DemoCollectionControls";
 import { BrandLogo } from "./components/BrandLogo";
 import { RealWorkspaceView, type RealWorkspacePage } from "./components/RealWorkspaceViews";
@@ -639,7 +640,7 @@ function WorkspaceApp() {
   useEffect(() => {
     if (page !== "settings") return;
     const id = window.location.hash.slice(1);
-    if (!["brand-demo-preparation", "demo-collection", "monthly-budgets", "gemini-smoke-test"].includes(id)) return;
+    if (!["brand-demo-preparation", "pattern-labels", "demo-collection", "monthly-budgets", "gemini-smoke-test"].includes(id)) return;
     const frame = requestAnimationFrame(() => document.getElementById(id)?.scrollIntoView({ block: "start" }));
     return () => cancelAnimationFrame(frame);
   }, [page, brandId]);
@@ -992,11 +993,13 @@ function WorkspaceApp() {
             <div className="page-content">
               <nav className="settings-shortcuts" aria-label="Settings sections">
                 <a href="#brand-demo-preparation">Website evidence & client demo</a>
+                <a href="#pattern-labels">Pattern labels</a>
                 <a href="#demo-collection">Competitor collection</a>
                 <a href="#monthly-budgets">Monthly budgets</a>
                 <a href="#gemini-smoke-test">Gemini smoke test</a>
               </nav>
               <DemoPreparation key={brandId} brandId={brandId} onBrandChange={setBrandId} />
+              <PatternLabelControls key={`pattern-labels-${brandId}`} brandId={brandId} />
               <DemoCollectionControls key={`collection-${brandId}`} brandId={brandId} />
               <BudgetSettings />
               <GeminiSmokeTest />

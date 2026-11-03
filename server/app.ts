@@ -34,6 +34,7 @@ import { attachBrandDemo } from "./demo/api.js";
 import { attachCreatorResearch } from "./creators/api.js";
 import { attachDemoCollection } from "./demo/collection-api.js";
 import { attachDemoReadiness } from "./demo/readiness-api.js";
+import { attachPatternLabelling } from "./demo/pattern-labelling-api.js";
 import { canonicalWorkspaceBrands, resolveDemoBrandId, workspaceAd, linkedWorkspaceAnalyses } from "./demo/reconcile.js";
 import { existsSync } from "node:fs";
 import { resolve } from "node:path";
@@ -251,6 +252,7 @@ export function createApp(db: DatabaseSync = openDatabase()) {
   attachLabelling(app, db, video);
   attachGeminiSmoke(app, db, video);
   attachBrandDemo(app, db);
+  attachPatternLabelling(app, db);
   attachDemoCollection(app, db, video);
   attachCreatorResearch(app, db);
   attachDemoReadiness(app, db);
