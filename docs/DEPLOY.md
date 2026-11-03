@@ -1,5 +1,22 @@
 # Deploying Exter on Render
 
+## Low-cost kernel foundation release
+
+This release adds the kernel plan, fixture-tested connector contracts and an
+authenticated `/api/kernel/status` route. It does not enable the new extraction
+pipeline or start a worker job. Deploy the latest `exter-test-drive` commit using
+the existing service configuration. Keep the current persistent disk, credentials
+and reference Gemini model setting. No new Render resources or model downloads
+are required for this release; do not apply the blueprint just for this change.
+
+TikTok remains `not_connected` while either `TIKTOK_CLIENT_KEY` or
+`TIKTOK_CLIENT_SECRET` is absent. Meta remains `not_connected` without
+`META_ACCESS_TOKEN`. Configured credentials are not evidence of API approval.
+Enter future credentials only in secure Render environment settings. The
+candidate pipeline stays `not_ready` until shared artifact transport, worker
+capacity and labelled-set evaluation pass the gates in
+[the kernel plan](../research/KERNEL-REBUILD-PLAN.md).
+
 ## Current deployment and the new blueprint
 
 The existing Node service auto-deploys `exter-test-drive`. A Git push updates its code,

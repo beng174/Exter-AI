@@ -35,6 +35,7 @@ import { attachCreatorResearch } from "./creators/api.js";
 import { attachDemoCollection } from "./demo/collection-api.js";
 import { attachDemoReadiness } from "./demo/readiness-api.js";
 import { attachPatternLabelling } from "./demo/pattern-labelling-api.js";
+import { attachKernelStatus } from "./kernel/api.js";
 import { canonicalWorkspaceBrands, resolveDemoBrandId, workspaceAd, linkedWorkspaceAnalyses } from "./demo/reconcile.js";
 import { existsSync } from "node:fs";
 import { resolve } from "node:path";
@@ -246,6 +247,7 @@ export function createApp(db: DatabaseSync = openDatabase()) {
   });
   app.use(["/api/budgets", "/api/gemini-smoke", "/api/labelling", "/api/creator-research", "/api/brands", "/api/brand-research"], protectSettingsMutation);
   attachInfrastructure(app, db);
+  attachKernelStatus(app);
   attachConnections(app, db);
   attachPublicMonitor(app, db);
   const video = attachVideoAnalysis(app, db);

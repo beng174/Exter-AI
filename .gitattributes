@@ -1,0 +1,2 @@
+# Preserve pinned third-party skill bytes, including their original line endings.
+research/codex-skills/vendor/** -text -whitespace

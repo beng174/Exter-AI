@@ -1,0 +1,430 @@
+{
+  "repository": "https://github.com/openai/skills",
+  "revision": "49f948faa9258a0c61caceaf225e179651397431",
+  "downloadedAt": "2026-11-03",
+  "activation": "Archived, not automatically loaded into context",
+  "skills": [
+    {
+      "name": "define-goal",
+      "sourcePath": ".curated/define-goal",
+      "sourceUrl": "https://github.com/openai/skills/tree/49f948faa9258a0c61caceaf225e179651397431/skills/.curated/define-goal",
+      "files": [
+        {
+          "path": "LICENSE.txt",
+          "sha256": "4dd13869245e356246a5b770723247bbb80a8f07a181d1d3d873a1734297cdb9"
+        },
+        {
+          "path": "SKILL.md",
+          "sha256": "708df89ff19cbae82a762efae036735d1914b5c7e44df1832e0b723f6cd9ee30"
+        },
+        {
+          "path": "agents/openai.yaml",
+          "sha256": "9d870a5d594130261173d7a4bd3fd9221a71eff34c347a7c782da5046fd23cb9"
+        }
+      ]
+    },
+    {
+      "name": "gh-address-comments",
+      "sourcePath": ".curated/gh-address-comments",
+      "sourceUrl": "https://github.com/openai/skills/tree/49f948faa9258a0c61caceaf225e179651397431/skills/.curated/gh-address-comments",
+      "files": [
+        {
+          "path": "LICENSE.txt",
+          "sha256": "58d1e17ffe5109a7ae296caafcadfdbe6a7d176f0bc4ab01e12a689b0499d8bd"
+        },
+        {
+          "path": "SKILL.md",
+          "sha256": "77389eefd3fb6584210668ca8e43f4b8de87e7722ddd953474bc9e24cdfaaedd"
+        },
+        {
+          "path": "agents/openai.yaml",
+          "sha256": "12cf845a78254dde85e60eefb45a60e6ce2129d321f3e1d691d4ebca9a140861"
+        },
+        {
+          "path": "assets/github-small.svg",
+          "sha256": "ee05e92d373d4d84f4612af3c1090ef67698d421bbe30896a4ed5a00cb86a069"
+        },
+        {
+          "path": "assets/github.png",
+          "sha256": "d55a9baa41798d8b5108e3058df3a5bda09914ea9fd73b49929cc38a8832424f"
+        },
+        {
+          "path": "scripts/fetch_comments.py",
+          "sha256": "d7bc64f6b26f7482f9ca9dd7c923a5b8b20e1ef13491ae2d9052cd208a7c1ad1"
+        }
+      ]
+    },
+    {
+      "name": "gh-fix-ci",
+      "sourcePath": ".curated/gh-fix-ci",
+      "sourceUrl": "https://github.com/openai/skills/tree/49f948faa9258a0c61caceaf225e179651397431/skills/.curated/gh-fix-ci",
+      "files": [
+        {
+          "path": "LICENSE.txt",
+          "sha256": "4dd13869245e356246a5b770723247bbb80a8f07a181d1d3d873a1734297cdb9"
+        },
+        {
+          "path": "SKILL.md",
+          "sha256": "7b326b4a2f0f5f85122144628ec02077e48841e0e0e82efce88b3415bcfb7c26"
+        },
+        {
+          "path": "agents/openai.yaml",
+          "sha256": "36f73b9450504983d1647c960689596f59bf9147c14b1b43162912ed7ada9af6"
+        },
+        {
+          "path": "assets/github-small.svg",
+          "sha256": "ee05e92d373d4d84f4612af3c1090ef67698d421bbe30896a4ed5a00cb86a069"
+        },
+        {
+          "path": "assets/github.png",
+          "sha256": "d55a9baa41798d8b5108e3058df3a5bda09914ea9fd73b49929cc38a8832424f"
+        },
+        {
+          "path": "scripts/inspect_pr_checks.py",
+          "sha256": "9459e5b03f86785d184a83e5cd8d621b832e918ec04158a2962d867785812c6c"
+        }
+      ]
+    },
+    {
+      "name": "playwright",
+      "sourcePath": ".curated/playwright",
+      "sourceUrl": "https://github.com/openai/skills/tree/49f948faa9258a0c61caceaf225e179651397431/skills/.curated/playwright",
+      "files": [
+        {
+          "path": "LICENSE.txt",
+          "sha256": "9a7110fc2d2f964038e5dc49128f908f29f47a574c961cba16085914e879cbda"
+        },
+        {
+          "path": "NOTICE.txt",
+          "sha256": "417d5d3372914ecfd9fe102ac1d7dc2119253209f9718d6c222f616876c1904b"
+        },
+        {
+          "path": "SKILL.md",
+          "sha256": "0ffaabcc8e0990627c4725f18bf1c7955534a796c1c199e872909de2013ce6a8"
+        },
+        {
+          "path": "agents/openai.yaml",
+          "sha256": "ddda43720fc566fffa45264be8f17f7745a3cee28d5245d41d3b963bc9967230"
+        },
+        {
+          "path": "assets/playwright-small.svg",
+          "sha256": "f1d213c0f76735d8272c3d3e9fbf71fe7b894e2d1588907044c780f2c33a9732"
+        },
+        {
+          "path": "assets/playwright.png",
+          "sha256": "521669f088c838196c6c852ccc9abdd7234d8f37fc9a8a7a9af7db2d50193381"
+        },
+        {
+          "path": "references/cli.md",
+          "sha256": "7c069a8206ba20b9ddbdc42436b04de30bb3aa4a825ba98680757ee62e954900"
+        },
+        {
+          "path": "references/workflows.md",
+          "sha256": "a2b5835a00ebee3906c146adf7f764f7718ea3f89a8702d86eaa135dfe0fc8c2"
+        },
+        {
+          "path": "scripts/playwright_cli.sh",
+          "sha256": "aa3fdff5d0e4556177f4dfd5f04117e772aa54f94b6a2e34b6c0edf629c6b9b5"
+        }
+      ]
+    },
+    {
+      "name": "render-deploy",
+      "sourcePath": ".curated/render-deploy",
+      "sourceUrl": "https://github.com/openai/skills/tree/49f948faa9258a0c61caceaf225e179651397431/skills/.curated/render-deploy",
+      "files": [
+        {
+          "path": "LICENSE.txt",
+          "sha256": "4dd13869245e356246a5b770723247bbb80a8f07a181d1d3d873a1734297cdb9"
+        },
+        {
+          "path": "SKILL.md",
+          "sha256": "c17c75adeb1834ed5cee1e440a651ae476c4101cd63762fcd9a58eada917552d"
+        },
+        {
+          "path": "agents/openai.yaml",
+          "sha256": "9d14eae8aad5f2e02112f1003e823df2da2b5b5df626fae4439f44349f59d291"
+        },
+        {
+          "path": "assets/docker.yaml",
+          "sha256": "3fd98d72fc490df5c2a57ee5ddb3997347d31ea72ac68035f6442e787a19e091"
+        },
+        {
+          "path": "assets/go-api.yaml",
+          "sha256": "fed7f5f2f59dc98cfc505533177d7b35dd3a993e6a93d0a6be1fae59a676af0b"
+        },
+        {
+          "path": "assets/nextjs-postgres.yaml",
+          "sha256": "0c3d482632b88c0e5f3dc620d32b06216b356205b1fd988f69b6fc69ee41d2d3"
+        },
+        {
+          "path": "assets/node-express.yaml",
+          "sha256": "1785a380074f7439e983f0cd50381559fd804a76c56f8d2da7d988a30ac8b519"
+        },
+        {
+          "path": "assets/python-django.yaml",
+          "sha256": "ce9e540e8cff7171557223044f61a83a058f0012831d07f99750cac70a4e236c"
+        },
+        {
+          "path": "assets/render-small.svg",
+          "sha256": "27cc74f766850724ac4a01bda8fb4a765a997522cdf5b93748e2e0c546193623"
+        },
+        {
+          "path": "assets/render.png",
+          "sha256": "becffed2fbc78e10cf25fb7837299b30bed33764bdd1ba521d7b6bd4e9167693"
+        },
+        {
+          "path": "assets/static-site.yaml",
+          "sha256": "d0a7df7c7a987049ec3609c28f1fdeef8e2e01f534c64372c6079746df286ac1"
+        },
+        {
+          "path": "references/blueprint-spec.md",
+          "sha256": "52cdb41c930c22ec5578c2e56cef33ffbba910ef6c72de57965908be7ec54139"
+        },
+        {
+          "path": "references/codebase-analysis.md",
+          "sha256": "54c4fe84ae50a4b358f7c9048dfcd68f9eddd88ddfbe24c50b4be7949dc9f6a7"
+        },
+        {
+          "path": "references/configuration-guide.md",
+          "sha256": "f0bdee2c78db76066e797139b1ee1230cf277192e8fbe9c42d277e82bef2ec40"
+        },
+        {
+          "path": "references/deployment-details.md",
+          "sha256": "fa6aa90a707494fcc9438b65829ef4891b9ed03c1cf69d6323fbd997b1f6782a"
+        },
+        {
+          "path": "references/direct-creation.md",
+          "sha256": "3b148def3c12061582229599616b680f57972c86a8782e22a765cf261ec80adc"
+        },
+        {
+          "path": "references/error-patterns.md",
+          "sha256": "b5556cdd3ba832e8f33602cf207cd80872df9c89ed17fe92129a56903176675b"
+        },
+        {
+          "path": "references/post-deploy-checks.md",
+          "sha256": "bd1e3e24abe6c9eb63164ac8ada9b285ceaffbd1722f58bbc1d3d94af4c59911"
+        },
+        {
+          "path": "references/runtimes.md",
+          "sha256": "285b66f9fbb7b20195be80d3bc91bdfc82944c779debbffad85f08ba338b414f"
+        },
+        {
+          "path": "references/service-types.md",
+          "sha256": "459590bed5b5600f155f8a9d39c7ca3a32e307270e58d636b30e7b25e6ca4e64"
+        },
+        {
+          "path": "references/troubleshooting-basics.md",
+          "sha256": "f999b13fc56ff62ccf6eec593d0e4cee94e52dec27a815e40d68532bf558a4ca"
+        }
+      ]
+    },
+    {
+      "name": "security-best-practices",
+      "sourcePath": ".curated/security-best-practices",
+      "sourceUrl": "https://github.com/openai/skills/tree/49f948faa9258a0c61caceaf225e179651397431/skills/.curated/security-best-practices",
+      "files": [
+        {
+          "path": "LICENSE.txt",
+          "sha256": "4dd13869245e356246a5b770723247bbb80a8f07a181d1d3d873a1734297cdb9"
+        },
+        {
+          "path": "SKILL.md",
+          "sha256": "7b3dae1ffc5434d890f3c65c8f552af52d0307fab3b35dec13013c9ca3844c4f"
+        },
+        {
+          "path": "agents/openai.yaml",
+          "sha256": "6e9c6f2edce448eb2b589f81ad6e3f722665021785513bcbfd0bf7b86b529171"
+        },
+        {
+          "path": "references/golang-general-backend-security.md",
+          "sha256": "a73c47c34497b120672d48411fe51dc90d426a571801a0b3f649e2ce4ec658b4"
+        },
+        {
+          "path": "references/javascript-express-web-server-security.md",
+          "sha256": "427835cbb5be7ba96172ea6ca9af80ddd4419c833e9ebf870996740c80d8406c"
+        },
+        {
+          "path": "references/javascript-general-web-frontend-security.md",
+          "sha256": "3a7bc7b3f6e7ff043db9dbaa8933894d7a19d987d0607e4ddae5d70184a63d63"
+        },
+        {
+          "path": "references/javascript-jquery-web-frontend-security.md",
+          "sha256": "bcbad2fa6c2a02709e47e889e70102c76886bf36bc798624d27db570eccf40da"
+        },
+        {
+          "path": "references/javascript-typescript-nextjs-web-server-security.md",
+          "sha256": "71c773f7a97ce60c853adfa100b3d88b3b7bc4c6b8acaef1432ffabd923ee182"
+        },
+        {
+          "path": "references/javascript-typescript-react-web-frontend-security.md",
+          "sha256": "d3030c0f24bddb56b9bbb91bbec1ee49eb7778bce4d3e0297b2641b2fc6b0d9c"
+        },
+        {
+          "path": "references/javascript-typescript-vue-web-frontend-security.md",
+          "sha256": "77c6a747f9f17e3df03aad0fcb20d99ac7898001b81aef8b80908e45ac14a688"
+        },
+        {
+          "path": "references/python-django-web-server-security.md",
+          "sha256": "4fb69b5d45f10e588d1a8c35cdc5f59e18910f6b46a93e2d342d90f286f8dfd2"
+        },
+        {
+          "path": "references/python-fastapi-web-server-security.md",
+          "sha256": "7383c7f4fc271190b05e562ada7e825982a2c76b6c79a9f95a1da7687b65a616"
+        },
+        {
+          "path": "references/python-flask-web-server-security.md",
+          "sha256": "9606d69190c04c167fdeac57e61297547a57b0542fd89dede36f355970446929"
+        }
+      ]
+    },
+    {
+      "name": "security-threat-model",
+      "sourcePath": ".curated/security-threat-model",
+      "sourceUrl": "https://github.com/openai/skills/tree/49f948faa9258a0c61caceaf225e179651397431/skills/.curated/security-threat-model",
+      "files": [
+        {
+          "path": "LICENSE.txt",
+          "sha256": "4dd13869245e356246a5b770723247bbb80a8f07a181d1d3d873a1734297cdb9"
+        },
+        {
+          "path": "SKILL.md",
+          "sha256": "1283c0dd62a8104d9edda4583569b5d8510b4ddaa45120687c999250fd96bad2"
+        },
+        {
+          "path": "agents/openai.yaml",
+          "sha256": "3319b59736312abceca614e341c0e59cae47263e3b58a22b2b5ddf1e5fc8c227"
+        },
+        {
+          "path": "references/prompt-template.md",
+          "sha256": "81a59aa3fb3ac3a739d6a26ab38e4015965f215581ee54becef21a2b121ec29b"
+        },
+        {
+          "path": "references/security-controls-and-assets.md",
+          "sha256": "d536cfa9acad2523dc39134bcf33b9566c29dd9a57b407cbc9901637230c6b98"
+        }
+      ]
+    },
+    {
+      "name": "openai-docs",
+      "sourcePath": ".system/openai-docs",
+      "sourceUrl": "https://github.com/openai/skills/tree/49f948faa9258a0c61caceaf225e179651397431/skills/.system/openai-docs",
+      "files": [
+        {
+          "path": "LICENSE.txt",
+          "sha256": "4dd13869245e356246a5b770723247bbb80a8f07a181d1d3d873a1734297cdb9"
+        },
+        {
+          "path": "SKILL.md",
+          "sha256": "669a42ccf3323fe0ceda6e466730bcb05dddf1e0c220d6523ea504909fc49165"
+        },
+        {
+          "path": "agents/openai.yaml",
+          "sha256": "004c73f6e01409cfd7db699e815f5fed4ced3b63dd2cc25874f6791eae7fd4bc"
+        },
+        {
+          "path": "assets/openai-small.svg",
+          "sha256": "45be1f0757eb18889eefb1e7db79668ef46a275dc4e0e78e8df5ebd7f6cdeadc"
+        },
+        {
+          "path": "assets/openai.png",
+          "sha256": "156cc84d7332bfe95b310350bd470b690d22aa33d65340cc6c2e06022946194c"
+        },
+        {
+          "path": "references/latest-model.md",
+          "sha256": "997e0c438432f983aae1a5e8bfec27d936314501da363bb40db4e146bbfa5fc1"
+        },
+        {
+          "path": "references/prompting-guide.md",
+          "sha256": "ecdf49b4a824a87367c7a6ec3c0218e2c5783dff951b30a101c3b6a95152aafa"
+        },
+        {
+          "path": "references/upgrade-guide.md",
+          "sha256": "563784eb13ad1b44c3a592f940aa7ac2086ebeb97df3f4a09ba038b2f1564d39"
+        },
+        {
+          "path": "scripts/fetch-codex-manual.mjs",
+          "sha256": "f53eb6d2f286e9efcc397e8bee93a938e37296c90953e4e06e94899ef1b6c363"
+        },
+        {
+          "path": "scripts/resolve-latest-model-info.js",
+          "sha256": "3fc420a12ab1a344ac49b852138f599d01e3ac561ec86426ba161f42a03d3e52"
+        }
+      ]
+    },
+    {
+      "name": "skill-creator",
+      "sourcePath": ".system/skill-creator",
+      "sourceUrl": "https://github.com/openai/skills/tree/49f948faa9258a0c61caceaf225e179651397431/skills/.system/skill-creator",
+      "files": [
+        {
+          "path": "LICENSE.txt",
+          "sha256": "cfc7749b96f63bd31c3c42b5c471bf756814053e847c10f3eb003417bc523d30"
+        },
+        {
+          "path": "SKILL.md",
+          "sha256": "a17383bfb1448637ac1f757ad891ddb9676fa30b0eff620200f0e1cbc0cc0d50"
+        },
+        {
+          "path": "agents/openai.yaml",
+          "sha256": "fcc3ba02bdf8d6df1f891637cf5336d2d7ef87bb8910fa622bd150c8e0d4c55b"
+        },
+        {
+          "path": "references/openai_yaml.md",
+          "sha256": "9fb5928b7f4a746fdb39df503ebbd7a659d5e64b47f85a60626aa1a03fd76b17"
+        },
+        {
+          "path": "scripts/generate_openai_yaml.py",
+          "sha256": "b8f6be33a9d72dd7a8da02e7a9fffea23dc79e94862e6dd6358b57a8899d8f73"
+        },
+        {
+          "path": "scripts/init_skill.py",
+          "sha256": "bcb8982d3f033a094f2f1be43123ac8537e2562d25d8ba4d8ef2196ae514d96d"
+        },
+        {
+          "path": "scripts/quick_validate.py",
+          "sha256": "6cc9dc3199c935916cf6f73fcbbbb0e3bb1b58c8f5109fefa499978908164f51"
+        }
+      ]
+    },
+    {
+      "name": "skill-installer",
+      "sourcePath": ".system/skill-installer",
+      "sourceUrl": "https://github.com/openai/skills/tree/49f948faa9258a0c61caceaf225e179651397431/skills/.system/skill-installer",
+      "files": [
+        {
+          "path": "LICENSE.txt",
+          "sha256": "cfc7749b96f63bd31c3c42b5c471bf756814053e847c10f3eb003417bc523d30"
+        },
+        {
+          "path": "SKILL.md",
+          "sha256": "83b31cffb2552a923f4152f0338bea548274accc5489d151a95bced8e7bcfb74"
+        },
+        {
+          "path": "agents/openai.yaml",
+          "sha256": "5ce223d8b1070b82c42298538f1b8d376f788eb9e7a42a987e8c094070d73f0e"
+        },
+        {
+          "path": "assets/skill-installer-small.svg",
+          "sha256": "3928703ff00dc1a681e7a22401843b7edcbd4b2051651ce4c43b75f7e140504e"
+        },
+        {
+          "path": "assets/skill-installer.png",
+          "sha256": "a3a31e72c3a8b753893a9ca9bad4a99ceb38efd6f6c3e0f98a38873256d3b36c"
+        },
+        {
+          "path": "scripts/github_utils.py",
+          "sha256": "61c1bbe2ae217433b4b6f9f09f21aca4df52c12598068343ade719f706e4859b"
+        },
+        {
+          "path": "scripts/install-skill-from-github.py",
+          "sha256": "0fbbd36e8ea294442c0bd48d6f610a2e8656216bfef5c322f1dcf448ef2f09f1"
+        },
+        {
+          "path": "scripts/list-skills.py",
+          "sha256": "e4e1f78ca3d045827f2a05cfd99fae57cc7c1a1bfeba8704029108834debff35"
+        }
+      ]
+    }
+  ]
+}

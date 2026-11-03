@@ -4,6 +4,7 @@ import type { Express } from "express";
 import { infrastructureDatabase } from "./database.js";
 import { budgetStatus } from "./budget.js";
 import { metaStatus } from "../connectors/meta-library.js";
+import { tiktokCommercialStatus } from "../connectors/tiktok-commercial.js";
 import { enqueueCollection } from "./jobs.js";
 type BudgetPool = ReturnType<typeof infrastructureDatabase>;
 
@@ -33,12 +34,13 @@ export function attachInfrastructure(app: Express, db: DatabaseSync) {
   attachBudgetRoutes(app);
   app.get("/api/infrastructure/status", async (_req,res) => {
     const meta = metaStatus();
-    if (!process.env.DATABASE_URL) { res.json({ meta, database: "not_configured", budgets: [], message: "Durable collection and paid inference paused: DATABASE_URL is not configured." }); return; }
+    const tiktok=tiktokCommercialStatus();
+    if (!process.env.DATABASE_URL) { res.json({ meta, tiktok, database: "not_configured", budgets: [], message: "Durable collection and paid inference paused: DATABASE_URL is not configured." }); return; }
     try {
       const pool = infrastructureDatabase();
       const [budgets,runs] = await Promise.all([budgetStatus(pool),pool.query("SELECT id,watchlist_id,status,records_new,records_updated,started_at,finished_at,last_successful_check,errors FROM collection_runs ORDER BY started_at DESC LIMIT 20")]);
-      res.json({ meta, database: "connected", budgets, runs: runs.rows });
-    } catch { res.json({ meta, database: "unavailable", message: "Collection database unavailable. Check DATABASE_URL and run migrations." }); }
+      res.json({ meta, tiktok, database: "connected", budgets, runs: runs.rows });
+    } catch { res.json({ meta, tiktok, database: "unavailable", message: "Collection database unavailable. Check DATABASE_URL and run migrations." }); }
   });
   app.get("/api/public/meta/watchlists", async (req,res) => {
     if (typeof req.query.workspaceId !== "string" || !readBrand(db,req.query.workspaceId)) { res.status(400).json({ error: "Choose an existing workspace." }); return; }

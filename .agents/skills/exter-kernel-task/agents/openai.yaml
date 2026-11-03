@@ -1,0 +1,4 @@
+interface:
+  display_name: "Exter kernel task"
+  short_description: "Implement one tested Exter kernel backlog item"
+  default_prompt: "Use $exter-kernel-task to complete the next ready backend task and update its evidence."

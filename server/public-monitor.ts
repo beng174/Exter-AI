@@ -1,4 +1,5 @@
 import { metaStatus } from "./connectors/meta-library.js";
+import { tiktokCommercialStatus } from "./connectors/tiktok-commercial.js";
 import { queueAnalysis } from "./brain.js";
 import type { Express } from "express";
 import type { DatabaseSync } from "node:sqlite";
@@ -139,7 +140,7 @@ export function attachPublicMonitor(
     res.json({
       scope: "public_competitor_and_category",
       clientAccountRequired: false,
-      providers: providers.map(provider => provider.platform === "Meta" ? { ...provider, method: "Meta Ad Library API and browser media capture", ...metaStatus() } : provider),
+      providers: providers.map(provider => provider.platform === "Meta" ? { ...provider, method: "Meta Ad Library API and browser media capture", ...metaStatus() } : provider.platform === "TikTok" ? { ...provider, ...tiktokCommercialStatus() } : provider),
       disclosure:
         "Submitted public URLs are collected only on request. Broad discovery and ongoing category polling are not connected. No claim to read every post or to know public competitor conversions.",
     }),

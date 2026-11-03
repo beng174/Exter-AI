@@ -1,7 +1,15 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { MetaLibraryConnector, META_FIELDS } from "../server/connectors/meta-library.js";
+import { readFileSync } from "node:fs";
+import { MetaLibraryConnector, META_FIELDS, metaStatus } from "../server/connectors/meta-library.js";
 const fakeToken = "test-fixture-token";
+test("Meta fixture pages preserve exact IDs, observed zero and missing reach without claiming live verification",async()=>{
+  const fixture=readFileSync(new URL("./fixtures/connectors/meta-page.json",import.meta.url),"utf8");
+  const connector=new MetaLibraryConnector({token:fakeToken,fetch:async()=>new Response(fixture,{headers:{"Content-Type":"application/json"}})});
+  const result=await connector.page({pageIds:["172851066181411"],countries:["GB"]});
+  assert.equal(result.rows[0].id,"7000000000000000001");assert.equal(result.rows[0].eu_total_reach,0);assert.equal(result.rows[1].eu_total_reach,undefined);assert.equal(result.after,"fixture-next");
+  assert.equal(metaStatus({META_ACCESS_TOKEN:" "}).status,"not_connected");assert.equal(metaStatus({META_ACCESS_TOKEN:"bad\nvalue"}).status,"not_connected");
+});
 test("missing Meta credential gives an actionable disconnected status without a network call", async () => {
   const connector = new MetaLibraryConnector({ token: "", fetch: async () => { throw new Error("must not fetch"); } });
   await assert.rejects(connector.page({ pageIds: ["12"], countries: ["GB"] }), /Meta not connected/);

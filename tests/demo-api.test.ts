@@ -19,6 +19,9 @@ test("demo reads are authenticated and do not collect, infer, fabricate samples 
   const headers = { authorization: `Basic ${Buffer.from("demo-fixture:fixture-only-password").toString("base64")}` };
   try {
     const before = db.prepare("SELECT total_changes() AS n").get() as { n: number };
+    assert.equal((await fetch(base + "/api/kernel/status")).status,401);
+    const kernel=await (await fetch(base + "/api/kernel/status",{headers})).json();
+    assert.equal(kernel.candidate.status,"not_ready");assert.equal(kernel.candidate.enabled,false);assert.equal(kernel.workStartsOnRead,false);
     for (const path of [`/api/brands/${brand.id}/demo`, `/api/creator-research?brandId=${brand.id}`, `/api/demo-readiness?brandId=${brand.id}`]) {
       assert.equal((await fetch(base + path)).status, 401);
       const response = await fetch(base + path, { headers });

@@ -1,0 +1,338 @@
+{
+  "version": 1,
+  "updatedAt": "2026-11-03",
+  "priority": "steady low-cost backend kernel",
+  "automation": "One bounded ready task; no autonomous paid prompt loop",
+  "tasks": [
+    {
+      "id": "K00",
+      "title": "Repository kernel operating system",
+      "dependsOn": [],
+      "status": "done",
+      "goal": "Keep requirements, backlog and skills discoverable without loading everything.",
+      "files": [
+        "research/PRODUCT-SPEC.md",
+        "research/KERNEL-REBUILD-PLAN.md",
+        "AGENTS.md",
+        "research/codex-skills/README.md"
+      ],
+      "acceptance": [
+        "Spec records supplied changes and unknown details.",
+        "One active project skill routes to one task.",
+        "Upstream bundles have pinned revisions and hashes."
+      ],
+      "checks": [
+        "npm run kernel:next",
+        "npm run check"
+      ],
+      "blockers": [],
+      "evidence": [
+        "10 official public skill bundles pinned and hash-verified; one small project router active",
+        "npm run kernel:next returns only the next task",
+        "305 regression tests and production build pass for the current foundation"
+      ]
+    },
+    {
+      "id": "K01",
+      "title": "Public connector protocol foundation",
+      "dependsOn": [
+        "K00"
+      ],
+      "status": "done",
+      "goal": "Implement TikTok client credentials and strengthen Meta protocol handling against clearly identified fixtures.",
+      "files": [
+        "server/connectors/meta-library.ts",
+        "server/connectors/tiktok-commercial.ts",
+        "tests/fixtures/connectors",
+        "tests/meta-connector.test.ts"
+      ],
+      "acceptance": [
+        "No required credentials means not_connected and zero network calls.",
+        "Exact IDs survive i64 values; pagination and retries are bounded.",
+        "Tokens stay in memory; errors/status never expose credentials.",
+        "Documented examples and synthetic fixtures are not called live recordings."
+      ],
+      "checks": [
+        "node --import tsx --test tests/meta-connector.test.ts tests/tiktok-commercial.test.ts"
+      ],
+      "blockers": [],
+      "evidence": [
+        "tests/tiktok-commercial.test.ts: token flow, no-key network guard, exact i64 IDs, cursor binding and error sanitisation",
+        "tests/meta-connector.test.ts: fixture pagination, missing reach, observed zero and disconnected status",
+        "Genuine provider recordings/live approval remain a separate blocked sign-off task."
+      ]
+    },
+    {
+      "id": "K01-LIVE",
+      "title": "Validate approved APIs against genuine sanitised recordings",
+      "dependsOn": [
+        "K01"
+      ],
+      "status": "blocked",
+      "goal": "Verify approved Meta/TikTok endpoint access on Render and retain safe real response fixtures.",
+      "files": [
+        "tests/fixtures/connectors/PROVENANCE.md",
+        "server/connectors/meta-library.ts",
+        "server/connectors/tiktok-commercial.ts"
+      ],
+      "acceptance": [
+        "Keys stay in secure Render settings, never chat or repository.",
+        "Success, empty, denied, rate-limited and paginated actual responses are reviewed without credentials.",
+        "Fixture-tested and live-verified statuses remain distinct."
+      ],
+      "checks": [
+        "Render-only connector verification with approved keys"
+      ],
+      "blockers": [
+        "TikTok keys are not set; approved runtime API access and genuine Meta recordings are not yet supplied."
+      ],
+      "evidence": []
+    },
+    {
+      "id": "K02",
+      "title": "Durable worker and shared artifacts",
+      "dependsOn": [
+        "K01"
+      ],
+      "status": "ready",
+      "goal": "Separate web, PostgreSQL queue and extraction worker; implement scoped artifact transport.",
+      "files": [
+        "server/infrastructure/jobs.ts",
+        "server/video/media.ts",
+        "render.yaml",
+        "research/KERNEL-REBUILD-PLAN.md"
+      ],
+      "acceptance": [
+        "A worker never assumes access to the web service private disk.",
+        "Scoped hash-verified artifact interface, lease, retry and cancellation tests pass.",
+        "No browser or local ML session starts on the web service.",
+        "Authentication/permission failures pause until corrected; transient retries are bounded and cannot silently replay uncertain paid work."
+      ],
+      "checks": [
+        "npm run test:infrastructure",
+        "npm run check"
+      ],
+      "blockers": [
+        "Choose/configure shared object storage or an authenticated artifact broker before a live cross-service run."
+      ],
+      "evidence": []
+    },
+    {
+      "id": "K03",
+      "title": "Dedupe, normalisation and scenes",
+      "dependsOn": [
+        "K02"
+      ],
+      "status": "ready",
+      "goal": "Cache exact media features and extract bounded source-timed frames using ffmpeg/PySceneDetect.",
+      "files": [
+        "server/video/normalize.ts",
+        "worker",
+        "shared/analysis-kernel.ts"
+      ],
+      "acceptance": [
+        "Identical media and stage versions reuse features.",
+        "Frame/audio byte and duration limits are enforced.",
+        "Near-duplicate similarity never silently reuses labels as an exact match."
+      ],
+      "checks": [
+        "npm test",
+        "worker extraction fixture tests"
+      ],
+      "blockers": [],
+      "evidence": []
+    },
+    {
+      "id": "K04",
+      "title": "Speech and audio features",
+      "dependsOn": [
+        "K03"
+      ],
+      "status": "ready",
+      "goal": "Integrate pinned faster-whisper and YAMNet stages on the worker.",
+      "files": [
+        "worker",
+        "research/LABELLING-GUIDE.md"
+      ],
+      "acceptance": [
+        "Spoken voiceover is separated from music/lyrics.",
+        "Silence and stage failure are distinct.",
+        "Model versions, source times, quality and peak RSS are recorded."
+      ],
+      "checks": [
+        "speech/music fixture evaluation",
+        "worker memory benchmark"
+      ],
+      "blockers": [
+        "Model weights/licences and the worker memory limit need explicit selection."
+      ],
+      "evidence": []
+    },
+    {
+      "id": "K05",
+      "title": "OCR and visual presence features",
+      "dependsOn": [
+        "K03"
+      ],
+      "status": "ready",
+      "goal": "Integrate RapidOCR and versioned face/product detectors.",
+      "files": [
+        "worker",
+        "shared/analysis-kernel.ts"
+      ],
+      "acceptance": [
+        "OCR is source-timed and deduplicated.",
+        "Face presence never becomes identity/demographics.",
+        "Product candidates never become verified brand identity without evidence."
+      ],
+      "checks": [
+        "OCR/detection fixture evaluation",
+        "worker memory benchmark"
+      ],
+      "blockers": [
+        "Pin model weights and verify licences before production."
+      ],
+      "evidence": []
+    },
+    {
+      "id": "K06",
+      "title": "Compact Flash-Lite label adapter",
+      "dependsOn": [
+        "K04",
+        "K05"
+      ],
+      "status": "ready",
+      "goal": "Use bounded evidence, fixed schema and labels-only output with minimal thinking.",
+      "files": [
+        "server/kernel/labels-prompt.ts",
+        "server/gemini/transport.ts",
+        "shared/analysis-kernel.ts"
+      ],
+      "acceptance": [
+        "No full video or repeated transcript output in the cheap request.",
+        "Stable instructions precede dynamic evidence.",
+        "Requested/served model, thought/input/output/cache tokens and distinct GBP accounting are retained.",
+        "A cache hit avoids paid dispatch."
+      ],
+      "checks": [
+        "node --import tsx --test tests/kernel-prompt.test.ts",
+        "recorded Gemini request/response tests"
+      ],
+      "blockers": [
+        "Model-specific GBP rates and a Render-only smoke test are required."
+      ],
+      "evidence": [
+        "server/kernel/labels-prompt.ts and kernel-prompt.test.ts provide a pure bounded request/validation foundation; paid worker dispatch is not implemented or enabled."
+      ]
+    },
+    {
+      "id": "K07",
+      "title": "Versioned quality escalation",
+      "dependsOn": [
+        "K06"
+      ],
+      "status": "ready",
+      "goal": "Escalate weak evidence under calibrated, capped, budgeted rules.",
+      "files": [
+        "server/kernel/policy.ts",
+        "server/video/service.ts"
+      ],
+      "acceptance": [
+        "Self-reported model confidence alone never triggers spend.",
+        "Escalation caps and budget guards stop further dispatch.",
+        "Restart does not replay uncertain paid attempts."
+      ],
+      "checks": [
+        "quality/cost/restart policy fixtures"
+      ],
+      "blockers": [
+        "Calibrate thresholds on a labelled development split."
+      ],
+      "evidence": []
+    },
+    {
+      "id": "K08",
+      "title": "Paired reference/candidate evaluation",
+      "dependsOn": [
+        "K07"
+      ],
+      "status": "ready",
+      "goal": "Compare both methods on identical human-labelled media hashes.",
+      "files": [
+        "server/video/evaluate.ts",
+        "scripts/evaluate-video.ts",
+        "research/LABELLING-GUIDE.md"
+      ],
+      "acceptance": [
+        "Report per-field accuracy and error cases, not only one aggregate score.",
+        "Report full worker/storage/model cost and escalation rate.",
+        "Keep a held-out evaluation split and versioned results."
+      ],
+      "checks": [
+        "npm run video:evaluate -- --help",
+        "paired labelled-set benchmark"
+      ],
+      "blockers": [
+        "Required labelled set and measured quality/cost release thresholds."
+      ],
+      "evidence": []
+    },
+    {
+      "id": "K09",
+      "title": "Controlled Render rollout",
+      "dependsOn": [
+        "K08",
+        "K01-LIVE"
+      ],
+      "status": "ready",
+      "goal": "Enable the candidate only after worker resource and recovery gates pass.",
+      "files": [
+        "render.yaml",
+        "Dockerfile",
+        "docs/DEPLOY.md"
+      ],
+      "acceptance": [
+        "Reference pipeline remains available.",
+        "No heavy extraction in the 512MB web process.",
+        "Connection states reflect actual approval/configuration.",
+        "Rollback preserves paid results and media."
+      ],
+      "checks": [
+        "npm test",
+        "npm run build",
+        "npm run secrets:check",
+        "Render capacity/restart checks"
+      ],
+      "blockers": [
+        "Approved worker capacity and artifact credentials."
+      ],
+      "evidence": []
+    },
+    {
+      "id": "K10",
+      "title": "Resume reports and UI from real data",
+      "dependsOn": [
+        "K09"
+      ],
+      "status": "ready",
+      "goal": "Resume the deferred comparison/scoring/export work after the kernel is dependable.",
+      "files": [
+        "research/WINNING-ADS-SPEC.md",
+        "src/components",
+        "server/winning"
+      ],
+      "acceptance": [
+        "Reuse actual API/worker data.",
+        "Review the paused draft before merging; do not treat it as tested.",
+        "Every visualization has basis, denominator and source links."
+      ],
+      "checks": [
+        "browser checks at 1280px/125%",
+        "modelled-score and weekly snapshot tests"
+      ],
+      "blockers": [],
+      "evidence": []
+    }
+  ],
+  "sourcesReviewedAt": "2026-11-03"
+}

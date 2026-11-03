@@ -1,9 +1,11 @@
 import type pg from "pg";
 import { reserveCost } from "../infrastructure/budget.js";
+import { boundedPublicBody } from "./public-json.js";
 export const META_COVERAGE = "Commercial ads delivered in the UK or EU; searchable for one year. Public reach is not conversions or sales. Media requires a separate browser capture.";
 export const META_FIELDS = "id,page_id,page_name,ad_creation_time,ad_delivery_start_time,ad_delivery_stop_time,ad_creative_bodies,ad_creative_link_titles,ad_creative_link_descriptions,ad_creative_link_captions,ad_snapshot_url,publisher_platforms,languages,target_ages,target_gender,target_locations,eu_total_reach,total_reach_by_location,age_country_gender_reach_breakdown,beneficiary_payers";
-export function metaStatus() {
-  return { status: process.env.META_ACCESS_TOKEN ? "configured" : "not_connected", message: process.env.META_ACCESS_TOKEN ? "Meta configured; collection permission is verified on the next run." : "Meta not connected", coverage: META_COVERAGE };
+export function metaStatus(env:Record<string,string|undefined>=process.env) {
+  const configured=Boolean(env.META_ACCESS_TOKEN?.trim()&&!/[\r\n]/.test(env.META_ACCESS_TOKEN));
+  return { status: configured ? "configured" : "not_connected", message: configured ? "Meta configured; collection permission is verified on the next run." : "Meta not connected", coverage: META_COVERAGE };
 }
 export class MetaCollectionError extends Error {
   constructor(public reason: "rate_limited" | "permission" | "unavailable" | "schema", message: string) { super(message); }
@@ -13,7 +15,7 @@ export class MetaLibraryConnector {
   constructor(private readonly options: { token?: string; version?: string; fetch?: typeof fetch } = {}) {}
   async page(query: MetaQuery) {
     const token = this.options.token ?? process.env.META_ACCESS_TOKEN;
-    if (!token) throw new MetaCollectionError("permission", "Meta not connected");
+    if (!token?.trim() || /[\r\n]/.test(token)) throw new MetaCollectionError("permission", "Meta not connected");
     const version = this.options.version ?? process.env.META_API_VERSION ?? "v25.0";
     if (!/^v\d+\.0$/.test(version)) throw new MetaCollectionError("schema", "Invalid META_API_VERSION.");
     if (!query.countries.length || query.countries.some(c => !/^[A-Z]{2}$/.test(c))) throw new MetaCollectionError("schema", "Use two-letter reached-country codes.");
@@ -32,8 +34,9 @@ export class MetaLibraryConnector {
     if (!response.ok) throw new MetaCollectionError(response.status === 429 ? "rate_limited" : [400,401,403].includes(response.status) ? "permission" : "unavailable", `Meta collection failed (HTTP ${response.status}). Check app approval and permissions.`);
     // Never store paging URLs or provider error messages: they may contain credentials.
     if (Number(response.headers.get("content-length")) > 10000000) throw new MetaCollectionError("schema", "Meta page exceeds size limit.");
-    const raw = await response.text();
-    if (raw.length > 10000000) throw new MetaCollectionError("schema", "Meta page exceeds size limit.");
+    let raw:string;
+    try { raw = await boundedPublicBody(response,10000000); }
+    catch { throw new MetaCollectionError("schema", "Meta page could not be read within the size and request limits."); }
     let body: any;
     try { body = JSON.parse(raw); } catch { throw new MetaCollectionError("schema", "Meta returned invalid JSON."); }
     if (body.error || !Array.isArray(body.data) || body.data.length > 100 || body.data.some((r: any) => !r || typeof r.id !== "string" || !/^\d+$/.test(r.id))) throw new MetaCollectionError("schema", "Meta returned an unsupported ad schema.");
@@ -54,8 +57,10 @@ export class MetaLibraryConnector {
   }
 }
 function observedReach(row: any) {
+  const raw=row.eu_total_reach;
+  const eu=typeof raw==="number"?raw:typeof raw==="string"&&/^\d+$/.test(raw)?Number(raw):null;
   return {
-    eu: row.eu_total_reach === undefined || row.eu_total_reach === null ? { type: "unavailable", value: null } : { type: "observed", value: row.eu_total_reach },
+    eu: typeof eu!=="number"||!Number.isSafeInteger(eu)||eu<0 ? { type: "unavailable", value: null } : { type: "observed", value: eu },
     locations: row.total_reach_by_location === undefined || row.total_reach_by_location === null ? { type: "unavailable", value: null } : { type: "observed", value: row.total_reach_by_location },
   };
 }

@@ -1,5 +1,11 @@
 # Exter AI
 
+The current development priority is the stable, low-cost backend kernel. See
+[product requirements](research/PRODUCT-SPEC.md), the
+[rebuild plan](research/KERNEL-REBUILD-PLAN.md), and run `npm run kernel:next`
+to load one bounded task. The existing full-video method remains the reference
+until the worker pipeline passes the labelled-set and resource gates.
+
 The authenticated **Brand demo** view presents saved source evidence, Beta
 opportunities and briefs, creator research, best-practice scores and a Preview
 of future prediction work. Ion8 and Valentte have separate workspaces; missing
