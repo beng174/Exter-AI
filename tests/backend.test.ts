@@ -425,3 +425,17 @@ test("a 10,000-record import aggregates completely and paginates without truncat
     scaleDb.close();
   }
 });
+
+test("owned reporting imports retain ad identity and reporting day for comparison charts", async () => {
+  const created = await post("/api/brands", {name:"Reporting Brand",domain:"reporting.example",category:"Beauty & skincare"});
+  assert.equal(created.status,201); const brand = await created.json();
+  const supplied = row({brand:"Reporting Brand",owned:true,providerAdId:"native-owned-123",metricDate:"2026-11-02",currency:"GBP",conversionEvent:"purchase",conversions:5,spend:50,revenue:150});
+  assert.equal((await post("/api/import",{brandId:brand.id,ads:[supplied]})).status,201);
+  const data = await get(`/api/brands/${brand.id}/demo/intelligence`);
+  assert.equal(data.performance.cohorts.length,1);
+  assert.equal(data.performance.cohorts[0].comparable,true);
+  assert.equal(data.performance.cohorts[0].rows[0].nativeId,"native-owned-123");
+  assert.equal(data.performance.cohorts[0].cpa,10);
+  assert.equal(data.audienceLabels[0].label,"Routine builders");
+  assert.equal((await post("/api/import",{brandId:brand.id,ads:[{...supplied,metricDate:"2026-02-30"}]})).status,400);
+});

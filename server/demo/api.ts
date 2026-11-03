@@ -4,7 +4,8 @@ import { readBrand } from "../db.js";
 import { BrandDemoService } from "./service.js";
 import { WebsiteEvidenceError } from "./website.js";
 import { ensureRequestedDemoWorkspaces } from "./workspaces.js";
-import { reconcileValentteWorkspace, resolveDemoBrandId } from "./reconcile.js";
+import { reconcileValentteWorkspace, resolveDemoBrandId, workspaceAds } from "./reconcile.js";
+import { ownedOutcomes } from "../../shared/owned-outcomes.js";
 import { attachCreativeGallery } from "./gallery.js";
 
 export function attachBrandDemo(app: Express, db: DatabaseSync) {
@@ -26,6 +27,22 @@ export function attachBrandDemo(app: Express, db: DatabaseSync) {
     if (!readBrand(db, resolveDemoBrandId(db, req.params.brandId))) { res.status(404).json({ error: "Brand report not found in this workspace." }); return; }
     try { res.json(service.report(req.params.brandId)); }
     catch { res.status(503).json({ error: "The saved brand report is unavailable. Earlier source evidence was preserved." }); }
+  });
+  app.get("/api/brands/:brandId/demo/intelligence", (req, res) => {
+    res.setHeader("Cache-Control", "private, no-store");
+    const brand = readBrand(db, resolveDemoBrandId(db, req.params.brandId));
+    if (!brand) { res.status(404).json({ error: "Brand not found in this workspace." }); return; }
+    const ads = workspaceAds(db, brand.id).filter(ad => ad.source !== "sample");
+    const labels = new Map<string, Set<string>>();
+    for (const ad of ads) {
+      const supplied = [...(ad.analysis?.inferredAudience || []), ...(["import", "live"].includes(ad.source) && ad.audience ? [ad.audience] : [])];
+      for (const label of new Set(supplied.map(value => value.trim()).filter(value => value && !/^(unknown|unsure|not (?:provided|available|recorded)|unclassified)/i.test(value)))) {
+        const ids = labels.get(label) || new Set<string>(); ids.add(ad.id); labels.set(label, ids);
+      }
+    }
+    res.json({ brandId: brand.id, voice: brand.voice, audienceTotal: ads.length,
+      audienceLabels: [...labels].map(([label, ids]) => ({ id: label, label, adIds: [...ids] })),
+      performance: ownedOutcomes(ads) });
   });
   app.post("/api/brands/:brandId/demo/website", async (req, res) => {
     if (!readBrand(db, resolveDemoBrandId(db, req.params.brandId))) { res.status(404).json({ error: "Brand not found in this workspace." }); return; }

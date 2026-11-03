@@ -189,7 +189,14 @@ function parseImportRow(row: unknown, brand: Brand): Ad {
   const currency = text(r.currency, "currency", 3, true).toUpperCase();
   if (currency && !/^[A-Z]{3}$/.test(currency))
     throw new InputError("currency must be an ISO three-letter code.");
+  const metricDate = text(r.metricDate, "metricDate", 10, true);
+  if (metricDate && (!/^\d{4}-\d{2}-\d{2}$/.test(metricDate) || !Number.isFinite(Date.parse(`${metricDate}T00:00:00Z`)) || new Date(`${metricDate}T00:00:00Z`).toISOString().slice(0,10) !== metricDate || metricDate < "2000-01-01" || metricDate > new Date().toISOString().slice(0,10)))
+    throw new InputError("metricDate must be a valid reporting day (YYYY-MM-DD) between 2000 and today.");
   return {
+    providerAdId: text(r.providerAdId, "providerAdId", 200, true) || undefined,
+    metricDate: metricDate || undefined,
+    ...(metricDate ? { dateBasis: "report" as const } : {}),
+    observedAt: new Date().toISOString(),
     creativeFormats,
     analysis,
     contentSource: r.contentSource === "organic" ? "organic" : "paid",

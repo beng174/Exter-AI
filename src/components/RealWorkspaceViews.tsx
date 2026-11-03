@@ -11,13 +11,15 @@ import { api } from "../lib/api";
 import { CreativeAdDetail, CreativeGallery } from "./CreativeGallery";
 import { creatorEligibility } from "../../shared/creator-eligibility";
 import { CreatorEvidenceCharts, ObservationDatesChart, PatternDistribution, SampleEvidenceCharts, ScoreDistributionChart } from "./EvidenceCharts";
+import { AudienceVoiceInsights, CompetitorComparison, CreativeLandscape, CreativeNextSteps, OwnedResults } from "./WorkspaceInsights";
 import "./real-workspace-views.css";
 
-export type RealWorkspacePage = "overview" | "ads" | "formats" | "brand" | "creators" | "competitors";
+export type RealWorkspacePage = "overview" | "ads" | "formats" | "brand" | "creators" | "competitors" | "audiences";
 export interface RealWorkspaceViewProps {
   brandId: string;
   view: RealWorkspacePage;
   onOpenSettings?: () => void;
+  onOpenSources?: () => void;
 }
 interface WorkspaceEvidence {
   report: BrandDemoReport | null;
@@ -64,7 +66,7 @@ function CreatorRates({ creator }: { creator: CreatorCandidate }) {
 }
 
 /** The real-source workspace never falls back to the sample dashboard or a rolling date filter. */
-export function RealWorkspaceView({ brandId, view, onOpenSettings }: RealWorkspaceViewProps) {
+export function RealWorkspaceView({ brandId, view, onOpenSettings, onOpenSources }: RealWorkspaceViewProps) {
   const [data, setData] = useState<WorkspaceEvidence>(emptyEvidence);
   const [loading, setLoading] = useState(true);
   const [unavailable, setUnavailable] = useState<string[]>([]);
@@ -148,9 +150,14 @@ export function RealWorkspaceView({ brandId, view, onOpenSettings }: RealWorkspa
   }
   function PatternSummary({ title, patterns, field }: { title: string; patterns: DemoPattern[]; field: "hookType" | "angle" | "offerType" | "format"; options?: readonly (readonly [string, string])[] }) {
     return <PatternDistribution title={title} patterns={patterns} legacyPatterns={data.report?.legacyPatterns?.[field]} coverage={data.report?.patternCoverage?.[field]} totalAnalysed={data.report?.analysedAdsCount || 0} onSelect={(pattern, basis) => {
-      const matching = creatives.filter(creative => pattern.evidence.some(source => source.adId === creative.adId || source.adId === creative.nativeId || source.sourceUrl === creative.sourceUrl));
+      const matching = creatives.filter(creative => pattern.evidence.some(source => source.adId === creative.adId || source.adId === creative.nativeId || Boolean(source.sourceUrl && source.sourceUrl === creative.sourceUrl)));
       if (basis === "legacy") revealGallery({}, matching); else revealGallery({ [field]: pattern.value });
-    }} renderSources={pattern => <AdReferences ads={creatives.filter(creative => pattern.evidence.some(source => source.adId === creative.adId || source.adId === creative.nativeId || source.sourceUrl === creative.sourceUrl))} limit={3} />} action={onOpenSettings && <a className="evidence-pattern-action" href={`/?${new URLSearchParams({ view: "settings", brandId })}#pattern-labels`}>Update pattern labels</a>} />;
+    }} renderSources={pattern => <AdReferences ads={creatives.filter(creative => pattern.evidence.some(source => source.adId === creative.adId || source.adId === creative.nativeId || Boolean(source.sourceUrl && source.sourceUrl === creative.sourceUrl)))} limit={3} />} action={onOpenSettings && <a className="evidence-pattern-action" href={`/?${new URLSearchParams({ view: "settings", brandId })}#pattern-labels`}>Update pattern labels</a>} />;
+  }
+
+  function showPatternAds(pattern: DemoPattern, basis: "canonical" | "legacy" = "legacy", dimension: "format" | "hookType" | "angle" | "offerType" = "angle") {
+    const matching = creatives.filter(creative => pattern.evidence.some(source => source.adId === creative.adId || source.adId === creative.nativeId || Boolean(source.sourceUrl && source.sourceUrl === creative.sourceUrl)));
+    if (basis === "canonical") revealGallery({ [dimension]: pattern.value }); else revealGallery({}, matching);
   }
 
   async function runWebsiteResearch() {
@@ -178,7 +185,7 @@ export function RealWorkspaceView({ brandId, view, onOpenSettings }: RealWorkspa
   }
   function gallerySection() {
     const supportingCreatives = evidenceAdIds ? creatives.filter(creative => evidenceAdIds.includes(creative.adId)) : creatives;
-    return <section ref={galleryRef} className="rws-gallery-section" aria-label="Creative library">
+    return <section id="workspace-creatives" ref={galleryRef} className="rws-gallery-section" aria-label="Creative library">
       {view !== "ads" && <SectionTitle title="Creatives" />}
       {evidenceAdIds && <div className="rws-brand-actions"><p className="rws-secondary">Showing {supportingCreatives.length} supporting ads.</p><button type="button" className="rws-source" onClick={() => revealGallery({})}>Show all collected ads</button></div>}
       {data.gallery && creatives.length ? <CreativeGallery creatives={supportingCreatives} filters={filters} onFiltersChange={setFilters} openAdId={openAdId} onOpenAd={setOpenAdId} />
@@ -193,6 +200,8 @@ export function RealWorkspaceView({ brandId, view, onOpenSettings }: RealWorkspa
     {notice && <p className="rws-notice" role="status">{notice}</p>}
     {actionError && <p className="rws-error" role="alert">{actionError}</p>}
 
+    <nav className="rws-section-nav" aria-label="Evidence workflow">{[["overview", "Creative overview"], ["ads", "Brand ads & results"], ["competitors", "Competitor comparison"], ["audiences", "Audience & voice"]].map(([page,label]) => <a key={page} href={`/?${new URLSearchParams({view:page,brandId})}`} aria-current={view===page?"page":undefined}>{label}</a>)}</nav>
+
     {view === "overview" && <>
       <section className="rws-kpis" aria-label="Workspace counts">
         {[
@@ -200,25 +209,20 @@ export function RealWorkspaceView({ brandId, view, onOpenSettings }: RealWorkspa
           ["Stored creatives", stored, () => revealGallery({}, creatives.filter(creative => creative.mediaAvailable))], ["Attributed creators", data.creators ? data.creators.seeds.length : null, () => revealGallery({}, creatives.filter(creative => Boolean(creative.partnershipAttribution)))],
         ].map(([label, value, action]) => <article className="rws-kpi" key={String(label)}><span>{String(label)}</span><strong>{numeric(value as number | null)}</strong>{typeof action === "function" && <button type="button" className="rws-source" onClick={action as () => void}>View evidence<ChevronRight size={13} /></button>}</article>)}
       </section>
-      <section className="rws-section"><SectionTitle title="Source coverage" /><p>{data.gallery?.dateRange.from || data.gallery?.dateRange.to ? `Source observations: ${date(data.gallery?.dateRange.from)} to ${date(data.gallery?.dateRange.to)}.` : "Capture dates are not available yet."}</p>
+      {data.report ? <section className="rws-section" id="creative-landscape"><SectionTitle title="Creative landscape" maturity="Beta"><p className="rws-secondary">A visual breakdown of the saved analyses, with the full sample represented.</p></SectionTitle><CreativeLandscape report={data.report} onSelect={showPatternAds} /></section>
+        : <Empty title="Creative analysis is unavailable" action={() => setRefresh(value=>value+1)} actionLabel="Refresh analyses">Collected ads and saved source evidence remain available in the content library.</Empty>}
+      <OwnedResults brandId={brandId} onSources={onOpenSources} />
+      {data.report && <CreativeNextSteps report={data.report} onEvidence={pattern=>showPatternAds(pattern)} />}
+      <details className="rws-coverage-disclosure"><summary>Source coverage, media & collection dates</summary><section className="rws-section"><p>{data.gallery?.dateRange.from || data.gallery?.dateRange.to ? `Source observations: ${date(data.gallery?.dateRange.from)} to ${date(data.gallery?.dateRange.to)}.` : "Capture dates are not available yet."}</p>
         {data.gallery ? <><SampleEvidenceCharts gallery={data.gallery} onSelect={ads => revealGallery({}, ads)} /><ObservationDatesChart creatives={creatives} onSelect={ads => revealGallery({}, ads)} /></> : <p className="rws-secondary">Source coverage is unavailable. Refresh the saved data to retry.</p>}
-      </section>
-      <section className="rws-section"><SectionTitle title="What the sample shows" maturity="Beta" />{creatives.length ? <div className="rws-findings">
-        <article><h3>{numeric(analysed)} of {numeric(collected)} collected ads have completed creative analyses.</h3><AdReferences ads={creatives.filter(creative => Boolean(creative.analysis))} /><button type="button" className="rws-source" onClick={() => revealGallery({})}>Explore the collected ads<ChevronRight size={13} /></button></article>
-        {(["hookType", "angle"] as const).map(field => {
-          const patterns = field === "hookType" ? data.report?.patterns.hookType : data.report?.patterns.angle;
-          const leading = patterns?.find(pattern => pattern.count > 0);
-          const options = field === "hookType" ? HOOK_TYPE_OPTIONS : ANGLE_OPTIONS;
-          const matching = leading ? creatives.filter(creative => creative[field] === leading.value) : creatives.filter(creative => Boolean(creative.analysis));
-          return <article key={field}><h3>{leading ? `${categoryLabel(leading.value, options)} appears in ${leading.count} of ${leading.denominator} supported ${field === "hookType" ? "hook" : "angle"} labels.` : `Consistent ${field === "hookType" ? "hook" : "angle"} categories are not available for this sample yet.`}</h3><AdReferences ads={matching} />{leading ? <button type="button" className="rws-source" onClick={() => revealGallery({ [field]: leading.value })}>View matching creatives<ChevronRight size={13} /></button> : onOpenSettings && <button type="button" className="rws-source" onClick={onOpenSettings}>Analyse collected ads<ChevronRight size={13} /></button>}</article>;
-        })}
-      </div> : <Empty title="No source ads collected yet" action={onOpenSettings} actionLabel="Collect or prepare source ads">Collect the brand's public ads to populate this workspace.</Empty>}</section>
-      {data.report && <section className="rws-section"><SectionTitle title="Creative patterns" maturity="Beta" /><div className="evidence-pattern-grid"><PatternSummary title="Hook types" patterns={data.report.patterns.hookType} field="hookType" options={HOOK_TYPE_OPTIONS} /><PatternSummary title="Angles" patterns={data.report.patterns.angle} field="angle" options={ANGLE_OPTIONS} /><PatternSummary title="Offers" patterns={data.report.patterns.offerType} field="offerType" options={OFFER_TYPE_OPTIONS} /></div></section>}
-      {data.report && <section className="rws-section"><SectionTitle title="Creative assessment" maturity="Beta" /><ScoreDistributionChart scores={data.report.scores} onSelect={scores => revealGallery({}, creatives.filter(creative => scores.some(score => score.adId === creative.adId || score.nativeId === creative.nativeId)))} /></section>}
+      </section></details>
+      {data.report && <details className="rws-coverage-disclosure"><summary>Creative checklist scores</summary><p className="rws-secondary">These scores assess creative structure. Conversion results appear in the measured-results panel.</p><ScoreDistributionChart scores={data.report.scores} onSelect={scores => revealGallery({}, creatives.filter(creative => scores.some(score => score.adId === creative.adId || score.nativeId === creative.nativeId)))} /></details>}
       {showGallery && gallerySection()}
     </>}
 
-    {view === "ads" && gallerySection()}
+    {view === "audiences" && <><AudienceVoiceInsights brandId={brandId} creatives={creatives} onSelect={ads=>revealGallery({},ads)} />{showGallery && gallerySection()}</>}
+
+    {view === "ads" && <><OwnedResults brandId={brandId} onSources={onOpenSources} />{gallerySection()}</>}
 
     {view === "formats" && <>
       <section className="rws-section"><SectionTitle title="Formats" />{data.gallery && <SampleEvidenceCharts gallery={data.gallery} onSelect={ads => revealGallery({}, ads)} />}<div className="rws-media-formats">{(["video", "image", "carousel", "unknown"] as const).map(kind => {
@@ -258,12 +262,14 @@ export function RealWorkspaceView({ brandId, view, onOpenSettings }: RealWorkspa
     </section>}
 
     {view === "competitors" && <>
+      <CompetitorComparison brandId={brandId} report={data.report} competition={data.competitors} onExplore={id=>{if(id===brandId)revealGallery({});else {setCompetitorBrandId(id);window.setTimeout(()=>document.getElementById("competitor-creatives")?.scrollIntoView({behavior:"smooth",block:"start"}),0);}}} />
+      {showGallery && gallerySection()}
       <section id="competitor-collection" className="rws-section"><SectionTitle title="Competitors" maturity="Beta"><p className="rws-secondary">Public collection and creative analysis for the requested comparison brands.</p></SectionTitle>
         <div className="rws-brand-actions"><button className="rws-primary-button" type="button" disabled={Boolean(busy) || competitorRunning || data.competitors?.hosted === false} onClick={() => void collectCompetitors()}>{busy || competitorRunning ? <LoaderCircle size={16} className="spin" /> : <RefreshCw size={16} />}{competitorRunning ? "Collecting competitor ads…" : "Collect competitor ads"}</button>{data.competitors?.hosted === false && <span className="rws-secondary">Collection is available in the hosted app.</span>}</div>
         {data.competitors?.competitors.length ? <div className="rws-competitors">{data.competitors.competitors.map(competitor => <article key={competitor.id}><div className="rws-competitor-heading"><h3>{competitor.name}</h3><span className="rws-status">{collectionStatus(competitor.status)}</span></div><ExternalSource url={`https://${competitor.domain}`}>{competitor.domain}</ExternalSource><dl className="rws-competitor-counts"><div><dt>Ads collected</dt><dd>{competitor.collectedCount}</dd></div><div><dt>Stored creatives</dt><dd>{competitor.storedCount}</dd></div><div><dt>Analysed</dt><dd>{competitor.analysedCount}</dd></div></dl><div className="rws-competitor-actions">{competitor.brandId && competitor.collectedCount > 0 && <button className="rws-secondary-button" type="button" onClick={() => setCompetitorBrandId(competitor.brandId)}>View collected ads<ChevronRight size={14} /></button>}{!activeCollectionStates.has(competitor.status) && <button className="rws-source" type="button" disabled={Boolean(busy) || data.competitors?.hosted === false} onClick={() => void collectCompetitors(competitor.id)}>{competitor.collectedCount ? "Continue collection" : "Collect ads"}</button>}</div></article>)}</div>
           : <Empty title="Competitor ads have not been collected">Collect the requested comparison brands to see actual counts, creatives and analyses here.</Empty>}
       </section>
-      {competitorBrandId && <section className="rws-section"><SectionTitle title={competitorGallery?.brand.name || "Competitor creatives"} />{competitorGallery ? <CreativeGallery creatives={competitorGallery.creatives} emptyAction={{ label: "Continue competitor collection", href: "#competitor-collection" }} /> : <p className="rws-secondary">Loading collected competitor ads…</p>}</section>}
+      {competitorBrandId && <section id="competitor-creatives" className="rws-section"><SectionTitle title={competitorGallery?.brand.name || "Competitor creatives"} />{competitorGallery ? <CreativeGallery creatives={competitorGallery.creatives} emptyAction={{ label: "Continue competitor collection", href: "#competitor-collection" }} /> : <p className="rws-secondary">Loading collected competitor ads…</p>}</section>}
     </>}
 
     <details className="rws-about"><summary><Info size={14} />About this data</summary><div><p>This workspace uses all saved real-source records. It does not apply the sample dashboard's rolling date filter.</p><p>Ad collection, stored media and completed analysis are separate counts. Missing metrics remain unavailable. Repeated source observations do not prove continuous delivery or ad performance.</p>{unavailable.length > 0 && <p>Some source sections could not be loaded: {unavailable.join(", ")}. Refresh to retry.</p>}</div></details>

@@ -602,7 +602,7 @@ function WorkspaceApp() {
     [exportBusy, setExportBusy] = useState(false);
   const searchRef = useRef<HTMLInputElement>(null);
   const selectedBrand = brands.find(item => item.id === brandId);
-  const isRealWorkspacePage = selectedBrand?.mode === "imported" && ["overview", "ads", "formats", "brand", "creators", "competitors"].includes(page);
+  const isRealWorkspacePage = selectedBrand?.mode === "imported" && ["overview", "ads", "formats", "brand", "creators", "competitors", "audiences"].includes(page);
   useEffect(() => {
     api<Brand[]>("/api/brands")
       .then((list) => {
@@ -1009,7 +1009,7 @@ function WorkspaceApp() {
           ) : page === "labelling" ? (
             <div key={brandId} className="page-content"><LabellingTool brandId={brandId} /></div>
           ) : isRealWorkspacePage ? (
-            <div key={`${brandId}:${page}:${refresh}`} className="page-content"><RealWorkspaceView brandId={brandId} view={page as RealWorkspacePage} onOpenSettings={() => navigate("settings")} /></div>
+            <div key={`${brandId}:${page}:${refresh}`} className="page-content"><RealWorkspaceView brandId={brandId} view={page as RealWorkspacePage} onOpenSettings={() => navigate("settings")} onOpenSources={() => navigate("sources")} /></div>
           ) : loading && !dashboard ? (
             <div className="loading-state main-loading">
               <LoaderCircle className="spin" size={23} />

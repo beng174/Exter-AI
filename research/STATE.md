@@ -21,3 +21,24 @@ Priority: stable low-cost kernel. Use npm run kernel:next and one listed task.
   No new paid inference or hosted model run took place for this change.
 - Full revised product document/genuine Meta recordings were not supplied.
 - Paused scoring/export draft remains local wip/winning-workflow-before-kernel.
+
+## Readable intelligence UI
+
+- Added a shared ranked-list/treemap view, compact bars and source-ad drill-down.
+  Historical descriptions populate explicitly marked text-theme groups without
+  rewriting paid analyses or silently converting them into fixed model labels.
+  Missing evidence stays in each chart's full-sample denominator.
+- Imported Audience & voice now reads retained creative evidence; competitor
+  comparison preserves per-brand samples and unavailable collections.
+- Added an authenticated, read-only intelligence projection and an owned-results
+  panel. Import identity/reporting-day metadata is preserved; comparisons separate
+  platform/date/currency/event and deduplicate native-ad snapshots. No live
+  collections, paid generations or production database changes were performed.
+- Rollout and data definitions: docs/INSIGHTS.md. Existing kernel validation gates
+  above are unchanged; this work does not complete them.
+- Validation: all 331 Node tests passed; TypeScript/Vite production build passed;
+  secret scan passed; isolated browser checks passed for chart population,
+  supporting-ad drill-down, audience/voice, competitor samples, owned results,
+  client report and 1024px/390px overflow at 1.25 device scale.
+- The UI is prepared for review. Render publication and actual production-data
+  verification remain rollout steps, not completed by the fixture tests.

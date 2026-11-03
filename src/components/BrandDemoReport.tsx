@@ -9,6 +9,7 @@ import { CreativeGallery, galleryDisplayText, metaAdUrl } from "./CreativeGaller
 import { api } from "../lib/api";
 import { creatorEligibility } from "../../shared/creator-eligibility";
 import { CreatorEvidenceCharts, ObservationDatesChart, PatternDistribution, SampleEvidenceCharts, ScoreDistributionChart } from "./EvidenceCharts";
+import { AudienceVoiceInsights, CompetitorComparison, CreativeLandscape, OwnedResults } from "./WorkspaceInsights";
 import "./brand-demo-report.css";
 
 const count = (value: number | null | undefined) => value == null ? "Unavailable" : value.toLocaleString("en-GB", { maximumFractionDigits: 1 });
@@ -74,7 +75,7 @@ function overviewFindings(report: DemoReport | null, gallery: CreativeGalleryRes
 }
 const sections = [
   ["overview", "Overview", "Live"], ["creatives", "Creatives", "Live"], ["patterns", "Patterns", "Beta"],
-  ["competitors", "Competitors", "Beta"], ["opportunities", "Opportunities & briefs", "Beta"], ["creators", "Creators", "Beta"], ["scores", "Scores", "Beta"],
+  ["competitors", "Competitors", "Beta"], ["audiences", "Audience & voice", "Beta"], ["results", "Owned results", "Live"], ["opportunities", "Opportunities & briefs", "Beta"], ["creators", "Creators", "Beta"], ["scores", "Scores", "Beta"],
 ] as const;
 
 export function BrandDemoReport({ brandId, onBrandChange }: { brandId: string; onBrandChange?: (brandId: string) => void }) {
@@ -192,16 +193,19 @@ export function BrandDemoReport({ brandId, onBrandChange }: { brandId: string; o
 
     <section id="bdr-patterns" data-report-section="patterns" aria-labelledby="bdr-patterns-title" className="bdr-section">
       <SectionTitle id="bdr-patterns-title" title="Patterns" status="Beta" description="Counts show their sample and label coverage. Click a bar to open the ads behind it; earlier descriptions remain separate from fixed labels." />
-      {report && analysedCount ? <div className="evidence-pattern-grid">{([
-        ["hookType", "Hook type", "hookType"], ["angle", "Angle", "angle"], ["offerType", "Offer type", "offerType"], ["format", "Creative format", "format"],
-      ] as const).map(([dimension, title, filter]) => <PatternDistribution key={dimension} title={title} patterns={report.patterns[dimension]} legacyPatterns={report.legacyPatterns?.[dimension]} coverage={report.patternCoverage?.[dimension]} totalAnalysed={report.analysedAdsCount} onSelect={(pattern, basis) => basis === "legacy" ? showPatternEvidence(pattern) : filterFromPattern(filter, pattern.value)} renderSources={pattern => <Evidence evidence={pattern.evidence} />} action={<a className="evidence-pattern-action" href={adminLink("pattern-labels")}>Update pattern labels</a>} />)}</div> : empty("Pattern labels are not available yet", "Analyse retained creatives to compare hooks, angles, offers and formats.", { label: "Analyse stored creatives", href: adminLink("gemini-smoke-test") })}
+      {report && analysedCount ? <CreativeLandscape report={report} onSelect={(pattern,basis,dimension)=>basis==="legacy"?showPatternEvidence(pattern):filterFromPattern(dimension,pattern.value)} /> : empty("Pattern labels are not available yet", "Analyse retained creatives to compare hooks, angles, offers and formats.", { label: "Analyse stored creatives", href: adminLink("gemini-smoke-test") })}
+
       {gallery && <div className="evidence-date-chart"><ObservationDatesChart creatives={creativeList} onSelect={showSupportingAds} /></div>}
     </section>
 
     <section id="bdr-competitors" data-report-section="competitors" aria-labelledby="bdr-competitors-title" className="bdr-section">
       <SectionTitle id="bdr-competitors-title" title="Competitors" status="Beta" description="Source-backed competitor collections. Missing evidence is shown explicitly." />
+      <CompetitorComparison brandId={selectedBrandId} report={report} competition={competition} onExplore={changeBrand} />
       {competition?.competitors.length ? <div className="bdr-competitor-grid">{competition.competitors.map(competitor => <article key={competitor.id} className="bdr-competitor-card"><h3>{competitor.name}</h3><SourceLink url={`https://${competitor.domain}`}>{competitor.domain}</SourceLink><dl><div><dt>Collected</dt><dd>{competitor.collectedCount}</dd></div><div><dt>Stored</dt><dd>{competitor.storedCount}</dd></div><div><dt>Analysed</dt><dd>{competitor.analysedCount}</dd></div></dl>{competitor.collectedCount && competitor.brandId ? <button type="button" onClick={() => changeBrand(competitor.brandId!)}>Explore creatives <ArrowRight size={14} /></button> : <><p>Competitor ads have not been collected yet.</p><a href={adminLink("demo-collection")}>Collect competitor ads <ArrowRight size={14} /></a></>}{competitor.lastRun?.sourceUrl && <div className="bdr-competitor-source"><SourceLink url={competitor.lastRun.sourceUrl}>Collection source</SourceLink><span>{date(competitor.lastRun.observedAt)}</span></div>}</article>)}</div> : empty("No competitor collections yet", "Collect Aery Living, The White Company and NEOM to compare their actual creatives.", { label: "Collect competitor ads", href: adminLink("demo-collection") })}
     </section>
+
+    <section id="bdr-audiences" data-report-section="audiences" aria-label="Audience & voice" className="bdr-section"><AudienceVoiceInsights brandId={selectedBrandId} creatives={creativeList} onSelect={showSupportingAds} /></section>
+    <section id="bdr-results" data-report-section="results" aria-label="Owned ad results" className="bdr-section"><OwnedResults brandId={selectedBrandId} onSources={()=>{window.location.href=`/?${new URLSearchParams({view:"sources",brandId:selectedBrandId})}`;}} /></section>
 
     <section id="bdr-opportunities" data-report-section="opportunities" aria-labelledby="bdr-opportunities-title" className="bdr-section">
       <SectionTitle id="bdr-opportunities-title" title="Opportunities & briefs" status="Beta" description="Draft directions to test, with the source ads that motivate each point." />
