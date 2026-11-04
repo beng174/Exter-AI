@@ -1,4 +1,5 @@
 import { canonicaliseLocation, navigateTo, NAVIGATION_EVENT, resolveNavigation, viewForScreen, navigation, type ViewId } from "./navigation";
+import { CreativeBrowserPage } from "./components/creatives/CreativeBrowserPage";
 import { Sidebar } from "./components/Sidebar";
 import { PageHeader, FilterBar } from "./components/ui";
 import "./shell.css";
@@ -572,6 +573,7 @@ function WorkspaceApp() {
       },
     ),
     [dashboard, setDashboard] = useState<Dashboard | null>(null),
+    [route, setRoute] = useState(() => resolveNavigation(window.location.href)),
     [page, setPage] = useState<Page>(() => resolveNavigation(window.location.href).screen),
     [platform, setPlatform] = useState("all"),
     [range, setRange] = useState("30"),
@@ -590,6 +592,7 @@ function WorkspaceApp() {
   useEffect(() => {
     function syncRoute() {
       const route=canonicaliseLocation();
+      setRoute(route);
       setPage(route.screen);
       if(route.brandId && /^[a-zA-Z0-9][a-zA-Z0-9:_-]{0,119}$/.test(route.brandId))setBrandId(route.brandId);
       setMenuOpen(false);
@@ -604,6 +607,7 @@ function WorkspaceApp() {
     if(url.searchParams.get("brandId")!==brandId){url.searchParams.set("brandId",brandId);window.history.replaceState({},"",url);}
   },[brandId]);
   const demoEnabled = new URLSearchParams(window.location.search).get("demo") === "1";
+  const isCreativePage = route.id === "creatives" || route.id === "creative";
   const isRealWorkspacePage = (selectedBrand?.mode === "imported" || !demoEnabled) && ["overview", "ads", "formats", "brand", "creators", "competitors", "audiences"].includes(page);
   useEffect(() => {
     api<Brand[]>("/api/brands")
@@ -793,7 +797,7 @@ function WorkspaceApp() {
         </header>
         <main>
           {page === "sources" && <MetaCollectionPanel key={brandId} workspaceId={brandId} />}
-          {page !== "demo" && <PageHeader title={page === "brand" && brand ? brand.name : title.title} subtitle={title.subtitle} eyebrow={<>{brand?.category || "Creative intelligence"} / {brand?.name || "Brand unavailable"}</>} actions={<>
+          {!isCreativePage && page !== "demo" && <PageHeader title={page === "brand" && brand ? brand.name : title.title} subtitle={title.subtitle} eyebrow={<>{brand?.category || "Creative intelligence"} / {brand?.name || "Brand unavailable"}</>} actions={<>
 {page !== "settings" && page !== "labelling" && !isRealWorkspacePage && <div className="title-actions">
               <button
                 className="button secondary export-button"
@@ -818,7 +822,7 @@ function WorkspaceApp() {
               </button>
             </div>}
           </>}/>}
-          {page !== "settings" && page !== "demo" && <FilterBar>
+          {!isCreativePage && page !== "settings" && page !== "demo" && <FilterBar>
             <div className="brand-context">
               <span className="tiny-brand" style={{ background: brand?.color }}>
                 {brand?.initials || "R"}
@@ -913,7 +917,9 @@ function WorkspaceApp() {
               </button>
             </div>
           )}
-          {page === "settings" ? (
+          {isCreativePage ? (
+            <CreativeBrowserPage key={brandId} brandId={brandId} route={route} refresh={refresh} />
+          ) : page === "settings" ? (
             <div className="page-content">
               <nav className="settings-shortcuts" aria-label="Settings sections">
                 <a href="#brand-demo-preparation">Website evidence & client demo</a>

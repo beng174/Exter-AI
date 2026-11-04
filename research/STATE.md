@@ -163,3 +163,38 @@ and blockers below remain unchanged.
   at 1440px and 390px are in output/playwright/ui-a-*.png.
 - No sample data, dependencies, schemas or provider calls were added. Both live
   gates remain open and owned sync remains default off.
+
+
+## UI-B Creatives and Creative detail (UI-02, UI-03)
+
+- Replaced the canonical library and creative modal with the approved grid/table
+  and full-page ?view=creative&id= detail. URL filters, aliases, filtered previous/
+  next, reload and browser back/forward work. Both views are ready.
+- Added an authenticated, read-only saved-creative projection. Only the selected
+  workspace and its configured public competitors are included. Owned outcomes
+  reuse CA-02 formulas and minimum samples, separate account/platform/currency/
+  attribution/event/date scopes, and replace restated pulls rather than adding them.
+  Benchmarks include all ads in the same account scope and dates. No partial totals
+  appear after a read failure; private competitor rows are excluded.
+- Detail uses retained media, timestamp seeking, source history, existing estimated
+  checklist scores and Modelled analysis fields. Similar public creatives are
+  computed from known angle/format labels. Missing scenes, source CTA, Working
+  Score and unsupported evidence stay Unavailable; no scene cuts or diagnoses are
+  inferred from processing coverage. Competitor retention is never shown.
+- Fixed sidebar viewport height and fixed positioning, unknown brand-role copy,
+  empty competitor copy, Help and the EXTER AI wordmark. Other screens are retained.
+- Validation: npm run check, npm test (371 passed), npm run build,
+  npm run secrets:check and git diff --check passed; final focused UI tests passed
+  (19). UI-A and UI-B browser acceptance passed, including nested table links,
+  filtered detail/history, synthetic byte-range video seeking and private-data
+  guards. No external requests were permitted in browser checks.
+- Four screenshots in output/playwright/ui-b-*.png cover both pages at 1440px and
+  390px using genuine retained public captures. Production media and paid analyses
+  are not present locally and are not fabricated. Populated states use separate
+  synthetic test fixtures. Fixtures are not live verification.
+- Built on UI-A PR #5, which remained open at the final base check; the UI-B PR
+  targets exter-test-drive and must state that dependency. No dependencies,
+  migrations, source collection, provider calls or environment changes were added.
+  Both live gates remain open, owned sync stays default off and kernel work remains
+  paused. After merge, Render > exter-ai > Manual Deploy > Deploy latest commit;
+  keep existing secrets, budgets, disk and EXTER_OWNED_SYNC_ENABLED absent/false.

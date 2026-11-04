@@ -1,3 +1,4 @@
+import { attachCreativeBrowser } from "./demo/creative-browser.js";
 import { attachOwnedAccounts } from "./owned/api.js";
 import { attachInfrastructure } from "./infrastructure/api.js";
 import { basicAuth } from "./auth.js";
@@ -271,6 +272,7 @@ export function createApp(db: DatabaseSync = openDatabase()) {
   attachBrandDemo(app, db);
   attachPatternLabelling(app, db);
   attachDemoCollection(app, db, video);
+  attachCreativeBrowser(app,db);
   attachCreatorResearch(app, db);
   attachDemoReadiness(app, db);
   attachBrain(app, db);

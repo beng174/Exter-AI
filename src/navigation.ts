@@ -6,15 +6,15 @@ export type NavigationGroup = "Overview" | "Research" | "Act" | "Share" | "Setti
 export interface NavigationItem {
   id: ViewId; label: string; group: NavigationGroup; icon: typeof Compass;
   ready: boolean; screen: Page | null; aliases?: readonly string[];
-  demoOnly?: boolean; hidden?: boolean;
+  demoOnly?: boolean; hidden?: boolean; rebuilt?: "UI-02" | "UI-03";
 }
 /** UI-00: readiness means an existing screen, not completion of a later UI rebuild. */
 export const navigation: readonly NavigationItem[] = [
   { id:"overview", label:"Home", group:"Overview", icon:Compass, ready:true, screen:"overview" },
   { id:"brands", label:"Brand research", group:"Research", icon:Globe2, ready:true, screen:"brand", aliases:["brand"] },
   { id:"competitors", label:"Competitors", group:"Research", icon:BarChart3, ready:true, screen:"competitors" },
-  { id:"creatives", label:"Creatives", group:"Research", icon:Layers, ready:true, screen:"ads", aliases:["ads"] },
-  { id:"creative", label:"Creative detail", group:"Research", icon:Layers, ready:true, screen:"ads", hidden:true },
+  { id:"creatives", label:"Creatives", group:"Research", icon:Layers, ready:true, screen:"ads", rebuilt:"UI-02", aliases:["ads"] },
+  { id:"creative", label:"Creative detail", group:"Research", icon:Layers, ready:true, screen:"ads", rebuilt:"UI-03", hidden:true },
   { id:"formats", label:"Formats", group:"Research", icon:Activity, ready:true, screen:"formats" },
   { id:"patterns", label:"Patterns", group:"Research", icon:BarChart3, ready:false, screen:null },
   { id:"audience", label:"Audience and voice", group:"Research", icon:Target, ready:true, screen:"audiences", aliases:["audiences"] },

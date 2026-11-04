@@ -47,3 +47,11 @@ test("UI-00 aliases replace history, page changes push and creative close return
     closeCreativeRoute("brand");assert.equal(resolveNavigation(mock.location.href).id,"creatives");
   } finally {if(original)Object.defineProperty(globalThis,"window",original);else Reflect.deleteProperty(globalThis,"window");}
 });
+
+test("UI-02/UI-03 canonical creatives and full-page detail are rebuilt and ready",()=>{
+  assert.equal(navigation.find(item=>item.id==="creatives")?.rebuilt,"UI-02");
+  assert.equal(navigation.find(item=>item.id==="creative")?.rebuilt,"UI-03");
+  for(const id of ["creatives","creative"]){const item=navigation.find(item=>item.id===id)!;assert.equal(item.ready,true);}
+  const route=resolveNavigation("/?view=creative&brandId=workspace-a&id=creative-a&angle=gifting&layout=table");
+  assert.equal(route.id,"creative");assert.equal(route.adId,"creative-a");assert.equal(route.url.searchParams.get("layout"),"table");
+});
