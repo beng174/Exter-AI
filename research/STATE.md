@@ -1,6 +1,26 @@
 # Current handoff
 
-Priority: stable low-cost kernel. Use npm run kernel:next and one listed task.
+Priority: creative analytics module in research/CREATIVE-ANALYTICS-SPEC.md,
+Phase 0 then Phase 1 (CA-01 and CA-02).
+
+The low-cost kernel work is paused until Phase 2. Its code, tests,
+research/PRODUCT-SPEC.md and this handoff remain in place. Do not pick kernel
+tasks or run npm run kernel:next unless the user asks. Existing kernel evidence
+and blockers below remain unchanged.
+
+## Creative analytics set-up (Phase 0; CA-01, CA-02)
+
+- Added module scope, commit ID, original-layout and metric-source rules to
+  AGENTS.md; removed external screen references from docs/INSIGHTS.md.
+- Default owned-account Meta Graph version is v25.0; explicit version overrides
+  remain supported. UI and kernel implementation are unchanged.
+- No live provider calls were made. The Phase 0 gate (system user reading Exter
+  Media's own ad account) remains unverified; do not start Phase 1 until it passes.
+
+- Validation: npm test passed all 336 tests; npm run check and
+  npm run secrets:check passed. Fixtures do not verify live-account gates.
+
+## Retained kernel handoff
 
 - Baseline before K05: 5fba1bd. K04 CI passed all jobs after an install timeout retry.
 - K04 audio code is implemented behind EXTER_KERNEL_AUDIO_ENABLED, default off.

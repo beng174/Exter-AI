@@ -5,12 +5,8 @@ results and creative tests. The Content library contains the brand's saved ads;
 Competitors contains a side-by-side comparison; Audience & voice uses the same
 retained native analyses. The client report shares these views.
 
-The layout takes its ranked list and treemap pairing from the public
-[Defy Monitor example](https://www.defygroup.ai/assets/img/shot-monitor.jpg).
-The evidence-to-brief workflow follows the public
-[Somin brand reference](https://somin.ai/somin-for-brands/). These are design and
-workflow references, not independently verified performance claims. Exter keeps
-its own visual system.
+Exter's own layout pairs ranked lists with treemaps and connects saved creative
+evidence to creative tests and briefs, using Exter's visual system.
 
 ## Counts and charts
 
