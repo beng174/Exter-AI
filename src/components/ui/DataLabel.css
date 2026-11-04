@@ -1,0 +1,4 @@
+.ui-data-label { display:inline-flex; padding:2px 8px; border:1px solid var(--line); border-radius:4px; font-size:12px; color:var(--text); background:var(--surface); }
+.ui-data-label-estimated { background:var(--chip-amber-bg);color:var(--chip-amber-fg); }
+.ui-data-label-modelled { background:var(--chip-blue-bg);color:var(--chip-blue-fg); }
+.ui-data-label-unavailable { background:var(--chip-grey-bg);color:var(--chip-grey-fg); }

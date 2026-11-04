@@ -1,0 +1,4 @@
+.ui-unavailable { color:var(--muted); font-size:14px; line-height:1.5; overflow-wrap:anywhere; }
+.ui-unavailable strong { color:var(--text); }
+.ui-unavailable p { margin:4px 0; }
+.ui-unavailable a { display:inline-flex; align-items:center; min-height:44px; color:var(--exter-blue); }

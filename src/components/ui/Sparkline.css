@@ -1,0 +1,4 @@
+.ui-sparkline { margin:0; }
+.ui-sparkline svg { display:block;width:120px;height:36px;max-width:100%; }
+.ui-sparkline path { fill:none;stroke:var(--exter-blue);stroke-width:2;vector-effect:non-scaling-stroke; }
+.ui-sparkline figcaption { font-size:12px;color:var(--muted); }

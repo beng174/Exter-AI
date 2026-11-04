@@ -1,0 +1,16 @@
+.app-shell { background:var(--surface-subtle); }
+.app-shell .main-shell { background:var(--surface-subtle);margin-left:240px;width:calc(100% - 240px);min-width:0; }
+.app-shell .main-shell > main { padding:32px 40px 48px; }
+.main-shell .page-content { min-width:0; }
+.main-shell .topbar button,.ui-page-header button,.ui-filter-bar button { min-width:44px;min-height:44px; }
+.app-shell .mobile-menu { display:none; }
+.sidebar .nav-item:focus-visible { outline:2px solid var(--exter-blue);outline-offset:-2px; }
+.ui-mobile-scrim { display:none; }
+@media(max-width:959px) {
+  .app-shell .ui-sidebar { position:fixed;visibility:hidden;inset:0 auto 0 0;z-index:101;width:240px;transform:translateX(-100%);overflow-y:auto; }
+  .app-shell .ui-sidebar.sidebar-open { transform:translateX(0);visibility:visible; }
+  .app-shell .main-shell { margin-left:0;width:100%; }
+  .app-shell .mobile-menu { display:inline-flex; }
+  .ui-mobile-scrim { display:block;position:fixed;inset:0;z-index:100;background:#111b3866; }
+  .app-shell .main-shell > main { padding:24px 16px 48px; }
+}

@@ -1,3 +1,7 @@
+import { canonicaliseLocation, navigateTo, NAVIGATION_EVENT, resolveNavigation, viewForScreen, navigation, type ViewId } from "./navigation";
+import { Sidebar } from "./components/Sidebar";
+import { PageHeader, FilterBar } from "./components/ui";
+import "./shell.css";
 import { MetaCollectionPanel } from "./components/MetaCollectionPanel";
 import { InfrastructureStatus } from "./components/InfrastructureStatus";
 import { BudgetSettings } from "./components/BudgetSettings";
@@ -65,18 +69,6 @@ import {
   SourcesView,
 } from "./components/ResearchViews";
 
-const navigation: { id: Page; label: string; icon: typeof Compass }[] = [
-  { id: "demo", label: "Brand demo", icon: FileChartColumnIncreasing },
-  { id: "overview", label: "Overview", icon: Compass },
-  { id: "brand", label: "Brands", icon: Globe2 },
-  { id: "ads", label: "Creative library", icon: Layers },
-  { id: "formats", label: "Creative formats", icon: Activity },
-  { id: "competitors", label: "Competitors", icon: BarChart3 },
-  { id: "audiences", label: "Audience & voice", icon: Target },
-  { id: "creators", label: "Creators", icon: UsersRound },
-  { id: "reports", label: "Reports", icon: FileChartColumnIncreasing },
-  { id: "labelling", label: "Labelling", icon: ClipboardCheck },
-];
 const headings: Record<Page, { title: string; subtitle: string }> = {
   demo: { title: "Brand report", subtitle: "" },
   settings: {
@@ -580,14 +572,7 @@ function WorkspaceApp() {
       },
     ),
     [dashboard, setDashboard] = useState<Dashboard | null>(null),
-    [page, setPage] = useState<Page>(() => {
-      const requested = new URLSearchParams(window.location.search).get("view");
-      if (requested && Object.hasOwn(headings, requested)) return requested as Page;
-      return (window as Window & { __EXTER_RESEARCH_BRAND__?: string })
-        .__EXTER_RESEARCH_BRAND__ === localStorage.getItem("exter-brand")
-        ? "brand"
-        : "overview";
-    }),
+    [page, setPage] = useState<Page>(() => resolveNavigation(window.location.href).screen),
     [platform, setPlatform] = useState("all"),
     [range, setRange] = useState("30"),
     [search, setSearch] = useState(""),
@@ -602,6 +587,22 @@ function WorkspaceApp() {
     [exportBusy, setExportBusy] = useState(false);
   const searchRef = useRef<HTMLInputElement>(null);
   const selectedBrand = brands.find(item => item.id === brandId);
+  useEffect(() => {
+    function syncRoute() {
+      const route=canonicaliseLocation();
+      setPage(route.screen);
+      if(route.brandId && /^[a-zA-Z0-9][a-zA-Z0-9:_-]{0,119}$/.test(route.brandId))setBrandId(route.brandId);
+      setMenuOpen(false);
+    }
+    syncRoute();
+    window.addEventListener("popstate",syncRoute);
+    window.addEventListener(NAVIGATION_EVENT,syncRoute);
+    return()=>{window.removeEventListener("popstate",syncRoute);window.removeEventListener(NAVIGATION_EVENT,syncRoute);};
+  }, []);
+  useEffect(()=>{
+    const url=new URL(window.location.href);
+    if(url.searchParams.get("brandId")!==brandId){url.searchParams.set("brandId",brandId);window.history.replaceState({},"",url);}
+  },[brandId]);
   const demoEnabled = new URLSearchParams(window.location.search).get("demo") === "1";
   const isRealWorkspacePage = (selectedBrand?.mode === "imported" || !demoEnabled) && ["overview", "ads", "formats", "brand", "creators", "competitors", "audiences"].includes(page);
   useEffect(() => {
@@ -697,19 +698,17 @@ function WorkspaceApp() {
     };
   }, [modalIsOpen]);
   const brand = selectedBrand || (dashboard?.brand.id === brandId ? dashboard.brand : undefined);
-  function navigate(next: Page) {
-    setPage(next);
+  function navigate(next: Page | ViewId, keepSearch=false) {
+    navigateTo(next,brandId);
     setMenuOpen(false);
-    setSearch("");
-    window.scrollTo({ top: 0, behavior: "smooth" });
+    if(!keepSearch)setSearch("");
+    window.scrollTo({top:0,behavior:"smooth"});
   }
   function select(b: Brand) {
-    setBrandId(b.id);
-    setBrandOpen(false);
-    setSearch("");
-    setPage(b.domain === "valentte.com" ? "brand" : "overview");
-    setDashboard(null);
+    navigateTo(b.domain === "valentte.com" ? "brands" : "overview",b.id);
+    setBrandOpen(false);setSearch("");setDashboard(null);
   }
+  function selectBrand(id: string) { navigateTo(viewForScreen(page),id); }
   async function exportReport() {
     setExportBusy(true);
     try {
@@ -728,77 +727,8 @@ function WorkspaceApp() {
   const title = headings[page];
   return (
     <div className="app-shell">
-      <aside className={`sidebar ${menuOpen ? "sidebar-open" : ""}`}>
-        <a className="wordmark" href="/" aria-label="Exter Media home">
-          <BrandLogo />
-        </a>
-        <div className="workspace-label">WORKSPACE</div>
-        <button className="workspace-switch" onClick={() => setBrandOpen(true)}>
-          <span
-            className="workspace-avatar"
-            style={{ background: brand?.color || "#ddd4c6" }}
-          >
-            {brand?.initials || "R"}
-          </span>
-          <span>
-            <strong>{brand?.name || "Your brand"}</strong>
-            <small>Brand intelligence</small>
-          </span>
-          <ChevronDown size={15} />
-        </button>
-        <div className="nav-label">INTELLIGENCE</div>
-        <nav aria-label="Main navigation">
-          {navigation.map(({ id, label, icon: Icon }) => (
-            <button
-              key={id}
-              className={`nav-item ${page === id ? "active" : ""}`}
-              onClick={() => navigate(id)}
-            >
-              <Icon size={18} />
-              <span>{label}</span>
-            </button>
-          ))}
-        </nav>
-        <div className="sidebar-bottom">
-          <button
-            className={`nav-item ${page === "settings" ? "active" : ""}`}
-            onClick={() => navigate("settings")}
-          >
-            <Settings2 size={18} />
-            <span>Budgets & tests</span>
-          </button>
-          <button
-            className={`nav-item ${page === "sources" ? "active" : ""}`}
-            onClick={() => navigate("sources")}
-          >
-            <Globe2 size={18} />
-            <span>Data sources</span>
-            <span className="source-dot" />
-          </button>
-          <button className="nav-item" onClick={() => setHelpOpen(true)}>
-            <CircleHelp size={18} />
-            <span>Help & getting started</span>
-            <ArrowUpRight size={14} />
-          </button>
-          <div className="user-profile">
-            <span>EW</span>
-            <div>
-              <strong>Exter workspace</strong>
-              <small>Local research edition</small>
-            </div>
-            <button
-              className="icon-button"
-              aria-label="Workspace settings"
-              onClick={() => navigate("settings")}
-            >
-              <Settings2 size={16} />
-            </button>
-          </div>
-        </div>
-      </aside>
-      {menuOpen && (
-        <div className="mobile-scrim" onClick={() => setMenuOpen(false)} />
-      )}
+      <Sidebar brand={brand} brandId={brandId} current={viewForScreen(page)} demo={demoEnabled} open={menuOpen} onNavigate={id=>navigate(id)} onSwitchBrand={()=>setBrandOpen(true)} onHelp={()=>setHelpOpen(true)} onClose={()=>setMenuOpen(false)}/>
+      {menuOpen && <button className="ui-mobile-scrim" aria-label="Close navigation" onClick={()=>setMenuOpen(false)}/>}
       <div className="main-shell">
         <header className="topbar">
           <div className="breadcrumb">
@@ -806,6 +736,8 @@ function WorkspaceApp() {
               className="icon-button mobile-menu"
               onClick={() => setMenuOpen(!menuOpen)}
               aria-label="Toggle navigation"
+              aria-expanded={menuOpen}
+              aria-controls="main-sidebar"
             >
               <Menu size={21} />
             </button>
@@ -816,7 +748,7 @@ function WorkspaceApp() {
                 ? "Data sources"
                 : page === "settings"
                   ? "Budgets & tests"
-                : navigation.find((n) => n.id === page)?.label}
+                : navigation.find((n) => n.screen === page && !n.hidden)?.label}
             </strong>
           </div>
           <div className="topbar-right">
@@ -824,7 +756,7 @@ function WorkspaceApp() {
               className="global-search"
               onSubmit={(e) => {
                 e.preventDefault();
-                setPage("ads");
+                navigate("ads",true);
               }}
             >
               <Search size={15} />
@@ -834,7 +766,7 @@ function WorkspaceApp() {
                 value={search}
                 onChange={(e) => {
                   setSearch(e.target.value);
-                  if (e.target.value) setPage("ads");
+                  if (e.target.value) navigate("ads",true);
                 }}
                 placeholder="Search your landscape…"
               />
@@ -848,7 +780,7 @@ function WorkspaceApp() {
                 ? "Website research"
                 : brand?.mode === "imported"
                   ? "Imported workspace"
-                  : "Sample workspace"}
+                  : brand?.mode === "demo" && demoEnabled ? "Sample workspace" : "Workspace"}
             </span>
             <button
               className="top-avatar"
@@ -861,18 +793,8 @@ function WorkspaceApp() {
         </header>
         <main>
           {page === "sources" && <MetaCollectionPanel key={brandId} workspaceId={brandId} />}
-          {page !== "demo" && <div className="page-title-row">
-            <div>
-              <div className="page-eyebrow">
-                <span />
-                {brand?.category || "CREATIVE INTELLIGENCE"}
-                <span className="eyebrow-divider">/</span>
-                {brand?.name || "YOUR BRAND"}
-              </div>
-              <h1>{page === "brand" && brand ? brand.name : title.title}</h1>
-              <p>{title.subtitle}</p>
-            </div>
-            {page !== "settings" && page !== "labelling" && !isRealWorkspacePage && <div className="title-actions">
+          {page !== "demo" && <PageHeader title={page === "brand" && brand ? brand.name : title.title} subtitle={title.subtitle} eyebrow={<>{brand?.category || "Creative intelligence"} / {brand?.name || "Brand unavailable"}</>} actions={<>
+{page !== "settings" && page !== "labelling" && !isRealWorkspacePage && <div className="title-actions">
               <button
                 className="button secondary export-button"
                 title="Generate a report covering the last 30 days across all platforms"
@@ -895,8 +817,8 @@ function WorkspaceApp() {
                 Ask Exter
               </button>
             </div>}
-          </div>}
-          {page !== "settings" && page !== "demo" && <div className="context-toolbar">
+          </>}/>}
+          {page !== "settings" && page !== "demo" && <FilterBar>
             <div className="brand-context">
               <span className="tiny-brand" style={{ background: brand?.color }}>
                 {brand?.initials || "R"}
@@ -906,7 +828,7 @@ function WorkspaceApp() {
               <span>
                 {isRealWorkspacePage ? "Saved public evidence" : page === "brand"
                   ? "Website and source research"
-                  : `${dashboard?.metrics.brands || 0} brands in landscape`}
+                  : `${dashboard?.metrics.brands ?? "Unavailable"} brands in landscape`}
               </span>
               <button
                 className="icon-button"
@@ -958,7 +880,7 @@ function WorkspaceApp() {
                 </button>
               </div>
             )}
-          </div>}
+          </FilterBar>}
           {page !== "settings" && page !== "labelling" && page !== "demo" && !isRealWorkspacePage && <div className="data-status">
             <span>
               <i className={brand?.mode === "imported" ? "green" : ""} />
@@ -1000,7 +922,7 @@ function WorkspaceApp() {
                 <a href="#monthly-budgets">Monthly budgets</a>
                 <a href="#gemini-smoke-test">Gemini smoke test</a>
               </nav>
-              <DemoPreparation key={brandId} brandId={brandId} onBrandChange={setBrandId} />
+              <DemoPreparation key={brandId} brandId={brandId} onBrandChange={selectBrand} />
               <PatternLabelControls key={`pattern-labels-${brandId}`} brandId={brandId} />
               <DemoCollectionControls key={`collection-${brandId}`} brandId={brandId} />
               <BudgetSettings />
@@ -1011,7 +933,7 @@ function WorkspaceApp() {
           ) : page === "labelling" ? (
             <div key={brandId} className="page-content"><LabellingTool brandId={brandId} /></div>
           ) : isRealWorkspacePage ? (
-            <div key={`${brandId}:${page}:${refresh}`} className="page-content"><RealWorkspaceView brands={brands} onSelectBrand={setBrandId} brandId={brandId} view={page as RealWorkspacePage} onOpenSettings={() => navigate("settings")} onOpenSources={() => navigate("sources")} /></div>
+            <div key={`${brandId}:${page}:${refresh}`} className="page-content"><RealWorkspaceView brands={brands} onSelectBrand={selectBrand} brandId={brandId} view={page as RealWorkspacePage} onOpenSettings={() => navigate("settings")} onOpenSources={() => navigate("sources")} /></div>
           ) : loading && !dashboard ? (
             <div className="loading-state main-loading">
               <LoaderCircle className="spin" size={23} />
