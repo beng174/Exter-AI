@@ -1,0 +1,95 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Exter AI creators</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0}
+a{color:#007C85}a:hover{color:#0C1F96}
+</style>
+</helmet>
+<div style="font-family: Inter, sans-serif; color: #1F2937; background: #F8FAFC; min-height: 100vh; display: flex; flex-wrap: wrap; align-items: stretch">
+<div style="flex: 1 1 240px; max-width: 100%; background: #FFFFFF; border-right: 1px solid #E5E7EB"><dc-import name="Sidebar" active="creators" hint-size="100%,980px"></dc-import></div>
+<main style="flex: 999 1 560px; min-width: 0; box-sizing: border-box; padding: 32px 40px 48px; display: flex; flex-direction: column; gap: 20px">
+
+<div style="display: flex; flex-wrap: wrap; align-items: flex-end; justify-content: space-between; gap: 16px">
+<div>
+<div style="font-size: 13px; color: #515B6B">Northwick Candle Co. · Act</div>
+<h1 style="margin: 4px 0 0; font-size: 28px; font-weight: 700; letter-spacing: -0.02em; color: #0C1F96">Creators</h1>
+<p style="margin: 4px 0 0; font-size: 15px; color: #515B6B">Creators who fit the brand and the brief. Each fit measure is shown on its own, never blended into one number.</p>
+</div>
+<div style="display: flex; flex-wrap: wrap; align-items: center; gap: 8px">
+<span style="font-size: 12px; font-weight: 600; padding: 4px 10px; border-radius: 999px; background: #FEF3C7; color: #78350F">Sample data</span>
+<button type="button" style="min-height: 44px; padding: 0 16px; border: 1px solid #D6DBE3; border-radius: 8px; background: #FFFFFF; font: inherit; font-size: 14px; font-weight: 600; color: #1F2937; cursor: pointer">Compare 2</button>
+<button type="button" style="min-height: 44px; padding: 0 18px; border: none; border-radius: 8px; background: #00C0CB; font: inherit; font-size: 14px; font-weight: 600; color: #0B1736; cursor: pointer">Export shortlist</button>
+</div>
+</div>
+
+<section aria-label="Filters" style="background: #FFFFFF; border: 1px solid #E5E7EB; border-radius: 12px; padding: 16px 20px; display: flex; flex-wrap: wrap; align-items: center; gap: 8px">
+<span style="font-size: 13px; color: #515B6B; margin-right: 4px">Matching for</span><a href="Briefs.dc.html" style="font-size: 13px; font-weight: 600; margin-right: 12px">Gift-ready unboxing brief</a>
+<sc-for list="{{filters}}" as="f" hint-placeholder-count="6"><button type="button" style="display: inline-flex; align-items: center; gap: 6px; min-height: 36px; padding: 0 12px; border: 1px solid #D6DBE3; border-radius: 999px; background: #FFFFFF; font: inherit; font-size: 13px; font-weight: 500; color: #1F2937; cursor: pointer">{{f.t}}<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9l6 6 6-6"></path></svg></button></sc-for>
+</section>
+
+<p style="margin: 0; font-size: 13px; color: #515B6B">48 creators found · 6 shown · fit is estimated from their public posts · counts are dated snapshots from 3 Nov 2026</p>
+
+<div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(360px, 1fr)); gap: 20px">
+<sc-for list="{{creators}}" as="c" hint-placeholder-count="6">
+<article style="background: #FFFFFF; border: 1px solid #E5E7EB; border-radius: 12px; padding: 20px; display: flex; flex-direction: column; gap: 14px">
+<div style="display: flex; align-items: center; gap: 12px">
+<span style="{{c.avatar}}" aria-hidden="true">{{c.initial}}</span>
+<div style="flex: 1; min-width: 0"><div style="font-size: 16px; font-weight: 600">{{c.name}}</div><div style="font-size: 13px; color: #515B6B">{{c.platform}} · {{c.followers}} followers · {{c.place}}</div></div>
+<button type="button" aria-pressed="{{c.pressed}}" style="{{c.btnStyle}}">{{c.btn}}</button>
+</div>
+<div style="display: flex; flex-direction: column; gap: 7px">
+<sc-for list="{{c.fit}}" as="f" hint-placeholder-count="5"><div style="display: grid; grid-template-columns: 150px minmax(0, 1fr) 40px; gap: 10px; align-items: center; font-size: 13px"><span>{{f.k}}</span><div style="height: 6px; border-radius: 3px; background: #EEF0F3"><div style="{{f.bar}}"></div></div><span style="text-align: right; font-weight: 600">{{f.v}}</span></div></sc-for>
+</div>
+<div style="display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; border-top: 1px solid #EEF0F3; padding-top: 12px">
+<div><div style="font-size: 11px; color: #515B6B">Median views</div><div style="font-size: 15px; font-weight: 600">{{c.views}}</div></div>
+<div><div style="font-size: 11px; color: #515B6B">Engagement per view</div><div style="font-size: 15px; font-weight: 600">{{c.eng}}</div></div>
+<div><div style="font-size: 11px; color: #515B6B">Posts, 30 days</div><div style="font-size: 15px; font-weight: 600">{{c.posts}}</div></div>
+</div>
+<div style="display: flex; gap: 8px; align-items: center"><sc-for list="{{c.thumbs}}" as="t" hint-placeholder-count="3"><span style="{{t.style}}" aria-hidden="true"></span></sc-for><span style="font-size: 12px; color: #515B6B">Recent posts</span></div>
+<p style="margin: 0; font-size: 13px; padding: 8px 12px; border-radius: 8px; background: #F8FAFC">{{c.ads}}</p>
+</article>
+</sc-for>
+</div>
+
+</main>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1440,"height":1560}}'>
+class Component extends DCLogic {
+  renderVals() {
+    const tones = ['#E9E2D6', '#D9E4DC', '#E3E0EC', '#EADCD8', '#DCE3EC', '#EFE6DA'];
+    const keys = ['Relevance to the brand', 'Tone match', 'Language', 'Location', 'Engagement consistency'];
+    const btnOn = 'min-height: 40px; padding: 0 12px; border: 1px solid #00C0CB; border-radius: 8px; background: #E6F9FA; font: inherit; font-size: 13px; font-weight: 600; color: #075E66; cursor: pointer';
+    const btnOff = 'min-height: 40px; padding: 0 12px; border: 1px solid #D6DBE3; border-radius: 8px; background: #FFFFFF; font: inherit; font-size: 13px; font-weight: 600; color: #1F2937; cursor: pointer';
+    const c = (i, name, platform, followers, place, fit, views, eng, posts, ads, listed) => ({
+      name, platform, followers, place, views, eng, posts, ads, initial: name[0],
+      avatar: 'flex: 0 0 48px; height: 48px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 18px; font-weight: 700; color: #0C1F96; background: ' + tones[i],
+      pressed: listed ? 'true' : 'false', btn: listed ? 'Shortlisted' : 'Shortlist', btnStyle: listed ? btnOn : btnOff,
+      fit: fit.map((v, j) => ({ k: keys[j], v: v + '%', bar: 'height: 6px; border-radius: 3px; background: #0C1F96; width: ' + v + '%' })),
+      thumbs: [0, 1, 2].map(j => ({ style: 'width: 40px; height: 50px; border-radius: 6px; background: ' + tones[(i + j + 1) % 6] }))
+    });
+    return {
+      filters: ['Instagram and TikTok', 'UK and Ireland', 'English', '5K to 50K followers', 'Home and lifestyle', 'Posted in last 30 days'].map(t => ({ t })),
+      creators: [
+        c(0, 'Ama', 'Instagram', '24K', 'Leeds', [92, 88, 100, 100, 81], '18K', '6.1%', '14', 'Already in your Refill ritual ads, with a branded-content label.', true),
+        c(1, 'Hana', 'TikTok', '41K', 'Manchester', [85, 90, 100, 100, 64], '52K', '4.3%', '22', 'Appears in 1 Otterly Scents ad (visible handle).', true),
+        c(2, 'Cleo', 'TikTok', '12K', 'Bristol', [78, 94, 100, 100, 88], '9.4K', '7.8%', '9', 'Featured on your website. No paid work found.', false),
+        c(3, 'Priya', 'Instagram', '33K', 'London', [81, 72, 100, 100, 77], '15K', '3.9%', '18', 'No brand ads found.', false),
+        c(4, 'Megan', 'Instagram', '47K', 'Glasgow', [70, 80, 100, 100, 59], '21K', '2.8%', '25', 'Appears in 3 Fennick Home ads (branded-content label).', false),
+        c(5, 'Sofia', 'TikTok', '8.9K', 'Dublin', [88, 85, 100, 70, 90], '6K', '8.2%', '11', 'No brand ads found. Based in Ireland.', false)
+      ]
+    };
+  }
+}
+</script>
+</body>
+</html>

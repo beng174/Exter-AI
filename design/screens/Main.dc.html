@@ -1,0 +1,205 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Exter AI home</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0}
+a{color:#007C85}a:hover{color:#0C1F96}
+</style>
+</helmet>
+<div style="font-family: Inter, sans-serif; color: #1F2937; background: #F8FAFC; min-height: 100vh; display: flex; flex-wrap: wrap; align-items: stretch">
+<div style="flex: 1 1 240px; max-width: 100%; background: #FFFFFF; border-right: 1px solid #E5E7EB"><dc-import name="Sidebar" active="home" hint-size="100%,980px"></dc-import></div>
+<main style="flex: 999 1 560px; min-width: 0; box-sizing: border-box; padding: 32px 40px 48px; display: flex; flex-direction: column; gap: 24px">
+
+<div style="display: flex; flex-wrap: wrap; align-items: flex-end; justify-content: space-between; gap: 16px">
+<div>
+<div style="font-size: 13px; color: #515B6B">Northwick Candle Co. · Home fragrance · UK</div>
+<h1 style="margin: 4px 0 0; font-size: 28px; font-weight: 700; letter-spacing: -0.02em; color: #0C1F96">This week</h1>
+<p style="margin: 4px 0 0; font-size: 15px; color: #515B6B">27 Oct to 2 Nov 2026, compared with the week before</p>
+</div>
+<div style="display: flex; flex-wrap: wrap; align-items: center; gap: 8px">
+<span style="font-size: 12px; font-weight: 600; padding: 4px 10px; border-radius: 999px; background: #FEF3C7; color: #78350F">Sample data</span>
+<a href="Reports.dc.html" style="display: inline-flex; align-items: center; min-height: 44px; padding: 0 16px; border: 1px solid #D6DBE3; border-radius: 8px; background: #FFFFFF; font-size: 14px; font-weight: 600; color: #1F2937; text-decoration: none">Weekly report</a>
+<button type="button" style="min-height: 44px; padding: 0 18px; border: none; border-radius: 8px; background: #00C0CB; font: inherit; font-size: 14px; font-weight: 600; color: #0B1736; cursor: pointer">Share client view</button>
+</div>
+</div>
+
+<div style="display: flex; flex-wrap: wrap; gap: 8px">
+<sc-for list="{{sources}}" as="s" hint-placeholder-count="3">
+<span style="display: inline-flex; align-items: center; gap: 8px; font-size: 13px; background: #FFFFFF; border: 1px solid #E5E7EB; border-radius: 999px; padding: 6px 12px"><span style="{{s.dot}}" aria-hidden="true"></span>{{s.text}}</span>
+</sc-for>
+<a href="DataSources.dc.html" style="font-size: 13px; font-weight: 600; padding: 6px 4px; align-self: center">About this data</a>
+</div>
+
+<section aria-labelledby="work-heading" style="background: #FFFFFF; border: 1px solid #E5E7EB; border-radius: 12px; padding: 24px; display: flex; flex-direction: column; gap: 20px">
+<div style="display: flex; flex-wrap: wrap; justify-content: space-between; align-items: flex-end; gap: 12px">
+<div>
+<h2 id="work-heading" style="margin: 0; font-size: 20px; font-weight: 600; color: #0C1F96">What to work on</h2>
+<p style="margin: 4px 0 0; font-size: 14px; color: #515B6B; max-width: 80ch">This week's top 3 priorities. Each one weighs how often the idea wins in your category, how far you lag competitors in using it, and how often your customers ask for it.</p>
+</div>
+<a href="Briefs.dc.html" style="font-size: 14px; font-weight: 600">All opportunities</a>
+</div>
+<div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(290px, 1fr)); gap: 16px">
+<sc-for list="{{priorities}}" as="p" hint-placeholder-count="3">
+<article style="border: 1px solid #E5E7EB; border-radius: 12px; padding: 20px; display: flex; flex-direction: column; gap: 14px">
+<div style="display: flex; align-items: center; justify-content: space-between; gap: 8px"><span style="{{p.actionStyle}}">{{p.action}}</span><span style="font-size: 12px; color: #515B6B">Priority {{p.n}}</span></div>
+<div>
+<h3 style="margin: 0; font-size: 17px; font-weight: 600; color: #1F2937">{{p.title}}</h3>
+<p style="margin: 6px 0 0; font-size: 14px; line-height: 1.5; color: #515B6B">{{p.what}}</p>
+</div>
+<div style="display: flex; flex-direction: column; gap: 8px">
+<sc-for list="{{p.stats}}" as="st" hint-placeholder-count="3">
+<div style="display: grid; grid-template-columns: 64px minmax(0, 1fr); gap: 10px; align-items: baseline"><span style="font-size: 18px; font-weight: 700; color: #0C1F96">{{st.v}}</span><span style="font-size: 13px; line-height: 1.4"><strong style="font-weight: 600">{{st.k}}</strong> · <span style="color: #515B6B">{{st.d}}</span></span></div>
+</sc-for>
+</div>
+<div style="display: flex; align-items: center; gap: 8px"><span style="font-size: 12px; color: #515B6B">Proof:</span><sc-for list="{{p.thumbs}}" as="t" hint-placeholder-count="3"><span style="{{t.style}}" aria-hidden="true"></span></sc-for><span style="font-size: 12px; color: #515B6B">3 example ads</span></div>
+<div style="margin-top: auto; display: flex; align-items: center; gap: 12px"><a href="Briefs.dc.html" style="display: inline-flex; align-items: center; min-height: 44px; padding: 0 16px; border: 1px solid #D6DBE3; border-radius: 8px; background: #FFFFFF; font-size: 14px; font-weight: 600; color: #1F2937; text-decoration: none">Open brief</a><a href="Patterns.dc.html" style="font-size: 14px; font-weight: 600">See the numbers</a></div>
+</article>
+</sc-for>
+</div>
+</section>
+
+<div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(420px, 1fr)); gap: 24px">
+
+<section aria-labelledby="score-heading" style="background: #FFFFFF; border: 1px solid #E5E7EB; border-radius: 12px; padding: 24px; display: flex; flex-direction: column; gap: 14px; min-width: 0">
+<div style="display: flex; flex-wrap: wrap; justify-content: space-between; align-items: baseline; gap: 8px"><div><h2 id="score-heading" style="margin: 0; font-size: 20px; font-weight: 600; color: #0C1F96">You against the market</h2><p style="margin: 4px 0 0; font-size: 13px; color: #515B6B">Weekly scorecard · 5 competitors · 214 active ads</p></div><a href="Competitors.dc.html" style="font-size: 14px; font-weight: 600">Full scorecard</a></div>
+<div style="overflow-x: auto">
+<table style="width: 100%; border-collapse: collapse; font-size: 14px; min-width: 440px">
+<thead><tr style="text-align: left; color: #515B6B; font-size: 12px"><th style="padding: 0 8px 8px 0; font-weight: 600">Measure</th><th style="padding: 0 8px 8px; font-weight: 600; text-align: right">You</th><th style="padding: 0 8px 8px; font-weight: 600; text-align: right">Competitor average</th><th style="padding: 0 8px 8px; font-weight: 600; text-align: right">You last week</th><th style="padding: 0 0 8px 8px; font-weight: 600">Basis</th></tr></thead>
+<tbody>
+<sc-for list="{{scorecard}}" as="r" hint-placeholder-count="8">
+<tr style="border-top: 1px solid #EEF0F3"><td style="padding: 9px 8px 9px 0">{{r.m}}</td><td style="padding: 9px 8px; text-align: right; font-weight: 600">{{r.you}}</td><td style="padding: 9px 8px; text-align: right">{{r.avg}}</td><td style="padding: 9px 8px; text-align: right; color: #515B6B">{{r.last}}</td><td style="padding: 9px 0 9px 8px"><span style="font-size: 11px; padding: 1px 6px; border-radius: 4px; border: 1px solid #D6DBE3; color: #374151">{{r.basis}}</span></td></tr>
+</sc-for>
+</tbody>
+</table>
+</div>
+<p style="margin: 0; font-size: 12px; color: #515B6B">Share of voice uses estimated impressions once Meta reach is connected; until then it is the share of active ads.</p>
+</section>
+
+<section aria-labelledby="account-heading" style="background: #FFFFFF; border: 1px solid #E5E7EB; border-radius: 12px; padding: 24px; display: flex; flex-direction: column; gap: 14px; min-width: 0">
+<div><h2 id="account-heading" style="margin: 0; font-size: 20px; font-weight: 600; color: #0C1F96">Your account</h2><p style="margin: 4px 0 0; font-size: 13px; color: #515B6B">Meta · last 7 days · purchases, 7-day click and 1-day view · Observed</p></div>
+<div style="display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px">
+<sc-for list="{{kpis}}" as="k" hint-placeholder-count="4">
+<div style="background: #F8FAFC; border-radius: 10px; padding: 16px 18px"><div style="font-size: 13px; color: #515B6B">{{k.label}}</div><div style="margin-top: 4px; font-size: 26px; font-weight: 700">{{k.value}}</div><div style="margin-top: 2px; font-size: 13px; color: #515B6B">{{k.note}}</div></div>
+</sc-for>
+</div>
+<a href="Winners.dc.html" style="font-size: 14px; font-weight: 600">Your winning creatives</a>
+</section>
+
+</div>
+
+<div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(420px, 1fr)); gap: 24px">
+
+<section aria-labelledby="working-heading" style="background: #FFFFFF; border: 1px solid #E5E7EB; border-radius: 12px; padding: 24px; display: flex; flex-direction: column; gap: 12px; min-width: 0">
+<div style="display: flex; flex-wrap: wrap; justify-content: space-between; align-items: baseline; gap: 8px"><div><h2 id="working-heading" style="margin: 0; font-size: 20px; font-weight: 600; color: #0C1F96">Top working ads</h2><p style="margin: 4px 0 0; font-size: 13px; color: #515B6B">Working Score, you and competitors · Estimated</p></div><a href="Winners.dc.html" style="font-size: 14px; font-weight: 600">Open Winners</a></div>
+<ul style="list-style: none; margin: 0; padding: 0">
+<sc-for list="{{working}}" as="w" hint-placeholder-count="5">
+<li style="display: flex; align-items: center; gap: 12px; padding: 10px 0; border-top: 1px solid #EEF0F3"><span style="{{w.thumb}}" aria-hidden="true"></span><div style="flex: 1; min-width: 0"><a href="CreativeDetail.dc.html" style="font-size: 14px; font-weight: 600; color: #1F2937; text-decoration: none">{{w.title}}</a><div style="font-size: 12px; color: #515B6B">{{w.brand}} · {{w.driver}}</div></div><span style="{{w.labelStyle}}">{{w.label}}</span><div style="text-align: right; min-width: 64px"><div style="font-size: 18px; font-weight: 700">{{w.score}}</div><div style="font-size: 11px; color: #515B6B">{{w.conf}}</div></div></li>
+</sc-for>
+</ul>
+</section>
+
+<section aria-labelledby="changed-heading" style="background: #FFFFFF; border: 1px solid #E5E7EB; border-radius: 12px; padding: 24px; display: flex; flex-direction: column; gap: 12px; min-width: 0">
+<div style="display: flex; flex-wrap: wrap; justify-content: space-between; align-items: baseline; gap: 8px"><div><h2 id="changed-heading" style="margin: 0; font-size: 20px; font-weight: 600; color: #0C1F96">What changed</h2><p style="margin: 4px 0 0; font-size: 13px; color: #515B6B">18 ads launched, 7 stopped, 2 new angles · Observed</p></div><a href="Competitors.dc.html" style="font-size: 14px; font-weight: 600">Open Competitors</a></div>
+<ul style="list-style: none; margin: 0; padding: 0">
+<sc-for list="{{changes}}" as="c" hint-placeholder-count="6">
+<li style="display: flex; align-items: center; gap: 12px; padding: 10px 0; border-top: 1px solid #EEF0F3"><span style="font-size: 11px; font-weight: 600; padding: 2px 8px; border-radius: 6px; background: #F3F4F6; color: #374151; min-width: 82px; text-align: center">{{c.type}}</span><span style="flex: 1; min-width: 0; font-size: 14px"><strong style="font-weight: 600">{{c.brand}}</strong> {{c.text}}</span><span style="font-size: 12px; color: #515B6B">{{c.day}}</span></li>
+</sc-for>
+</ul>
+</section>
+
+</div>
+
+<section aria-labelledby="attention-heading" style="background: #FFFFFF; border: 1px solid #E5E7EB; border-radius: 12px; padding: 24px; display: flex; flex-direction: column; gap: 12px">
+<h2 id="attention-heading" style="margin: 0; font-size: 20px; font-weight: 600; color: #0C1F96">Needs attention</h2>
+<div style="display: flex; flex-wrap: wrap; align-items: center; gap: 16px; padding: 14px 16px; border-radius: 8px; background: #FFFBEB">
+<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#92400E" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3l10 18H2z"></path><path d="M12 10v5"></path><path d="M12 18h.01"></path></svg>
+<div style="flex: 1 1 360px; min-width: 0"><div style="font-size: 14px; font-weight: 600">Possible fatigue: Cosy evenings, static</div><div style="font-size: 14px; color: #515B6B">Cost per purchase is up 46% against its first two weeks while frequency rose to 3.8. A signal, not a verdict.</div></div>
+<a href="CreativeDetail.dc.html" style="display: inline-flex; align-items: center; min-height: 44px; padding: 0 16px; border: 1px solid #D6DBE3; border-radius: 8px; background: #FFFFFF; font-size: 14px; font-weight: 600; color: #1F2937; text-decoration: none">View creative</a>
+</div>
+<div style="display: flex; flex-wrap: wrap; align-items: center; gap: 16px; padding: 14px 16px; border-radius: 8px; background: #F8FAFC">
+<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#1F2937" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"></circle><path d="M12 8v5"></path><path d="M12 16h.01"></path></svg>
+<div style="flex: 1 1 360px; min-width: 0"><div style="font-size: 14px; font-weight: 600">Meta Ad Library is not connected yet</div><div style="font-size: 14px; color: #515B6B">Reach, share of voice and spend ranges switch on once Meta approves access. Until then competitor numbers rely on browser capture.</div></div>
+<a href="DataSources.dc.html" style="display: inline-flex; align-items: center; min-height: 44px; padding: 0 16px; border: 1px solid #D6DBE3; border-radius: 8px; background: #FFFFFF; font-size: 14px; font-weight: 600; color: #1F2937; text-decoration: none">Data sources</a>
+</div>
+</section>
+
+</main>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1440,"height":1960}}'>
+class Component extends DCLogic {
+  renderVals() {
+    const chip = (bg, fg) => 'font-size: 12px; font-weight: 600; padding: 3px 10px; border-radius: 999px; background: ' + bg + '; color: ' + fg;
+    const action = { 'Test now': chip('#E6F9FA', '#075E66'), 'Scale': chip('#E7F6EC', '#14532D'), 'Fix': chip('#FEF3C7', '#78350F') };
+    const label = { 'Proven winner': chip('#E7F6EC', '#14532D'), 'Rising': chip('#EEF2FF', '#1E3A8A'), 'Steady': chip('#F3F4F6', '#374151') };
+    const thumb = (bg, w, h) => 'flex: 0 0 ' + w + 'px; width: ' + w + 'px; height: ' + h + 'px; border-radius: 6px; background: ' + bg;
+    const dot = (c) => 'width: 8px; height: 8px; border-radius: 50%; background: ' + c;
+    const p = (n, a, title, what, stats, bgs) => ({ n, action: a, actionStyle: action[a], title, what, stats, thumbs: bgs.map(b => ({ style: thumb(b, 28, 35) })) });
+    return {
+      sources: [
+        { dot: dot('#00DFB8'), text: 'Your Meta account · synced today 06:00' },
+        { dot: dot('#E5A50A'), text: 'Market · 214 active ads from 5 competitors · browser capture, checked 03:00' },
+        { dot: dot('#00DFB8'), text: 'Customer reviews · 1,240 read' }
+      ],
+      priorities: [
+        p(1, 'Test now', 'Gift-ready unboxing', 'Show the box, the wrap and the first light. Competitors lean on it for the gifting season; you barely use it.', [
+          { v: '29 pts', k: 'Usage gap', d: 'competitors 31% of ads, you 2%' },
+          { v: '38%', k: 'Category win rate', d: '16 of 42 ads are proven winners' },
+          { v: '8%', k: 'Customer demand', d: '96 reviews mention gifting' }
+        ], ['#EADCD8', '#E9E2D6', '#E3E0EC']),
+        p(2, 'Scale', 'Refill ritual', 'Your best concept sits in an angle competitors barely use. Make more versions with new creators.', [
+          { v: '3.1', k: 'Your ROAS', d: 'benchmark 2.4 on £4,120 spend' },
+          { v: '9%', k: 'Competitor usage', d: '19 of 214 ads' },
+          { v: '5%', k: 'Customer demand', d: '58 reviews mention buying again' }
+        ], ['#E9E2D6', '#D9E4DC', '#E6E1D3']),
+        p(3, 'Fix', 'Offer-led hooks', 'You open with offers more than the market does, and they return less. Keep the offer, change the hook.', [
+          { v: '30%', k: 'Your usage', d: 'market 24% of ads' },
+          { v: '2.0', k: 'Your ROAS', d: 'below the 2.4 benchmark' },
+          { v: '22%', k: 'Category win rate', d: '11 of 51 ads are proven winners' }
+        ], ['#DCE3EC', '#EFE6DA', '#E2E8E4'])
+      ],
+      scorecard: [
+        { m: 'Share of voice', you: '14%', avg: '17%', last: '12%', basis: 'Estimated' },
+        { m: 'Active ads', you: '46', avg: '43', last: '44', basis: 'Observed' },
+        { m: 'New ads this week', you: '3', avg: '4', last: '5', basis: 'Observed' },
+        { m: 'Ads stopped this week', you: '2', avg: '1', last: '3', basis: 'Observed' },
+        { m: 'Median days running', you: '21', avg: '28', last: '20', basis: 'Observed' },
+        { m: 'Proven winners', you: '13%', avg: '18%', last: '11%', basis: 'Estimated' },
+        { m: 'New concepts per month', you: '5', avg: '8', last: '5', basis: 'Estimated' },
+        { m: 'Versions per concept', you: '2.1', avg: '3.4', last: '2.0', basis: 'Estimated' }
+      ],
+      kpis: [
+        { label: 'Spend', value: '£8,420', note: '12% more than last week' },
+        { label: 'ROAS', value: '2.6', note: 'Up from 2.3 · benchmark 2.4' },
+        { label: 'Cost per purchase', value: '£18.70', note: '£1.40 lower than last week' },
+        { label: 'Hook rate', value: '29%', note: 'Up 3 points' }
+      ],
+      working: [
+        { thumb: thumb('#D9E4DC', 36, 45), title: 'Refill and save', brand: 'Halvane', driver: 'driven by survival, 64 days', label: 'Proven winner', labelStyle: label['Proven winner'], score: '86', conf: 'High confidence' },
+        { thumb: thumb('#E9E2D6', 36, 45), title: 'Refill ritual, Ama', brand: 'You', driver: 'driven by scaling, 3 ads', label: 'Proven winner', labelStyle: label['Proven winner'], score: '81', conf: 'High confidence' },
+        { thumb: thumb('#E3E0EC', 36, 45), title: 'Hand-poured in Bristol', brand: 'Corrie & Moss', driver: 'driven by reach velocity', label: 'Rising', labelStyle: label['Rising'], score: '74', conf: 'Medium confidence' },
+        { thumb: thumb('#E6E1D3', 36, 45), title: 'Burns to the last drop', brand: 'Fennick Home', driver: 'driven by survival, 41 days', label: 'Steady', labelStyle: label['Steady'], score: '68', conf: 'Medium confidence' },
+        { thumb: thumb('#EADCD8', 36, 45), title: 'Gift box reveal', brand: 'You', driver: 'driven by scaling, 2 ads', label: 'Steady', labelStyle: label['Steady'], score: '63', conf: 'High confidence' }
+      ],
+      changes: [
+        { type: 'Launched', brand: 'Corrie & Moss', text: 'launched 6 founder-led videos', day: 'Mon' },
+        { type: 'New offer', brand: 'Otterly Scents', text: 'is testing a £5 sample box', day: 'Tue' },
+        { type: 'Stopped', brand: 'Fennick Home', text: 'stopped all discount-led ads', day: 'Wed' },
+        { type: 'New angle', brand: '2 brands', text: 'started scent layering, 4 ads', day: 'Thu' },
+        { type: 'Milestone', brand: 'Halvane', text: 'Refill and save passed 60 days running', day: 'Fri' },
+        { type: 'Share of voice', brand: 'You', text: 'rose from 12% to 14%', day: 'Week' }
+      ]
+    };
+  }
+}
+</script>
+</body>
+</html>

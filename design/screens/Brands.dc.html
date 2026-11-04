@@ -1,0 +1,163 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Exter AI brand research</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0}
+a{color:#007C85}a:hover{color:#0C1F96}
+</style>
+</helmet>
+<div style="font-family: Inter, sans-serif; color: #1F2937; background: #F8FAFC; min-height: 100vh; display: flex; flex-wrap: wrap; align-items: stretch">
+<div style="flex: 1 1 240px; max-width: 100%; background: #FFFFFF; border-right: 1px solid #E5E7EB"><dc-import name="Sidebar" active="brands" hint-size="100%,980px"></dc-import></div>
+<main style="flex: 999 1 560px; min-width: 0; box-sizing: border-box; padding: 32px 40px 48px; display: flex; flex-direction: column; gap: 24px">
+
+<div style="display: flex; flex-wrap: wrap; align-items: flex-end; justify-content: space-between; gap: 16px">
+<div>
+<div style="font-size: 13px; color: #515B6B">Research</div>
+<h1 style="margin: 4px 0 0; font-size: 28px; font-weight: 700; letter-spacing: -0.02em; color: #0C1F96">Brand research</h1>
+<p style="margin: 4px 0 0; font-size: 15px; color: #515B6B">Who each brand is, what its public sources say, and who it competes with.</p>
+</div>
+<div style="display: flex; flex-wrap: wrap; align-items: center; gap: 8px">
+<span style="font-size: 12px; font-weight: 600; padding: 4px 10px; border-radius: 999px; background: #FEF3C7; color: #78350F">Sample data</span>
+<button type="button" style="min-height: 44px; padding: 0 16px; border: 1px solid #D6DBE3; border-radius: 8px; background: #FFFFFF; font: inherit; font-size: 14px; font-weight: 600; color: #1F2937; cursor: pointer">Prospect teardown</button>
+<button type="button" style="min-height: 44px; padding: 0 18px; border: none; border-radius: 8px; background: #00C0CB; font: inherit; font-size: 14px; font-weight: 600; color: #0B1736; cursor: pointer">Add brand</button>
+</div>
+</div>
+
+<div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 12px">
+<sc-for list="{{brands}}" as="b" hint-placeholder-count="3">
+<button type="button" aria-pressed="{{b.pressed}}" style="{{b.style}}"><span style="display: flex; justify-content: space-between; align-items: center; gap: 8px"><span style="font-size: 15px; font-weight: 600">{{b.name}}</span><span style="{{b.typeStyle}}">{{b.type}}</span></span><span style="display: block; margin-top: 6px; font-size: 13px; color: #515B6B">{{b.meta}}</span><span style="display: block; margin-top: 2px; font-size: 13px; color: #515B6B">{{b.alerts}}</span></button>
+</sc-for>
+</div>
+
+<div style="display: flex; flex-wrap: wrap; gap: 24px; align-items: flex-start">
+
+<section aria-labelledby="profile-heading" style="flex: 1 1 340px; max-width: 460px; min-width: 0; background: #FFFFFF; border: 1px solid #E5E7EB; border-radius: 12px; padding: 24px; display: flex; flex-direction: column; gap: 16px">
+<h2 id="profile-heading" style="margin: 0; font-size: 20px; font-weight: 600; color: #0C1F96">Northwick Candle Co.</h2>
+<dl style="margin: 0; display: grid; grid-template-columns: 130px minmax(0, 1fr); row-gap: 10px; font-size: 14px">
+<sc-for list="{{profile}}" as="p" hint-placeholder-count="8"><dt style="color: #515B6B">{{p.k}}</dt><dd style="{{p.style}}">{{p.v}}</dd></sc-for>
+</dl>
+<div style="border-top: 1px solid #EEF0F3; padding-top: 14px; display: flex; flex-direction: column; gap: 10px">
+<div style="display: flex; justify-content: space-between; align-items: baseline"><h3 style="margin: 0; font-size: 15px; font-weight: 600">Watchlist</h3><span style="font-size: 12px; color: #515B6B">Daily at 03:00 · UK and Ireland</span></div>
+<div style="display: flex; flex-wrap: wrap; gap: 6px"><sc-for list="{{watch}}" as="w" hint-placeholder-count="5"><span style="font-size: 13px; padding: 4px 10px; border-radius: 999px; background: #F3F4F6; color: #374151">{{w.name}}</span></sc-for><button type="button" style="font: inherit; font-size: 13px; font-weight: 600; padding: 4px 10px; border-radius: 999px; border: 1px dashed #A3ACB9; background: #FFFFFF; color: #1F2937; cursor: pointer">Add competitor</button></div>
+<h3 style="margin: 6px 0 0; font-size: 15px; font-weight: 600">Category keywords</h3>
+<div style="display: flex; flex-wrap: wrap; gap: 6px"><sc-for list="{{keywords}}" as="w" hint-placeholder-count="4"><span style="font-size: 13px; padding: 4px 10px; border-radius: 999px; border: 1px solid #D6DBE3; color: #374151">{{w.name}}</span></sc-for></div>
+</div>
+</section>
+
+<section aria-labelledby="facts-heading" style="flex: 999 1 460px; min-width: 0; background: #FFFFFF; border: 1px solid #E5E7EB; border-radius: 12px; padding: 24px; display: flex; flex-direction: column; gap: 12px">
+<div style="display: flex; flex-wrap: wrap; justify-content: space-between; align-items: baseline; gap: 8px"><div><h2 id="facts-heading" style="margin: 0; font-size: 20px; font-weight: 600; color: #0C1F96">What the public sources say</h2><p style="margin: 4px 0 0; font-size: 13px; color: #515B6B">Website, reviews and ad library, read on 3 Nov 2026 · each fact links to its source</p></div><button type="button" style="min-height: 44px; padding: 0 16px; border: 1px solid #D6DBE3; border-radius: 8px; background: #FFFFFF; font: inherit; font-size: 14px; font-weight: 600; color: #1F2937; cursor: pointer">Refresh research</button></div>
+<ul style="list-style: none; margin: 0; padding: 0">
+<sc-for list="{{facts}}" as="f" hint-placeholder-count="7">
+<li style="display: grid; grid-template-columns: 150px minmax(0, 1fr) auto; gap: 12px; padding: 12px 0; border-top: 1px solid #EEF0F3; align-items: start"><span style="font-size: 13px; color: #515B6B">{{f.k}}</span><div><div style="font-size: 14px; font-weight: 600">{{f.v}}</div><div style="font-size: 12px; color: #515B6B; margin-top: 2px">"{{f.quote}}" · <a href="#">{{f.src}}</a></div></div><span style="{{f.kindStyle}}">{{f.kind}}</span></li>
+</sc-for>
+</ul>
+</section>
+
+</div>
+
+<section aria-labelledby="pos-heading" style="background: #FFFFFF; border: 1px solid #E5E7EB; border-radius: 12px; padding: 24px; display: flex; flex-direction: column; gap: 14px">
+<div><h2 id="pos-heading" style="margin: 0; font-size: 20px; font-weight: 600; color: #0C1F96">Positioning signals</h2><p style="margin: 4px 0 0; font-size: 13px; color: #515B6B">What the brand keeps coming back to across its site and ads. Hypotheses to check, not facts.</p></div>
+<div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 12px">
+<sc-for list="{{signals}}" as="s" hint-placeholder-count="3"><div style="border: 1px solid #E5E7EB; border-radius: 10px; padding: 14px 16px; display: flex; flex-direction: column; gap: 6px"><span style="font-size: 11px; font-weight: 600; padding: 1px 6px; border-radius: 4px; border: 1px solid #D6DBE3; color: #374151; align-self: flex-start">Hypothesis</span><div style="font-size: 15px; font-weight: 600">{{s.k}}</div><div style="font-size: 13px; color: #515B6B">{{s.v}}</div></div></sc-for>
+</div>
+</section>
+
+<div style="display: flex; flex-wrap: wrap; gap: 24px; align-items: flex-start">
+
+<section aria-labelledby="cand-heading" style="flex: 999 1 520px; min-width: 0; background: #FFFFFF; border: 1px solid #E5E7EB; border-radius: 12px; padding: 24px; display: flex; flex-direction: column; gap: 12px">
+<div><h2 id="cand-heading" style="margin: 0; font-size: 20px; font-weight: 600; color: #0C1F96">Competitor set</h2><p style="margin: 4px 0 0; font-size: 13px; color: #515B6B">Tracked brands and new candidates found in ads, search and the brand's own site</p></div>
+<div style="overflow-x: auto">
+<table style="width: 100%; border-collapse: collapse; font-size: 14px; min-width: 560px">
+<thead><tr style="text-align: left; color: #515B6B; font-size: 12px"><th style="padding: 0 8px 8px 0; font-weight: 600">Brand</th><th style="padding: 0 8px 8px; font-weight: 600">Why it is a competitor</th><th style="padding: 0 8px 8px; font-weight: 600; text-align: right">Active ads</th><th style="padding: 0 0 8px 8px; font-weight: 600; text-align: right">Status</th></tr></thead>
+<tbody>
+<sc-for list="{{candidates}}" as="c" hint-placeholder-count="6"><tr style="border-top: 1px solid #EEF0F3"><td style="padding: 10px 8px 10px 0"><div style="font-weight: 600">{{c.name}}</div><div style="font-size: 12px; color: #515B6B">{{c.domain}}</div></td><td style="padding: 10px 8px; font-size: 13px; color: #515B6B">{{c.why}}</td><td style="padding: 10px 8px; text-align: right">{{c.ads}}</td><td style="padding: 10px 0 10px 8px; text-align: right"><span style="{{c.statusStyle}}">{{c.status}}</span></td></tr></sc-for>
+</tbody>
+</table>
+</div>
+</section>
+
+<section aria-labelledby="sources-heading" style="flex: 1 1 320px; min-width: 0; background: #FFFFFF; border: 1px solid #E5E7EB; border-radius: 12px; padding: 24px; display: flex; flex-direction: column; gap: 12px">
+<h2 id="sources-heading" style="margin: 0; font-size: 20px; font-weight: 600; color: #0C1F96">Profiles, creators and limits</h2>
+<ul style="list-style: none; margin: 0; padding: 0">
+<sc-for list="{{profiles}}" as="p" hint-placeholder-count="5"><li style="display: flex; justify-content: space-between; gap: 12px; padding: 9px 0; border-top: 1px solid #EEF0F3; font-size: 14px"><span><strong style="font-weight: 600">{{p.k}}</strong> <span style="color: #515B6B">{{p.v}}</span></span><span style="font-size: 12px; color: #515B6B; text-align: right">{{p.note}}</span></li></sc-for>
+</ul>
+<h3 style="margin: 4px 0 0; font-size: 14px; font-weight: 600">What this research cannot show</h3>
+<ul style="margin: 0; padding-left: 18px; font-size: 13px; color: #515B6B; display: flex; flex-direction: column; gap: 4px">
+<li>Competitors' sales, conversions or ROAS</li>
+<li>Audience demographics, except where an ad library publishes them</li>
+<li>Whether a featured creator is a paid partner, without a label or handle</li>
+</ul>
+</section>
+
+</div>
+
+</main>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1440,"height":1900}}'>
+class Component extends DCLogic {
+  renderVals() {
+    const chip = (bg, fg) => 'font-size: 12px; font-weight: 600; padding: 3px 9px; border-radius: 999px; background: ' + bg + '; color: ' + fg + '; white-space: nowrap';
+    const card = 'text-align: left; padding: 14px 16px; border-radius: 12px; background: #FFFFFF; font: inherit; color: #1F2937; cursor: pointer;';
+    const lab = (k) => 'font-size: 11px; font-weight: 600; padding: 1px 6px; border-radius: 4px; white-space: nowrap; ' + (k === 'Observed' ? 'border: 1px solid #D6DBE3; color: #374151' : 'background: #EEF2FF; color: #1E3A8A');
+    return {
+      brands: [
+        { name: 'Northwick Candle Co.', type: 'Client', typeStyle: chip('#E6F9FA', '#075E66'), meta: 'Checked today 03:00 · 46 ads', alerts: '2 alerts', pressed: 'true', style: card + ' border: 2px solid #00C0CB' },
+        { name: 'Larch & Linen', type: 'Prospect', typeStyle: chip('#F3F4F6', '#374151'), meta: 'Teardown ready · 3 competitors', alerts: 'No alerts', pressed: 'false', style: card + ' border: 1px solid #E5E7EB' },
+        { name: 'Pip & Bloom', type: 'Prospect', typeStyle: chip('#F3F4F6', '#374151'), meta: 'Collecting, first pass at 03:00', alerts: 'No alerts', pressed: 'false', style: card + ' border: 1px solid #E5E7EB' }
+      ],
+      profile: [
+        { k: 'Website', v: 'northwickcandle.co.uk', style: 'margin: 0' },
+        { k: 'Category', v: 'Home fragrance and gifting', style: 'margin: 0' },
+        { k: 'Country', v: 'United Kingdom', style: 'margin: 0' },
+        { k: 'Meta page', v: 'Linked · ID 1043 8812 0057', style: 'margin: 0' },
+        { k: 'TikTok', v: '@northwickcandle', style: 'margin: 0' },
+        { k: 'Instagram', v: '@northwickcandle', style: 'margin: 0' },
+        { k: 'Google advertiser', v: 'Not linked yet (phase 2)', style: 'margin: 0; color: #515B6B' },
+        { k: 'Ad account', v: 'Meta connected · TikTok not connected', style: 'margin: 0' }
+      ],
+      watch: ['Halvane', 'Corrie & Moss', 'Fennick Home', 'Otterly Scents', 'Brightmoor'].map(name => ({ name })),
+      keywords: ['soy candle', 'candle refill', 'reed diffuser', 'home fragrance gift'].map(name => ({ name })),
+      facts: [
+        { k: 'Price range', v: '£18 refills to £46 gift sets', quote: 'Refill kits from £18', src: 'Website, shop page', kind: 'Observed', kindStyle: lab('Observed') },
+        { k: 'Bestseller', v: 'Fig and Cedar, 220g', quote: 'Our most-loved scent', src: 'Website, home page', kind: 'Brand claim', kindStyle: lab('Brand claim') },
+        { k: 'Burn time', v: 'Up to 50 hours per candle', quote: 'Burns for up to 50 hours', src: 'Website, product page', kind: 'Brand claim', kindStyle: lab('Brand claim') },
+        { k: 'Delivery', v: 'Free UK delivery over £40', quote: 'Free delivery on orders over £40', src: 'Website, footer', kind: 'Observed', kindStyle: lab('Observed') },
+        { k: 'Reviews', v: '4.8 from 1,240 reviews', quote: '4.8 out of 5', src: 'Review site', kind: 'Observed', kindStyle: lab('Observed') },
+        { k: 'Provenance', v: 'Hand-poured in Yorkshire', quote: 'Hand-poured in small batches', src: 'Website, about page', kind: 'Brand claim', kindStyle: lab('Brand claim') },
+        { k: 'Current offer', v: '15% off first refill kit', quote: 'Code REFILL', src: 'Meta ad, 9 Oct', kind: 'Observed', kindStyle: lab('Observed') }
+      ],
+      signals: [
+        { k: 'Refill and less waste', v: 'On 4 site pages and in 9 of 46 ads' },
+        { k: 'A gift that feels special', v: 'Gift sets lead the menu; 6 ads, mostly Q4' },
+        { k: 'Craft and provenance', v: 'About page and 3 ads; never in the first 3 seconds' }
+      ],
+      candidates: [
+        { name: 'Halvane', domain: 'halvane.co.uk', why: 'Same price band; refill offer; bids on "candle refill"', ads: '58', status: 'Tracked', statusStyle: chip('#E6F9FA', '#075E66') },
+        { name: 'Corrie & Moss', domain: 'corrieandmoss.com', why: 'Hand-poured, founder-led ads; same UK audience', ads: '41', status: 'Tracked', statusStyle: chip('#E6F9FA', '#075E66') },
+        { name: 'Fennick Home', domain: 'fennickhome.co.uk', why: 'Gift sets at £35 to £50; heavy Q4 advertiser', ads: '49', status: 'Tracked', statusStyle: chip('#E6F9FA', '#075E66') },
+        { name: 'Otterly Scents', domain: 'otterlyscents.com', why: 'Newer brand, fast testing, scent layering', ads: '33', status: 'Tracked', statusStyle: chip('#E6F9FA', '#075E66') },
+        { name: 'Brightmoor', domain: 'brightmoor.co.uk', why: 'Discount-led, same keywords', ads: '33', status: 'Tracked', statusStyle: chip('#E6F9FA', '#075E66') },
+        { name: 'Wickstone', domain: 'wickstone.co.uk', why: 'Appeared in 3 searches this week; reed diffusers', ads: '12', status: 'Candidate', statusStyle: chip('#F3F4F6', '#374151') }
+      ],
+      profiles: [
+        { k: 'Instagram', v: '@northwickcandle', note: '18.4K followers' },
+        { k: 'TikTok', v: '@northwickcandle', note: '6.1K followers' },
+        { k: 'Creator', v: 'Ama, Instagram', note: 'Featured on website; fit unverified' },
+        { k: 'Creator', v: 'Cleo, TikTok', note: 'Featured on website; fit unverified' },
+        { k: 'Sources', v: 'Website, reviews, Meta Ad Library', note: 'TikTok library not connected' }
+      ]
+    };
+  }
+}
+</script>
+</body>
+</html>

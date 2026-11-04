@@ -73,3 +73,15 @@ archived skill.
 - Follow build phases in order. The user authorised Phase 1 fixtures while the
   Phase 0 gate awaits Meta identity verification. Keep both live gates open until
   the user confirms them on Exter Media's own account. Fixtures are not live verification.
+
+## Owned sync (CA-01, CA-02)
+
+- Keep EXTER_OWNED_SYNC_ENABLED absent or false by default. Do not enable live
+  dispatch without separate user authorisation. Both live gates remain open.
+- Keep the shared Meta and TikTok reporting tokens in Render secrets only. Never
+  store tokens or raw provider errors in the database. Use the existing budget
+  guard for provider dispatch. Missing credentials must make no source requests.
+- Preserve stored history when tokens are revoked or syncs fail. Keep account,
+  platform, currency, attribution and conversion-event cohorts separate.
+- Treat Phase 1 as fixture-tested, not live-verified. Keep M1 status and the main
+  product spec references above alongside these own-account module rules.

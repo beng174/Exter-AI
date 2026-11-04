@@ -7,7 +7,9 @@ paused until Phase 2; do not run kernel:next without a request.
 
 This PR retains M1's public creative evidence and original Exter screens. M1's
 M2 to M5 remain planned, not started here. The separately authorised CA-01/CA-02
-fixture-only work is tracked in PR #4, not introduced by this reconciliation.
+fixture-only implementation now comes from PR #4 in exter-test-drive. This
+reconciliation preserves its status and rules alongside M1; it adds no new
+owned-sync implementation.
 
 - Phase 0 live gate: OPEN, awaiting Meta identity verification and user confirmation
   on Exter Media's own ad account.
@@ -22,6 +24,16 @@ that screenshots verify production data. Internal fixture tests cover populated
 analysis and playback separately. No live provider calls, production writes,
 Gemini method changes, Render settings changes or budget changes were made.
 See .agent/plans/weeks-1-2.md for validation, screenshots and remaining gates.
+
+## PR #3 update after PR #4 (2026-11-04 02:49 UTC)
+
+- Merged exter-test-drive at 5edb13b, which includes PR #4. Preserved both M1 and
+  Phase 1 status, the main PRODUCT-SPEC references and creative analytics rules.
+- Manual merge resolution changed only AGENTS.md and this handoff. Owned sync
+  stays default off (EXTER_OWNED_SYNC_ENABLED absent/false); both live gates stay
+  OPEN. No live provider calls or runtime setting changes were made.
+- Validation: npm run check, npm test (352 passed), npm run build and
+  npm run secrets:check passed on the combined branch.
 
 ## PR #3 branch reconciliation (2026-11-04 01:53 UTC)
 
@@ -54,12 +66,36 @@ and blockers below remain unchanged.
 - Default owned-account Meta Graph version is v25.0; explicit version overrides
   remain supported. UI and kernel implementation are unchanged.
 - No live provider calls were made. The Phase 0 gate (system user reading Exter
-  Media's own ad account) remains unverified. The earlier instruction to wait on
-  Phase 1 is superseded only for fixture development by the user's authorisation;
-  both live gates remain open.
+  Media's own ad account) remains open, awaiting Meta identity verification.
+  The user explicitly authorised Phase 1 fixture-only development on 4 November.
+  The earlier instruction to wait on Phase 1 is superseded only for fixture
+  development; both live gates remain open.
 
 - Validation: npm test passed all 336 tests; npm run check and
   npm run secrets:check passed. Fixtures do not verify live-account gates.
+
+## Phase 1 fixture-only work (CA-01, CA-02)
+
+- Phase 0 live gate: OPEN, awaiting Meta identity verification and user confirmation
+  that the system user reads Exter Media's own ad account.
+- Phase 1 live gate: OPEN, awaiting user confirmation that spend and impressions
+  match within 1% for 10 ads on Exter Media's own account.
+- Attention-field availability on Graph v25+ and the TikTok purchase-value field
+  remain unverified. Fixtures are not live verification. No provider calls here.
+- The latest user instruction authorises CA-01/CA-02 despite the open Phase 0 gate.
+  Kernel and later CA features remain paused. Live dispatch stays off by default.
+- Added owned account metadata/status, attribution-scoped daily rows, durable daily
+  scheduler/worker jobs, 90-day backfill and seven-day restatement. Lease fencing
+  and atomic page commits preserve history on errors or worker loss.
+- Added shared/owned-metrics.ts: ratios of sums, cohort benchmarks, missing-value
+  exclusion and minimum-sample status. Frequency/watch time remain as reported;
+  multiple daily values do not establish a period metric. TikTok ROAS remains
+  unavailable until its purchase-value field is confirmed.
+- Synthetic-only validation: 347 Node tests, two disposable Postgres integration
+  tests, TypeScript check, production build and secret scan passed. Browser checks
+  verified the account panel at 1024px and 390px with no source requests.
+- Rollout: docs/OWNED-SYNC.md. Keep EXTER_OWNED_SYNC_ENABLED absent/false. Existing
+  tokens stay in Render secrets; no credentials or raw errors enter the database.
 
 ## Retained kernel handoff
 
