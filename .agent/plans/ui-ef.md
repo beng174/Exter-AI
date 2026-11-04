@@ -19,7 +19,7 @@ footer and removal of unreachable old UI. No new models, schemas or dependencies
 - [x] 2026-11-04 UTC: Fold budgets into Data sources while preserving operator tests/Labelling.
 - [x] 2026-11-04 UTC: Fix Winners, Competitors, internal copy and footer; remove 22 unreachable UI modules/styles and old App page branches.
 - [x] 2026-11-04 UTC: Fixture/browser checks, all four required checks, 403 tests, browser checks and screenshot comparisons.
-- [ ] Push one PR against exter-test-drive with section classifications and images.
+- [x] 2026-11-04 UTC: Push PR #9 against exter-test-drive with all section classifications, paired reference images and retained differences.
 
 ## Surprises and discoveries
 
@@ -52,7 +52,8 @@ All six new screens and the fifteen-screen fidelity pass are implemented.
 UI-A/UI-B/UI-C-D regressions pass, alongside populated UI-E/F fixtures.
 Typecheck, 403 tests, build and diff checks pass. Every requested desktop/mobile
 capture and all sixteen side-by-side comparisons are complete and visually
-reviewed. Secret scan passes on the staged files. Publication is the remaining step.
+reviewed. Secret scan passes on the staged files. Review: https://github.com/beng174/Exter-AI/pull/9, on feat/ui-ef-workspace
+against exter-test-drive. No merge or deployment was run.
 
 ## Context and orientation
 

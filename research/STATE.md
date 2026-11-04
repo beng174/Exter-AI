@@ -348,3 +348,7 @@ and blockers below remain unchanged.
 
 - Final staged validation also passed npm run secrets:check; no known secret
   patterns were found. All four required checks pass on the completed change.
+
+- Review: https://github.com/beng174/Exter-AI/pull/9 on feat/ui-ef-workspace,
+  against exter-test-drive. The description includes every section classification,
+  all app/reference pairs, mobile captures and intentional differences.
