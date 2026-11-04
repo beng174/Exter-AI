@@ -1,5 +1,5 @@
 import { infrastructureDatabase, migrate } from "./database.js";
-import { schedule, workOnce } from "./jobs.js";
+import { schedule, workOnce, workOwnedOnce } from "./jobs.js";
 import { configuredKernelArtifactClient, workKernelOnce } from "../kernel/worker.js";
 const role = process.argv[2];
 const pool = infrastructureDatabase();
@@ -15,8 +15,9 @@ try {
     process.once("SIGINT", () => { stopping = true; shutdown.abort(); });
     while (!stopping) {
       const collected = await workOnce(pool);
+      const owned = !stopping ? await workOwnedOnce(pool) : false;
       const staged = artifactClient && !stopping ? await workKernelOnce(pool, artifactClient, { signal: shutdown.signal }) : false;
-      if (!collected && !staged && !stopping) await new Promise(resolve => setTimeout(resolve,1000));
+      if (!collected && !owned && !staged && !stopping) await new Promise(resolve => setTimeout(resolve,1000));
     }
   } else throw new Error("Unknown runtime role.");
 } catch {

@@ -1,3 +1,4 @@
+import { attachOwnedAccounts } from "./owned/api.js";
 import { attachInfrastructure } from "./infrastructure/api.js";
 import { basicAuth } from "./auth.js";
 import { protectSettingsMutation } from "./request-guard.js";
@@ -259,6 +260,7 @@ export function createApp(db: DatabaseSync = openDatabase()) {
   });
   app.use(["/api/budgets", "/api/gemini-smoke", "/api/labelling", "/api/creator-research", "/api/brands", "/api/brand-research"], protectSettingsMutation);
   attachInfrastructure(app, db);
+  attachOwnedAccounts(app,id=>Boolean(readBrand(db,id)));
   attachKernelStatus(app);
   attachConnections(app, db);
   attachPublicMonitor(app, db);

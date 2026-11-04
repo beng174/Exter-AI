@@ -24,7 +24,8 @@
     "test:infrastructure": "tsx --test --test-concurrency=1 tests/infrastructure.integration.ts tests/kernel-*.integration.ts",
     "kernel:next": "node scripts/kernel-backlog.mjs next",
     "kernel:task": "node scripts/kernel-backlog.mjs show",
-    "kernel:skills:verify": "node --import tsx --test tests/kernel-skills.test.ts"
+    "kernel:skills:verify": "node --import tsx --test tests/kernel-skills.test.ts",
+    "test:owned": "tsx --test --test-concurrency=1 tests/owned-sync.integration.ts"
   },
   "dependencies": {
     "@huggingface/transformers": "4.3.2",

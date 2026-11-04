@@ -15,10 +15,34 @@ and blockers below remain unchanged.
 - Default owned-account Meta Graph version is v25.0; explicit version overrides
   remain supported. UI and kernel implementation are unchanged.
 - No live provider calls were made. The Phase 0 gate (system user reading Exter
-  Media's own ad account) remains unverified; do not start Phase 1 until it passes.
+  Media's own ad account) remains open, awaiting Meta identity verification.
+  The user explicitly authorised Phase 1 fixture-only development on 4 November.
 
 - Validation: npm test passed all 336 tests; npm run check and
   npm run secrets:check passed. Fixtures do not verify live-account gates.
+
+## Phase 1 fixture-only work (CA-01, CA-02)
+
+- Phase 0 live gate: OPEN, awaiting Meta identity verification and user confirmation
+  that the system user reads Exter Media's own ad account.
+- Phase 1 live gate: OPEN, awaiting user confirmation that spend and impressions
+  match within 1% for 10 ads on Exter Media's own account.
+- Attention-field availability on Graph v25+ and the TikTok purchase-value field
+  remain unverified. Fixtures are not live verification. No provider calls here.
+- The latest user instruction authorises CA-01/CA-02 despite the open Phase 0 gate.
+  Kernel and later CA features remain paused. Live dispatch stays off by default.
+- Added owned account metadata/status, attribution-scoped daily rows, durable daily
+  scheduler/worker jobs, 90-day backfill and seven-day restatement. Lease fencing
+  and atomic page commits preserve history on errors or worker loss.
+- Added shared/owned-metrics.ts: ratios of sums, cohort benchmarks, missing-value
+  exclusion and minimum-sample status. Frequency/watch time remain as reported;
+  multiple daily values do not establish a period metric. TikTok ROAS remains
+  unavailable until its purchase-value field is confirmed.
+- Synthetic-only validation: 347 Node tests, two disposable Postgres integration
+  tests, TypeScript check, production build and secret scan passed. Browser checks
+  verified the account panel at 1024px and 390px with no source requests.
+- Rollout: docs/OWNED-SYNC.md. Keep EXTER_OWNED_SYNC_ENABLED absent/false. Existing
+  tokens stay in Render secrets; no credentials or raw errors enter the database.
 
 ## Retained kernel handoff
 

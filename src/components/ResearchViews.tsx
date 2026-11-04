@@ -1,3 +1,4 @@
+import { OwnedAccounts } from "./OwnedAccounts";
 import { PublicMonitorPanel } from "./PublicMonitorPanel";
 import { ConnectionPanel } from "./ConnectionPanel";
 import { useEffect, useMemo, useRef, useState } from "react";
@@ -922,6 +923,7 @@ export function SourcesView({
   }
   return (
     <div className="rv-stack">
+      <OwnedAccounts workspaceId={brand.id} />
       <PublicMonitorPanel brandId={brand.id} onUpdated={onImported} />
       <ConnectionPanel brandId={brand.id} onSynced={onImported} mode="claude" />
       <details className="optional-client-connections">
