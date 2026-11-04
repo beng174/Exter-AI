@@ -20,6 +20,7 @@ test("UI-01 missing values render Unavailable, never an invented zero",()=>{
     assert.equal(hasValue(missing),false);assert.equal(displayValue(missing),"Unavailable");
     const result=text(render(ui.MetricTile,{label:"Count",value:missing,basis:"Observed"}));
     assert.match(result,/Unavailable/);assert.doesNotMatch(result,/\b0\b/);
+    const card=text(render(ui.CreativeCard,{title:"Stored creative",source:"Source",onOpen:()=>{},metrics:[{label:"Spend",value:missing,basis:"Observed"}]}));assert.match(card,/Unavailable/);assert.doesNotMatch(card,/\b0\b/);
   }
   assert.match(text(render(ui.MetricTile,{label:"Count",value:0,basis:"Observed"})),/Observed0/);
   assert.equal(displayValue(false),"false");
@@ -44,4 +45,12 @@ test("UI-01 primitives expose evidence targets, text status, summaries and real 
   assert.match(text(render(ui.EmptyState,{title:"No ads match",description:"Clear filters to see other stored ads."})),/No ads match/);
   const exports=["PageHeader","FilterBar","SectionCard","MetaLine","DataLabel","StatusChip","Confidence","MetricTile","Unavailable","EmptyState","CreativeCard","DataTable","BarList","Heatmap","Sparkline"];
   for(const name of exports)assert.equal(typeof ui[name],"function",name);
+});
+
+test("UI-03 retention never plots missing points as zero",()=>{
+  const missing=text(render(ui.RetentionChart,{points:[{label:"Retention 25%",creative:null,benchmark:null}],onCreative:()=>{},onBenchmark:()=>{}}));
+  assert.match(missing,/Unavailable/);assert.doesNotMatch(missing,/\b0\b/);
+  const chart=render(ui.RetentionChart,{points:[{label:"25%",creative:.5,benchmark:.4},{label:"50%",creative:null,benchmark:null},{label:"75%",creative:.2,benchmark:.1}],onCreative:()=>{},onBenchmark:()=>{}});
+  assert.ok(!chart.includes('class="retention-creative"'),"missing checkpoints break each line");
+  assert.match(chart,/50.0 percent/);assert.match(chart,/Observed/);
 });

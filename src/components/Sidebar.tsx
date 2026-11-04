@@ -3,7 +3,7 @@ import { ArrowUpRight, ChevronDown, CircleHelp, Settings2 } from "lucide-react";
 import type { Brand } from "../../shared/types";
 import { visibleNavigation, type ViewId } from "../navigation";
 import { api } from "../lib/api";
-import { BrandLogo } from "./BrandLogo";
+import { brandContext } from "../lib/brand-context";
 import "./Sidebar.css";
 
 export function Sidebar({brand,brandId,current,demo,open,onNavigate,onSwitchBrand,onHelp,onClose}:{brand?:Brand;brandId:string;current:ViewId;demo:boolean;open:boolean;onNavigate:(id:ViewId)=>void;onSwitchBrand:()=>void;onHelp:()=>void;onClose:()=>void}) {
@@ -40,16 +40,15 @@ export function Sidebar({brand,brandId,current,demo,open,onNavigate,onSwitchBran
     window.addEventListener("keydown",escape);breakpoint.addEventListener("change",closeDesktop);
     return()=>{window.removeEventListener("keydown",escape);breakpoint.removeEventListener("change",closeDesktop);document.body.style.overflow=overflow;previous?.focus();};
   },[open,onClose]);
-  const role=(brand as Brand & {role?:string}|undefined)?.role;
-  const type=role==="client"?"Client":role==="prospect"?"Prospect":"Type: Unavailable";
+  const context=brandContext(brand);
   return <aside ref={sidebar} className={`sidebar ui-sidebar ${open?"sidebar-open":""}`} id="main-sidebar">
-    <a className="wordmark" href={`/?view=overview&brandId=${encodeURIComponent(brandId)}`} aria-label="Exter Media home" onClick={event=>{if(!event.metaKey&&!event.ctrlKey&&!event.shiftKey&&!event.altKey){event.preventDefault();onNavigate("overview");}}}><BrandLogo/></a>
-    <button className="workspace-switch" onClick={()=>{onClose();onSwitchBrand();}} aria-label="Switch brand"><span className="workspace-avatar">{brand?.initials||"?"}</span><span><strong>{brand?.name||"Brand unavailable"}</strong><small>{type} · {brand?`${brand.competitors.length} competitors`:"Competitors unavailable"}</small></span><ChevronDown size={16}/></button>
+    <a className="wordmark" href={`/?view=overview&brandId=${encodeURIComponent(brandId)}`} aria-label="Exter AI home" onClick={event=>{if(!event.metaKey&&!event.ctrlKey&&!event.shiftKey&&!event.altKey){event.preventDefault();onNavigate("overview");}}}><span className="exter-wordmark">EXTER <small>AI</small></span></a>
+    <button className="workspace-switch" onClick={()=>{onClose();onSwitchBrand();}} aria-label="Switch brand"><span className="workspace-avatar">{brand?.initials||"?"}</span><span><strong>{brand?.name||"Brand unavailable"}</strong><small>{context}</small></span><ChevronDown size={16}/></button>
     <nav aria-label="Main navigation">{visibleNavigation(demo).map(group=><section className="ui-nav-group" key={group.label} aria-label={group.label}><h2>{group.label}</h2>{group.items.map(item=>{
       const Icon=item.icon,selected=current===item.id || current==="creative"&&item.id==="creatives";
       const href=new URLSearchParams({view:item.id,brandId,...(demo?{demo:"1"}:{})});
       return <a key={item.id} className={`nav-item ${selected?"active":""}`} href={`/?${href}`} aria-current={selected?"page":undefined} onClick={event=>{if(event.metaKey||event.ctrlKey||event.shiftKey||event.altKey)return;event.preventDefault();onNavigate(item.id);}}><Icon size={18}/><span>{item.label}</span>{item.id==="data"&&attention&&<span className="ui-source-attention" title={attention}><span className="sr-only">{attention}</span></span>}</a>;
     })}</section>)}</nav>
-    <div className="sidebar-bottom"><button className="nav-item" onClick={()=>{onClose();onHelp();}}><CircleHelp size={18}/><span>Help and getting started</span><ArrowUpRight size={14}/></button><div className="user-profile"><span>EW</span><div><strong>Exter workspace</strong><small>Research edition</small></div><button className="icon-button" aria-label="Workspace settings" onClick={()=>onNavigate("settings")}><Settings2 size={16}/></button></div></div>
+    <div className="sidebar-bottom"><button className="nav-item" onClick={()=>{onClose();onHelp();}}><CircleHelp size={18}/><span>Help</span><ArrowUpRight size={14}/></button><div className="user-profile"><span>EW</span><div><strong>Exter workspace</strong><small>Research edition</small></div><button className="icon-button" aria-label="Workspace settings" onClick={()=>onNavigate("settings")}><Settings2 size={16}/></button></div></div>
   </aside>;
 }

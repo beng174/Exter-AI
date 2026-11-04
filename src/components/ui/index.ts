@@ -14,3 +14,4 @@ export * from "./BarList";
 export * from "./Heatmap";
 export * from "./Sparkline";
 export * from "./value";
+export * from "./RetentionChart";

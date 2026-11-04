@@ -42,6 +42,10 @@ export interface DemoGalleryCreative {
   daysRunningAsOf: string | null;
   daysRunningBasis: string | null;
   searchText: string;
+  platform?: string;
+  owned?: boolean;
+  placements?: string[];
+  scenes?: {startSeconds:number;label:string}[];
 }
 
 export interface CreativeGalleryResponse {
