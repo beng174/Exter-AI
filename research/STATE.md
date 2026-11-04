@@ -398,3 +398,7 @@ and blockers below remain unchanged.
 
 - Final staged secret scan also passes with no known secret patterns found.
   All four required checks pass on the completed implementation.
+
+- Review: https://github.com/beng174/Exter-AI/pull/11 on feat/sample-workspace,
+  against exter-test-drive. The description includes every app/reference pair,
+  the read-only boundary, validation and intentional fidelity differences.

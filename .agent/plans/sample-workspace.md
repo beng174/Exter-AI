@@ -10,7 +10,7 @@ Populate every approved screen with the fictional Northwick Candle Co. workspace
 - [x] 2026-11-04 UTC: Unit/API tests and browser acceptance pass for isolation, no operational fall-through, complete screen sections, canned answers, private-outcome restrictions, visible bars and desktop/mobile navigation. Reviewed all app/reference comparisons.
 - [x] 2026-11-04 UTC: Type check, 405 tests, production build and browser regressions pass; sixteen app/reference pairs include all fifteen screens and sidebar.
 - [x] 2026-11-04 UTC: Staged secret scan passes; all four required checks pass on the completed implementation.
-- [ ] Publish against exter-test-drive.
+- [x] 2026-11-04 UTC: Published https://github.com/beng174/Exter-AI/pull/11 against exter-test-drive, with all sixteen app/reference pairs and kept differences.
 
 ## Surprises and discoveries
 The current demo flag only filters existing database brands. Several sections deliberately have no implemented calculation yet. The authorised sample requires presentation read models for those sections; these must never imply live calculations or enable production gates. PR #10 remains separate from the current base. Visual review caught missing mix-bar height and incorrect detail scene/checklist/readings grids; these were fixed, and browser acceptance now asserts visible mix bars. The reference retention points were copied from its SVG, not invented or inferred from a provider.
