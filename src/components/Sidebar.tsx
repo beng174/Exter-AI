@@ -8,7 +8,15 @@ import "./Sidebar.css";
 
 export function Sidebar({brand,brandId,current,demo,open,onNavigate,onSwitchBrand,onHelp,onClose}:{brand?:Brand;brandId:string;current:ViewId;demo:boolean;open:boolean;onNavigate:(id:ViewId)=>void;onSwitchBrand:()=>void;onHelp:()=>void;onClose:()=>void}) {
   const sidebar=useRef<HTMLElement>(null);
+  const [competitors,setCompetitors]=useState<{brandId:string;count:number|null}>({brandId,count:null});
   const [attention,setAttention]=useState<string|null>("Source health is waiting for a check");
+  useEffect(()=>{
+    let active=true;
+    setCompetitors({brandId,count:null});
+    const check=()=>api<{competitors:unknown[]}>(`/api/brands/${encodeURIComponent(brandId)}/creative-competitors`).then(result=>{if(active)setCompetitors({brandId,count:result.competitors.length});}).catch(()=>{if(active)setCompetitors({brandId,count:null});});
+    void check();const timer=window.setInterval(()=>void check(),60000);
+    return()=>{active=false;window.clearInterval(timer);};
+  },[brandId]);
   useEffect(()=>{
     let active=true;
     async function check() {
@@ -40,7 +48,7 @@ export function Sidebar({brand,brandId,current,demo,open,onNavigate,onSwitchBran
     window.addEventListener("keydown",escape);breakpoint.addEventListener("change",closeDesktop);
     return()=>{window.removeEventListener("keydown",escape);breakpoint.removeEventListener("change",closeDesktop);document.body.style.overflow=overflow;previous?.focus();};
   },[open,onClose]);
-  const context=brandContext(brand);
+  const context=brandContext(brand,competitors.brandId===brandId?competitors.count:null);
   return <aside ref={sidebar} className={`sidebar ui-sidebar ${open?"sidebar-open":""}`} id="main-sidebar">
     <a className="wordmark" href={`/?view=overview&brandId=${encodeURIComponent(brandId)}`} aria-label="Exter AI home" onClick={event=>{if(!event.metaKey&&!event.ctrlKey&&!event.shiftKey&&!event.altKey){event.preventDefault();onNavigate("overview");}}}><span className="exter-wordmark">EXTER <small>AI</small></span></a>
     <button className="workspace-switch" onClick={()=>{onClose();onSwitchBrand();}} aria-label="Switch brand"><span className="workspace-avatar">{brand?.initials||"?"}</span><span><strong>{brand?.name||"Brand unavailable"}</strong><small>{context}</small></span><ChevronDown size={16}/></button>

@@ -1,5 +1,6 @@
 import type { DemoGalleryCreative } from "./creative-gallery.js";
 import type { DemoAdScore } from "./brand-demo.js";
+import { creativeTitle } from "./creative-presentation.js";
 import type { OwnedMetric, MetricName } from "./owned-metrics.js";
 export interface CreativePerformance {
     id: string;
@@ -29,7 +30,9 @@ export interface BrowserCreative extends DemoGalleryCreative {
         label: string;
     }[];
 }
+export interface CreativeCompetitor { key:string;brandId:string|null;name:string;status:string }
 export interface CreativeBrowserResponse {
+    competitors:CreativeCompetitor[];
     brand: {
         id: string;
         name: string;
@@ -91,7 +94,7 @@ export function filterBrowserCreatives(rows: BrowserCreative[], filters: Browser
         if (filters.sort === "days")
             return (b.daysRunning ?? -1) - (a.daysRunning ?? -1) || a.adId.localeCompare(b.adId);
         if (filters.sort === "title")
-            return a.title.localeCompare(b.title) || a.adId.localeCompare(b.adId);
+            return creativeTitle(a).localeCompare(creativeTitle(b)) || a.adId.localeCompare(b.adId);
         return (b.observedAt || "").localeCompare(a.observedAt || "") || a.adId.localeCompare(b.adId);
     });
 }

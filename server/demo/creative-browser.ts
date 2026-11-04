@@ -1,7 +1,7 @@
 import type { Express } from "express";
 import type { DatabaseSync } from "node:sqlite";
 import type pg from "pg";
-import type { Brand } from "../../shared/types.js";
+import { configuredCreativeCompetitors } from "./creative-competitors.js";
 import type { BrowserCreative, CreativeBrowserResponse, CreativePerformance } from "../../shared/creative-browser.js";
 import { ownedMetrics, type OwnedDay } from "../../shared/owned-metrics.js";
 import { readBrand } from "../db.js";
@@ -9,12 +9,19 @@ import { resolveDemoBrandId } from "./reconcile.js";
 import type { CreativeGalleryService } from "./gallery.js";
 import type { BrandDemoService } from "./service.js";
 import { infrastructureDatabase } from "../infrastructure/database.js";
-import type { DemoCollectionService } from "./collection.js";
 export interface BrowserOptions {
     getPool?: () => pg.Pool | null;
     now?: () => Date;
 }
 export function attachCreativeBrowser(app: Express, db: DatabaseSync, options: BrowserOptions = {}) {
+    app.get("/api/brands/:brandId/creative-competitors",(req,res)=>{
+        res.setHeader("Cache-Control","private, no-store");
+        try {
+            const brand=readBrand(db,resolveDemoBrandId(db,String(req.params.brandId)));
+            if(!brand||brand.mode==="demo"){res.status(404).json({error:"Real workspace not found."});return;}
+            res.json({brandId:brand.id,competitors:configuredCreativeCompetitors(db,brand,app.locals.demoCollection)});
+        }catch{res.status(503).json({error:"The configured competitor set could not be read."});}
+    });
     app.get("/api/brands/:brandId/creatives", async (req, res) => {
         res.setHeader("Cache-Control", "private, no-store");
         const brand = readBrand(db, resolveDemoBrandId(db, String(req.params.brandId)));
@@ -34,27 +41,15 @@ export function attachCreativeBrowser(app: Express, db: DatabaseSync, options: B
         }
         try {
             const gallery = app.locals.creativeGallery as CreativeGalleryService, reports = app.locals.brandDemo as BrandDemoService;
-            const allBrands = (db.prepare("SELECT data FROM brands").all() as {
-                data: string;
-            }[]).map(row => JSON.parse(row.data) as Brand);
-            const ids = new Set<string>([brand.id]);
-            for (const label of brand.competitors)
-                for (const other of allBrands)
-                    if (other.mode !== "demo" && (other.id === label || other.name.toLowerCase() === label.toLowerCase()))
-                        ids.add(other.id);
-            const sources: CreativeBrowserResponse["sources"] = [];
-            try {
-                for (const item of (app.locals.demoCollection as DemoCollectionService).snapshot(brand.id).competitors) {
-                    if (item.brandId)
-                        ids.add(item.brandId);
-                    sources.push({ brandId: item.brandId, name: item.name, status: item.status, ...(item.lastRun?.message ? { message: "Review the saved collection status in Data sources." } : {}) });
-                }
-            }
-            catch { /* Not every workspace belongs to the existing explicit collection campaign. */ }
+            const competitors=configuredCreativeCompetitors(db,brand,app.locals.demoCollection);
+            const ids=new Set([brand.id,...competitors.flatMap(item=>item.brandId?[item.brandId]:[])]);
+            const sources:CreativeBrowserResponse["sources"]=competitors.map(item=>({brandId:item.brandId,name:item.name,status:item.status}));
             const creatives: BrowserCreative[] = [];
             for (const id of ids) {
                 try {
                     const list = await gallery.list(id);
+                    const coverage=sources.find(item=>item.brandId===id&&item.status==="configured");
+                    if(coverage)coverage.status=list.creatives.some(item=>!item.owned)?"collected":"not-collected";
                     let scores: ReturnType<BrandDemoService["report"]>["scores"] = [];
                     let scoreError=false;
                     try {
@@ -68,7 +63,7 @@ export function attachCreativeBrowser(app: Express, db: DatabaseSync, options: B
                     }
                 }
                 catch {
-                    sources.push({ brandId: id, name: allBrands.find(item => item.id === id)?.name || "Configured brand", status: "error", message: "Stored creative data could not be read. Earlier records are preserved." });
+                    sources.push({ brandId: id, name: competitors.find(item => item.brandId === id)?.name || "Configured brand", status: "error", message: "Stored creative data could not be read. Earlier records are preserved." });
                 }
             }
             let ownedStatus: CreativeBrowserResponse["ownedStatus"] = "not_configured";
@@ -118,7 +113,7 @@ export function attachCreativeBrowser(app: Express, db: DatabaseSync, options: B
                 ownedStatus = "error";
             }
             const dates = creatives.flatMap(item => [item.firstObservedAt, item.observedAt].filter((value): value is string => Boolean(value))).sort();
-            res.json({ brand: { id: brand.id, name: brand.name, domain: brand.domain }, creatives, sources, ownedStatus, dateRange: { from: dates[0] || null, to: dates.at(-1) || null }, lastChecked: dates.at(-1) || null, reportingRange: { from, to } } satisfies CreativeBrowserResponse);
+            res.json({ brand: { id: brand.id, name: brand.name, domain: brand.domain }, creatives, competitors, sources, ownedStatus, dateRange: { from: dates[0] || null, to: dates.at(-1) || null }, lastChecked: dates.at(-1) || null, reportingRange: { from, to } } satisfies CreativeBrowserResponse);
         }
         catch {
             res.status(503).json({ error: "Stored creative evidence is unavailable. No source collection or analysis was started." });

@@ -1,4 +1,6 @@
-.ui-unavailable { color:var(--muted); font-size:14px; line-height:1.5; overflow-wrap:anywhere; }
-.ui-unavailable strong { color:var(--text); }
-.ui-unavailable p { margin:4px 0; }
-.ui-unavailable a { display:inline-flex; align-items:center; min-height:44px; color:var(--exter-blue); }
+.ui-unavailable { display:flex;align-items:baseline;flex-wrap:wrap;gap:4px 16px;color:var(--muted);font-size:14px;line-height:1.5;overflow-wrap:anywhere; }
+.ui-unavailable strong { color:var(--text);font-weight:500; }.ui-unavailable p { margin:0;font-size:inherit;flex:1 1 180px; }
+.ui-unavailable a,.ui-unavailable button { display:inline-flex;align-items:center;min-height:44px;color:var(--exter-blue);font:inherit;font-size:13px;font-weight:600; }
+.ui-unavailable button { border:0;background:transparent;padding:0;cursor:pointer; }
+.ui-unavailable-label { display:inline-block;font-size:12px;font-weight:400;line-height:1.5;color:var(--muted);cursor:help; }
+.ui-unavailable-label:focus-visible { outline:2px solid var(--exter-blue);outline-offset:3px; }

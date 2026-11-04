@@ -19,7 +19,7 @@ after(() => rm(dir, { recursive: true, force: true }));
 function render(row: BrowserCreative) {
     const original = Object.getOwnPropertyDescriptor(globalThis, "window");
     Object.defineProperty(globalThis, "window", { value: { location: { href: "http://exter.local/?view=creative&brandId=workspace-a&id=creative-a", origin: "http://exter.local" } }, configurable: true });
-    const data: CreativeBrowserResponse = { brand: { id: "workspace-a", name: "Fixture advertiser", domain: "fixture.example" }, creatives: [row], sources: [], ownedStatus: "not_configured", dateRange: { from: null, to: null }, lastChecked: null, reportingRange: { from: "2026-11-01", to: "2026-11-04" } };
+    const data: CreativeBrowserResponse = { brand: { id: "workspace-a", name: "Fixture advertiser", domain: "fixture.example" }, creatives: [row], competitors:[], sources: [], ownedStatus: "not_configured", dateRange: { from: null, to: null }, lastChecked: null, reportingRange: { from: "2026-11-01", to: "2026-11-04" } };
     try {
         return renderToStaticMarkup(h(CreativeDetailPage, { data, adId: row.adId, filtered: [row], onOpen: () => { } }));
     }
@@ -34,10 +34,10 @@ test("UI-03 missing evidence renders reasons/unlocks, never invented outcomes, s
     const html = render(browserCreative({ daysRunning: null, durationSeconds: null, angle: null, creativeFormat: null }));
     assert.match(html, /No retained media file/);
     assert.match(html, /No scene boundaries are stored/);
-    assert.match(html, /No saved owned reporting data/);
+    assert.match(html, /Owned metrics are not synced/);
     assert.match(html, /No saved analysis supports/);
-    assert.match(html, /Working Score calculation.*not built/);
-    assert.match(html, /Predictive score: not validated yet/);
+    assert.match(html, /calculation is not built/);
+    assert.equal((html.match(/class="ui-meta-line"/g)||[]).length,1,"only the complete source-history metadata remains");
     assert.ok(!html.includes('role="dialog"'));
     assert.ok(!html.includes('>0<'));
     assert.ok(!html.includes("Proven winner"));
@@ -70,4 +70,14 @@ test("UI-03 machine evidence is Modelled, timestamped and never reproduces sung 
   assert.ok(!html.includes("LYRIC_MUST_NOT_RENDER"));assert.ok(!html.includes("Human reviewed"));
 });
 
-test("UI-03 a checklist read failure stays explicit rather than claiming missing analysis",()=>{const html=render(browserCreative({scoreError:true}));assert.match(html,/saved creative checklist could not be read/);});
+test("UI-03 a checklist read failure stays explicit rather than claiming missing analysis",()=>{const html=render(browserCreative({scoreError:true}));assert.match(html,/saved checklist could not be read/);});
+
+
+test("UI-03 source facts are formatted, active ads remain Still running, and gaps link to their actual fixes",()=>{
+  const html=render(browserCreative({title:"{{product.name}}",copy:"First line of retained copy\nSecond line",firstObservedAt:null,placements:["FACEBOOK","INSTAGRAM","AUDIENCE_NETWORK"],observedAt:"2026-10-30T00:00:00Z"}));
+  assert.match(html,/<h1>First line of retained copy<\/h1>/);assert.ok(!html.includes("{{product.name}}"));
+  assert.match(html,/Facebook, Instagram, Audience Network/);assert.match(html,/Still running/);assert.match(html,/>Active</);assert.match(html,/30 Oct 2026/);
+  assert.ok(!html.includes("n = Unavailable")&&!html.includes("Unavailable to Unavailable"));
+  assert.match(html,/view=settings&amp;brandId=workspace-a&amp;analysisAdId=12345678#gemini-smoke-test/);
+  assert.match(html,/Open original ad/);assert.match(html,/Connect account/);
+});

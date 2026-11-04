@@ -15,10 +15,18 @@ and copy tone. If the two disagree, follow the spec and note it in the PR.
    placeholder. Real values come from the API. Sample data only appears behind
    the existing explicit demo flag, labelled "Sample data", never mixed with real
    records.
-2. **Unavailable is a state, not a zero.** When a value does not exist yet, show
-   the `Unavailable` component: one sentence on why, one on what unlocks it, and
-   a link to Data sources when a connection is the fix. Never show 0, a dash or
-   an empty chart for a missing value.
+2. **Unavailable is a state, not a zero.** Explain a missing value once per page
+   or section. Inside repeated cards, table cells and list rows, show only a short
+   "Unavailable" or "Not synced" label, with the reason in a tooltip. On Creatives,
+   explain missing owned metrics once above the grid or table. Collapse an empty
+   section to one line with the reason and one useful action. Hide its meta line
+   if the sample size, either date or check time is unknown; never print
+   "n = Unavailable ads" or "Unavailable to Unavailable". Link to Data sources only
+   when a connection is the fix. Missing analysis links to the existing analysis
+   controls; missing media links to the original ad. If no user action can supply
+   a value yet, explain that honestly rather than offering a false fix. Never show
+   0, a dash or an empty chart for a missing value. An ad active at capture with
+   no stop date shows "Still running", qualified by the saved capture date.
 3. **Every number carries a data label:** Observed, Estimated, Modelled or
    Unavailable (PRODUCT-SPEC, Data honesty rules).
 4. **Every chart and table shows sample size, date range and last successful

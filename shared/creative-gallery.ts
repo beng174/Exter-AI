@@ -15,6 +15,7 @@ export interface DemoGalleryCreative {
   brandName: string;
   title: string;
   copy: string;
+  copyTruncated?: boolean;
   sourceUrl: string | null;
   mediaKind: GalleryMediaKind;
   durationSeconds: number | null;

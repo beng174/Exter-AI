@@ -2,3 +2,5 @@
 .ui-section-card > header { display:flex;flex-wrap:wrap;align-items:baseline;justify-content:space-between;gap:12px;margin-bottom:16px; }
 .ui-section-card h2 { font-size:20px;color:var(--exter-blue);margin:0; }
 .ui-section-card header p { color:var(--muted);margin:4px 0 0; }
+.ui-section-card.ui-section-empty { display:flex;align-items:baseline;flex-wrap:wrap;gap:4px 20px;padding:12px 20px; }
+.ui-section-card.ui-section-empty h2 { font-size:15px;flex:0 1 auto; }.ui-section-empty>.ui-unavailable { flex:1 1 260px; }

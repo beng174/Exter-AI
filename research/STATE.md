@@ -201,3 +201,33 @@ and blockers below remain unchanged.
 
 - UI-B review: https://github.com/beng174/Exter-AI/pull/6 on feat/ui-b-creatives,
   targeting exter-test-drive. Merge UI-A #5 first. No merge or deployment was run.
+
+
+## UI-B presentation polish (UI-02, UI-03)
+
+- The user requested less repetitive missing-data copy. Rule 2 in UI-SPEC now
+  specifies one page/section explanation, short repeated tooltip labels, compact
+  empty sections, no incomplete metadata and links to the actual fix.
+- Creatives explains missing owned metrics once above grid/table. Repeated items
+  show only Unavailable or Not synced; read failures use Unavailable and Retry.
+  Detail collapses empty sections and retains real source facts. Data sources is
+  used for a connection gap, analysis gaps link to existing operator controls,
+  media gaps link to the original ad and collection gaps to collection controls.
+- UK dates use Europe/London, including daylight saving. Source enums are plain
+  words; active capture status without a stop date reads Still running. Complete
+  metadata uses 1 ad; unknown metadata is hidden rather than filled with text.
+- Template titles fall back to the first retained copy line, then the source ad
+  ID. Show more reveals every retained copy character at whole-word boundaries;
+  source-truncated excerpts are labelled and link to the original ad. No missing
+  source text or historical evidence is reconstructed or overwritten.
+- Sidebar and Creatives use one deduplicated configured competitor set, including
+  uncollected competitors. A lightweight authenticated endpoint reads only that
+  set; it does not read gallery/owned rows or start collection.
+- PR #6 was already merged into exter-test-drive as eaeb8a2. Polish stays on
+  feat/ui-b-creatives and requires a follow-up PR; no merge/deployment is run.
+- Validation: check, npm test (378 passed), build, secrets:check and diff checks
+  pass. UI-A/UI-B browser checks and all four refreshed real-capture screenshots
+  pass review; separate synthetic fixtures check populated states. The follow-up
+  review link is recorded in the plan.
+  No dependency, schema, provider, scoring or environment changes. Both live gates
+  stay open, owned sync remains default off and kernel work remains paused.

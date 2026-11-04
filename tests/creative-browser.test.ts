@@ -57,10 +57,11 @@ test("UI-00 brand switcher omits unknown roles and explains an empty competitor 
     assert.equal(brandContext({ ...brand, role: "client" }), "Client · No competitors added");
     assert.equal(brandContext({ ...brand, role: "prospect", competitors: ["a"] }), "Prospect · 1 competitor");
     assert.ok(!brandContext({ ...brand, role: "other" }).includes("Type:"));
+    assert.equal(brandContext(brand,3),"3 competitors");assert.equal(brandContext(brand,null),"Competitors unavailable");
 });
 test("UI-02 read endpoint is authenticated, read-only, scoped and does not turn failures into empty success", async () => {
     const db = openDatabase(":memory:", false), app = express();
-    const root = { id: "workspace-a", name: "Fixture advertiser", domain: "fixture.example", category: "Home fragrance & gifting", color: "#123456", initials: "FA", voice: [], competitors: ["competitor-a"], mode: "imported", createdAt: "2026-11-01" } as Brand;
+    const root = { id: "workspace-a", name: "Fixture advertiser", domain: "fixture.example", category: "Home fragrance & gifting", color: "#123456", initials: "FA", voice: [], competitors: ["competitor-a","Fixture competitor","WORKSPACE-A"], mode: "imported", createdAt: "2026-11-01" } as Brand;
     for (const brand of [root, { ...root, id: "competitor-a", name: "Fixture competitor" }, { ...root, id: "unrelated", name: "Unrelated" }])
         db.prepare("INSERT INTO brands VALUES (?,?)").run(brand.id, JSON.stringify(brand));
     app.use(basicAuth({ EXTER_ADMIN_USER: "browser-fixture", EXTER_ADMIN_PASSWORD: "fixture-only" }));
@@ -69,6 +70,7 @@ test("UI-02 read endpoint is authenticated, read-only, scoped and does not turn 
     let queries = 0;
     app.locals.creativeGallery = { async list(id: string) { reads.push(id); if (failGallery)
             throw new Error("private provider detail"); return { creatives: id === root.id ? [browserCreative()] : [browserCreative({ adId: "public-competitor", brandId: id, workspaceBrand: false }), browserCreative({ adId: "private-competitor", brandId: id, workspaceBrand: false, owned: true })] }; } };
+    app.locals.demoCollection={snapshot(){return {competitors:[{brandId:"competitor-a",name:"Fixture competitor",status:"complete"},{brandId:null,name:"Pending competitor",status:"not-started"}]};}};
     app.locals.brandDemo = { report() { throw new Error("No scoring evidence"); } };
     const pool = { async query(sql: string, params: unknown[]) { queries++; assert.match(sql, /^SELECT d.data FROM owned_ad_days d JOIN owned_accounts/); assert.match(sql, /a.workspace_id=\$1/); assert.match(sql, /LIMIT 100001/); assert.deepEqual(params, [root.id, "2026-11-01", "2026-11-04"]); if (failOwned)
             throw new Error("private database detail"); if (overflow)
@@ -89,6 +91,12 @@ test("UI-02 read endpoint is authenticated, read-only, scoped and does not turn 
         assert.match(response.headers.get("cache-control")!, /no-store/);
         const data = await response.json() as CreativeBrowserResponse;
         assert.deepEqual(reads, ["workspace-a", "competitor-a"]);
+        const configured=await (await fetch(base.replace("/creatives","/creative-competitors"),{headers})).json();
+        assert.deepEqual(configured.competitors,data.competitors,"sidebar and list share the configured set");
+        assert.equal(configured.competitors.length,2,"duplicates and self are excluded; uncollected competitors remain");
+        assert.equal(configured.competitors[1].brandId,null);
+        assert.deepEqual(reads,["workspace-a","competitor-a"],"count endpoint does not read creatives or owned metrics");
+
         assert.equal(data.creatives.length, 2);
         const own = data.creatives.find(row => row.workspaceBrand)!;
         assert.equal(own.performance.length, 3);

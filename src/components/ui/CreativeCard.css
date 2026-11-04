@@ -9,9 +9,12 @@
 .ui-creative-card h3 { margin:0;font-size:15px;font-weight:600;line-height:1.5;overflow-wrap:anywhere; }
 .ui-creative-format { font-size:12px;color:var(--muted); }.ui-creative-format .ui-data-label { margin-left:4px; }
 .ui-creative-tags { display:flex;flex-wrap:wrap;gap:4px; }.ui-creative-tags > span { padding:3px 8px;background:var(--chip-teal-bg);color:var(--chip-teal-fg);border-radius:6px;font-size:12px; }
-.ui-creative-card dl { display:grid;grid-template-columns:repeat(auto-fit,minmax(80px,1fr));gap:8px;padding:12px 16px;margin:0;border-top:1px solid var(--line-soft); }
+.ui-creative-card dl { display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;padding:12px 16px;margin:0;border-top:1px solid var(--line-soft); }
 .ui-creative-card dt { font-size:12px;color:var(--muted); }.ui-creative-card dd { margin:0; }.ui-creative-card dd button { min-height:44px;border:0;background:transparent;text-align:left;font-weight:600;padding:0;cursor:pointer;color:var(--exter-blue); }
 .ui-creative-card dd .ui-unavailable { padding:0;border:0;background:transparent;font-size:11px; }.ui-creative-card dd .ui-unavailable p { margin:4px 0; }
 .ui-creative-card > .ui-meta-line { padding:8px 16px;border-top:1px solid var(--line-soft); }
 
-.ui-creative-card .ui-creative-metrics-missing { padding:12px 16px;border-top:1px solid var(--line-soft); }.ui-creative-card .ui-creative-metrics-missing>p { margin:0 0 8px;color:var(--muted);font-size:12px; }.ui-creative-card .ui-creative-metrics-missing .ui-unavailable { font-size:12px; }.ui-creative-card .ui-creative-metrics-missing .ui-unavailable p { font-size:12px; }.ui-creative-card dd .ui-unavailable p { font-size:11px;line-height:1.5; }
+
+.ui-creative-poster.ui-creative-no-poster { aspect-ratio:auto;min-height:140px; }.ui-creative-no-poster .ui-creative-missing { min-height:140px;align-items:center; }
+
+.ui-creative-card dl.ui-creative-single-metric { grid-template-columns:1fr; }
