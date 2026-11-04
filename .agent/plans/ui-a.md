@@ -14,7 +14,7 @@ contracts. No individual screen rebuild, schema, dependency or provider change.
 - [x] 2026-11-04 03:08 UTC: Shared components, tokens and missing-value render tests pass.
 - [x] 2026-11-04 03:08 UTC: check, 359 tests, build, secrets:check and browser acceptance passed.
 - [x] 2026-11-04 03:08 UTC: Captured 1440px and 390px screenshots from real retained records.
-- [ ] Push UI-A and open one PR against exter-test-drive.
+- [x] 2026-11-04 03:10 UTC: Pushed feat/ui-a-navigation and opened PR #5 against exter-test-drive.
 
 ## Surprises and discoveries
 
@@ -46,6 +46,7 @@ hiding and 959px/390px drawer/overflow behaviour, with no external requests.
 Screenshots: output/playwright/ui-a-1440.png, ui-a-390.png and
 ui-a-390-navigation.png. All show genuine retained captures, with production media
 and analyses unavailable locally. No sample data, schema or dependency was added.
+Review: https://github.com/beng174/Exter-AI/pull/5.
 Future screens stay unready; this PR does not implement their metrics or layouts.
 
 ## Context and orientation
