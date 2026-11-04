@@ -229,7 +229,7 @@ export function GeminiSmokeTest() {
         <p>Preparation checks all {status.candidateCount} candidates until {targetSampleSize} verified inputs are retained, recording each failed download. Refresh failed media links reopens the ad snapshots for fresh media URLs and keeps existing stored inputs. Preparation makes no Gemini inference requests. Videos, images and carousels are valid inputs. The API key stays in Render’s environment.</p>
         <p>Saved runs keep their submitted settings. Low resolution requires Static; the Agentic preview does not support this override. Default leaves resolution to the provider. Compare both settings on the same human-labelled set. Static is the default; Agentic preview runs only when explicitly chosen.</p>
         <p>One verified input is enough for the one-ad diagnostic. It uses the selected mode, {resolutionLabel(mediaResolution)} media resolution and the same inference budget. The selected video mode applies only to videos; image and carousel inputs use their own modes. Static mode processes video ads up to 60 seconds at 3 fps throughout; longer ads use a higher frame rate for the opening hook.</p>
-        <p>A live run reserves budget before dispatch and pauses when the next reservation would exceed the 90% threshold. Reserved budget and token estimates are shown separately from confirmed billing. Missing usage and billed charges remain unavailable. Mixed-format runs and samples other than 25 videos remain exploratory and do not establish the original Phase 1 acceptance target.</p>
+        <p>A live run reserves budget before dispatch and pauses when the next reservation would exceed the 90% threshold. Reserved budget and token estimates are shown separately from confirmed billing. Missing usage and billed charges remain unavailable. Mixed-format runs and samples other than 25 videos remain exploratory and do not establish the video acceptance target.</p>
       </details>
     </>}
     {error && <p className="gemini-smoke-error" role="alert">{error}</p>}
@@ -288,7 +288,7 @@ export function GeminiSmokeTest() {
       <details className="gemini-smoke-data-note">
         <summary><CircleHelp size={14} aria-hidden="true" /> About this data</summary>
         {run.kind !== "prepare" && <p>A reservation holds budget; it is not a Google bill. Token costs are estimates. Confirmed billed cost is unavailable until provider billing data is reconciled.</p>}
-        <p>The original Phase 1 video acceptance target requires at least 24 successful video analyses from a 25-video sample, with cost accounting and stored raw responses. Mixed-format runs remain exploratory. The report states the actual sample size and format counts, includes source issues and up to five full successful outputs for review.</p>
+        <p>The video acceptance target requires at least 24 successful video analyses from a 25-video sample, with cost accounting and stored raw responses. Mixed-format runs remain exploratory. The report states the actual sample size and format counts, includes source issues and up to five full successful outputs for review.</p>
       </details>
     </div>}
   </section>;

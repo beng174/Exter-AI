@@ -7,7 +7,7 @@ import json, os, re, shutil, subprocess
 from playwright.sync_api import sync_playwright, expect
 base=os.environ.get('UI_CD_URL','http://127.0.0.1:3118')
 out=Path('output/playwright');out.mkdir(parents=True,exist_ok=True)
-views={'overview':('This week','Home'),'brands':('Brand research','Brand research'),'competitors':('Competitors','Competitors'),'formats':('Formats','Formats'),'patterns':('Patterns','Patterns'),'audience':('Audience and voice','Audience and voice'),'winners':('Winners','Winners')}
+views={'overview':('This week','Home'),'brands':('Brand research','Brand research'),'competitors':('Competitors','Competitors'),'formats':('Formats','Formats'),'patterns':('Patterns','Patterns'),'audience':('Audience and voice','Audience & voice'),'winners':('Winners','Winners')}
 fixture=json.loads(subprocess.check_output(['node','--import','tsx','--input-type=module','-e','import {researchFixture} from "./tests/fixtures/research.ts"; console.log(JSON.stringify(researchFixture().library));'],text=True))
 with sync_playwright() as pw:
     browser=pw.chromium.launch(executable_path=shutil.which('chromium'),args=['--no-sandbox'])
@@ -69,18 +69,19 @@ with sync_playwright() as pw:
     expect(account).not_to_contain_text('£100.00')
     page.goto(base+'/?view=competitors&brandId=valentte',wait_until='networkidle')
     mix=page.get_by_role('region',name='Creative mix by brand',exact=True)
-    expect(mix.locator('.ui-heatmap')).to_be_visible()
-    classified=mix.locator('a[href*="value=classified"]').first
+    expect(mix.locator('.reference-mix')).to_be_visible()
+    page.locator('.workspace-data-note > summary').click()
+    classified=page.locator('.workspace-data-note a[href*="value=classified"]').first
     classified.click();expect(page).to_have_url(re.compile(r'dimension=format&value=classified'))
     expect(page.locator('.ui-creative-card')).to_have_count(2)
     # A chart and a keyboard table row use the same canonical evidence route.
     page.goto(base+'/?view=competitors&brandId=valentte',wait_until='networkidle')
-    page.locator('.ui-heatmap button').first.click()
+    page.locator('.reference-mix-track button').first.click()
     expect(page).to_have_url(re.compile(r'view=creatives.*kind=active.*dimension=format'))
     expect(page.locator('.ui-creative-card')).not_to_have_count(0)
     page.goto(base+'/?view=patterns&brandId=valentte',wait_until='networkidle')
     page.locator('.ui-data-table tbody tr').first.focus();page.keyboard.press('Enter')
-    expect(page).to_have_url(re.compile(r'view=creatives.*dimension=format'))
+    expect(page).to_have_url(re.compile(r'view=creatives.*dimension=hook'))
     expect(page.locator('.ui-creative-card')).not_to_have_count(0)
     # Card rule: copy title, m:ss, hidden empty tags/format, compact evidence chip, ID fallback.
     fixture['creatives'][0].update({'durationSeconds':11.9322,'hookType':'question','offerType':'none','angle':'gifting'})

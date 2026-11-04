@@ -21,10 +21,17 @@ test("UI-04 through UI-10 all seven screens render real evidence with exact Crea
 });
 test("UI-04 accounts stay separated, and unsupported winner/priority/demographic calculations remain unavailable",()=>{
   const source=data(),home=render("HomeScreen",source);assert.ok(home.includes("GBP")&&home.includes("USD"));assert.ok(!home.includes("£100.00"),"multiple account scopes require an explicit choice");
-  assert.match(render("WinnersScreen"),/requires CA-06/);assert.match(render("PatternsScreen"),/No action is inferred/);assert.match(render("AudienceScreen"),/Audience demographics are never inferred/);
+  assert.match(render("WinnersScreen"),/Your own winners appear once your ad account/);assert.match(render("PatternsScreen"),/Not yet available/);assert.match(render("AudienceScreen"),/Audience demographics are never inferred/);
   source.library.creatives[0].performance=source.library.creatives[0].performance.slice(0,1);assert.match(render("HomeScreen",source),/£100.00/);
 });
 test("UI-07/UI-08 no saved analysis yields compact gaps rather than guessed formats or actions",()=>{
   const source=data();source.library.creatives=source.library.creatives.map(row=>({...row,analysis:null,creativeFormat:null,hookType:null,angle:null,offerType:null,durationSeconds:null}));
   const formats=render("FormatsScreen",source),patterns=render("PatternsScreen",source);assert.match(formats,/No supported format analysis is saved/);assert.match(patterns,/No supported labels are saved/);assert.ok(!formats.includes("tbody"));
+});
+
+test("Review fixes hide universal unavailable winner columns and mark uncollected brand headers once",()=>{
+ const source=data();source.library.competitors.push({key:"pending",brandId:null,name:"Pending advertiser",status:"not-started"});
+ const winners=render("WinnersScreen",source);assert.ok(!winners.includes('data-label="Working Score"')&&!winners.includes('data-label="Confidence"'));assert.match(winners,/reference-thumb/);assert.match(winners,/First line/);
+ const competitors=render("CompetitorsScreen",source);assert.equal((competitors.match(/not-collected-header/g)||[]).length,1);
+ for(const name of ["HomeScreen","BrandScreen","CompetitorsScreen","FormatsScreen","PatternsScreen","AudienceScreen","WinnersScreen"])assert.doesNotMatch(render(name,source),/\b(?:CA|UI)-\d+/);
 });

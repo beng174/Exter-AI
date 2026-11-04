@@ -87,3 +87,4 @@ archived skill.
   product spec references above alongside these own-account module rules.
 
 UI work follows research/UI-SPEC.md and design/screens/.
+Read design/reference/README.md before UI work; compare each screen with its PNG and static HTML.
