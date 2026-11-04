@@ -22,7 +22,7 @@ with sync_playwright() as pw:
     nav=page.get_by_role('navigation',name='Main navigation')
     for name in ('Overview','Research','Act','Share','Settings'):
         expect(nav.get_by_role('region',name=name)).to_be_visible()
-    for hidden in ('Patterns','Winners','Opportunities and briefs','Scores','Ask Exter','Brand demo'):
+    for hidden in ('Opportunities and briefs','Scores','Ask Exter','Brand demo'):
         expect(nav.get_by_role('link',name=hidden,exact=True)).to_have_count(0)
     expect(page.locator('.ui-creative-card')).to_have_count(58)
     nav.get_by_role('link',name='Brand research',exact=True).click()
@@ -34,13 +34,13 @@ with sync_playwright() as pw:
         page.goto(base+'/?view='+alias+'&brandId=valentte',wait_until='networkidle')
         expect(page).to_have_url(base+'/?view='+new+'&brandId=valentte')
     # Every ready page uses its existing screen rather than an unready placeholder.
-    for view in ('overview','brands','competitors','creatives','formats','audience','creators','reports','data','settings','labelling'):
+    for view in ('overview','brands','competitors','creatives','formats','patterns','winners','audience','creators','reports','data','settings','labelling'):
         page.goto(base+'/?view='+view+'&brandId=valentte',wait_until='networkidle')
         expect(page.locator('main')).to_be_visible()
         assert page.locator('main h1').count()==1,view
         assert page.evaluate('document.documentElement.scrollWidth <= innerWidth'),view
     page.goto(base+'/?view=winners&brandId=valentte',wait_until='networkidle')
-    expect(page).to_have_url(base+'/?view=overview&brandId=valentte')
+    expect(page).to_have_url(base+'/?view=winners&brandId=valentte')
     page.screenshot(path=str(out/'ui-a-1440.png'),full_page=True)
     assert 'Rhode' not in page.inner_text('body')
     page.goto(base+'/?view=creatives&brandId=valentte',wait_until='networkidle')

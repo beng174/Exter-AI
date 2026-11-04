@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { ArrowLeft, ArrowRight, ExternalLink } from "lucide-react";
 import type { BrowserCreative, CreativeBrowserResponse } from "../../../shared/creative-browser";
 import { creativeUrl, similarPublicCreatives } from "../../../shared/creative-browser";
-import { analysisUrl, creativeTitle, plainEnum, ukDate, adCount } from "../../../shared/creative-presentation";
+import { analysisUrl, creativeTitle, creativeSecondary, plainEnum, ukDate, adCount } from "../../../shared/creative-presentation";
 import type { MetricName } from "../../../shared/owned-metrics";
 import type { VideoField } from "../../../shared/video-analysis";
 import type { ImageField } from "../../../shared/image-analysis";
@@ -120,7 +120,7 @@ function Detail({row,data,filtered,onOpen,onRefresh}:DetailProps&{row:BrowserCre
         </SectionCard>
         <div id="creative-market"><SectionCard title="In the market" help="Similar public competitor ads by known angle and format. Classification is Modelled." meta={{sampleSize:similar.length,from:data.dateRange.from,to:data.dateRange.to,lastChecked:data.lastChecked}} empty={marketGap}>
           <button className="creative-evidence-value" onClick={openMarket}>{adCount(similar.length)} with similar creative labels</button> <DataLabel basis="Observed"/>
-          <div className="creative-similar-grid">{similar.slice(0,3).map(item=><CreativeCard key={item.adId} title={creativeTitle(item)} thumbnail={item.thumbnailUrl} source={item.brandName} duration={item.durationSeconds} format={item.creativeFormat?plainEnum(item.creativeFormat):null} tags={[item.hookType,item.angle].filter((value):value is string=>Boolean(value)).map(plainEnum)} metrics={cardMetrics(item)} meta={creativeMeta(item)} onOpen={()=>onOpen(item)}/>)}</div>
+          <div className="creative-similar-grid">{similar.slice(0,3).map(item=><CreativeCard key={item.adId} title={creativeTitle(item)} secondary={creativeSecondary(item)} thumbnail={item.thumbnailUrl} source={item.brandName} duration={item.durationSeconds} format={item.creativeFormat?plainEnum(item.creativeFormat):null} tags={[item.hookType,item.angle].filter((value):value is string=>Boolean(value)).map(plainEnum)} metrics={cardMetrics(item)} meta={creativeMeta(item)} onOpen={()=>onOpen(item)}/>)}</div>
         </SectionCard></div>
       </div>
     </div>

@@ -1,4 +1,5 @@
 import { canonicaliseLocation, navigateTo, NAVIGATION_EVENT, resolveNavigation, viewForScreen, navigation, type ViewId } from "./navigation";
+import { ResearchWorkspace, REBUILT_RESEARCH_VIEWS } from "./components/research/ResearchWorkspace";
 import { CreativeBrowserPage } from "./components/creatives/CreativeBrowserPage";
 import { Sidebar } from "./components/Sidebar";
 import { PageHeader, FilterBar } from "./components/ui";
@@ -71,6 +72,8 @@ import {
 } from "./components/ResearchViews";
 
 const headings: Record<Page, { title: string; subtitle: string }> = {
+  patterns:{title:"Patterns",subtitle:"Recorded creative patterns."},
+  winners:{title:"Winners",subtitle:"Longest-running saved ads."},
   demo: { title: "Brand report", subtitle: "" },
   settings: {
     title: "Settings",
@@ -607,6 +610,7 @@ function WorkspaceApp() {
     if(url.searchParams.get("brandId")!==brandId){url.searchParams.set("brandId",brandId);window.history.replaceState({},"",url);}
   },[brandId]);
   const demoEnabled = new URLSearchParams(window.location.search).get("demo") === "1";
+  const isResearchPage = (REBUILT_RESEARCH_VIEWS as readonly string[]).includes(route.id);
   const isCreativePage = route.id === "creatives" || route.id === "creative";
   const isRealWorkspacePage = (selectedBrand?.mode === "imported" || !demoEnabled) && ["overview", "ads", "formats", "brand", "creators", "competitors", "audiences"].includes(page);
   useEffect(() => {
@@ -625,7 +629,7 @@ function WorkspaceApp() {
   useEffect(() => {
     let cancelled = false;
     localStorage.setItem("exter-brand", brandId);
-    if (page === "demo" || page === "settings" || page === "labelling" || isRealWorkspacePage) { setDashboard(null); setLoading(false); setError(""); return; }
+    if (page === "demo" || page === "settings" || page === "labelling" || isRealWorkspacePage || isResearchPage) { setDashboard(null); setLoading(false); setError(""); return; }
     setLoading(true);
     setError("");
     api<Dashboard>(
@@ -643,7 +647,7 @@ function WorkspaceApp() {
     return () => {
       cancelled = true;
     };
-  }, [brandId, platform, range, refresh, page, isRealWorkspacePage]);
+  }, [brandId, platform, range, refresh, page, isRealWorkspacePage, isResearchPage]);
   useEffect(() => {
     if (page !== "settings") return;
     const id = window.location.hash.slice(1);
@@ -745,14 +749,10 @@ function WorkspaceApp() {
             >
               <Menu size={21} />
             </button>
-            <span>Intelligence</span>
+            <span>{navigation.find(item=>item.id===route.id)?.group||"Overview"}</span>
             <ChevronRight size={14} />
             <strong>
-              {page === "sources"
-                ? "Data sources"
-                : page === "settings"
-                  ? "Budgets & tests"
-                : navigation.find((n) => n.screen === page && !n.hidden)?.label}
+              {navigation.find(item=>item.id===route.id)?.label||"Home"}
             </strong>
           </div>
           <div className="topbar-right">
@@ -797,7 +797,7 @@ function WorkspaceApp() {
         </header>
         <main>
           {page === "sources" && <MetaCollectionPanel key={brandId} workspaceId={brandId} />}
-          {!isCreativePage && page !== "demo" && <PageHeader title={page === "brand" && brand ? brand.name : title.title} subtitle={title.subtitle} eyebrow={<>{brand?.category || "Creative intelligence"} / {brand?.name || "Brand unavailable"}</>} actions={<>
+          {!isCreativePage && !isResearchPage && page !== "demo" && <PageHeader title={page === "brand" && brand ? brand.name : title.title} subtitle={title.subtitle} eyebrow={<>{brand?.category || "Creative intelligence"} / {brand?.name || "Brand unavailable"}</>} actions={<>
 {page !== "settings" && page !== "labelling" && !isRealWorkspacePage && <div className="title-actions">
               <button
                 className="button secondary export-button"
@@ -822,7 +822,7 @@ function WorkspaceApp() {
               </button>
             </div>}
           </>}/>}
-          {!isCreativePage && page !== "settings" && page !== "demo" && <FilterBar>
+          {!isCreativePage && !isResearchPage && page !== "settings" && page !== "demo" && <FilterBar>
             <div className="brand-context">
               <span className="tiny-brand" style={{ background: brand?.color }}>
                 {brand?.initials || "R"}
@@ -885,7 +885,7 @@ function WorkspaceApp() {
               </div>
             )}
           </FilterBar>}
-          {page !== "settings" && page !== "labelling" && page !== "demo" && !isRealWorkspacePage && <div className="data-status">
+          {page !== "settings" && page !== "labelling" && page !== "demo" && !isRealWorkspacePage && !isResearchPage && <div className="data-status">
             <span>
               <i className={brand?.mode === "imported" ? "green" : ""} />
               {page === "brand"
@@ -917,7 +917,9 @@ function WorkspaceApp() {
               </button>
             </div>
           )}
-          {isCreativePage ? (
+          {isResearchPage ? (
+            <ResearchWorkspace key={brandId} brandId={brandId} brands={brands} route={route} onManageBrands={()=>setBrandOpen(true)}/>
+          ) : isCreativePage ? (
             <CreativeBrowserPage key={brandId} brandId={brandId} route={route} refresh={refresh} />
           ) : page === "settings" ? (
             <div className="page-content">

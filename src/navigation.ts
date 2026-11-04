@@ -6,19 +6,19 @@ export type NavigationGroup = "Overview" | "Research" | "Act" | "Share" | "Setti
 export interface NavigationItem {
   id: ViewId; label: string; group: NavigationGroup; icon: typeof Compass;
   ready: boolean; screen: Page | null; aliases?: readonly string[];
-  demoOnly?: boolean; hidden?: boolean; rebuilt?: "UI-02" | "UI-03";
+  demoOnly?: boolean; hidden?: boolean; rebuilt?: "UI-02" | "UI-03" | "UI-04" | "UI-05" | "UI-06" | "UI-07" | "UI-08" | "UI-09" | "UI-10";
 }
 /** UI-00: readiness means an existing screen, not completion of a later UI rebuild. */
 export const navigation: readonly NavigationItem[] = [
-  { id:"overview", label:"Home", group:"Overview", icon:Compass, ready:true, screen:"overview" },
-  { id:"brands", label:"Brand research", group:"Research", icon:Globe2, ready:true, screen:"brand", aliases:["brand"] },
-  { id:"competitors", label:"Competitors", group:"Research", icon:BarChart3, ready:true, screen:"competitors" },
+  { id:"overview", label:"Home", group:"Overview", icon:Compass, ready:true, screen:"overview", rebuilt:"UI-04" },
+  { id:"brands", label:"Brand research", group:"Research", icon:Globe2, ready:true, screen:"brand", rebuilt:"UI-05", aliases:["brand"] },
+  { id:"competitors", label:"Competitors", group:"Research", icon:BarChart3, ready:true, screen:"competitors", rebuilt:"UI-06" },
   { id:"creatives", label:"Creatives", group:"Research", icon:Layers, ready:true, screen:"ads", rebuilt:"UI-02", aliases:["ads"] },
   { id:"creative", label:"Creative detail", group:"Research", icon:Layers, ready:true, screen:"ads", rebuilt:"UI-03", hidden:true },
-  { id:"formats", label:"Formats", group:"Research", icon:Activity, ready:true, screen:"formats" },
-  { id:"patterns", label:"Patterns", group:"Research", icon:BarChart3, ready:false, screen:null },
-  { id:"audience", label:"Audience and voice", group:"Research", icon:Target, ready:true, screen:"audiences", aliases:["audiences"] },
-  { id:"winners", label:"Winners", group:"Act", icon:Trophy, ready:false, screen:null },
+  { id:"formats", label:"Formats", group:"Research", icon:Activity, ready:true, screen:"formats", rebuilt:"UI-07" },
+  { id:"patterns", label:"Patterns", group:"Research", icon:BarChart3, ready:true, screen:"patterns", rebuilt:"UI-08" },
+  { id:"audience", label:"Audience and voice", group:"Research", icon:Target, ready:true, screen:"audiences", rebuilt:"UI-09", aliases:["audiences"] },
+  { id:"winners", label:"Winners", group:"Act", icon:Trophy, ready:true, screen:"winners", rebuilt:"UI-10" },
   { id:"briefs", label:"Opportunities and briefs", group:"Act", icon:Sparkles, ready:false, screen:null },
   { id:"creators", label:"Creators", group:"Act", icon:UsersRound, ready:true, screen:"creators" },
   { id:"scores", label:"Scores", group:"Act", icon:Activity, ready:false, screen:null },

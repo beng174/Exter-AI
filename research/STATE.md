@@ -235,3 +235,54 @@ and blockers below remain unchanged.
 - Polish review: https://github.com/beng174/Exter-AI/pull/7 on the same
   feat/ui-b-creatives branch, against exter-test-drive. Merged PR #6 links to it.
   All four checks and browser acceptance pass; no merge or deployment was run.
+
+
+## UI-C and UI-D research screens (UI-04 to UI-10)
+
+- Built on exter-test-drive after merged PR #7 (8518ecb), on
+  feat/ui-cd-research. One PR combines the seven authorised screens. Home is
+  titled This week; breadcrumbs use sidebar groups/labels. Patterns and Winners
+  are ready. Replaced old screen bodies without duplicate in-page navigation.
+- Pure shared/creative-research.ts functions calculate saved active/event counts,
+  median running days, full-sample shares, competitor averages, usage gaps and
+  explicit launch-share changes in equal windows. URL predicates are shared with
+  Creatives, including classifications, claim groups and longest-running subsets.
+  Counts, bars, chart cells, rows and sample footers open their supporting ads.
+- Latest source status cannot reconstruct historical active snapshots. Those
+  remain Unavailable; event counts require explicit start/stop dates. The default
+  public window ends at the latest saved capture and is labelled. Uncollected
+  competitors and incomplete comparison coverage never become invented zeroes.
+  Public evidence remains usable after matching owned outcomes, while private-only
+  rows stay out of public comparisons. Existing CA-02 benchmarks retain separate
+  account/platform/currency/attribution/event/date scopes; no new CA logic is added.
+- Brand research reads saved website facts, source quotes, positioning, profiles,
+  credits and the existing watchlist. Existing explicit brand/research/watchlist
+  actions are reused; loading the screens never dispatches collection or inference.
+  Audience quotes come from source-linked website research, not seeded review rows.
+  No review themes, tone, demographics, scores, Priority or action are inferred.
+- Home and Winners show Longest running, labelled Observed, while Working Score
+  is absent. Unsupported sections collapse per PR #7 rule 2. Tables retain short
+  tooltip gaps and complete metadata only. Creative cards use one copy/analysis/
+  brand title rule, secondary ID fallback, m:ss duration, no empty/None tags or
+  unknown-format line, an inline Modelled chip and no per-card meta line.
+- Validation: npm run check, npm test (391 passed), npm run build,
+  npm run secrets:check and diff checks pass. Existing bundle-size advisory remains.
+  UI-A/UI-B browser regressions and UI-C/UI-D browser acceptance pass, covering
+  all routes/breadcrumbs, mobile overflow, back, exact chart/count/row drill-downs,
+  fixture account/currency separation and creative card presentation. Browser
+  verification blocks external requests and mutations. No provider calls were made.
+- Nine output/playwright/ui-cd-*.png screenshots cover every screen at 1440px and
+  Home/Competitors at 390px. They use genuine retained public captures and saved
+  website research. Production media, paid creative analyses and live owned sync
+  are absent locally and stay visibly unavailable. Populated fixtures are checked
+  separately. Fixtures are not live verification.
+- No dependencies, schemas, scoring models, provider/model methods, budgets or
+  environment settings change. Both Phase 0 and Phase 1 live gates remain open,
+  EXTER_OWNED_SYNC_ENABLED stays absent/false and kernel work remains paused.
+  After merge: Render > exter-ai > Manual Deploy > Deploy latest commit. Keep
+  existing secrets, budgets and disk; no migration or worker change is needed.
+  No merge or deployment is run by this task.
+
+- UI-C/UI-D review: https://github.com/beng174/Exter-AI/pull/8 on
+  feat/ui-cd-research, targeting exter-test-drive. All section classifications
+  and requested desktop/mobile screenshots are attached in the description.

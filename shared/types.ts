@@ -27,7 +27,9 @@ export type Page =
   | "sources"
   | "settings"
   | "demo"
-  | "labelling";
+  | "labelling"
+  | "patterns"
+  | "winners";
 export interface Brand {
   id: string;
   name: string;

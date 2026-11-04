@@ -1,14 +1,14 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { creativeTitle, plainEnum, ukDate, adCount, copyExcerpt, analysisUrl } from "../shared/creative-presentation.js";
+import { creativeTitle, creativeIdentity, creativeTags, videoLength, plainEnum, ukDate, adCount, copyExcerpt, analysisUrl } from "../shared/creative-presentation.js";
 import { browserCreative } from "./fixtures/creative-browser.js";
 
-test("UI-02/UI-03 title fallback rejects templates, uses the first retained copy line, then the ad ID without changing source data",()=>{
+test("UI-02/UI-03 title fallback rejects templates, uses the first retained copy line, then analysis or brand identity without changing source data",()=>{
   const row=browserCreative({title:"{{product.name}}",copy:"\nA complete retained first line\nSecond line"});
   assert.equal(creativeTitle(row),"A complete retained first line");assert.equal(row.title,"{{product.name}}");
-  assert.equal(creativeTitle({...row,title:"Valid saved title"}),"Valid saved title");
-  assert.equal(creativeTitle({...row,copy:"{{product.name}}\nAnother line"}),"Ad 12345678");
-  assert.equal(creativeTitle({...row,title:"",copy:""}),"Ad 12345678");
+  assert.equal(creativeTitle({...row,title:"Valid saved title"}),"A complete retained first line");
+  assert.equal(creativeTitle({...row,copy:"{{product.name}}\nAnother line"}),"Studio, gifting");
+  assert.equal(creativeTitle({...row,title:"",copy:""}),"Studio, gifting");
 });
 test("UI-03 source enums use plain labels, preserving the platform names and attribution meaning",()=>{
   assert.equal(["FACEBOOK","INSTAGRAM","AUDIENCE_NETWORK"].map(plainEnum).join(", "),"Facebook, Instagram, Audience Network");
@@ -33,3 +33,5 @@ test("UI-03 copy disclosure keeps whole words and every retained character on ex
   assert.equal(link.searchParams.get("view"),"settings");assert.equal(link.searchParams.get("analysisAdId"),"12345678");assert.equal(link.hash,"#gemini-smoke-test");
   assert.equal(new URL(analysisUrl("competitor-a","12345678","workspace-a"),"http://exter.local").hash,"#demo-collection");
 });
+
+test("Creative cards share copy/analysis/brand identity, m:ss duration and nonempty tags",()=>{const row=browserCreative({copy:"",creativeFormat:null,angle:null});assert.deepEqual(creativeIdentity(row),{title:"Fixture advertiser ad",secondary:"Ad 12345678"});assert.equal(creativeIdentity({...row,creativeFormat:"UGC",angle:"gifting"}).title,"UGC, gifting");assert.equal(videoLength(11.9322),"0:12");assert.equal(videoLength(47.01),"0:47");assert.equal(videoLength(60),"1:00");assert.equal(videoLength(null),null);assert.deepEqual(creativeTags([null,"none","None","","unknown","gifting"]),["Gifting"]);});

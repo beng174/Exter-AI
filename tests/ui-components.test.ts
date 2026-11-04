@@ -72,3 +72,8 @@ test("UI-02 repeated missing values have one short label and a reason tooltip",(
   const card=render(ui.CreativeCard,{title:"Saved creative",source:"You",onOpen:()=>{},metrics:[{label:"Spend",value:null,basis:"Observed",reason:"No owned rows.",missingLabel:"Not synced"}]});
   assert.ok(!card.includes("<p"));assert.ok(!card.includes("/?view=data"));assert.match(text(card),/SpendNot synced/);
 });
+
+test("Creative cards show m:ss, no None tags or unknown-format line, compact Modelled chip and no per-card metadata",()=>{
+  const html=render(ui.CreativeCard,{title:"First source copy line",secondary:"Ad 12345678",source:"Fixture brand",duration:11.9322,format:null,tags:["None","","unknown","gifting"],meta:{sampleSize:1,from:"2026-10-30",to:"2026-10-30",lastChecked:"2026-10-30"},onOpen:()=>{}});
+  assert.match(html,/0:12/);assert.ok(!html.includes("11.9322s"));assert.ok(!html.includes("ui-creative-format"));assert.ok(!html.includes("ui-meta-line"));assert.ok(!html.includes(">None<"));assert.match(html,/ui-creative-tags.*ui-data-label-modelled/);
+});
