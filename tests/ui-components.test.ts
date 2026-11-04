@@ -27,7 +27,6 @@ test("UI-01 missing values render Unavailable, never an invented zero",()=>{
 });
 test("UI-01 missing metadata, table cells, bars, heatmap values and trends stay Unavailable",()=>{
   for(const [component,props] of [
-    [ui.MetaLine,{}],
     [ui.DataTable,{caption:"Rows",rows:[{id:"a",count:null}],columns:[{key:"count",label:"Count",value:(row:any)=>row.count}],rowKey:(row:any)=>row.id,basis:"Observed"}],
     [ui.BarList,{label:"Counts",items:[{id:"a",label:"Ad",value:null}],basis:"Observed",onSelect:()=>{}}],
     [ui.Heatmap,{label:"Mix",columns:["Brand"],rows:[{id:"a",label:"Group",values:[null]}],basis:"Observed",onSelect:()=>{}}],
@@ -53,4 +52,23 @@ test("UI-03 retention never plots missing points as zero",()=>{
   const chart=render(ui.RetentionChart,{points:[{label:"25%",creative:.5,benchmark:.4},{label:"50%",creative:null,benchmark:null},{label:"75%",creative:.2,benchmark:.1}],onCreative:()=>{},onBenchmark:()=>{}});
   assert.ok(!chart.includes('class="retention-creative"'),"missing checkpoints break each line");
   assert.match(chart,/50.0 percent/);assert.match(chart,/Observed/);
+});
+
+
+test("UI-02/UI-03 incomplete metadata is hidden; complete evidence uses UK dates and singular ad",()=>{
+  const complete={sampleSize:1,from:"2026-10-30T00:00:00Z",to:"2026-10-30T12:00:00Z",lastChecked:"2026-10-30T12:30:00Z"};
+  for(const field of ["sampleSize","from","to","lastChecked"])assert.equal(render(ui.MetaLine,{...complete,[field]:null}),"");
+  assert.equal(render(ui.MetaLine,{}),"");
+  const known=text(render(ui.MetaLine,complete));assert.match(known,/n = 1 ad · 30 Oct 2026/);assert.doesNotMatch(known,/1 ads|Unavailable/);
+  assert.match(text(render(ui.MetaLine,{...complete,sampleSize:0})),/n = 0 ads/);
+  const empty=render(ui.SectionCard,{title:"Analysis",empty:{reason:"No analysis is saved.",href:"/?view=settings#gemini-smoke-test",linkLabel:"Run analysis"},meta:complete});
+  assert.ok(!empty.includes("ui-meta-line"));assert.ok(!empty.includes("<footer"));assert.equal((empty.match(/<a /g)||[]).length,1);
+});
+test("UI-02 repeated missing values have one short label and a reason tooltip",()=>{
+  const gap=render(ui.Unavailable,{compact:true,reason:"This account has not synced.",label:"Not synced",href:"/?view=data"});
+  assert.equal(text(gap),"Not synced");assert.match(gap,/title="This account has not synced./);assert.ok(!gap.includes("<p")&&!gap.includes("<a"));
+  const table=render(ui.DataTable,{caption:"Ads",rows:[{id:"a",spend:null}],columns:[{key:"spend",label:"Spend",value:(row:any)=>row.spend,unavailable:()=>({reason:"No owned rows."})}],rowKey:(row:any)=>row.id,basis:"Observed"});
+  assert.ok(!table.includes("<p"));assert.match(table,/title="No owned rows/);
+  const card=render(ui.CreativeCard,{title:"Saved creative",source:"You",onOpen:()=>{},metrics:[{label:"Spend",value:null,basis:"Observed",reason:"No owned rows.",missingLabel:"Not synced"}]});
+  assert.ok(!card.includes("<p"));assert.ok(!card.includes("/?view=data"));assert.match(text(card),/SpendNot synced/);
 });

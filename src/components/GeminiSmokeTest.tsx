@@ -83,7 +83,9 @@ export function GeminiSmokeTest() {
 
   const receiveCreatives = useCallback((value: RetainedCreatives) => {
     setCreatives(value.creatives);
-    setSelectedCreativeKey(current => value.creatives.some(creative => creativeKey(creative) === current) ? current : value.creatives[0] ? creativeKey(value.creatives[0]) : "");
+    const requested=new URLSearchParams(window.location.search).get("analysisAdId");
+    const matches=requested?value.creatives.filter(creative=>creative.nativeId===requested||creative.adId===requested):[];
+    setSelectedCreativeKey(current => value.creatives.some(creative=>creativeKey(creative)===current)?current:requested?matches.length===1?creativeKey(matches[0]):"":value.creatives[0]?creativeKey(value.creatives[0]):"");
   }, []);
 
   const refresh = useCallback(async () => {
@@ -206,6 +208,7 @@ export function GeminiSmokeTest() {
         <button type="button" disabled={!status.hosted || busy || running} onClick={() => void submit("/api/gemini-smoke/prepare", { processingMode: mode, refreshFailed: true })}>Refresh failed media links</button>
         <button type="button" className="gemini-smoke-primary" disabled={!canRun} onClick={() => void submit("/api/gemini-smoke/runs", { processingMode: mode, mediaResolution })}>Run Gemini smoke test{availableSampleSize >= minimumSampleSize ? ` · ${availableSampleSize} stored inputs` : ""}</button>
       </div>
+      {new URLSearchParams(window.location.search).has("analysisAdId")&&!selectedCreative&&<p role="status">The selected ad is not available among the verified inputs for this control. No analysis has started.</p>}
       <p className="gemini-smoke-note">The selected mode and resolution apply to the next batch or one-ad test.</p>
       <div className="gemini-smoke-single-test" aria-labelledby="gemini-smoke-single-heading">
         <div><h3 id="gemini-smoke-single-heading">Test one retained creative</h3><p>Check one input and read the full sanitised Gemini response before starting a batch.</p></div>

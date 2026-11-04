@@ -2,8 +2,8 @@ import type { Brand } from "../../shared/types";
 /** UI-00: omit unknown roles rather than inventing a client relationship. */
 export function brandContext(brand?: Brand & {
     role?: string;
-}) {
+}, competitorCount:number|null|undefined=brand?.competitors.length) {
     const role = brand?.role === "client" ? "Client" : brand?.role === "prospect" ? "Prospect" : null;
-    const competitors = brand ? brand.competitors.length ? `${brand.competitors.length} ${brand.competitors.length === 1 ? "competitor" : "competitors"}` : "No competitors added" : "Competitors unavailable";
+    const competitors = competitorCount==null?"Competitors unavailable":competitorCount===0?"No competitors added":`${competitorCount} ${competitorCount===1?"competitor":"competitors"}`;
     return [role, competitors].filter(Boolean).join(" · ");
 }

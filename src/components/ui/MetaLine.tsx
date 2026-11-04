@@ -1,12 +1,12 @@
-import { displayValue } from "./value";
+import { adCount, ukDate } from "../../../shared/creative-presentation";
 import "./MetaLine.css";
 export interface MetaLineProps {sampleSize?:number|null;from?:string|null;to?:string|null;lastChecked?:string|null}
-export function evidenceDate(value:string|null|undefined,withTime=false) {
-  if(!value)return "Unavailable";
-  const date=new Date(value);
-  if(!Number.isFinite(date.getTime()))return "Unavailable";
-  return new Intl.DateTimeFormat("en-GB",{day:"numeric",month:"short",year:"numeric",timeZone:"UTC",...(withTime?{hour:"2-digit",minute:"2-digit",timeZoneName:"short"}: {})}).format(date);
+export function evidenceDate(value:string|null|undefined,withTime=false) {return ukDate(value,withTime)||"Unavailable";}
+export function hasCompleteMeta(meta:MetaLineProps|undefined):meta is Required<MetaLineProps> {
+  return Boolean(meta&&typeof meta.sampleSize==="number"&&Number.isFinite(meta.sampleSize)&&meta.sampleSize>=0&&ukDate(meta.from)&&ukDate(meta.to)&&ukDate(meta.lastChecked));
 }
-export function MetaLine({sampleSize,from,to,lastChecked}:MetaLineProps) {
-  return <div className="ui-meta-line">n = {displayValue(sampleSize)} ads · {evidenceDate(from)} to {evidenceDate(to)} · checked {evidenceDate(lastChecked,true)}</div>;
+export function MetaLine(props:MetaLineProps) {
+  if(!hasCompleteMeta(props))return null;
+  const from=ukDate(props.from),to=ukDate(props.to);
+  return <div className="ui-meta-line">n = {adCount(props.sampleSize!)} · {from===to?from:`${from} to ${to}`} · checked {ukDate(props.lastChecked,true)}</div>;
 }
