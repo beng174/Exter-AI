@@ -5,7 +5,7 @@ import { Caveat } from "../ui/Caveat";
 import { brandVoice, brandSnapshots, comparisonGroups, evidenceUrl, launchShareTrend, longestRunning, mixGroups, productionFacts, selectResearchAds, RESEARCH_DIMENSIONS, type ResearchDimension, type EvidenceSelection, type BrandSnapshot } from "../../../shared/creative-research";
 import { adCount, analysisUrl, creativeTitle, plainEnum, ukDate } from "../../../shared/creative-presentation";
 import { CreativeRow } from "../ui/CreativeRow";
-import { BarList, Heatmap, SectionCard, DataTable, DataLabel, StatusChip, Unavailable } from "../ui";
+import { BarList, Heatmap, SectionCard, DataTable, DataLabel, hasValue, StatusChip, Unavailable } from "../ui";
 import { CreativeTile, DimensionSwitch, EvidenceNumber, Measure, SafeLink, dimensionLabel, metadata, number, percent, type ScreenProps } from "./common";
 
 interface DimensionProps {dimension:ResearchDimension;onDimension:(dimension:ResearchDimension)=>void}
@@ -23,7 +23,7 @@ export function CompetitorsScreen({data,selection,dimension,onDimension}:ScreenP
   return <>
     <SectionCard title="Scorecard" help="Select a number to see its ads" actions={<button className="button secondary" disabled title="Scorecard export is not available yet.">Export</button>} meta={metadata(data,selection)}>
       <p className="reference-muted">Winner share and estimated spend are not available yet.</p>
-      <DataTable caption="You and configured competitors" basis="Observed" rows={metrics} rowKey={row=>row.id} onRow={row=>window.location.assign(evidenceUrl(data.library.brand.id,{...selection,kind:row.id==="launched"?"launches":row.id==="stopped"?"stopped":row.id==="medianDays"?"running":"active",activityFrom:data.window.from||undefined,activityTo:data.window.to||undefined}))} columns={[
+      <DataTable caption="You and configured competitors" basis="Observed" rowBasis={row=>brands.some(brand=>hasValue(brand[row.id].value))?"Observed":"Unavailable"} rows={metrics} rowKey={row=>row.id} onRow={row=>window.location.assign(evidenceUrl(data.library.brand.id,{...selection,kind:row.id==="launched"?"launches":row.id==="stopped"?"stopped":row.id==="medianDays"?"running":"active",activityFrom:data.window.from||undefined,activityTo:data.window.to||undefined}))} columns={[
         {key:"measure",label:"Measure",value:row=>row.label},...brands.map(brand=>({key:brand.id,label:brand.workspaceBrand?"You":brand.name,header:<><span>{brand.workspaceBrand?"You":brand.name}</span>{!brand.available&&<small className="not-collected-header">Not collected</small>}</>,always:true,missing:()=>brand.available?<Unavailable compact reason="No comparable saved measure is available."/>:<span aria-hidden="true"/>,value:(row:typeof metrics[number])=>brand[row.id].value,render:(row:typeof metrics[number])=><Measure data={data} metric={brand[row.id]} suffix={row.id==="shareActive"?"%":""}/>}))
       ]}/>
 
@@ -61,7 +61,7 @@ export function FormatsScreen({data,selection}:ScreenProps) {
 
     </SectionCard>
     <SectionCard title="How winning ads are built" help="Longest-running ads are shown until Working Score is available" empty={!measures.some(item=>item.known)&&{reason:"No supported production measurements are saved for these creatives.",...analysis}}>
-      <DataTable caption="Production evidence from longest-running ads" basis="Observed" meta={metadata(data,productionSelection)} rows={measures} rowKey={row=>row.id} onRow={row=>window.location.assign(evidenceUrl(data.library.brand.id,{...productionSelection,...(row.known?{measure:row.id==="duration"?"duration" as const:"talkingKnown" as const}:{})}))} columns={[
+      <DataTable caption="Production evidence from longest-running ads" basis="Observed" rowBasis={row=>[row.all,row.yours,row.competitors].some(hasValue)?row.basis:"Unavailable"} meta={metadata(data,productionSelection)} rows={measures} rowKey={row=>row.id} onRow={row=>window.location.assign(evidenceUrl(data.library.brand.id,{...productionSelection,...(row.known?{measure:row.id==="duration"?"duration" as const:"talkingKnown" as const}:{})}))} columns={[
         {key:"measure",label:"Measure",value:row=>row.label},
         {key:"all",label:"Longest running",value:row=>row.all,render:row=><EvidenceNumber value={row.all} data={data} basis={row.basis} selection={{...productionSelection,measure:row.id==="duration"?"duration":"talkingKnown"}}/>},
         {key:"yours",label:"Yours",value:row=>row.yours,render:row=><EvidenceNumber value={row.yours} data={data} basis={row.basis} selection={{...productionSelection,show:"yours",measure:row.id==="duration"?"duration":"talkingKnown"}}/>},
@@ -106,7 +106,7 @@ export function AudienceScreen({data,selection}:ScreenProps) {
     <SectionCard title="Words customers use" empty={{reason:"Exact phrase counts will appear when review grouping is available.",href:researchHref,linkLabel:"View saved quotes"}}/>
     <SectionCard title="Who the ads reach" empty={{reason:"No published demographic reach breakdown is available. Audience demographics are never inferred.",href:`/?view=data&brandId=${encodeURIComponent(data.library.brand.id)}`,linkLabel:"Review public sources"}}/>
     <SectionCard title="How each brand talks" help="Tone, typical claim and call to action across each brand's active ads" empty={!voices.some(row=>row.claim||row.cta||row.offer)&&{reason:"No supported creative language analysis is saved.",href:analysisUrl(data.library.brand.id),linkLabel:"Run analysis"}}>
-      <DataTable caption="Saved brand language" basis="Modelled" meta={metadata(data,{...selection,kind:"active"})} rows={voices} rowKey={row=>row.id} onRow={row=>window.location.assign(evidenceUrl(data.library.brand.id,{...selection,brand:row.id,kind:"active"}))} columns={[{key:"brand",label:"Brand",value:row=>row.name},{key:"tone",label:"Tone",value:()=>null,unavailable:()=>({reason:"No explicit tone field is saved. Audience traits are not inferred from creative style."})},{key:"claim",label:"Typical recorded claim",value:row=>row.claim},{key:"offer",label:"Recorded offer",value:row=>row.offer?dimensionLabel("offer",row.offer):null},{key:"cta",label:"Call to action",value:row=>row.cta}]}/>
+      <DataTable caption="Saved brand language" basis="Modelled" rowBasis={row=>[row.claim,row.offer,row.cta].some(hasValue)?"Modelled":"Unavailable"} meta={metadata(data,{...selection,kind:"active"})} rows={voices} rowKey={row=>row.id} onRow={row=>window.location.assign(evidenceUrl(data.library.brand.id,{...selection,brand:row.id,kind:"active"}))} columns={[{key:"brand",label:"Brand",value:row=>row.name},{key:"tone",label:"Tone",value:()=>null,unavailable:()=>({reason:"No explicit tone field is saved. Audience traits are not inferred from creative style."})},{key:"claim",label:"Typical recorded claim",value:row=>row.claim},{key:"offer",label:"Recorded offer",value:row=>row.offer?dimensionLabel("offer",row.offer):null},{key:"cta",label:"Call to action",value:row=>row.cta}]}/>
     </SectionCard>
   </>;
 }

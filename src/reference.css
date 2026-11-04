@@ -93,7 +93,7 @@
 .reference-ui .creative-header-actions { display:flex;align-items:center;gap:8px;flex-wrap:wrap; }
 .reference-ui .creative-layout-toggle { padding:0;gap:0;border-radius:8px; }.reference-ui .creative-layout-toggle button { border-radius:0;padding:0 12px; }.reference-ui .creative-layout-toggle button[aria-pressed=true] { background:var(--exter-blue);color:var(--surface); }
 .reference-ui .creative-filter-card .ui-filter-bar { padding:0;border:0;gap:8px;align-items:center; }.reference-ui .creative-filter-card .ui-filter-bar label { flex:0 1 auto;max-width:180px; }
-.reference-ui .creative-filter-card label:has(select) { font-size:0; }.reference-ui .creative-filter-card label select { min-height:44px;font-size:13px;padding:0 12px;border-radius:999px; }.reference-ui .creative-filter-card label input { font-size:13px; }
+.reference-ui .creative-filter-card label select { min-height:44px;font-size:13px;padding:0 12px;border-radius:999px; }.reference-ui .creative-filter-card label input { font-size:13px; }
 .reference-ui .creative-show { padding:0;border:1px solid var(--line);border-radius:8px;gap:0;overflow:hidden; }.reference-ui .creative-show>span,.reference-ui .creative-show>.ui-data-label { display:none; }.reference-ui .creative-show button { border:0;border-right:1px solid var(--line-soft);border-radius:0;min-height:44px; }.reference-ui .creative-show button[aria-pressed=true] { background:var(--chip-teal-bg); }
 .reference-ui .creative-results { margin:0;font-size:13px; }
 .reference-ui .creative-browser-grid { grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:20px; }
@@ -145,3 +145,6 @@
 .reference-source-pills .ui-status-chip::before { content:"";width:6px;height:6px;border-radius:50%;background:var(--muted);flex:none; }
 .reference-ui .reference-source-pills .ui-status-chip { display:inline-flex;gap:6px;align-items:center; }
 .reference-ui .reference-source-pills>a.reference-source-count { flex-basis:auto;min-height:44px;display:inline-flex;align-items:center;font-size:12px; }
+
+.reference-ui .research-grid-two .ui-data-table table { min-width:0; }
+.reference-ui .ui-data-table :is(th,td).ui-table-basis { width:100px;min-width:100px;white-space:nowrap; }

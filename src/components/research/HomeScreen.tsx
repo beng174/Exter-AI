@@ -3,7 +3,7 @@ import { Caveat } from "../ui/Caveat";
 import { useState } from "react";
 import { brandSnapshots, competitorAverage, evidenceUrl, longestRunning, selectResearchAds, staleCapture, type EvidenceMeasure } from "../../../shared/creative-research";
 import { analysisUrl, plainEnum, ukDate } from "../../../shared/creative-presentation";
-import { SectionCard, DataTable, DataLabel, MetricTile, Unavailable } from "../ui";
+import { SectionCard, DataTable, DataLabel, hasValue, MetricTile, Unavailable } from "../ui";
 import { metricText, metricReason } from "../creatives/presentation";
 import { CreativeRow } from "../ui/CreativeRow";
 import { Measure, metadata, number, type ScreenProps } from "./common";
@@ -22,7 +22,7 @@ export function HomeScreen({data,selection,refresh}:ScreenProps) {
     <SectionCard title="What to work on" actions={<a href={`/?view=briefs&brandId=${encodeURIComponent(data.library.brand.id)}`}>All opportunities</a>} empty={{reason:"Recommendations appear once creative results and customer needs can be compared."}}/>
     <div className="research-grid-two">
       <SectionCard title="You against the market" help="Weekly scorecard" actions={<a href={`/?view=competitors&brandId=${encodeURIComponent(data.library.brand.id)}`}>Full scorecard</a>} meta={metadata(data,selection)}>
-        <DataTable caption="Saved activity scorecard" basis="Observed" rows={rows} rowKey={row=>row.key} onRow={row=>window.location.assign(evidenceUrl(data.library.brand.id,row.yours.selection))} columns={[
+        <DataTable caption="Saved activity scorecard" basis="Observed" rowBasis={row=>[row.yours.value,row.average.value,row.previous?.value].some(hasValue)?"Observed":"Unavailable"} rows={rows} rowKey={row=>row.key} onRow={row=>window.location.assign(evidenceUrl(data.library.brand.id,row.yours.selection))} columns={[
           {key:"measure",label:"Measure",value:row=>row.label},
           {key:"you",label:"You",value:row=>row.yours.value,render:row=><Measure data={data} metric={row.yours} suffix={row.key==="shareActive"?"%":""}/>},
           {key:"average",label:"Competitor average",value:row=>row.average.value,render:row=><Measure data={data} metric={row.average} suffix={row.key==="shareActive"?"%":""}/>},

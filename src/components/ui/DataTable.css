@@ -9,3 +9,7 @@
 .ui-data-table tr[tabindex]:hover { background:var(--surface-subtle); }
 .ui-data-table tr:focus-visible { outline:2px solid var(--exter-blue);outline-offset:-2px; }
 @media(max-width:719px) { .ui-data-table thead { position:absolute;clip-path:inset(50%);height:1px;overflow:hidden; } .ui-data-table table,.ui-data-table tbody,.ui-data-table tr,.ui-data-table td { display:block; } .ui-data-table td::before { content:attr(data-label);display:block;font-weight:600;color:var(--muted); } .ui-data-table tr { margin-bottom:16px;border:1px solid var(--line-soft);border-radius:8px; } }
+
+.ui-data-table :is(th,td).ui-table-basis { width:100px;min-width:100px;white-space:nowrap;position:sticky;right:0;background:var(--surface);z-index:1; }
+.ui-data-table th.ui-table-basis { z-index:2; }
+.ui-data-table .ui-table-basis .ui-data-label { white-space:nowrap;flex-shrink:0; }
