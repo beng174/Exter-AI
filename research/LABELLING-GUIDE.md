@@ -1,3 +1,40 @@
+# Creative labelling guide
+
+research/PRODUCT-SPEC.md is authoritative. Use these fields and allowed values exactly.
+Unsure means "unknown", never a guess. Review the complete retained creative, not
+a thumbnail. Preserve timestamps and exact source wording. Never infer creator identity.
+
+
+Exter analyses each unique creative once. Free open-source tools extract what is said and shown, a low-cost model picks the fixed values, and only unclear cases get full video analysis. Fixed values make ads countable across brands; a short note explains each choice.
+
+| Field | Allowed values | Example: Valentte ad 1321091253011155 |
+| --- | --- | --- |
+| Format | UGC, creator-led, founder-led, studio product, lifestyle, motion graphics, static graphic, mixed | Studio product |
+| Hook type | Offer-led, scarcity or restock, problem, question, bold claim, social proof, demo, testimonial, unboxing, trend | Scarcity or restock ("sells out fast, back now") |
+| Angle | Value or bundle, urgency, gifting, quality or luxury, problem-solution, identity or values, social proof, newness, seasonal | Value or bundle, plus urgency |
+| Offer type | Percent off, price drop, bundle or multibuy, free gift, free shipping, none | Bundle plus percent off (£39.99, over 50% off) |
+| Claims | Each claim tagged: price, comparative, superlative, performance, provenance, values, social proof | "Made in the UK" (provenance), "5 Star Reviews" (social proof) |
+| Audio | Voiceover, on-camera speech, music only, music plus voiceover, silent | Voiceover |
+| People | Person on camera; talking to camera | No person on camera |
+| Pacing | Length, cuts in first 3 seconds, seconds until product appears, captions on or off | 32 seconds, captions on |
+| Text | Full transcript and on-screen text, each with timestamps | 8 spoken lines, 11 text overlays |
+| Call to action | Exact CTA words | "Tap below to shop yours before it's gone" |
+| Creator | Creator handle, only with proof (branded-content label or visible handle) | None |
+
+
+Comparative and superlative claims receive "may need substantiation (ASA)".
+Background song lyrics are music, never spoken voiceover. Client fields remain
+unvalidated until each reaches 85% on 200 human labels. Do not filter ads by
+uncalibrated model confidence.
+
+## Historical schema compatibility
+
+The archive below documents existing stored labels and exports only. It is not
+the current allowed vocabulary. Do not rewrite paid analyses or silently map old
+values into new ones. The current analysis method and labelling tool are unchanged
+in M1; their versioned migration and evaluation belong to M2. Historical `unsure`
+remains in old exports; new product-facing uncertainty is unknown.
+
 # Human labelling guide — draft for Benjamin's review
 
 **Status: DRAFT. Benjamin should review and edit this guide before real labelling starts.** The tool is available for review; its availability does not mean these definitions or any labels have been approved. This document implements Phase 5.2 of [BUILD-SPEC.md](BUILD-SPEC.md). It covers the seven dropdown fields in the Phase 5.1 tool and the shared model audio, claim and boolean vocabulary, with the exact stored values below.

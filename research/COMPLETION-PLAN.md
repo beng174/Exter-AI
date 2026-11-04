@@ -1,3 +1,5 @@
+Superseded by research/PRODUCT-SPEC.md where they disagree.
+
 # Completing Exter's public-first platform
 
 The target is category intelligence from public paid ads and organic posts before a client grants account access. Public engagement and source dates are the core measures. Private account reporting is an optional later layer.

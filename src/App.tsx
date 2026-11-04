@@ -68,8 +68,8 @@ import {
 const navigation: { id: Page; label: string; icon: typeof Compass }[] = [
   { id: "demo", label: "Brand demo", icon: FileChartColumnIncreasing },
   { id: "overview", label: "Overview", icon: Compass },
-  { id: "brand", label: "Brand research", icon: Globe2 },
-  { id: "ads", label: "Content library", icon: Layers },
+  { id: "brand", label: "Brands", icon: Globe2 },
+  { id: "ads", label: "Creative library", icon: Layers },
   { id: "formats", label: "Creative formats", icon: Activity },
   { id: "competitors", label: "Competitors", icon: BarChart3 },
   { id: "audiences", label: "Audience & voice", icon: Target },
@@ -88,7 +88,7 @@ const headings: Record<Page, { title: string; subtitle: string }> = {
     subtitle: "Human review of source ads, with model predictions hidden.",
   },
   brand: {
-    title: "Brand research",
+    title: "Brands",
     subtitle: "Website observations and source links.",
   },
   formats: {
@@ -100,7 +100,7 @@ const headings: Record<Page, { title: string; subtitle: string }> = {
     subtitle: "Collected ads and creative analysis.",
   },
   ads: {
-    title: "Content library",
+    title: "Creative library",
     subtitle: "Explore source ads and their analysis.",
   },
   competitors: {
@@ -179,7 +179,7 @@ function BrandModal({
         </button>
         <span className="eyebrow">YOUR WORKSPACES</span>
         <h2>A new perspective starts here.</h2>
-        <p>Choose a sample landscape or start researching your brand.</p>
+        <p>Choose a brand or create a workspace for retained evidence.</p>
         <div className="brand-options">
           {brands.map((b) => (
             <button key={b.id} onClick={() => onSelect(b)}>
@@ -602,10 +602,12 @@ function WorkspaceApp() {
     [exportBusy, setExportBusy] = useState(false);
   const searchRef = useRef<HTMLInputElement>(null);
   const selectedBrand = brands.find(item => item.id === brandId);
-  const isRealWorkspacePage = selectedBrand?.mode === "imported" && ["overview", "ads", "formats", "brand", "creators", "competitors", "audiences"].includes(page);
+  const demoEnabled = new URLSearchParams(window.location.search).get("demo") === "1";
+  const isRealWorkspacePage = (selectedBrand?.mode === "imported" || !demoEnabled) && ["overview", "ads", "formats", "brand", "creators", "competitors", "audiences"].includes(page);
   useEffect(() => {
     api<Brand[]>("/api/brands")
       .then((list) => {
+        list = list.filter(item => item.mode !== "demo" || new URLSearchParams(window.location.search).get("demo") === "1");
         setBrands(list);
         if (!list.some((b) => b.id === brandId) && list.length)
           setBrandId((list.find(item => item.mode === "imported" && item.domain.replace(/^www\./, "") === "valentte.com") || list[0]).id);
@@ -1009,7 +1011,7 @@ function WorkspaceApp() {
           ) : page === "labelling" ? (
             <div key={brandId} className="page-content"><LabellingTool brandId={brandId} /></div>
           ) : isRealWorkspacePage ? (
-            <div key={`${brandId}:${page}:${refresh}`} className="page-content"><RealWorkspaceView brandId={brandId} view={page as RealWorkspacePage} onOpenSettings={() => navigate("settings")} onOpenSources={() => navigate("sources")} /></div>
+            <div key={`${brandId}:${page}:${refresh}`} className="page-content"><RealWorkspaceView brands={brands} onSelectBrand={setBrandId} brandId={brandId} view={page as RealWorkspacePage} onOpenSettings={() => navigate("settings")} onOpenSources={() => navigate("sources")} /></div>
           ) : loading && !dashboard ? (
             <div className="loading-state main-loading">
               <LoaderCircle className="spin" size={23} />
@@ -1134,7 +1136,7 @@ function WorkspaceApp() {
               <div>
                 <h3>Find your perspective</h3>
                 <p>
-                  Switch between sample brands or create your own workspace with
+                  Choose a brand or create your own workspace with
                   the brand selector.
                 </p>
               </div>

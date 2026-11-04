@@ -1,3 +1,5 @@
+Superseded by research/PRODUCT-SPEC.md where they disagree.
+
 # Exter AI: Winning Ads, Weekly Data and Competitor Gaps
 
 **For:** Codex. Save as `research/WINNING-ADS-SPEC.md` in `beng174/Exter-AI` (branch `exter-test-drive`) and implement in the order below.

@@ -1,4 +1,55 @@
-# Current handoff
+# Product renewal and M1 handoff
+
+Current source of truth: research/PRODUCT-SPEC.md, uploaded 4 November 2026.
+research/CREATIVE-ANALYTICS-SPEC.md is its own-account module. The current priority
+remains creative analytics Phase 0 then Phase 1 (CA-01, CA-02). Kernel work stays
+paused until Phase 2; do not run kernel:next without a request.
+
+This PR retains M1's public creative evidence and original Exter screens. M1's
+M2 to M5 remain planned, not started here. The separately authorised CA-01/CA-02
+fixture-only implementation now comes from PR #4 in exter-test-drive. This
+reconciliation preserves its status and rules alongside M1; it adds no new
+owned-sync implementation.
+
+- Phase 0 live gate: OPEN, awaiting Meta identity verification and user confirmation
+  on Exter Media's own ad account.
+- Phase 1 live gate: OPEN, awaiting the user's own-account reporting parity check.
+- The user's explicit authorisation permits Phase 1 fixture work while Phase 0
+  remains open. Fixtures are not live verification; keep live dispatch disabled.
+
+M1 reuses the retained-record projection, immutable analyses and media routes.
+58 genuine captured ad records are available locally; production media and the
+14 paid analyses are not included in this checkout. Do not invent them or claim
+that screenshots verify production data. Internal fixture tests cover populated
+analysis and playback separately. No live provider calls, production writes,
+Gemini method changes, Render settings changes or budget changes were made.
+See .agent/plans/weeks-1-2.md for validation, screenshots and remaining gates.
+
+## PR #3 update after PR #4 (2026-11-04 02:49 UTC)
+
+- Merged exter-test-drive at 5edb13b, which includes PR #4. Preserved both M1 and
+  Phase 1 status, the main PRODUCT-SPEC references and creative analytics rules.
+- Manual merge resolution changed only AGENTS.md and this handoff. Owned sync
+  stays default off (EXTER_OWNED_SYNC_ENABLED absent/false); both live gates stay
+  OPEN. No live provider calls or runtime setting changes were made.
+- Validation: npm run check, npm test (352 passed), npm run build and
+  npm run secrets:check passed on the combined branch.
+
+## PR #3 branch reconciliation (2026-11-04 01:53 UTC)
+
+- Merged exter-test-drive at 4636ddc. Preserved M1 and Phase 0 handoff evidence,
+  the creative analytics priority and module rules, and all M1 working guidance.
+- PRODUCT-SPEC.md remains the main product spec; CREATIVE-ANALYTICS-SPEC.md is
+  its own-account module. Added the four requested environment-variable names.
+- The connector config tests, default version and INSIGHTS.md are identical to
+  the target branch and no longer appear as duplicate changes in this PR.
+- Validation: npm run check, npm test (341 passed), npm run build and
+  npm run secrets:check passed. No UI changes or live provider calls were made.
+
+
+## Phase 0 and earlier handoff (retained notes)
+
+### Creative analytics priority
 
 Priority: creative analytics module in research/CREATIVE-ANALYTICS-SPEC.md,
 Phase 0 then Phase 1 (CA-01 and CA-02).
@@ -17,6 +68,8 @@ and blockers below remain unchanged.
 - No live provider calls were made. The Phase 0 gate (system user reading Exter
   Media's own ad account) remains open, awaiting Meta identity verification.
   The user explicitly authorised Phase 1 fixture-only development on 4 November.
+  The earlier instruction to wait on Phase 1 is superseded only for fixture
+  development; both live gates remain open.
 
 - Validation: npm test passed all 336 tests; npm run check and
   npm run secrets:check passed. Fixtures do not verify live-account gates.

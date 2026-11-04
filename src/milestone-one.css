@@ -1,0 +1,14 @@
+body, button, input, select, textarea { font-size: var(--type-body); }
+p, .real-workspace-view p, .creative-gallery p, .cg-detail p { font-size: var(--type-body); }
+body { color: var(--text); background: var(--canvas); }
+h1 { font-size: var(--type-title); }
+h2 { font-size: var(--type-section); }
+.rws-section, .cg-card, .panel { border-radius: var(--card-radius); box-shadow: var(--card-shadow); }
+.m1-snapshot { padding: var(--space-3); border: 1px solid var(--line); margin-bottom: var(--space-3); }
+.m1-evidence-actions { display: flex; flex-wrap: wrap; gap: var(--space-1); }
+.m1-honesty { display: block; color: var(--muted); }
+.cg-detail pre { white-space: pre-wrap; overflow-wrap: anywhere; font-size: 14px; }
+.cg-detail dt, .cg-detail dd { overflow-wrap: anywhere; }
+.cg-filters { grid-template-columns: repeat(4,minmax(0,1fr)); }
+.cg-filters label { color: var(--muted); }
+@media(max-width:760px) { .cg-filters { grid-template-columns: repeat(2,minmax(0,1fr)); } .cg-filters .cg-search { grid-column: 1 / -1; } }

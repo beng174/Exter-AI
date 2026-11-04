@@ -32,6 +32,7 @@ export interface DemoGalleryCreative {
   ugc: boolean | null;
   creatorEvidence: CreatorEvidence[];
   partnershipAttribution: { name: string; pageId: string; profileUrl: string | null; adUrl: string | null } | null;
+  deliveryStatus?: "active" | "inactive" | "unknown";
   deliveryStartAt: string | null;
   deliveryStopAt: string | null;
   observedAt: string | null;

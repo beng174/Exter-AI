@@ -1,3 +1,5 @@
+Superseded by research/PRODUCT-SPEC.md where they disagree.
+
 # Exter AI — Build Spec for Limitations 1, 2, 3, 4, 7 and 8
 
 **For:** Codex. Save this file as `research/BUILD-SPEC.md` in `beng174/Exter-AI` and implement it phase by phase, in the order below.

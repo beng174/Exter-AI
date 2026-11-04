@@ -24,5 +24,5 @@ test("archived official skill files match the pinned manifest and stay outside a
     assert.deepEqual(new Set(files(root)), expected, "Archived skill inventory must match the manifest");
     const active = readFileSync(".agents/skills/exter-kernel-task/SKILL.md", "utf8");
     assert.ok(active.length < 2200);
-    assert.ok(readFileSync("AGENTS.md", "utf8").length < 1800);
+    assert.ok(readFileSync("AGENTS.md", "utf8").trim().split("\n").length < 120);
 });

@@ -16,7 +16,7 @@ if (process.env.DATABASE_URL) {
   try { await migrate(infrastructureDatabase()); }
   catch { console.error("Database initialisation failed. Check DATABASE_URL, permissions and pgvector support."); process.exit(1); }
 }
-const db = openDatabase();
+const db = openDatabase(undefined, false);
 const app = createApp(db);
 app.locals.videoAnalysis.recoverInterruptedJobs();
 recoverHostedValentteResearch(db);

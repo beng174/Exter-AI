@@ -1,15 +1,10 @@
 :root {
-  font-family: "Inter", sans-serif;
-  color: #1F2937;
-  background: #FFFFFF;
+  font-family: Inter, sans-serif;
+  color: var(--text);
+  background: var(--canvas);
   font-synthesis: none;
-  font-size: 15px;
+  font-size: var(--type-body);
   font-weight: 400;
-  --green: #1F2937;
-  --muted: #6B7280;
-  --line: #E5E7EB;
-  --canvas: #FFFFFF;
-  --serif: "Inter", sans-serif;
 }
 * {
   box-sizing: border-box;
