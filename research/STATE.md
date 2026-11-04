@@ -231,3 +231,7 @@ and blockers below remain unchanged.
   review link is recorded in the plan.
   No dependency, schema, provider, scoring or environment changes. Both live gates
   stay open, owned sync remains default off and kernel work remains paused.
+
+- Polish review: https://github.com/beng174/Exter-AI/pull/7 on the same
+  feat/ui-b-creatives branch, against exter-test-drive. Merged PR #6 links to it.
+  All four checks and browser acceptance pass; no merge or deployment was run.

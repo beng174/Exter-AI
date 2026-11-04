@@ -12,8 +12,8 @@ with the configured competitor set. Update UI spec rule 2. Keep all data rules.
 - [x] 2026-11-04 UTC: Confirm PR #6 merged and fast-forward the same branch to eaeb8a2.
 - [x] 2026-11-04 UTC: Implement compact gaps, complete metadata, formatting/copy and competitor parity.
 - [x] 2026-11-04 UTC: Fixture/render/browser regressions and all four required checks pass.
-- [ ] Refresh four real-capture screenshots and push the same feature branch.
-- [ ] Open a follow-up PR against exter-test-drive because merged PR #6 cannot change.
+- [x] 2026-11-04 UTC: Refresh four real-capture screenshots and push feat/ui-b-creatives.
+- [x] 2026-11-04 UTC: Open follow-up PR #7 against exter-test-drive and link it from merged PR #6.
 
 ## Surprises and discoveries
 
@@ -37,7 +37,7 @@ projection. Use the first retained copy line, then the source ad ID.
 
 ## Outcomes and retrospective
 
-Implemented the eight presentation requests. Full npm test: 378 passed. Typecheck
+Review: https://github.com/beng174/Exter-AI/pull/7. Implemented the eight presentation requests. Full npm test: 378 passed. Typecheck
 and production build pass; the existing bundle-size advisory remains. Focused
 presentation/render/API tests pass. UI-A browser regression passes. UI-B
 acceptance and staged secret scan pass. Both real-capture screens were visually
