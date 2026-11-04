@@ -1,0 +1,7 @@
+.owned-accounts { padding:24px; margin-bottom:24px; min-width:0; }
+.owned-accounts .form-row { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:16px; }
+.owned-accounts label, .owned-accounts input, .owned-accounts select { min-width:0; width:100%; }
+.owned-accounts article { border-top:1px solid var(--line); padding:16px 0; }
+.owned-accounts dd { margin-left:0; overflow-wrap:anywhere; }
+.owned-accounts h3 { overflow-wrap:anywhere; }
+@media(max-width:600px) { .owned-accounts .form-row { grid-template-columns:minmax(0,1fr); } }

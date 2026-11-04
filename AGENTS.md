@@ -31,4 +31,4 @@ the matching archived skill.
 - Never use screenshots or descriptions of other products' screens. Exter's
   own layout follows docs/BRANDING.md.
 - Metric names and formulas come only from the spec's "Metric definitions".
-- Follow build phases in order; live-account gates must pass before advancing.
+- Follow build phases in order. The user authorised Phase 1 fixtures with live gates open.

@@ -1,0 +1,32 @@
+{
+  "code": 0,
+  "data": {
+    "list": [
+      {
+        "dimensions": {
+          "ad_id": "1111",
+          "stat_time_day": "2026-11-02 00:00:00"
+        },
+        "metrics": {
+          "spend": "100",
+          "impressions": "2000",
+          "clicks": "100",
+          "conversion": "20",
+          "video_watched_2s": "500",
+          "video_watched_6s": "200",
+          "video_play_actions": "1000",
+          "video_views_p25": "500",
+          "video_views_p50": "300",
+          "video_views_p75": "200",
+          "video_views_p95": "100",
+          "video_views_p100": "50",
+          "average_video_play": "4",
+          "frequency": "1.5"
+        }
+      }
+    ],
+    "page_info": {
+      "total_page": 1
+    }
+  }
+}

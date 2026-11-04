@@ -1,3 +1,5 @@
+import { scheduleOwnedSync } from "../owned/jobs.js";
+export { enqueueOwnedSync, workOwnedOnce } from "../owned/jobs.js";
 import { randomUUID } from "node:crypto";
 import type pg from "pg";
 import { collectMetaPage, MetaCollectionError, MetaLibraryConnector, metaStatus } from "../connectors/meta-library.js";
@@ -104,6 +106,7 @@ export async function workOnce(pool: pg.Pool, connector?: MetaLibraryConnector) 
   return true;
 }
 export async function schedule(pool: pg.Pool, now = new Date()) {
+  await scheduleOwnedSync(pool,now);
   const watchlists = await pool.query("SELECT id FROM watchlists WHERE enabled ORDER BY id");
   for (const row of watchlists.rows) await enqueueCollection(pool,row.id,now.toISOString().slice(0,10));
 }
