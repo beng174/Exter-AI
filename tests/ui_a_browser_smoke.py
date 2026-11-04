@@ -22,9 +22,9 @@ with sync_playwright() as pw:
     nav=page.get_by_role('navigation',name='Main navigation')
     for name in ('Overview','Research','Act','Share','Settings'):
         expect(nav.get_by_role('region',name=name)).to_be_visible()
-    for hidden in ('Opportunities and briefs','Scores','Ask Exter','Brand demo'):
+    for hidden in ('Brand demo',):
         expect(nav.get_by_role('link',name=hidden,exact=True)).to_have_count(0)
-    expect(page.locator('.ui-creative-card')).to_have_count(58)
+    expect(page.locator('.ui-creative-card')).to_have_count(8)
     nav.get_by_role('link',name='Brand research',exact=True).click()
     expect(page).to_have_url(base+'/?view=brands&brandId=valentte&sort=days')
     expect(nav.get_by_role('link',name='Brand research',exact=True)).to_have_attribute('aria-current','page')
@@ -70,7 +70,7 @@ with sync_playwright() as pw:
         page.keyboard.press('Escape');expect(nav).not_to_be_visible()
         page.get_by_label('Toggle navigation').click()
         nav.get_by_role('link',name='Creatives',exact=True).click();expect(nav).not_to_be_visible()
-        expect(page.locator('.ui-creative-card')).to_have_count(58)
+        expect(page.locator('.ui-creative-card')).to_have_count(8)
         assert page.evaluate('document.documentElement.scrollWidth <= innerWidth'),width
     assert not errors,errors
     assert not external,external

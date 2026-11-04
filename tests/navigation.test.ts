@@ -6,7 +6,7 @@ import type { Page } from "../shared/types.js";
 test("UI-00 config has unique canonical IDs, ordered groups and only existing ready screens",()=>{
   assert.equal(new Set(navigation.map(item=>item.id)).size,navigation.length);
   assert.deepEqual(navigationGroups,["Overview","Research","Act","Share","Settings"]);
-  const screens:Page[]=["overview","brand","competitors","ads","formats","audiences","creators","reports","sources","settings","demo","labelling","patterns","winners"];
+  const screens:Page[]=["overview","brand","competitors","ads","formats","audiences","creators","reports","sources","settings","demo","labelling","patterns","winners","briefs","scores","ask"];
   for(const item of navigation) {
     assert.ok(navigationGroups.includes(item.group));
     if(item.ready)assert.ok(item.screen && screens.includes(item.screen),item.id);
@@ -14,7 +14,7 @@ test("UI-00 config has unique canonical IDs, ordered groups and only existing re
   }
   for(const screen of screens)assert.equal(resolveNavigation(`/?view=${viewForScreen(screen)}&demo=1`).screen,screen);
   const visible=visibleNavigation().flatMap(group=>group.items.map(item=>item.id));
-  assert.deepEqual(visible,["overview","brands","competitors","creatives","formats","patterns","audience","winners","creators","reports","data","settings","labelling"]);
+  assert.deepEqual(visible,["overview","brands","competitors","creatives","formats","patterns","audience","winners","briefs","creators","scores","reports","ask","data","settings","labelling"]);
   assert.ok(visibleNavigation(true).flatMap(group=>group.items).some(item=>item.id==="demo"));
 });
 test("UI-00 legacy aliases redirect canonically and preserve brand, filters and hashes",()=>{
@@ -57,3 +57,14 @@ test("UI-02/UI-03 canonical creatives and full-page detail are rebuilt and ready
 });
 
 test("UI-C/UI-D all seven rebuilt routes are ready with correct sidebar titles/groups",()=>{for(const [id,code] of Object.entries({overview:"04",brands:"05",competitors:"06",formats:"07",patterns:"08",audience:"09",winners:"10"})){const item=navigation.find(item=>item.id===id)!;assert.equal(item.ready,true);assert.equal(item.rebuilt,`UI-${code}`);assert.equal(resolveNavigation(`/?view=${id}&brandId=known`).id,id);}assert.equal(navigation.find(item=>item.id==="winners")?.group,"Act");});
+
+test("UI-E/UI-F all remaining screens are ready and budgets retain only operator preparation under Settings",()=>{
+  for(const id of ["briefs","creators","scores","ask","reports","data"]){const item=navigation.find(item=>item.id===id)!;assert.equal(item.ready,true);assert.match(item.rebuilt!,/^UI-1[1-6]$/);assert.equal(resolveNavigation(`/?view=${id}`).id,id);}
+  assert.equal(navigation.find(item=>item.id==="settings")?.label,"Tests and preparation");
+  assert.equal(navigation.find(item=>item.id==="audience")?.label,"Audience & voice");
+  assert.equal(navigation.find(item=>item.id==="briefs")?.label,"Opportunities & briefs");
+});
+
+test("UI-16 old budget bookmarks redirect to Data sources without losing their target",()=>{
+ const route=resolveNavigation("/?view=settings&brandId=real-brand#monthly-budgets");assert.equal(route.id,"data");assert.equal(route.url.searchParams.get("view"),"data");assert.equal(route.url.searchParams.get("brandId"),"real-brand");assert.equal(route.url.hash,"#monthly-budgets");assert.equal(route.redirect,true);
+});

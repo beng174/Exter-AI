@@ -27,6 +27,7 @@ export function SafeLink({href,children}:{href:string|null|undefined;children:Re
   let safe:string|null=null;try{const url=new URL(href||"");if(url.protocol==="https:"&&!url.username&&!url.password)safe=url.href;}catch{}
   return safe?<a href={safe} target="_blank" rel="noopener noreferrer">{children}</a>:<Unavailable compact reason="No verified public source URL is saved."/>;
 }
-export function DimensionSwitch({value,onChange,label="Group by"}:{value:ResearchDimension;onChange:(value:ResearchDimension)=>void;label?:string}) {
-  return <div className="research-dimension-switch" role="group" aria-label={label}>{(["format","hook","angle","offer","claim"] as const).map(item=><button key={item} aria-pressed={value===item} onClick={()=>onChange(item)}>{item==="hook"?"Hook type":item==="claim"?"Claim type":plainEnum(item)}</button>)}</div>;
+export function DimensionSwitch({value,onChange,label="Group by",first="format"}:{value:ResearchDimension;onChange:(value:ResearchDimension)=>void;label?:string;first?:"format"|"hook"}) {
+  const order:ResearchDimension[]=first==="hook"?["hook","angle","offer","format","claim"]:["format","hook","angle","offer","claim"];
+  return <div className="research-dimension-switch" role="group" aria-label={label}>{order.map(item=><button key={item} aria-pressed={value===item} onClick={()=>onChange(item)}>{item==="hook"?(first==="hook"?"Hook type":"Hook"):item==="claim"?"Claim type":plainEnum(item)}</button>)}{first==="hook"&&["Creator","Length"].map(item=><button key={item} disabled title={`${item} comparisons are not available yet.`}>{item}</button>)}</div>;
 }

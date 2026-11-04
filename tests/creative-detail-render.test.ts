@@ -36,13 +36,13 @@ test("UI-03 missing evidence renders reasons/unlocks, never invented outcomes, s
     assert.match(html, /No scene boundaries are stored/);
     assert.match(html, /Owned metrics are not synced/);
     assert.match(html, /No saved analysis supports/);
-    assert.match(html, /calculation is not built/);
+    assert.ok(!html.includes('aria-label="Working Score"'),"unbuilt Working Score does not add a duplicate section");
     assert.equal((html.match(/class="ui-meta-line"/g)||[]).length,1,"only the complete source-history metadata remains");
     assert.ok(!html.includes('role="dialog"'));
     assert.ok(!html.includes('>0<'));
     assert.ok(!html.includes("Proven winner"));
     assert.ok(!html.includes("Correct a tag"));
-    assert.ok(!html.includes("Add to brief"));
+    assert.match(html, /disabled="" title="Adding saved creatives to briefs is not available yet/);
 });
 test("UI-03 a competitor never receives private outcomes or a retention section", () => {
     const html = render(browserCreative({ workspaceBrand: false, owned: true, performance: [] }));

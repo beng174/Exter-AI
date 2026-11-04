@@ -286,3 +286,65 @@ and blockers below remain unchanged.
 - UI-C/UI-D review: https://github.com/beng174/Exter-AI/pull/8 on
   feat/ui-cd-research, targeting exter-test-drive. All section classifications
   and requested desktop/mobile screenshots are attached in the description.
+
+
+## UI-E/UI-F and full reference fidelity (UI-00 to UI-16)
+
+- Built feat/ui-ef-workspace from exter-test-drive at 82f2aa1, after merged
+  PR #8 and the uploaded reference renders. The user expanded this work to a
+  fidelity pass on all fifteen reference screens and the sidebar in the same PR.
+  Read design/reference/README.md before building; static HTML measurements and
+  PNG comparisons control layout. AGENTS.md now points to that workflow.
+- All six remaining screens are ready: Opportunities and briefs, Creators,
+  Scores, Ask Exter, Reports and Data sources. Ask is a page opened by the header
+  control. Budgets move into Data sources; old settings#monthly-budgets URLs
+  redirect and scroll to the new location. Tests and preparation stays because
+  website/collection/analysis tools still live there; Labelling stays in Settings.
+- Reused existing saved-data/action APIs. Creator search/fit/shortlist and report
+  generation/download keep their existing guards. No new source or model method,
+  schema, dependency, account token storage, budget limit or environment setting.
+  Draft upload, approval/delivery, PDF, weekly packs, client links, invitations,
+  scores and calculations without existing support stay disabled/unavailable.
+- Reference frame uses the measured header pattern, local Inter, section order,
+  widths, 12px cards, 24px padding, paired share bars, competitor mix bars, icons
+  and copy. Extra desktop topbar/research filter cards are removed. Caveats move
+  behind About this data. Missing sections keep their frames with one explanation;
+  tables hide universally unknown columns and use Basis labels. Cards retain one
+  small evidence chip per basis instead of labels after every metric.
+- PR #8 review fixes: Winners shows Longest running, thumbnails, shared titles and
+  native IDs, with no empty score/label/confidence/four-signal columns. Competitor
+  headers say Not collected once for uncollected brands. Visible copy has no
+  internal item IDs, and the footer says Exter AI. Creatives starts with eight
+  cards and Show more; browser back from detail retains the expanded list.
+- Deleted 22 unreachable legacy UI components/styles and old App page/drawer
+  branches. Kept UI still used by operator controls and the client demo, alongside
+  all services, stored media, analyses and historical evidence.
+- Pure shared/workspace-screens.ts selectors cover creator filters/known-view
+  medians, source-safe links, public-only counts and saved score order, with
+  synthetic fixture tests. Existing account calculations stay in their original
+  shared module; account/currency/attribution/event/date scopes remain separate.
+- Validation: npm run check, npm test (403 passed), npm run build and diff checks
+  pass. The existing bundle-size advisory remains. UI-A/UI-B/UI-C-D browser
+  regressions pass with updated expectations. Full fidelity browser acceptance
+  covers all routes, header layout, missing frames, aliases/history, expanded
+  library return, budget bookmarks, no internal IDs and mobile overflow.
+  Separate intercepted fixtures verify Ask sources/history, shortlist/export,
+  saved scores, disabled uploads, reports, safe account metadata and budget edits.
+- output/playwright/fidelity-*.png contains 35 artifacts: every screen/sidebar
+  at 1440px, Data sources/Briefs at 390px, a sidebar component capture and sixteen
+  full-resolution side-by-side comparisons with approved references. App images
+  use genuine retained captures and website research; synthetic populated cases
+  are tested separately. Production media, paid analyses and live owned sync are
+  absent locally and are not fabricated. Fixtures are not live verification.
+- Kept differences are documented for review: actual/missing source content;
+  longevity fallback; qualitative fit; overlapping claim shares; 44px interactive
+  targets; full-page 260px sidebar versus standalone 240px export; required extra
+  Settings/Ask/Help/footer controls; answer-level citation granularity; and the real
+  saved winner row count. No paid/source requests were made during verification.
+- Both live gates remain open, EXTER_OWNED_SYNC_ENABLED stays absent/false and
+  kernel work stays paused. After merge: Render > exter-ai > Manual Deploy >
+  Deploy latest commit. Keep existing secrets, budgets and disk. No migration or
+  worker change is needed. No merge or deployment is run by this task.
+
+- Final staged validation also passed npm run secrets:check; no known secret
+  patterns were found. All four required checks pass on the completed change.

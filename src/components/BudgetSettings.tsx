@@ -1,7 +1,7 @@
 import { useEffect, useState, type FormEvent } from "react";
 import { CircleHelp, RefreshCw, Wallet } from "lucide-react";
 import { api } from "../lib/api";
-import "./budget-settings.css";
+
 
 type CostType = "inference" | "data_providers";
 interface Budget {
@@ -83,35 +83,11 @@ export function BudgetSettings() {
   }
 
   const month = data ? new Date(`${data.month}-01T00:00:00Z`).toLocaleDateString("en-GB", { month: "long", year: "numeric", timeZone: "UTC" }) : "Current month";
-  return <section id="monthly-budgets" className="budget-settings" aria-labelledby="budget-settings-title">
-    <div className="budget-heading">
-      <div><span className="budget-eyebrow"><Wallet size={14} aria-hidden="true" /> SETTINGS</span><h2 id="budget-settings-title">Monthly budgets</h2><p>Control the monthly GBP caps shared by this deployment.</p></div>
-      <button className="budget-refresh" onClick={() => void refresh()} disabled={loading || saving !== null}><RefreshCw size={14} aria-hidden="true" />{loading ? "Loading…" : "Refresh usage"}</button>
-    </div>
-    <div className="budget-period"><strong>{month} · UTC</strong>
-      <details className="budget-data-note"><summary><CircleHelp size={14} aria-hidden="true" /> About this data</summary><p>Paid jobs pause at 90% of each cap, or earlier when the next request reserve would exceed it. Usage includes estimated charges and reservations for requests whose final cost is unknown. Budgets renew on the first day of each month in UTC.</p></details>
-    </div>
-    {error && <p className="budget-error" role="alert">{error}</p>}
-    {message && <p className="budget-success" role="status">{message}</p>}
-    {loading && !data && <p role="status">Loading budget settings…</p>}
-    {!loading && !data && <p className="budget-unavailable">Budget settings are unavailable. Check the database configuration and migrations in Render, then refresh.</p>}
-    {data && <div className="budget-grid">{types.map(type => {
-      const budget = data.budgets.find(row => row.cost_type === type);
-      if (!budget) return <article key={type} className="budget-card"><h3>{labels[type]}</h3><p>Budget setting unavailable. Apply the database migrations in Render, then refresh.</p></article>;
-      const fraction = budget.monthly_budget_gbp > 0 ? budget.used_gbp / budget.monthly_budget_gbp : 0;
-      return <article key={type} className="budget-card">
-        <div className="budget-card-heading"><h3>{labels[type]}</h3><span className={`budget-state ${budget.paused ? "is-paused" : "is-active"}`}>{budget.paused ? "Paused" : "Available"}</span></div>
-        <p className="budget-description">{descriptions[type]}</p>
-        <div className="budget-usage"><strong>{money(budget.used_gbp,true)}</strong><span>of {money(budget.monthly_budget_gbp)} monthly cap</span></div>
-        <div className="budget-meter"><progress aria-label={`${labels[type]} usage against monthly cap`} max={1} value={Math.min(1,Math.max(0,fraction))} /><span aria-hidden="true" /></div>
-        <p className="budget-threshold">Safety threshold: {money(budget.threshold_gbp,true)} · Available before threshold: {money(budget.remaining_gbp,true)}</p>
-        {budget.request_reserve_gbp !== null && <p className="budget-threshold">Reserved before each paid request: {money(budget.request_reserve_gbp,true)}</p>}
-        <p className={`budget-pause-note ${budget.paused ? "is-paused" : ""}`}>{budget.paused ? pauseReasons[budget.pause_reason || "threshold_reached"] : "Paid requests can run while each reservation fits within the safety threshold."}</p>
-        <form onSubmit={event => void save(event,type)}>
-          <label htmlFor={`budget-${type}`}>Monthly cap (GBP)</label>
-          <div className="budget-input-row"><span aria-hidden="true">£</span><input id={`budget-${type}`} type="number" min="0" step="0.01" inputMode="decimal" required value={drafts[type] ?? ""} disabled={loading || saving !== null} onChange={event => setDrafts(current => ({ ...current,[type]: event.target.value }))} /><button type="submit" disabled={loading || saving !== null}>{saving === type ? "Saving…" : "Save budget"}</button></div>
-        </form>
-      </article>;
-    })}</div>}
+  return <section id="monthly-budgets" className="ui-section-card reference-budget" aria-label="Budgets and schedule">
+    <header><div><h2>Budgets and schedule</h2><p>Paid calls stop when a budget is reached; nothing is silently retried</p></div><button className="button secondary" onClick={()=>void refresh()} disabled={loading||saving!==null}>Refresh usage</button></header>
+    {error&&<p role="alert" className="reference-muted">Saved budget usage could not be read.</p>}{message&&<p role="status">{message}</p>}
+    {loading&&!data?<p role="status" className="reference-muted">Reading saved budgets…</p>:!data?error?null:<p className="reference-muted">Budget settings are unavailable.</p>:<div className="reference-stack">{types.map(type=>{const budget=data.budgets.find(row=>row.cost_type===type);if(!budget)return <p className="reference-muted" key={type}>{labels[type]} budget is unavailable.</p>;return <article key={type} className="budget-reference-row"><div><strong>{type==="inference"?"AI reading budget":"Data provider budget"}</strong><span>{money(budget.used_gbp)} of {money(budget.monthly_budget_gbp)} this month</span></div><progress aria-label={`${labels[type]} usage against monthly cap`} max={budget.monthly_budget_gbp||1} value={budget.used_gbp}/><small>{budget.paused?"Paid requests are paused.":"Budget available"}</small><details><summary>Edit budget</summary><form onSubmit={event=>void save(event,type)}><label htmlFor={`budget-${type}`}>Monthly cap (GBP)<input id={`budget-${type}`} type="number" min="0" step="0.01" required value={drafts[type]??""} onChange={event=>setDrafts(current=>({...current,[type]:event.target.value}))}/></label><button className="button secondary" disabled={saving!==null}>Save budget</button></form></details></article>;})}</div>}
+    <dl className="reference-schedule"><dt>Collection</dt><dd>Daily, when configured</dd><dt>Your account sync</dt><dd>Daily, when enabled · last 7 days re-pulled</dd><dt>Weekly data pack</dt><dd>Not available yet</dd></dl>
+    <details className="reference-muted"><summary>About this data</summary><p>Usage includes estimated charges and uncertain reservations. Existing safety thresholds and request reserves are unchanged. Collection and account sync depend on existing worker configuration. Live account sync remains off unless separately enabled.</p></details>
   </section>;
 }

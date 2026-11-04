@@ -1,4 +1,4 @@
-import { Activity, BarChart3, ClipboardCheck, Compass, FileChartColumnIncreasing, Globe2, Layers, MessageSquareText, Settings2, Sparkles, Target, Trophy, UsersRound } from "lucide-react";
+import { House, Building2, Eye, Grid2X2, Layers2, MessageSquare, Gauge, Database, UserRound, BarChart3, ClipboardCheck, Compass, FileChartColumnIncreasing, Globe2, Layers, MessageSquareText, Settings2, Sparkles, Target, Trophy, UsersRound } from "lucide-react";
 import type { Page } from "../shared/types";
 
 export type ViewId = "overview" | "brands" | "competitors" | "creatives" | "creative" | "formats" | "patterns" | "audience" | "winners" | "briefs" | "creators" | "scores" | "reports" | "ask" | "demo" | "data" | "settings" | "labelling";
@@ -6,27 +6,27 @@ export type NavigationGroup = "Overview" | "Research" | "Act" | "Share" | "Setti
 export interface NavigationItem {
   id: ViewId; label: string; group: NavigationGroup; icon: typeof Compass;
   ready: boolean; screen: Page | null; aliases?: readonly string[];
-  demoOnly?: boolean; hidden?: boolean; rebuilt?: "UI-02" | "UI-03" | "UI-04" | "UI-05" | "UI-06" | "UI-07" | "UI-08" | "UI-09" | "UI-10";
+  demoOnly?: boolean; hidden?: boolean; rebuilt?: "UI-11" | "UI-12" | "UI-13" | "UI-14" | "UI-15" | "UI-16" | "UI-02" | "UI-03" | "UI-04" | "UI-05" | "UI-06" | "UI-07" | "UI-08" | "UI-09" | "UI-10";
 }
 /** UI-00: readiness means an existing screen, not completion of a later UI rebuild. */
 export const navigation: readonly NavigationItem[] = [
-  { id:"overview", label:"Home", group:"Overview", icon:Compass, ready:true, screen:"overview", rebuilt:"UI-04" },
-  { id:"brands", label:"Brand research", group:"Research", icon:Globe2, ready:true, screen:"brand", rebuilt:"UI-05", aliases:["brand"] },
-  { id:"competitors", label:"Competitors", group:"Research", icon:BarChart3, ready:true, screen:"competitors", rebuilt:"UI-06" },
-  { id:"creatives", label:"Creatives", group:"Research", icon:Layers, ready:true, screen:"ads", rebuilt:"UI-02", aliases:["ads"] },
-  { id:"creative", label:"Creative detail", group:"Research", icon:Layers, ready:true, screen:"ads", rebuilt:"UI-03", hidden:true },
-  { id:"formats", label:"Formats", group:"Research", icon:Activity, ready:true, screen:"formats", rebuilt:"UI-07" },
+  { id:"overview", label:"Home", group:"Overview", icon:House, ready:true, screen:"overview", rebuilt:"UI-04" },
+  { id:"brands", label:"Brand research", group:"Research", icon:Building2, ready:true, screen:"brand", rebuilt:"UI-05", aliases:["brand"] },
+  { id:"competitors", label:"Competitors", group:"Research", icon:Eye, ready:true, screen:"competitors", rebuilt:"UI-06" },
+  { id:"creatives", label:"Creatives", group:"Research", icon:Grid2X2, ready:true, screen:"ads", rebuilt:"UI-02", aliases:["ads"] },
+  { id:"creative", label:"Creative detail", group:"Research", icon:Grid2X2, ready:true, screen:"ads", rebuilt:"UI-03", hidden:true },
+  { id:"formats", label:"Formats", group:"Research", icon:Layers2, ready:true, screen:"formats", rebuilt:"UI-07" },
   { id:"patterns", label:"Patterns", group:"Research", icon:BarChart3, ready:true, screen:"patterns", rebuilt:"UI-08" },
-  { id:"audience", label:"Audience and voice", group:"Research", icon:Target, ready:true, screen:"audiences", rebuilt:"UI-09", aliases:["audiences"] },
+  { id:"audience", label:"Audience & voice", group:"Research", icon:MessageSquare, ready:true, screen:"audiences", rebuilt:"UI-09", aliases:["audiences"] },
   { id:"winners", label:"Winners", group:"Act", icon:Trophy, ready:true, screen:"winners", rebuilt:"UI-10" },
-  { id:"briefs", label:"Opportunities and briefs", group:"Act", icon:Sparkles, ready:false, screen:null },
-  { id:"creators", label:"Creators", group:"Act", icon:UsersRound, ready:true, screen:"creators" },
-  { id:"scores", label:"Scores", group:"Act", icon:Activity, ready:false, screen:null },
-  { id:"reports", label:"Reports", group:"Share", icon:FileChartColumnIncreasing, ready:true, screen:"reports" },
-  { id:"ask", label:"Ask Exter", group:"Share", icon:MessageSquareText, ready:false, screen:null },
+  { id:"briefs", label:"Opportunities & briefs", group:"Act", icon:Target, ready:true, screen:"briefs", rebuilt:"UI-11" },
+  { id:"creators", label:"Creators", group:"Act", icon:UserRound, ready:true, screen:"creators", rebuilt:"UI-12" },
+  { id:"scores", label:"Scores", group:"Act", icon:Gauge, ready:true, screen:"scores", rebuilt:"UI-13" },
+  { id:"reports", label:"Reports", group:"Share", icon:FileChartColumnIncreasing, ready:true, screen:"reports", rebuilt:"UI-15" },
+  { id:"ask", label:"Ask Exter", group:"Share", icon:MessageSquareText, ready:true, screen:"ask", rebuilt:"UI-14" },
   { id:"demo", label:"Brand demo", group:"Share", icon:FileChartColumnIncreasing, ready:true, screen:"demo", demoOnly:true },
-  { id:"data", label:"Data sources", group:"Settings", icon:Globe2, ready:true, screen:"sources", aliases:["sources"] },
-  { id:"settings", label:"Budgets and tests", group:"Settings", icon:Settings2, ready:true, screen:"settings" },
+  { id:"data", label:"Data sources", group:"Settings", icon:Database, ready:true, screen:"sources", rebuilt:"UI-16", aliases:["sources"] },
+  { id:"settings", label:"Tests and preparation", group:"Settings", icon:Settings2, ready:true, screen:"settings" },
   { id:"labelling", label:"Labelling", group:"Settings", icon:ClipboardCheck, ready:true, screen:"labelling" },
 ];
 export const navigationGroups: readonly NavigationGroup[] = ["Overview","Research","Act","Share","Settings"];
@@ -40,7 +40,7 @@ export function resolveNavigation(input: string) {
   const url=new URL(input,"http://exter.local"), requested=url.searchParams.get("view") || "overview";
   const item=navigation.find(item=>item.id===requested || item.aliases?.includes(requested));
   const available=item?.ready && (!item.demoOnly || url.searchParams.get("demo")==="1");
-  const selected=available?item:navigation[0];
+  const selected=available?(item.id==="settings"&&url.hash==="#monthly-budgets"?navigation.find(item=>item.id==="data")!:item):navigation[0];
   const id=selected.id==="creative" && !url.searchParams.get("id")?"creatives":selected.id;
   const canonical=navigation.find(item=>item.id===id)!;
   const redirect=requested!==id || id!=="creative" && url.searchParams.has("id");
@@ -52,6 +52,7 @@ export const NAVIGATION_EVENT="exter:navigation";
 export function navigateTo(view:ViewId|Page,brandId?:string,options:{replace?:boolean;adId?:string}={}) {
   const item=navigation.find(item=>item.id===view || item.screen===view && !item.hidden);
   const url=new URL(window.location.href);
+  if(item?.id!==resolveNavigation(window.location.href).id)url.hash="";
   url.searchParams.set("view",item?.id || "overview");
   if(brandId)url.searchParams.set("brandId",brandId);
   if(options.adId)url.searchParams.set("id",options.adId);else url.searchParams.delete("id");

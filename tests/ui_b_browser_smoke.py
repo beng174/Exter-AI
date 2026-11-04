@@ -19,7 +19,7 @@ with sync_playwright() as pw:
     page.route('**/*',route)
     page.goto(base+'/?view=ads&brandId=valentte',wait_until='networkidle')
     expect(page).to_have_url(base+'/?view=creatives&brandId=valentte')
-    expect(page.locator('.ui-creative-card')).to_have_count(58)
+    expect(page.locator('.ui-creative-card')).to_have_count(8)
     expect(page.get_by_role('heading',name='Creatives',exact=True)).to_be_visible()
     expect(page.locator('.workspace-switch')).not_to_contain_text('Type: Unavailable')
     expect(page.locator('.wordmark')).to_contain_text('EXTER AI')
@@ -61,7 +61,7 @@ with sync_playwright() as pw:
     page.get_by_role('button',name='Grid',exact=True).click()
     search=page.get_by_role('searchbox',name='Search copy, transcript and on-screen text')
     search.fill('this-query-is-absent');expect(page.get_by_text('No ads match these filters',exact=True)).to_be_visible()
-    search.fill('');expect(page.locator('.ui-creative-card')).to_have_count(58)
+    search.fill('');expect(page.locator('.ui-creative-card')).to_have_count(8)
     # Filtered next follows the URL-backed days-running order.
     page.get_by_label('Sort',exact=True).select_option('days')
     expected=page.locator('.ui-creative-open').nth(1).get_attribute('aria-label')[5:]
@@ -130,7 +130,7 @@ with sync_playwright() as pw:
     fixture['ownedStatus']='error';performance=fixture['creatives'][0]['performance'];fixture['creatives'][0]['performance']=[]
     page.goto(base+'/?view=creatives&brandId=valentte',wait_until='networkidle')
     expect(page.get_by_role('region',name='Owned metrics availability',exact=True)).to_contain_text('could not be read')
-    expect(page.locator('.ui-creative-card').filter(has_text='You ·').locator('dd')).to_have_text(['Unavailable','Unavailable','Unavailable'])
+    expect(page.locator('.ui-creative-card').filter(has_text='Yours').locator('dd')).to_have_text(['Unavailable','Unavailable','Unavailable'])
     fixture['ownedStatus']='available';fixture['creatives'][0]['performance']=performance
     page.goto(base+'/?view=creative&brandId=valentte&id=competitor',wait_until='networkidle')
     expect(page.get_by_role('region',name='Viewer retention',exact=True)).to_have_count(0)

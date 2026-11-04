@@ -29,7 +29,10 @@ export type Page =
   | "demo"
   | "labelling"
   | "patterns"
-  | "winners";
+  | "winners"
+  | "briefs"
+  | "scores"
+  | "ask";
 export interface Brand {
   id: string;
   name: string;
