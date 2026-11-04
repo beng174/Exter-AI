@@ -1,4 +1,6 @@
+import { workspaceEvidence } from "../../shared/workspace-evidence";
 import { useEffect, useMemo, useRef, useState } from "react";
+import type { Brand } from "../../shared/types";
 import type { ReactNode } from "react";
 import { ArrowUpRight, ChevronRight, Info, LoaderCircle, RefreshCw } from "lucide-react";
 import type { BrandDemoReport, DemoPattern } from "../../shared/brand-demo";
@@ -19,6 +21,8 @@ export type RealWorkspacePage = "overview" | "ads" | "formats" | "brand" | "crea
 export interface RealWorkspaceViewProps {
   brandId: string;
   view: RealWorkspacePage;
+  brands?: Brand[];
+  onSelectBrand?: (id: string) => void;
   onOpenSettings?: () => void;
   onOpenSources?: () => void;
 }
@@ -66,7 +70,7 @@ function CreatorRates({ creator }: { creator: CreatorCandidate }) {
 }
 
 /** The real-source workspace never falls back to the sample dashboard or a rolling date filter. */
-export function RealWorkspaceView({ brandId, view, onOpenSettings, onOpenSources }: RealWorkspaceViewProps) {
+export function RealWorkspaceView({ brandId, view, brands = [], onSelectBrand, onOpenSettings, onOpenSources }: RealWorkspaceViewProps) {
   const [data, setData] = useState<WorkspaceEvidence>(emptyEvidence);
   const [loading, setLoading] = useState(true);
   const [unavailable, setUnavailable] = useState<string[]>([]);
@@ -106,7 +110,7 @@ export function RealWorkspaceView({ brandId, view, onOpenSettings, onOpenSources
       if (!current) return;
       const value = <T,>(result: PromiseSettledResult<T>): T | null => result.status === "fulfilled" ? result.value : null;
       setData({ report: value(results[0]), gallery: value(results[1]), creators: value(results[2]), research: value(results[3]), competitors: value(results[4]) });
-      setUnavailable(results.flatMap((result, index) => result.status === "rejected" ? [["report", "creatives", "creators", "website", "competitors"][index]] : []));
+      setUnavailable(results.flatMap((result, index) => result.status === "rejected" ? [`${["report", "creatives", "creators", "website", "competitors"][index]}: ${result.reason instanceof Error ? result.reason.message : "Saved source could not be read"}`] : []));
       setCheckedAt(new Date().toISOString()); setLoading(false);
     });
     return () => { current = false; };
@@ -135,6 +139,7 @@ export function RealWorkspaceView({ brandId, view, onOpenSettings, onOpenSources
   }, [competitorBrandId, competitorCounts]);
 
   const creatives = data.gallery?.creatives || [];
+  const snapshot = workspaceEvidence(creatives);
   const brandName = data.gallery?.brand.name || data.report?.brand.name || data.creators?.brandName || "This brand";
   const collected = data.gallery?.collectedAdsCount ?? (data.report ? data.report.analysedAdsCount + data.report.sample.excludedUnanalysed : null);
   const analysed = data.gallery?.analysedAdsCount ?? data.report?.analysedAdsCount ?? null;
@@ -189,12 +194,15 @@ export function RealWorkspaceView({ brandId, view, onOpenSettings, onOpenSources
     const labels: Record<string, string> = { "not-started": "Not collected", queued: "Queued", collecting: "Collecting ads", preparing: "Preparing media", analysing: "Analysing creatives", complete: "Complete", paused: "Paused", interrupted: "Interrupted", failed: "Needs attention" };
     return labels[status] || status.replaceAll("-", " ");
   }
+  function snapshotSection() {
+    return <section className="rws-section m1-snapshot" aria-label="Stored evidence summary"><h2>Stored source evidence</h2><p><strong>Observed</strong> · {creatives.length} ads in this sample · {date(snapshot.from)} to {date(snapshot.lastCheck)}. Last successful source check: {date(snapshot.lastCheck)}.</p><p>Activity status is known for {snapshot.activeKnown} of {creatives.length} ads. Activity describes the recorded capture, not current delivery. Creative interpretations are modelled and have not passed the 200-ad client validation gate.</p><div className="m1-evidence-actions">{[["Active at capture", snapshot.activeKnown ? snapshot.active : null], ["Launched in the recorded week", snapshot.startsKnown ? snapshot.launched : null], ["Stopped in the recorded week", snapshot.stopsKnown ? snapshot.stopped : null]].map(([label, ads]) => <button type="button" className="button secondary" key={String(label)} disabled={!Array.isArray(ads)} onClick={() => Array.isArray(ads) && revealGallery({}, ads as DemoGalleryCreative[])}>{String(label)}: {Array.isArray(ads) ? ads.length : "Unavailable"}</button>)}</div><p>Recorded week: {date(snapshot.weekFrom)} to {date(snapshot.lastCheck)}. Start dates known for {snapshot.startsKnown} ads; stop dates known for {snapshot.stopsKnown}. Missing dates are unavailable, not zero changes.</p></section>;
+  }
   function gallerySection() {
     const supportingCreatives = evidenceAdIds ? creatives.filter(creative => evidenceAdIds.includes(creative.adId)) : creatives;
     return <section id="workspace-creatives" ref={galleryRef} className="rws-gallery-section" aria-label="Creative library">
       {view !== "ads" && <SectionTitle title="Creatives" />}
       {evidenceAdIds && <div className="rws-brand-actions"><p className="rws-secondary">Showing {supportingCreatives.length} supporting ads.</p><button type="button" className="rws-source" onClick={() => revealGallery({})}>Show all collected ads</button></div>}
-      {data.gallery && creatives.length ? <CreativeGallery creatives={supportingCreatives} filters={filters} onFiltersChange={setFilters} openAdId={openAdId} onOpenAd={setOpenAdId} />
+      {data.gallery && creatives.length ? <CreativeGallery brandControl={<label>Brand<select aria-label="Brand" value={brandId} onChange={event => onSelectBrand?.(event.target.value)}>{brands.length ? brands.map(brand => <option key={brand.id} value={brand.id}>{brand.name}</option>) : <option value={brandId}>{brandName}</option>}</select></label>} creatives={supportingCreatives} filters={filters} onFiltersChange={setFilters} openAdId={openAdId} onOpenAd={setOpenAdId} />
         : data.gallery ? <Empty title="No source creatives collected yet" action={onOpenSettings} actionLabel="Collect or prepare source ads">Collected ads and their available media appear here. No sample creatives are substituted.</Empty>
         : <Empty title="Creatives are temporarily unavailable" action={() => setRefresh(value => value + 1)} actionLabel="Refresh creative data">Your saved sources have not been replaced with sample content.</Empty>}
     </section>;
@@ -206,14 +214,15 @@ export function RealWorkspaceView({ brandId, view, onOpenSettings, onOpenSources
     {notice && <p className="rws-notice" role="status">{notice}</p>}
     {actionError && <p className="rws-error" role="alert">{actionError}</p>}
 
-    <nav className="rws-section-nav" aria-label="Evidence workflow">{[["overview", "Creative overview"], ["ads", "Brand ads & results"], ["competitors", "Competitor comparison"], ["audiences", "Audience & voice"]].map(([page,label]) => <a key={page} href={`/?${new URLSearchParams({view:page,brandId})}`} aria-current={view===page?"page":undefined}>{label}</a>)}</nav>
+    <nav className="rws-section-nav" aria-label="Evidence workflow">{[["overview", "Creative overview"], ["ads", "Creative library"], ["competitors", "Competitor comparison"], ["audiences", "Audience & voice"]].map(([page,label]) => <a key={page} href={`/?${new URLSearchParams({view:page,brandId})}`} aria-current={view===page?"page":undefined}>{label}</a>)}</nav>
 
+    {["overview", "ads", "brand", "competitors"].includes(view) && snapshotSection()}
     {view === "overview" && <>
       <section className="rws-kpis" aria-label="Workspace counts">
         {[
           ["Ads collected", collected, () => revealGallery({})], ["Ads analysed", analysed, () => revealGallery({}, creatives.filter(creative => Boolean(creative.analysis)))],
           ["Stored creatives", stored, () => revealGallery({}, creatives.filter(creative => creative.mediaAvailable))], ["Attributed creators", data.creators ? data.creators.seeds.length : null, () => revealGallery({}, creatives.filter(creative => Boolean(creative.partnershipAttribution)))],
-        ].map(([label, value, action]) => <article className="rws-kpi" key={String(label)}><span>{String(label)}</span><strong>{numeric(value as number | null)}</strong>{typeof action === "function" && <button type="button" className="rws-source" onClick={action as () => void}>View evidence<ChevronRight size={13} /></button>}</article>)}
+        ].map(([label, value, action]) => <article className="rws-kpi" key={String(label)}><span>{String(label)} · Observed</span><strong>{numeric(value as number | null)}</strong>{typeof action === "function" && <button type="button" className="rws-source" onClick={action as () => void}>View evidence<ChevronRight size={13} /></button>}</article>)}
       </section>
       {data.report ? <section className="rws-section" id="creative-landscape"><SectionTitle title="Creative landscape" maturity="Beta"><p className="rws-secondary">A visual breakdown of the saved analyses, with the full sample represented.</p></SectionTitle><CreativeLandscape report={data.report} onSelect={showPatternAds} /></section>
         : <Empty title="Creative analysis is unavailable" action={() => setRefresh(value=>value+1)} actionLabel="Refresh analyses">Collected ads and saved source evidence remain available in the content library.</Empty>}
@@ -241,6 +250,8 @@ export function RealWorkspaceView({ brandId, view, onOpenSettings, onOpenSources
     </>}
 
     {view === "brand" && <>
+      <section className="rws-section"><h2>Brand workspaces</h2><div className="m1-evidence-actions">{brands.map(brand => <button type="button" className="button secondary" key={brand.id} onClick={() => onSelectBrand?.(brand.id)}>{brand.name}{brand.id === brandId ? " · Selected" : " · Open stored evidence"}</button>)}</div></section>
+      {gallerySection()}
       <section className="rws-section"><SectionTitle title={brandName}><p className="rws-secondary">Published website positioning, offers and claims.</p></SectionTitle>
         <div className="rws-brand-actions"><button className="rws-primary-button" type="button" disabled={Boolean(busy)} onClick={() => void runWebsiteResearch()}>{busy === "website" ? <LoaderCircle size={16} className="spin" /> : <RefreshCw size={16} />}{busy === "website" ? "Researching website…" : data.research || data.report?.website.status === "available" ? "Refresh website research" : "Research brand website"}</button>{safeHref(data.research?.domain ? `https://${data.research.domain}` : data.report?.website.url) && <ExternalSource url={data.research?.domain ? `https://${data.research.domain}` : data.report?.website.url}>Open brand website</ExternalSource>}</div>
         {data.research ? <><p className="rws-secondary">Observed {date(data.research.observedAt)}.</p><dl className="rws-brand-facts">{data.research.facts.map((fact, index) => <div key={`${fact.label}-${index}`}><dt>{fact.label}</dt><dd><p>{fact.value}</p><ExternalSource url={fact.sourceUrl}>Website source</ExternalSource><small>{fact.kind === "brand_claim" ? "Publisher claim" : "Website observation"}</small></dd></div>)}</dl>{data.research.socialProfiles.length > 0 && <div className="rws-brand-socials"><h3>Published social profiles</h3>{data.research.socialProfiles.map(profile => <ExternalSource key={profile.url} url={profile.url}>{profile.platform}</ExternalSource>)}</div>}</>

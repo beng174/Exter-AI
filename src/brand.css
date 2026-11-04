@@ -7,20 +7,8 @@
 }
 
 :root {
-  --exter-blue: #0C1F96;
-  --exter-teal: #00C0CB;
-  --exter-mint: #00DFB8;
-  --exter-grey: #6B7280;
-  --text: #1F2937;
-  --muted: #6B7280;
-  --line: #E5E7EB;
-  --canvas: #FFFFFF;
-  --surface: #FFFFFF;
-  --surface-subtle: #F9FAFB;
-  --green: #1F2937;
-  --serif: Inter, sans-serif;
   font-family: Inter, sans-serif;
-  font-size: 15px;
+  font-size: var(--type-body);
   line-height: 1.5;
   color: var(--text);
   background: var(--canvas);
@@ -32,7 +20,7 @@ body, button, input, select, textarea { font-family: Inter, sans-serif; line-hei
 h1, h2, h3, h4, h5, h6 { font-family: Inter, sans-serif; line-height: 1.5; letter-spacing: -.02em; }
 h1 { font-size: 28px; font-weight: 700; color: var(--exter-blue); }
 h2 { font-size: 20px; font-weight: 600; color: var(--exter-blue); }
-h3, h4, h5, h6 { font-size: 15px; font-weight: 600; color: var(--text); }
+h3, h4, h5, h6 { font-size: var(--type-body); font-weight: 600; color: var(--text); }
 p { max-width: 72ch; line-height: 1.5; }
 label, small, kbd { font-size: 13px; }
 table, summary { font-size: 14px; }
@@ -41,7 +29,7 @@ a { color: inherit; text-decoration-color: var(--exter-teal); text-underline-off
 a:hover { text-decoration: underline; }
 button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible,
 textarea:focus-visible, summary:focus-visible { outline: 2px solid var(--text); outline-offset: 3px; }
-button, input, select, textarea { font-size: 15px; }
+button, input, select, textarea { font-size: var(--type-body); }
 input, select, textarea { border-color: var(--line); border-radius: 8px; background: var(--surface); color: var(--text); }
 pre, code { font-size: 13px; line-height: 1.5; }
 
@@ -94,7 +82,7 @@ pre, code { font-size: 13px; line-height: 1.5; }
 main { padding: 24px 24px 0; }
 .page-title-row { align-items: flex-start; margin-bottom: 24px; gap: 24px; }
 .page-title-row h1 { margin: 0 0 8px; font: 700 28px/1.5 Inter, sans-serif; letter-spacing: -.025em; color: var(--exter-blue); }
-.page-title-row p { margin: 0; font-size: 15px; color: var(--muted); line-height: 1.5; max-width: 72ch; }
+.page-title-row p { margin: 0; font-size: var(--type-body); color: var(--muted); line-height: 1.5; max-width: 72ch; }
 .page-eyebrow { margin-bottom: 8px; font-size: 13px; font-weight: 500; letter-spacing: 0; text-transform: none; }
 .page-eyebrow > span:first-child { display: none; }
 .context-toolbar { padding: 16px; border-color: var(--line); border-radius: 12px; gap: 16px; }
@@ -106,7 +94,7 @@ main { padding: 24px 24px 0; }
 .footer-logo { color: var(--text); font-size: 14px; font-weight: 600; }
 
 /* One clear primary action. Supporting actions remain neutral. */
-.button { min-height: 40px; padding: 8px 16px; border: 1px solid var(--line); border-radius: 8px; background: var(--surface); color: var(--text); font-size: 15px; font-weight: 500; line-height: 1.5; box-shadow: none; }
+.button { min-height: 40px; padding: 8px 16px; border: 1px solid var(--line); border-radius: 8px; background: var(--surface); color: var(--text); font-size: var(--type-body); font-weight: 500; line-height: 1.5; box-shadow: none; }
 .button.secondary, .button.secondary:hover { border-color: var(--line); background: var(--surface); color: var(--text); }
 .button:hover, .button.secondary:hover { background: #F9FAFB; }
 .button.primary, .button.primary:hover, .primary-button, .primary-action { background: var(--exter-teal); border-color: var(--exter-teal); color: var(--text); font-weight: 600; }
@@ -145,7 +133,7 @@ main { padding: 24px 24px 0; }
 .panel-heading h2, .section-heading h2, .br-section-heading h2, .rv-section-head h2,
 .budget-heading h2, .gemini-smoke h2, .labelling-header h2 { font: 600 20px/1.5 Inter, sans-serif; color: var(--exter-blue); margin: 0 0 8px; letter-spacing: -.02em; }
 .panel-heading p, .section-heading p, .br-section-heading p, .rv-section-head p,
-.budget-heading p, .gemini-smoke-intro, .labelling-header p { font-size: 15px; line-height: 1.5; color: var(--muted); max-width: 72ch; }
+.budget-heading p, .gemini-smoke-intro, .labelling-header p { font-size: var(--type-body); line-height: 1.5; color: var(--muted); max-width: 72ch; }
 .section-block { margin-top: 32px; }
 .section-heading { margin-bottom: 16px; }
 .overview-middle { display: grid; grid-template-columns: repeat(12, minmax(0, 1fr)); gap: 24px; margin-bottom: 32px; }
@@ -154,10 +142,10 @@ main { padding: 24px 24px 0; }
 .rank, .fmt-rank { color: var(--text) !important; background: #F3F4F6; }
 .rv-match { background: #F3F4F6; color: var(--text); }
 .creative-brand, .creative-brand * { color: var(--text) !important; }
-.demo-preparation p { color: var(--muted); font-size: 15px; line-height: 1.5; }
+.demo-preparation p { color: var(--muted); font-size: var(--type-body); line-height: 1.5; }
 .demo-preparation label { color: var(--text); font-size: 13px; }
 .demo-preparation h2 { font-size: 20px; font-weight: 600; color: var(--exter-blue); }
-.demo-preparation h3 { font-size: 15px; font-weight: 600; color: var(--text); }
+.demo-preparation h3 { font-size: var(--type-body); font-weight: 600; color: var(--text); }
 .demo-preparation-badge, .gemini-smoke-badge, .br-pill, .rv-pill,
 .mini-tag, .mode-tag, .budget-state { padding: 2px 8px; border: 0; border-radius: 999px; font-size: 12px; line-height: 1.5; font-weight: 500; background: #F3F4F6; color: var(--text); white-space: nowrap; }
 .demo-preparation-badge { background: #E9FAF5; }

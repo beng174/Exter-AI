@@ -1,0 +1,24 @@
+/* Exter tokens: accents are not body text colours. */
+:root {
+  --exter-blue: #0c1f96;
+  --exter-navy: #111b38;
+  --exter-teal: #00c0cb;
+  --exter-mint: #00dfb8;
+  --green: #1f2937;
+  --serif: Inter, sans-serif;
+  --text: #1f2937;
+  --muted: #515b6b;
+  --line: #d6dbe3;
+  --canvas: #ffffff;
+  --surface: #ffffff;
+  --surface-subtle: #f8fafc;
+  --type-body: 16px;
+  --type-title: 28px;
+  --type-section: 20px;
+  --space-1: 8px;
+  --space-2: 16px;
+  --space-3: 24px;
+  --space-4: 32px;
+  --card-radius: 12px;
+  --card-shadow: 0 1px 2px #111b3808;
+}

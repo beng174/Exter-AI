@@ -1,3 +1,21 @@
+# Product renewal and M1 handoff
+
+Current source of truth: research/PRODUCT-SPEC.md, uploaded 4 November 2026.
+Implement M1 only: public creative evidence and original Exter screens. M2 to M5
+remain planned, not started. The earlier creative-analytics and low-cost kernel
+priorities are superseded by this request. Preserve their implementation and
+historical evidence below; do not run kernel:next without a request.
+
+M1 reuses the retained-record projection, immutable analyses and media routes.
+58 genuine captured ad records are available locally; production media and the
+14 paid analyses are not included in this checkout. Do not invent them or claim
+that screenshots verify production data. Internal fixture tests cover populated
+analysis and playback separately. No live provider calls, production writes,
+Gemini method changes, Render settings changes or budget changes were made.
+See .agent/plans/weeks-1-2.md for validation, screenshots and remaining gates.
+
+## Earlier handoff (historical)
+
 # Current handoff
 
 Priority: stable low-cost kernel. Use npm run kernel:next and one listed task.

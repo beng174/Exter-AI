@@ -179,6 +179,7 @@ export class CreativeGalleryService {
       ugc: format === "UGC" ? creatorEvidence.length > 0 ? true : null : format ? false : null,
       creatorEvidence,
       partnershipAttribution: partner ? { name: partner.name, pageId: partner.pageId, profileUrl: publicEvidenceUrl(partner.profileUrl) || null, adUrl: sourceUrl(ad) } : null,
+      deliveryStatus: ad.deliveryStatus || "unknown",
       ...chronology(ad),
       searchText: [ad.title, ad.copy, ...transcript.map(item => item.value), ...(fields?.onScreenText || []).map(item => item.value)].filter(Boolean).join("\n"),
     };
