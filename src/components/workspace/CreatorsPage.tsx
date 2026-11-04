@@ -1,3 +1,4 @@
+import { CreatorsReadModel } from "./ActionReadModels";
 import { useState } from "react";
 import { ImageIcon } from "lucide-react";
 import type { CreatorCandidate } from "../../../shared/creator-research";
@@ -9,6 +10,7 @@ import { Disabled,type ActionProps } from "./ActionWorkspace";
 const n=(value:number|null|undefined)=>value==null?"Unavailable":new Intl.NumberFormat("en-GB",{maximumFractionDigits:1,notation:value>=10000?"compact":"standard"}).format(value);
 export function CreatorsPage({data,header,refresh}:ActionProps) {
   const [platform,setPlatform]=useState("all"),[country,setCountry]=useState("all"),[followers,setFollowers]=useState("all"),[busy,setBusy]=useState(""),[error,setError]=useState("");
+  if(data.base.library.presentation)return <>{header(<><Disabled reason="Sample workspace is read-only.">Compare 2</Disabled><Disabled primary reason="Sample workspace is read-only.">Export shortlist</Disabled></>)}<CreatorsReadModel library={data.base.library} model={data.base.library.presentation}/></>;
   const source=data.creators.value,all=source?.candidates||[],id=data.base.library.brand.id;
   const rows=selectCreatorCards(all,{platform,country,...(followers!=="all"?{minFollowers:Number(followers)}:{})});
   async function shortlist(row:CreatorCandidate){setBusy(row.id);setError("");try{await api("/api/creator-research/shortlist",{brandId:id,candidateId:row.id,selected:!row.shortlisted});refresh();}catch{setError("The shortlist could not be saved.");}finally{setBusy("");}}

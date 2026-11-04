@@ -61,6 +61,8 @@ test("UI-02/UI-03 incomplete metadata is hidden; complete evidence uses UK dates
   assert.equal(render(ui.MetaLine,{}),"");
   const known=text(render(ui.MetaLine,complete));assert.match(known,/n = 1 ad · 30 Oct 2026/);assert.doesNotMatch(known,/1 ads|Unavailable/);
   assert.match(text(render(ui.MetaLine,{...complete,sampleSize:0})),/n = 0 ads/);
+  assert.match(text(render(ui.MetaLine,{...complete,sampleSize:1240,sampleUnit:"reviews"})),/n = 1240 reviews/);
+  assert.match(text(render(ui.MetaLine,{...complete,sampleSize:1,sampleUnit:"creators"})),/n = 1 creator/);
   const empty=render(ui.SectionCard,{title:"Analysis",empty:{reason:"No analysis is saved.",href:"/?view=settings#gemini-smoke-test",linkLabel:"Run analysis"},meta:complete});
   assert.ok(!empty.includes("ui-meta-line"));assert.ok(!empty.includes("<footer"));assert.equal((empty.match(/<a /g)||[]).length,1);
 });

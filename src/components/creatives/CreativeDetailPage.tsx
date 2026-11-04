@@ -1,3 +1,4 @@
+import { CreativeDetailReadModel } from "./CreativeDetailReadModel";
 import { Caveat } from "../ui/Caveat";
 import { useEffect, useRef, useState } from "react";
 import { ArrowLeft, ArrowRight, ExternalLink } from "lucide-react";
@@ -17,6 +18,7 @@ interface DetailProps {data:CreativeBrowserResponse;filtered:BrowserCreative[];o
 export function CreativeDetailPage({data,adId,filtered,onOpen,onRefresh}:DetailProps&{adId:string}) {
   const row=data.creatives.find(item=>item.adId===adId);
   if(!row)return <div className="creative-browser"><PageHeader title="Creative detail"/><SectionCard title="Saved creative" empty={{reason:"This creative is not in the workspace's saved evidence.",href:creativeUrl(window.location.href,data.brand.id),linkLabel:"Back to Creatives"}}/></div>;
+  if(data.presentation)return <CreativeDetailReadModel key={row.adId} row={row} data={data} filtered={filtered} onOpen={onOpen}/>;
   return <Detail key={row.adId} row={row} data={data} filtered={filtered} onOpen={onOpen} onRefresh={onRefresh}/>;
 }
 function Detail({row,data,filtered,onOpen,onRefresh}:DetailProps&{row:BrowserCreative}) {

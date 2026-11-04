@@ -1,3 +1,4 @@
+import { CompetitorsReadModel, FormatsReadModel, PatternsReadModel, AudienceReadModel, WinnersReadModel } from "./ResearchReadModels";
 import type { CSSProperties } from "react";
 import { ComparisonBars } from "../ui/ComparisonBars";
 import { Caveat } from "../ui/Caveat";
@@ -10,6 +11,7 @@ import { CreativeTile, DimensionSwitch, EvidenceNumber, Measure, SafeLink, dimen
 interface DimensionProps {dimension:ResearchDimension;onDimension:(dimension:ResearchDimension)=>void}
 const validDimension=(value:ResearchDimension)=>RESEARCH_DIMENSIONS.includes(value)?value:"format";
 export function CompetitorsScreen({data,selection,dimension,onDimension}:ScreenProps&DimensionProps) {
+  if(data.library.presentation)return <CompetitorsReadModel library={data.library} model={data.library.presentation}/>;
   dimension=validDimension(dimension);
   const brands=brandSnapshots(data.library,data.window,selection.platform);
   const metrics=[{id:"active",label:"Active ads"},{id:"launched",label:"New this week"},{id:"stopped",label:"Stopped this week"},{id:"medianDays",label:"Median days running"},{id:"shareActive",label:"Share of voice"}] as const;
@@ -40,6 +42,7 @@ export function CompetitorsScreen({data,selection,dimension,onDimension}:ScreenP
   </>;
 }
 export function FormatsScreen({data,selection}:ScreenProps) {
+  if(data.library.presentation)return <FormatsReadModel library={data.library} model={data.library.presentation}/>;
   const groups=comparisonGroups(data.library.creatives,"format",selection),coverage=mixGroups(data.library.creatives,"format",selection);
   const analysis={href:analysisUrl(data.library.brand.id),linkLabel:"Run analysis"};
   const productionSelection={...selection,kind:"running" as const,take:"5"};
@@ -69,6 +72,7 @@ export function FormatsScreen({data,selection}:ScreenProps) {
 }
 const actions=[{name:"Test now",when:"It wins often in the category and you use it 15 or more points less.",what:"A brief with three variants, linked to supporting ads."},{name:"Scale",when:"Your own winners sit where competitors barely go.",what:"More versions of the concept and new creators."},{name:"Fix",when:"You use it a lot but win less than the category.",what:"New hooks or formats for the same idea."},{name:"Reduce",when:"It wins rarely everywhere and you overuse it.",what:"Move budget to stronger tests."},{name:"Watch",when:"A competitor idea is new or rising in the saved week.",what:"Record it and check whether it keeps rising."}] as const;
 export function PatternsScreen({data,selection,dimension,onDimension}:ScreenProps&DimensionProps) {
+  if(data.library.presentation)return <PatternsReadModel library={data.library} model={data.library.presentation}/>;
   dimension=validDimension(dimension);
   const rows=comparisonGroups(data.library.creatives,dimension,selection);
   return <>
@@ -89,6 +93,7 @@ export function PatternsScreen({data,selection,dimension,onDimension}:ScreenProp
   </>;
 }
 export function AudienceScreen({data,selection}:ScreenProps) {
+  if(data.library.presentation)return <AudienceReadModel library={data.library} model={data.library.presentation}/>;
   const quotes=data.research?.facts.filter(fact=>fact.label==="Customer review displayed by the brand")||[];
   const brands=brandSnapshots(data.library,data.window,selection.platform);
   const voices=brands.map(brand=>({...brand,...brandVoice(data.library.creatives,{...selection,brand:brand.id,kind:"active"})}));
@@ -106,6 +111,7 @@ export function AudienceScreen({data,selection}:ScreenProps) {
   </>;
 }
 export function WinnersScreen({data,selection}:ScreenProps) {
+  if(data.library.presentation)return <WinnersReadModel library={data.library} model={data.library.presentation}/>;
   const rows=longestRunning(data.library.creatives,selection);
   return <>
     <SectionCard title="Longest running" help="Working Score, labels, confidence and public signal scores are not available yet. Longest running is shown instead." empty={!rows.length&&{reason:"No supported source running durations are saved.",href:`/?view=settings&brandId=${encodeURIComponent(data.library.brand.id)}#demo-collection`,linkLabel:"Review collection"}}>

@@ -384,3 +384,64 @@ and blockers below remain unchanged.
   fix/creative-filters-basis, against exter-test-drive. The description includes
   before/after screenshots for all three requested screens at both widths,
   the ten-table audit, data classifications and kept reference differences.
+
+
+## Complete read-only sample workspace (UI-00 to UI-16)
+
+- 2026-11-04: feat/sample-workspace starts from exter-test-drive at abe2de6,
+  after PR #9. The fictional Northwick Candle Co. workspace is available only
+  with ?demo=1. Its switcher says Sample, and every page shows Sample data.
+- shared/sample holds the approved renderVals and static reference content,
+  fictional brands and advertiser records, 260 illustrative creatives (46 yours,
+  214 competitors), six creator profiles, seven briefs, canned answers and four
+  weekly packs. Sources use reserved .example domains and inline SVG posters.
+  scripts/generate-sample-fixtures.mjs regenerates the design values. There is
+  no database seed, schema change or new dependency.
+- Existing API paths and typed record shapes serve the fixtures. Optional section
+  read models populate illustrative Working Scores, priorities, review themes,
+  retention and report sections in the existing screens and shared components.
+  This does not implement or validate their live calculations. Predictive scoring
+  remains gated. Sample competitor views never show private account outcomes.
+- The flag gates the API and UI. Sample IDs without it and mixed real/sample
+  scopes fail. The server rejects sample mutations before operational handlers,
+  including bypass attempts; provider, analysis, sync, collection, budget and
+  write controls are disabled. Ask is a read-only canned lookup with sample
+  source IDs. Internal links/new tabs and history retain the flag; sample brand
+  selection does not overwrite the saved real-workspace preference.
+- All fifteen requested screens have their reference sections populated. The
+  legacy demo link opens the full sample report; Settings and Labelling remain
+  explicitly read-only. Browser acceptance covers populated section order,
+  visible charts, labels, disabled controls, canned answers/sources, scene and
+  creative navigation, private-outcome restrictions and mobile overflow.
+- Validation passes: npm run check, npm test (405 tests), npm run build and diff
+  checks. The existing bundle-size advisory remains. The ordinary-workspace
+  fidelity regression passes, and its fifteen screen captures plus sidebar are
+  pixel-identical to the existing committed captures (16 identical, 0 changed).
+- output/playwright/sample-*.png contains 32 artifacts: all fifteen sample screens
+  and sidebar at 1440px, each beside its approved reference. Kept differences
+  include the requested Sample switcher label, disabled operational controls,
+  .example links, existing shell utilities/footer, 44px targets, visible evidence
+  metadata and the unvalidated predictive-score gate.
+- No external requests or live provider calls occurred during verification.
+  Fixtures are not live verification. Both live gates remain open,
+  EXTER_OWNED_SYNC_ENABLED stays absent/false and kernel work stays paused.
+  After merge: Render > exter-ai > Manual Deploy > Deploy latest commit.
+  No migration or worker change is needed; keep existing secrets, budgets and disk.
+
+- Final staged secret scan also passes with no known secret patterns found.
+  All four required checks pass on the completed implementation.
+
+- Review: https://github.com/beng174/Exter-AI/pull/11 on feat/sample-workspace,
+  against exter-test-drive. The description includes every app/reference pair,
+  the read-only boundary, validation and intentional fidelity differences.
+
+- PR #10 merged during publication. Updated the sample branch from the current
+  exter-test-drive at 60d5f5f, retaining its filter pills, Basis widths and
+  unavailable-row rules alongside the sample workspace. Kept both sets of
+  research notes. The combined type check, production build and 407 tests pass;
+  real-workspace screenshots are rechecked against a clean build of that base.
+
+- Post-merge validation: all four required checks pass with 407 tests. Sample
+  browser acceptance, ordinary-workspace fidelity regression and PR #10's
+  filter/Basis acceptance pass. All sixteen real captures are pixel-identical
+  to the clean 60d5f5f base build; sample/reference pairs have been refreshed.
