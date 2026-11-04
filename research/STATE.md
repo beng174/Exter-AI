@@ -352,3 +352,30 @@ and blockers below remain unchanged.
 - Review: https://github.com/beng174/Exter-AI/pull/9 on feat/ui-ef-workspace,
   against exter-test-drive. The description includes every section classification,
   all app/reference pairs, mobile captures and intentional differences.
+
+
+## Final filter and Basis polish after PR #9 (UI-01, UI-02, UI-04, UI-06, UI-07, UI-09)
+
+- 2026-11-04: Based fix/creative-filters-basis on exter-test-drive at abe2de6,
+  after the PR #9 merge. Read the approved reference README, PNGs and static HTML.
+- Creatives uses named compact filter pills, a date disclosure, extra Platform /
+  Status at capture / reset controls under Add filter, visible Sort by and an
+  accurate Showing X of Y line. Existing selection URLs, back navigation,
+  show-more and grid/table behaviour remain intact.
+- Shared Basis columns reserve 100px, keep chips on one line and remain visible
+  when a wide table scrolls. Home no longer forces a 540px table into its narrow
+  scorecard frame. Unsupported scorecard/production measures and missing saved
+  language show Unavailable in Basis. Genuine zero stays Observed; supported
+  saved analysis retains Modelled. No formulas or stored data changed.
+- npm run check, npm test (405 passed), npm run build, npm run secrets:check and
+  diff checks pass. The existing bundle-size advisory remains. Browser acceptance
+  covers all ten Basis tables at 1440px and 1280px (30 retained/synthetic table
+  cases), filter names/selections/URLs/history, displayed counts and 390px
+  popovers/overflow. Populated table captures were visually reviewed separately.
+- output/playwright/polish-*.png contains 18 images: genuine retained-record
+  before/after captures of Creatives, Home and Competitors at both widths plus
+  six side-by-side comparisons. No synthetic fixtures enter these screenshots.
+  No external requests or mutations occurred. Fixtures are not live verification.
+- Both live gates remain open; EXTER_OWNED_SYNC_ENABLED stays absent/false and
+  kernel work remains paused. After merge: Render > exter-ai > Manual Deploy >
+  Deploy latest commit. No migration or worker change is needed.

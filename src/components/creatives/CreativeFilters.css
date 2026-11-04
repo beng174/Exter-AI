@@ -1,0 +1,19 @@
+.reference-ui .creative-filter-top { gap:12px; }
+.reference-ui .creative-filter-top .creative-sort { display:flex;flex-direction:row;align-items:center;gap:8px;margin-left:auto;font-size:13px;white-space:nowrap; }
+.reference-ui .creative-filter-top .creative-sort select { border-radius:8px; }
+.creative-filter-pills { position:relative;display:flex;flex-wrap:wrap;align-items:center;gap:8px; }
+.reference-ui .creative-filter-pills .creative-filter-pill { display:inline-flex;max-width:100%;font-size:13px; }
+.reference-ui .creative-filter-pill select { width:auto;max-width:230px; }
+.creative-filter-pills details { position:relative;max-width:100%; }
+.creative-filter-pills summary { display:flex;align-items:center;justify-content:center;gap:8px;min-height:44px;padding:0 12px;border:1px solid var(--line);border-radius:999px;list-style:none;font-size:13px;cursor:pointer;background:var(--surface); }
+.creative-filter-pills summary::-webkit-details-marker { display:none; }
+.creative-extra-filters summary { border-style:dashed;font-weight:600; }
+.creative-filter-pills details[open]>summary { border-color:var(--exter-blue); }
+.creative-filter-panel { position:absolute;top:calc(100% + 8px);left:0;z-index:5;display:flex;flex-wrap:wrap;align-items:flex-end;gap:12px;width:360px;max-width:calc(100vw - 56px);padding:16px;background:var(--surface);border:1px solid var(--line);border-radius:12px;box-shadow:0 8px 24px #111b3814; }
+.creative-filter-pills .creative-extra-filters { position:static; }
+.creative-extra-filters .creative-filter-panel { left:0;right:auto; }
+.creative-filter-panel button { display:inline-flex;align-items:center;justify-content:center;gap:6px;padding:0 12px;border:1px solid var(--line);border-radius:8px;background:var(--surface);font-size:13px; }
+.creative-browser .creative-filter-panel label { font-size:12px; }
+@media(max-width:719px) { .reference-ui .creative-filter-top .creative-sort { margin-left:0; }.creative-filter-top .creative-show { width:auto; }.creative-filter-panel { width:280px; }.creative-extra-filters .creative-filter-panel { right:auto;left:0; } }
+.reference-ui .creative-search input { padding-left:36px; }
+.reference-ui .creative-filter-pill select { field-sizing:content; }
