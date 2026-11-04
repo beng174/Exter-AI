@@ -14,7 +14,7 @@ copy, Help and EXTER AI branding. Preserve all source history and provider gates
 - [x] 2026-11-04 UTC: Build grid/table library and full-page detail with existing evidence.
 - [x] 2026-11-04 UTC: Fix shell and add navigation/data-honesty/browser regressions.
 - [x] 2026-11-04 UTC: Run check, test, build and secrets:check; capture both screens at both sizes.
-- [ ] Open one PR against exter-test-drive and record dependency/remaining gates.
+- [x] 2026-11-04 15:00 UTC: Open PR #6 against exter-test-drive, including the UI-A dependency and remaining gates.
 
 ## Surprises and discoveries
 
@@ -41,7 +41,7 @@ for canonical creatives and creative. Links preserve filters and filtered order.
 
 ## Outcomes and retrospective
 
-Implemented and locally verified. Full npm test: 371 passed. Final focused tests:
+Implemented and locally verified. Review: https://github.com/beng174/Exter-AI/pull/6. Full npm test: 371 passed. Final focused tests:
 19 passed. npm run check, npm run build, npm run secrets:check and git diff --check
 passed. UI-A and UI-B browser acceptance passed with all external requests blocked.
 Four UI-B PNGs in output/playwright/ show both screens at 1440px and 390px using

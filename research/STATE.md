@@ -198,3 +198,6 @@ and blockers below remain unchanged.
   Both live gates remain open, owned sync stays default off and kernel work remains
   paused. After merge, Render > exter-ai > Manual Deploy > Deploy latest commit;
   keep existing secrets, budgets, disk and EXTER_OWNED_SYNC_ENABLED absent/false.
+
+- UI-B review: https://github.com/beng174/Exter-AI/pull/6 on feat/ui-b-creatives,
+  targeting exter-test-drive. Merge UI-A #5 first. No merge or deployment was run.
