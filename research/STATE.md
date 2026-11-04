@@ -282,3 +282,7 @@ and blockers below remain unchanged.
   After merge: Render > exter-ai > Manual Deploy > Deploy latest commit. Keep
   existing secrets, budgets and disk; no migration or worker change is needed.
   No merge or deployment is run by this task.
+
+- UI-C/UI-D review: https://github.com/beng174/Exter-AI/pull/8 on
+  feat/ui-cd-research, targeting exter-test-drive. All section classifications
+  and requested desktop/mobile screenshots are attached in the description.

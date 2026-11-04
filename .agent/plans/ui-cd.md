@@ -14,7 +14,7 @@ shared components. Fix Creatives card titles, duration, tags/chips and metadata.
 - [x] 2026-11-04 UTC: Build seven screens and shell navigation/breadcrumbs without duplicate page tabs.
 - [x] 2026-11-04 UTC: Fix the shared creative card presentation everywhere.
 - [x] 2026-11-04 UTC: Fixture/API/render/browser regression; all four checks; nine real-data screenshots.
-- [ ] Push and open one PR against exter-test-drive, with all section classifications.
+- [x] 2026-11-04 UTC: Push and open PR #8 against exter-test-drive, with all section classifications.
 
 ## Surprises and discoveries
 
@@ -44,7 +44,8 @@ All seven screens and card fixes are implemented. UI-A, UI-B and UI-C/UI-D brows
 acceptance pass on the isolated saved-capture preview, without external requests
 or mutations. npm run check, npm test (391 passed), npm run build,
 npm run secrets:check and git diff --check pass. The build retains its existing
-bundle-size advisory. Review publication is the remaining step.
+bundle-size advisory. Review: https://github.com/beng174/Exter-AI/pull/8,
+feat/ui-cd-research against exter-test-drive. No merge or deployment was run.
 
 ## Context and orientation
 
