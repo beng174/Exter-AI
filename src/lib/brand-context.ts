@@ -3,7 +3,7 @@ import type { Brand } from "../../shared/types";
 export function brandContext(brand?: Brand & {
     role?: string;
 }, competitorCount:number|null|undefined=brand?.competitors.length) {
-    const role = brand?.role === "client" ? "Client" : brand?.role === "prospect" ? "Prospect" : null;
+    const role = brand?.mode === "demo" ? "Sample" : brand?.role === "client" ? "Client" : brand?.role === "prospect" ? "Prospect" : null;
     const competitors = competitorCount==null?"Competitors unavailable":competitorCount===0?"No competitors added":`${competitorCount} ${competitorCount===1?"competitor":"competitors"}`;
     return [role, competitors].filter(Boolean).join(" · ");
 }

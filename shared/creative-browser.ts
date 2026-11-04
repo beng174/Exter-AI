@@ -17,9 +17,11 @@ export interface CreativePerformance {
     metrics: Record<MetricName, OwnedMetric>;
     benchmark: Record<MetricName, OwnedMetric>;
 }
+import type { WorkspacePresentation, CreativePresentation } from "./workspace-presentation.js";
 export interface BrowserCreative extends DemoGalleryCreative {
     platform: string;
     publicEvidence?:boolean;
+    presentation?:CreativePresentation;
     owned: boolean;
     workspaceBrand: boolean;
     sourceKind: "public" | "owned";
@@ -34,6 +36,8 @@ export interface BrowserCreative extends DemoGalleryCreative {
 }
 export interface CreativeCompetitor { key:string;brandId:string|null;name:string;status:string }
 export interface CreativeBrowserResponse {
+    presentation?:WorkspacePresentation;
+    conversation?:{question:string;answer:string;sources:string[]}[];
     competitors:CreativeCompetitor[];
     brand: {
         id: string;

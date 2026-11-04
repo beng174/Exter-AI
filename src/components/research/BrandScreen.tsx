@@ -1,3 +1,4 @@
+import { BrandReadModel } from "./ResearchReadModels";
 import { useState, type FormEvent } from "react";
 import { brandSnapshots, evidenceUrl } from "../../../shared/creative-research";
 import { plainEnum, ukDate } from "../../../shared/creative-presentation";
@@ -7,6 +8,7 @@ import { Measure, SafeLink, metadata, type ScreenProps } from "./common";
 export function BrandScreen({data,selection,refresh}:ScreenProps) {
   const [editing,setEditing]=useState(false),[busy,setBusy]=useState(false),[error,setError]=useState(""),[allFacts,setAllFacts]=useState(false);
   const [pages,setPages]=useState(data.watchlists?.[0]?.page_ids.join(", ")||""),[terms,setTerms]=useState(data.watchlists?.[0]?.search_terms.join("\n")||""),[countries,setCountries]=useState(data.watchlists?.[0]?.countries.join(", ")||"");
+  if(data.library.presentation)return <BrandReadModel library={data.library} model={data.library.presentation}/>;
   const profile=data.research,brand=data.brand,competitors=brandSnapshots(data.library,data.window,selection.platform).slice(1);
   const dataSources=`/?view=data&brandId=${encodeURIComponent(data.library.brand.id)}`;
   const refreshResearch=async()=>{setBusy(true);setError("");try{await api("/api/brand-research",{brandId:data.library.brand.id});refresh();}catch{setError("Research did not finish. Earlier evidence is preserved.");}finally{setBusy(false);}};

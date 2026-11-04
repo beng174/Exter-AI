@@ -1,3 +1,4 @@
+import { BriefsReadModel, ScoresReadModel, ReportsReadModel } from "./ActionReadModels";
 import { publicCaptureCount,savedScoreRows,safeEvidenceHref } from "../../../shared/workspace-screens";
 import { useState } from "react";
 import { Upload } from "lucide-react";
@@ -16,6 +17,7 @@ function Point({point,workspaceId}:{point:DemoPoint;workspaceId:string}) {return
 export function BriefsPage({data,header}:ActionProps) {
   const [selected,setSelected]=useState("");const {base,drafts}=data,id=base.library.brand.id;
   const opportunities=drafts.value?.opportunities||[],chosen=opportunities.find(item=>item.id===selected)||opportunities[0];
+  if(base.library.presentation)return <>{header()}<BriefsReadModel library={base.library} model={base.library.presentation}/></>;
   const gap="Ranked opportunities appear once creative results and customer needs can be compared.";
   const draftGap=drafts.failed?"Saved briefs could not be read.":"No evidence-backed brief is saved yet.";
   return <>{header()}<div className="reference-rail-layout brief-layout">
@@ -33,6 +35,7 @@ export function BriefsPage({data,header}:ActionProps) {
 }
 export function ScoresPage({data,header}:ActionProps) {
   const [selected,setSelected]=useState("");const rows=savedScoreRows(data.base.library.creatives),chosen=rows.find(row=>row.adId===selected)||rows[0],id=data.base.library.brand.id;
+  if(data.base.library.presentation)return <>{header()}<ScoresReadModel library={data.base.library} model={data.base.library.presentation}/></>;
   return <>{header()}<div className="score-layout">
     <SectionCard title="Score a draft"><label className="score-upload" title="Draft uploads are not supported by the current reading pipeline."><Upload size={28}/><strong>Drop a video or image, or choose a file</strong><span>MP4, MOV, JPG or PNG · up to 200 MB</span><input type="file" disabled aria-label="Choose a draft file"/></label><label>Which brief is it for?<select disabled aria-label="Brief for draft"><option>No brief</option></select></label><Disabled primary reason="The reading pipeline accepts retained ads only; draft uploads are not available yet.">Score draft</Disabled><p className="reference-muted">Draft scoring is not available yet.</p></SectionCard>
     <SectionCard title={chosen?"Selected result":"Selected result"} actions={chosen?.score?<strong className="score-value">{chosen.score.score??"Unavailable"}<small> / 100</small><DataLabel basis="Estimated"/></strong>:undefined}>
@@ -44,6 +47,7 @@ const sectionNames=["Headline","Top working ads","Rising this week","What change
 export function ReportsPage({data,header,refresh}:ActionProps) {
   const [selected,setSelected]=useState(""),[busy,setBusy]=useState(false),[error,setError]=useState("");
   const reports=(data.reports.value||[]).filter(report=>report.mode!=="demo"||data.base.brand?.mode==="demo"),chosen=reports.find(report=>report.id===selected)||reports[0],id=data.base.library.brand.id;
+  if(data.base.library.presentation)return <>{header(<><Disabled reason="Sample workspace is read-only.">Download data pack</Disabled><Disabled reason="Sample workspace is read-only.">Export PDF</Disabled><Disabled primary reason="Sample workspace is read-only.">Share client link</Disabled></>)}<ReportsReadModel library={data.base.library} model={data.base.library.presentation}/></>;
   const generate=async()=>{setBusy(true);setError("");try{const report=await api<Report>("/api/reports",{brandId:id});setSelected(report.id);refresh();}catch{setError("The report could not be generated. Earlier reports are preserved.");}finally{setBusy(false);}};
   return <>{header(<><Disabled reason="Weekly data packs are not available yet.">Download data pack</Disabled><Disabled reason="PDF export is not available yet.">Export PDF</Disabled><Disabled primary reason="Read-only client links are not available yet.">Share client link</Disabled></>)}{error&&<p role="alert">{error}</p>}<div className="reference-rail-layout reports-layout"><div className="reference-stack"><SectionCard title="Weekly packs"><p className="reference-muted">Weekly packs are not available yet.</p>{reports.map(report=><button className="saved-report-choice" key={report.id} aria-pressed={chosen?.id===report.id} onClick={()=>setSelected(report.id)}><strong>{report.title}</strong><small>{ukDate(report.createdAt)}</small></button>)}<button className="button secondary" onClick={()=>void generate()} disabled={busy}>{busy?"Generating…":"Generate report"}</button>{chosen&&<a className="button secondary" href={`/api/reports/${encodeURIComponent(chosen.id)}/download`}>Download saved report</a>}</SectionCard><SectionCard title="Client link" actions={<Disabled reason="Client-link access is not available yet.">Revoke link</Disabled>}><p className="reference-muted">Read-only client links are not available yet.</p></SectionCard></div><SectionCard title={chosen?.title||data.base.library.brand.name} actions={<div className="reference-actions"><StatusChip status="Live"/><StatusChip status="Beta"/><StatusChip status="Preview"/></div>}>
       {chosen&&<details className="saved-report-content"><summary>Saved report · {ukDate(chosen.createdAt)}</summary><pre>{chosen.content}</pre></details>}

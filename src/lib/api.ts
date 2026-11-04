@@ -1,5 +1,10 @@
 import { displayData, plainDashes } from "../../shared/presentation";
 export async function api<T>(url: string, body?: unknown): Promise<T> {
+  const sample = typeof window!=="undefined" && new URLSearchParams(window.location.search).get("demo")==="1";
+  if(sample) {
+    if(body!==undefined && !url.startsWith("/api/ask")) throw new Error("Sample workspace is read-only.");
+    const scoped=new URL(url,window.location.origin);scoped.searchParams.set("demo","1");url=scoped.pathname+scoped.search;
+  }
   const response = await fetch(
     url,
     body === undefined

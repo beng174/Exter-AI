@@ -1,3 +1,4 @@
+import { DataSourcesReadModel } from "./ActionReadModels";
 import { useState } from "react";
 import { SectionCard, DataTable, StatusChip, DataLabel, Unavailable } from "../ui";
 import { ukDate,plainEnum } from "../../../shared/creative-presentation";
@@ -7,6 +8,7 @@ import { BudgetSettings } from "../BudgetSettings";
 import { Disabled,type ActionProps } from "./ActionWorkspace";
 export function DataSourcesPage({data,header,refresh}:ActionProps) {
   const [adding,setAdding]=useState(false),[platform,setPlatform]=useState("Meta"),[accountId,setAccountId]=useState(""),[currency,setCurrency]=useState("GBP"),[event,setEvent]=useState("purchase"),[busy,setBusy]=useState(false),[error,setError]=useState("");
+  if(data.base.library.presentation)return <>{header()}<DataSourcesReadModel library={data.base.library} model={data.base.library.presentation}/></>;
   const {base,owned}=data,id=base.library.brand.id,accounts=owned.value?.accounts||[],captures=selectResearchAds(base.library.creatives),captureFailed=base.library.sources.some(source=>source.status==="error");
   const platformState=(name:string)=>{const own=accounts.filter(account=>account.platform===name);return !owned.value?"Unavailable":!own.length?"Not connected":own.some(account=>account.status==="error")?"Error":own.every(account=>account.status==="connected")?"Connected":own.some(account=>account.status==="syncing")?"Syncing":"Not connected";};
   const publicState=(value:string|undefined)=>!value?"Unavailable":value==="configured"?"Configured":value==="connected"?"Connected":value==="error"?"Error":"Not connected";

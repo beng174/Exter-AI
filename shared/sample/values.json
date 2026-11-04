@@ -1,0 +1,4105 @@
+{
+  "Main": {
+    "sources": [
+      {
+        "dot": "width: 8px; height: 8px; border-radius: 50%; background: #00DFB8",
+        "text": "Your Meta account · synced today 06:00"
+      },
+      {
+        "dot": "width: 8px; height: 8px; border-radius: 50%; background: #E5A50A",
+        "text": "Market · 214 active ads from 5 competitors · browser capture, checked 03:00"
+      },
+      {
+        "dot": "width: 8px; height: 8px; border-radius: 50%; background: #00DFB8",
+        "text": "Customer reviews · 1,240 read"
+      }
+    ],
+    "priorities": [
+      {
+        "n": 1,
+        "action": "Test now",
+        "actionStyle": "font-size: 12px; font-weight: 600; padding: 3px 10px; border-radius: 999px; background: #E6F9FA; color: #075E66",
+        "title": "Gift-ready unboxing",
+        "what": "Show the box, the wrap and the first light. Competitors lean on it for the gifting season; you barely use it.",
+        "stats": [
+          {
+            "v": "29 pts",
+            "k": "Usage gap",
+            "d": "competitors 31% of ads, you 2%"
+          },
+          {
+            "v": "38%",
+            "k": "Category win rate",
+            "d": "16 of 42 ads are proven winners"
+          },
+          {
+            "v": "8%",
+            "k": "Customer demand",
+            "d": "96 reviews mention gifting"
+          }
+        ],
+        "thumbs": [
+          {
+            "style": "flex: 0 0 28px; width: 28px; height: 35px; border-radius: 6px; background: #EADCD8"
+          },
+          {
+            "style": "flex: 0 0 28px; width: 28px; height: 35px; border-radius: 6px; background: #E9E2D6"
+          },
+          {
+            "style": "flex: 0 0 28px; width: 28px; height: 35px; border-radius: 6px; background: #E3E0EC"
+          }
+        ]
+      },
+      {
+        "n": 2,
+        "action": "Scale",
+        "actionStyle": "font-size: 12px; font-weight: 600; padding: 3px 10px; border-radius: 999px; background: #E7F6EC; color: #14532D",
+        "title": "Refill ritual",
+        "what": "Your best concept sits in an angle competitors barely use. Make more versions with new creators.",
+        "stats": [
+          {
+            "v": "3.1",
+            "k": "Your ROAS",
+            "d": "benchmark 2.4 on £4,120 spend"
+          },
+          {
+            "v": "9%",
+            "k": "Competitor usage",
+            "d": "19 of 214 ads"
+          },
+          {
+            "v": "5%",
+            "k": "Customer demand",
+            "d": "58 reviews mention buying again"
+          }
+        ],
+        "thumbs": [
+          {
+            "style": "flex: 0 0 28px; width: 28px; height: 35px; border-radius: 6px; background: #E9E2D6"
+          },
+          {
+            "style": "flex: 0 0 28px; width: 28px; height: 35px; border-radius: 6px; background: #D9E4DC"
+          },
+          {
+            "style": "flex: 0 0 28px; width: 28px; height: 35px; border-radius: 6px; background: #E6E1D3"
+          }
+        ]
+      },
+      {
+        "n": 3,
+        "action": "Fix",
+        "actionStyle": "font-size: 12px; font-weight: 600; padding: 3px 10px; border-radius: 999px; background: #FEF3C7; color: #78350F",
+        "title": "Offer-led hooks",
+        "what": "You open with offers more than the market does, and they return less. Keep the offer, change the hook.",
+        "stats": [
+          {
+            "v": "30%",
+            "k": "Your usage",
+            "d": "market 24% of ads"
+          },
+          {
+            "v": "2.0",
+            "k": "Your ROAS",
+            "d": "below the 2.4 benchmark"
+          },
+          {
+            "v": "22%",
+            "k": "Category win rate",
+            "d": "11 of 51 ads are proven winners"
+          }
+        ],
+        "thumbs": [
+          {
+            "style": "flex: 0 0 28px; width: 28px; height: 35px; border-radius: 6px; background: #DCE3EC"
+          },
+          {
+            "style": "flex: 0 0 28px; width: 28px; height: 35px; border-radius: 6px; background: #EFE6DA"
+          },
+          {
+            "style": "flex: 0 0 28px; width: 28px; height: 35px; border-radius: 6px; background: #E2E8E4"
+          }
+        ]
+      }
+    ],
+    "scorecard": [
+      {
+        "m": "Share of voice",
+        "you": "14%",
+        "avg": "17%",
+        "last": "12%",
+        "basis": "Estimated"
+      },
+      {
+        "m": "Active ads",
+        "you": "46",
+        "avg": "43",
+        "last": "44",
+        "basis": "Observed"
+      },
+      {
+        "m": "New ads this week",
+        "you": "3",
+        "avg": "4",
+        "last": "5",
+        "basis": "Observed"
+      },
+      {
+        "m": "Ads stopped this week",
+        "you": "2",
+        "avg": "1",
+        "last": "3",
+        "basis": "Observed"
+      },
+      {
+        "m": "Median days running",
+        "you": "21",
+        "avg": "28",
+        "last": "20",
+        "basis": "Observed"
+      },
+      {
+        "m": "Proven winners",
+        "you": "13%",
+        "avg": "18%",
+        "last": "11%",
+        "basis": "Estimated"
+      },
+      {
+        "m": "New concepts per month",
+        "you": "5",
+        "avg": "8",
+        "last": "5",
+        "basis": "Estimated"
+      },
+      {
+        "m": "Versions per concept",
+        "you": "2.1",
+        "avg": "3.4",
+        "last": "2.0",
+        "basis": "Estimated"
+      }
+    ],
+    "kpis": [
+      {
+        "label": "Spend",
+        "value": "£8,420",
+        "note": "12% more than last week"
+      },
+      {
+        "label": "ROAS",
+        "value": "2.6",
+        "note": "Up from 2.3 · benchmark 2.4"
+      },
+      {
+        "label": "Cost per purchase",
+        "value": "£18.70",
+        "note": "£1.40 lower than last week"
+      },
+      {
+        "label": "Hook rate",
+        "value": "29%",
+        "note": "Up 3 points"
+      }
+    ],
+    "working": [
+      {
+        "thumb": "flex: 0 0 36px; width: 36px; height: 45px; border-radius: 6px; background: #D9E4DC",
+        "title": "Refill and save",
+        "brand": "Halvane",
+        "driver": "driven by survival, 64 days",
+        "label": "Proven winner",
+        "labelStyle": "font-size: 12px; font-weight: 600; padding: 3px 10px; border-radius: 999px; background: #E7F6EC; color: #14532D",
+        "score": "86",
+        "conf": "High confidence"
+      },
+      {
+        "thumb": "flex: 0 0 36px; width: 36px; height: 45px; border-radius: 6px; background: #E9E2D6",
+        "title": "Refill ritual, Ama",
+        "brand": "You",
+        "driver": "driven by scaling, 3 ads",
+        "label": "Proven winner",
+        "labelStyle": "font-size: 12px; font-weight: 600; padding: 3px 10px; border-radius: 999px; background: #E7F6EC; color: #14532D",
+        "score": "81",
+        "conf": "High confidence"
+      },
+      {
+        "thumb": "flex: 0 0 36px; width: 36px; height: 45px; border-radius: 6px; background: #E3E0EC",
+        "title": "Hand-poured in Bristol",
+        "brand": "Corrie & Moss",
+        "driver": "driven by reach velocity",
+        "label": "Rising",
+        "labelStyle": "font-size: 12px; font-weight: 600; padding: 3px 10px; border-radius: 999px; background: #EEF2FF; color: #1E3A8A",
+        "score": "74",
+        "conf": "Medium confidence"
+      },
+      {
+        "thumb": "flex: 0 0 36px; width: 36px; height: 45px; border-radius: 6px; background: #E6E1D3",
+        "title": "Burns to the last drop",
+        "brand": "Fennick Home",
+        "driver": "driven by survival, 41 days",
+        "label": "Steady",
+        "labelStyle": "font-size: 12px; font-weight: 600; padding: 3px 10px; border-radius: 999px; background: #F3F4F6; color: #374151",
+        "score": "68",
+        "conf": "Medium confidence"
+      },
+      {
+        "thumb": "flex: 0 0 36px; width: 36px; height: 45px; border-radius: 6px; background: #EADCD8",
+        "title": "Gift box reveal",
+        "brand": "You",
+        "driver": "driven by scaling, 2 ads",
+        "label": "Steady",
+        "labelStyle": "font-size: 12px; font-weight: 600; padding: 3px 10px; border-radius: 999px; background: #F3F4F6; color: #374151",
+        "score": "63",
+        "conf": "High confidence"
+      }
+    ],
+    "changes": [
+      {
+        "type": "Launched",
+        "brand": "Corrie & Moss",
+        "text": "launched 6 founder-led videos",
+        "day": "Mon"
+      },
+      {
+        "type": "New offer",
+        "brand": "Otterly Scents",
+        "text": "is testing a £5 sample box",
+        "day": "Tue"
+      },
+      {
+        "type": "Stopped",
+        "brand": "Fennick Home",
+        "text": "stopped all discount-led ads",
+        "day": "Wed"
+      },
+      {
+        "type": "New angle",
+        "brand": "2 brands",
+        "text": "started scent layering, 4 ads",
+        "day": "Thu"
+      },
+      {
+        "type": "Milestone",
+        "brand": "Halvane",
+        "text": "Refill and save passed 60 days running",
+        "day": "Fri"
+      },
+      {
+        "type": "Share of voice",
+        "brand": "You",
+        "text": "rose from 12% to 14%",
+        "day": "Week"
+      }
+    ],
+    "attention": [
+      {
+        "title": "Possible fatigue: Cosy evenings, static",
+        "text": "Cost per purchase is up 46% against its first two weeks while frequency rose to 3.8. A signal, not a verdict.",
+        "action": "View creative",
+        "adId": "sample-ad-005",
+        "view": "creatives"
+      },
+      {
+        "title": "Meta Ad Library is not connected yet",
+        "text": "Reach, share of voice and spend ranges switch on once Meta approves access. Until then competitor numbers rely on browser capture.",
+        "action": "Data sources",
+        "view": "data",
+        "adId": ""
+      }
+    ],
+    "accountNote": "Meta · last 7 days · purchases, 7-day click and 1-day view · Observed",
+    "changeNote": "18 ads launched, 7 stopped, 2 new angles · Observed",
+    "scorecardNote": "Weekly scorecard · 5 competitors · 214 active ads"
+  },
+  "Brands": {
+    "brands": [
+      {
+        "name": "Northwick Candle Co.",
+        "type": "Client",
+        "typeStyle": "font-size: 12px; font-weight: 600; padding: 3px 9px; border-radius: 999px; background: #E6F9FA; color: #075E66; white-space: nowrap",
+        "meta": "Checked today 03:00 · 46 ads",
+        "alerts": "2 alerts",
+        "pressed": "true",
+        "style": "text-align: left; padding: 14px 16px; border-radius: 12px; background: #FFFFFF; font: inherit; color: #1F2937; cursor: pointer; border: 2px solid #00C0CB"
+      },
+      {
+        "name": "Larch & Linen",
+        "type": "Prospect",
+        "typeStyle": "font-size: 12px; font-weight: 600; padding: 3px 9px; border-radius: 999px; background: #F3F4F6; color: #374151; white-space: nowrap",
+        "meta": "Teardown ready · 3 competitors",
+        "alerts": "No alerts",
+        "pressed": "false",
+        "style": "text-align: left; padding: 14px 16px; border-radius: 12px; background: #FFFFFF; font: inherit; color: #1F2937; cursor: pointer; border: 1px solid #E5E7EB"
+      },
+      {
+        "name": "Pip & Bloom",
+        "type": "Prospect",
+        "typeStyle": "font-size: 12px; font-weight: 600; padding: 3px 9px; border-radius: 999px; background: #F3F4F6; color: #374151; white-space: nowrap",
+        "meta": "Collecting, first pass at 03:00",
+        "alerts": "No alerts",
+        "pressed": "false",
+        "style": "text-align: left; padding: 14px 16px; border-radius: 12px; background: #FFFFFF; font: inherit; color: #1F2937; cursor: pointer; border: 1px solid #E5E7EB"
+      }
+    ],
+    "profile": [
+      {
+        "k": "Website",
+        "v": "northwickcandle.co.uk",
+        "style": "margin: 0"
+      },
+      {
+        "k": "Category",
+        "v": "Home fragrance and gifting",
+        "style": "margin: 0"
+      },
+      {
+        "k": "Country",
+        "v": "United Kingdom",
+        "style": "margin: 0"
+      },
+      {
+        "k": "Meta page",
+        "v": "Linked · ID 1043 8812 0057",
+        "style": "margin: 0"
+      },
+      {
+        "k": "TikTok",
+        "v": "@northwickcandle",
+        "style": "margin: 0"
+      },
+      {
+        "k": "Instagram",
+        "v": "@northwickcandle",
+        "style": "margin: 0"
+      },
+      {
+        "k": "Google advertiser",
+        "v": "Not linked yet (phase 2)",
+        "style": "margin: 0; color: #515B6B"
+      },
+      {
+        "k": "Ad account",
+        "v": "Meta connected · TikTok not connected",
+        "style": "margin: 0"
+      }
+    ],
+    "watch": [
+      {
+        "name": "Halvane"
+      },
+      {
+        "name": "Corrie & Moss"
+      },
+      {
+        "name": "Fennick Home"
+      },
+      {
+        "name": "Otterly Scents"
+      },
+      {
+        "name": "Brightmoor"
+      }
+    ],
+    "keywords": [
+      {
+        "name": "soy candle"
+      },
+      {
+        "name": "candle refill"
+      },
+      {
+        "name": "reed diffuser"
+      },
+      {
+        "name": "home fragrance gift"
+      }
+    ],
+    "facts": [
+      {
+        "k": "Price range",
+        "v": "£18 refills to £46 gift sets",
+        "quote": "Refill kits from £18",
+        "src": "Website, shop page",
+        "kind": "Observed",
+        "kindStyle": "font-size: 11px; font-weight: 600; padding: 1px 6px; border-radius: 4px; white-space: nowrap; border: 1px solid #D6DBE3; color: #374151"
+      },
+      {
+        "k": "Bestseller",
+        "v": "Fig and Cedar, 220g",
+        "quote": "Our most-loved scent",
+        "src": "Website, home page",
+        "kind": "Brand claim",
+        "kindStyle": "font-size: 11px; font-weight: 600; padding: 1px 6px; border-radius: 4px; white-space: nowrap; background: #EEF2FF; color: #1E3A8A"
+      },
+      {
+        "k": "Burn time",
+        "v": "Up to 50 hours per candle",
+        "quote": "Burns for up to 50 hours",
+        "src": "Website, product page",
+        "kind": "Brand claim",
+        "kindStyle": "font-size: 11px; font-weight: 600; padding: 1px 6px; border-radius: 4px; white-space: nowrap; background: #EEF2FF; color: #1E3A8A"
+      },
+      {
+        "k": "Delivery",
+        "v": "Free UK delivery over £40",
+        "quote": "Free delivery on orders over £40",
+        "src": "Website, footer",
+        "kind": "Observed",
+        "kindStyle": "font-size: 11px; font-weight: 600; padding: 1px 6px; border-radius: 4px; white-space: nowrap; border: 1px solid #D6DBE3; color: #374151"
+      },
+      {
+        "k": "Reviews",
+        "v": "4.8 from 1,240 reviews",
+        "quote": "4.8 out of 5",
+        "src": "Review site",
+        "kind": "Observed",
+        "kindStyle": "font-size: 11px; font-weight: 600; padding: 1px 6px; border-radius: 4px; white-space: nowrap; border: 1px solid #D6DBE3; color: #374151"
+      },
+      {
+        "k": "Provenance",
+        "v": "Hand-poured in Yorkshire",
+        "quote": "Hand-poured in small batches",
+        "src": "Website, about page",
+        "kind": "Brand claim",
+        "kindStyle": "font-size: 11px; font-weight: 600; padding: 1px 6px; border-radius: 4px; white-space: nowrap; background: #EEF2FF; color: #1E3A8A"
+      },
+      {
+        "k": "Current offer",
+        "v": "15% off first refill kit",
+        "quote": "Code REFILL",
+        "src": "Meta ad, 9 Oct",
+        "kind": "Observed",
+        "kindStyle": "font-size: 11px; font-weight: 600; padding: 1px 6px; border-radius: 4px; white-space: nowrap; border: 1px solid #D6DBE3; color: #374151"
+      }
+    ],
+    "signals": [
+      {
+        "k": "Refill and less waste",
+        "v": "On 4 site pages and in 9 of 46 ads"
+      },
+      {
+        "k": "A gift that feels special",
+        "v": "Gift sets lead the menu; 6 ads, mostly Q4"
+      },
+      {
+        "k": "Craft and provenance",
+        "v": "About page and 3 ads; never in the first 3 seconds"
+      }
+    ],
+    "candidates": [
+      {
+        "name": "Halvane",
+        "domain": "halvane.example",
+        "why": "Same price band; refill offer; bids on \"candle refill\"",
+        "ads": "58",
+        "status": "Tracked",
+        "statusStyle": "font-size: 12px; font-weight: 600; padding: 3px 9px; border-radius: 999px; background: #E6F9FA; color: #075E66; white-space: nowrap"
+      },
+      {
+        "name": "Corrie & Moss",
+        "domain": "corrieandmoss.example",
+        "why": "Hand-poured, founder-led ads; same UK audience",
+        "ads": "41",
+        "status": "Tracked",
+        "statusStyle": "font-size: 12px; font-weight: 600; padding: 3px 9px; border-radius: 999px; background: #E6F9FA; color: #075E66; white-space: nowrap"
+      },
+      {
+        "name": "Fennick Home",
+        "domain": "fennickhome.example",
+        "why": "Gift sets at £35 to £50; heavy Q4 advertiser",
+        "ads": "49",
+        "status": "Tracked",
+        "statusStyle": "font-size: 12px; font-weight: 600; padding: 3px 9px; border-radius: 999px; background: #E6F9FA; color: #075E66; white-space: nowrap"
+      },
+      {
+        "name": "Otterly Scents",
+        "domain": "otterlyscents.example",
+        "why": "Newer brand, fast testing, scent layering",
+        "ads": "33",
+        "status": "Tracked",
+        "statusStyle": "font-size: 12px; font-weight: 600; padding: 3px 9px; border-radius: 999px; background: #E6F9FA; color: #075E66; white-space: nowrap"
+      },
+      {
+        "name": "Brightmoor",
+        "domain": "brightmoor.example",
+        "why": "Discount-led, same keywords",
+        "ads": "33",
+        "status": "Tracked",
+        "statusStyle": "font-size: 12px; font-weight: 600; padding: 3px 9px; border-radius: 999px; background: #E6F9FA; color: #075E66; white-space: nowrap"
+      },
+      {
+        "name": "Wickstone",
+        "domain": "wickstone.example",
+        "why": "Appeared in 3 searches this week; reed diffusers",
+        "ads": "12",
+        "status": "Candidate",
+        "statusStyle": "font-size: 12px; font-weight: 600; padding: 3px 9px; border-radius: 999px; background: #F3F4F6; color: #374151; white-space: nowrap"
+      }
+    ],
+    "profiles": [
+      {
+        "k": "Instagram",
+        "v": "@northwickcandle",
+        "note": "18.4K followers"
+      },
+      {
+        "k": "TikTok",
+        "v": "@northwickcandle",
+        "note": "6.1K followers"
+      },
+      {
+        "k": "Creator",
+        "v": "Ama, Instagram",
+        "note": "Featured on website; fit unverified"
+      },
+      {
+        "k": "Creator",
+        "v": "Cleo, TikTok",
+        "note": "Featured on website; fit unverified"
+      },
+      {
+        "k": "Sources",
+        "v": "Website, reviews, Meta Ad Library",
+        "note": "TikTok library not connected"
+      }
+    ],
+    "checkedNote": "Public sources, checked today at 03:12"
+  },
+  "Competitors": {
+    "brands": [
+      {
+        "name": "You",
+        "headStyle": "padding: 0 8px 10px; font-weight: 600; text-align: right; white-space: nowrap; color: #075E66"
+      },
+      {
+        "name": "Halvane",
+        "headStyle": "padding: 0 8px 10px; font-weight: 600; text-align: right; white-space: nowrap;"
+      },
+      {
+        "name": "Corrie & Moss",
+        "headStyle": "padding: 0 8px 10px; font-weight: 600; text-align: right; white-space: nowrap;"
+      },
+      {
+        "name": "Fennick Home",
+        "headStyle": "padding: 0 8px 10px; font-weight: 600; text-align: right; white-space: nowrap;"
+      },
+      {
+        "name": "Otterly Scents",
+        "headStyle": "padding: 0 8px 10px; font-weight: 600; text-align: right; white-space: nowrap;"
+      },
+      {
+        "name": "Brightmoor",
+        "headStyle": "padding: 0 8px 10px; font-weight: 600; text-align: right; white-space: nowrap;"
+      }
+    ],
+    "rows": [
+      {
+        "m": "Share of voice",
+        "basis": "Estimated",
+        "cells": [
+          {
+            "v": "14%",
+            "style": "padding: 10px 8px; text-align: right; white-space: nowrap; background: #F0FBFC; font-weight: 600"
+          },
+          {
+            "v": "24%",
+            "style": "padding: 10px 8px; text-align: right; white-space: nowrap;"
+          },
+          {
+            "v": "15%",
+            "style": "padding: 10px 8px; text-align: right; white-space: nowrap;"
+          },
+          {
+            "v": "22%",
+            "style": "padding: 10px 8px; text-align: right; white-space: nowrap;"
+          },
+          {
+            "v": "11%",
+            "style": "padding: 10px 8px; text-align: right; white-space: nowrap;"
+          },
+          {
+            "v": "14%",
+            "style": "padding: 10px 8px; text-align: right; white-space: nowrap;"
+          }
+        ]
+      },
+      {
+        "m": "Active ads",
+        "basis": "Observed",
+        "cells": [
+          {
+            "v": "46",
+            "style": "padding: 10px 8px; text-align: right; white-space: nowrap; background: #F0FBFC; font-weight: 600"
+          },
+          {
+            "v": "58",
+            "style": "padding: 10px 8px; text-align: right; white-space: nowrap;"
+          },
+          {
+            "v": "41",
+            "style": "padding: 10px 8px; text-align: right; white-space: nowrap;"
+          },
+          {
+            "v": "49",
+            "style": "padding: 10px 8px; text-align: right; white-space: nowrap;"
+          },
+          {
+            "v": "33",
+            "style": "padding: 10px 8px; text-align: right; white-space: nowrap;"
+          },
+          {
+            "v": "33",
+            "style": "padding: 10px 8px; text-align: right; white-space: nowrap;"
+          }
+        ]
+      },
+      {
+        "m": "New this week",
+        "basis": "Observed",
+        "cells": [
+          {
+            "v": "3",
+            "style": "padding: 10px 8px; text-align: right; white-space: nowrap; background: #F0FBFC; font-weight: 600"
+          },
+          {
+            "v": "4",
+            "style": "padding: 10px 8px; text-align: right; white-space: nowrap;"
+          },
+          {
+            "v": "6",
+            "style": "padding: 10px 8px; text-align: right; white-space: nowrap;"
+          },
+          {
+            "v": "3",
+            "style": "padding: 10px 8px; text-align: right; white-space: nowrap;"
+          },
+          {
+            "v": "3",
+            "style": "padding: 10px 8px; text-align: right; white-space: nowrap;"
+          },
+          {
+            "v": "2",
+            "style": "padding: 10px 8px; text-align: right; white-space: nowrap;"
+          }
+        ]
+      },
+      {
+        "m": "Stopped this week",
+        "basis": "Observed",
+        "cells": [
+          {
+            "v": "2",
+            "style": "padding: 10px 8px; text-align: right; white-space: nowrap; background: #F0FBFC; font-weight: 600"
+          },
+          {
+            "v": "1",
+            "style": "padding: 10px 8px; text-align: right; white-space: nowrap;"
+          },
+          {
+            "v": "0",
+            "style": "padding: 10px 8px; text-align: right; white-space: nowrap;"
+          },
+          {
+            "v": "4",
+            "style": "padding: 10px 8px; text-align: right; white-space: nowrap;"
+          },
+          {
+            "v": "1",
+            "style": "padding: 10px 8px; text-align: right; white-space: nowrap;"
+          },
+          {
+            "v": "1",
+            "style": "padding: 10px 8px; text-align: right; white-space: nowrap;"
+          }
+        ]
+      },
+      {
+        "m": "Median days running",
+        "basis": "Observed",
+        "cells": [
+          {
+            "v": "21",
+            "style": "padding: 10px 8px; text-align: right; white-space: nowrap; background: #F0FBFC; font-weight: 600"
+          },
+          {
+            "v": "38",
+            "style": "padding: 10px 8px; text-align: right; white-space: nowrap;"
+          },
+          {
+            "v": "26",
+            "style": "padding: 10px 8px; text-align: right; white-space: nowrap;"
+          },
+          {
+            "v": "35",
+            "style": "padding: 10px 8px; text-align: right; white-space: nowrap;"
+          },
+          {
+            "v": "19",
+            "style": "padding: 10px 8px; text-align: right; white-space: nowrap;"
+          },
+          {
+            "v": "22",
+            "style": "padding: 10px 8px; text-align: right; white-space: nowrap;"
+          }
+        ]
+      },
+      {
+        "m": "Proven winners",
+        "basis": "Estimated",
+        "cells": [
+          {
+            "v": "13%",
+            "style": "padding: 10px 8px; text-align: right; white-space: nowrap; background: #F0FBFC; font-weight: 600"
+          },
+          {
+            "v": "28%",
+            "style": "padding: 10px 8px; text-align: right; white-space: nowrap;"
+          },
+          {
+            "v": "18%",
+            "style": "padding: 10px 8px; text-align: right; white-space: nowrap;"
+          },
+          {
+            "v": "24%",
+            "style": "padding: 10px 8px; text-align: right; white-space: nowrap;"
+          },
+          {
+            "v": "12%",
+            "style": "padding: 10px 8px; text-align: right; white-space: nowrap;"
+          },
+          {
+            "v": "8%",
+            "style": "padding: 10px 8px; text-align: right; white-space: nowrap;"
+          }
+        ]
+      },
+      {
+        "m": "New concepts per month",
+        "basis": "Estimated",
+        "cells": [
+          {
+            "v": "5",
+            "style": "padding: 10px 8px; text-align: right; white-space: nowrap; background: #F0FBFC; font-weight: 600"
+          },
+          {
+            "v": "9",
+            "style": "padding: 10px 8px; text-align: right; white-space: nowrap;"
+          },
+          {
+            "v": "11",
+            "style": "padding: 10px 8px; text-align: right; white-space: nowrap;"
+          },
+          {
+            "v": "7",
+            "style": "padding: 10px 8px; text-align: right; white-space: nowrap;"
+          },
+          {
+            "v": "8",
+            "style": "padding: 10px 8px; text-align: right; white-space: nowrap;"
+          },
+          {
+            "v": "5",
+            "style": "padding: 10px 8px; text-align: right; white-space: nowrap;"
+          }
+        ]
+      },
+      {
+        "m": "Versions per concept",
+        "basis": "Estimated",
+        "cells": [
+          {
+            "v": "2.1",
+            "style": "padding: 10px 8px; text-align: right; white-space: nowrap; background: #F0FBFC; font-weight: 600"
+          },
+          {
+            "v": "4.2",
+            "style": "padding: 10px 8px; text-align: right; white-space: nowrap;"
+          },
+          {
+            "v": "2.6",
+            "style": "padding: 10px 8px; text-align: right; white-space: nowrap;"
+          },
+          {
+            "v": "3.8",
+            "style": "padding: 10px 8px; text-align: right; white-space: nowrap;"
+          },
+          {
+            "v": "2.9",
+            "style": "padding: 10px 8px; text-align: right; white-space: nowrap;"
+          },
+          {
+            "v": "3.5",
+            "style": "padding: 10px 8px; text-align: right; white-space: nowrap;"
+          }
+        ]
+      },
+      {
+        "m": "UGC with proof",
+        "basis": "Observed",
+        "cells": [
+          {
+            "v": "22%",
+            "style": "padding: 10px 8px; text-align: right; white-space: nowrap; background: #F0FBFC; font-weight: 600"
+          },
+          {
+            "v": "8%",
+            "style": "padding: 10px 8px; text-align: right; white-space: nowrap;"
+          },
+          {
+            "v": "12%",
+            "style": "padding: 10px 8px; text-align: right; white-space: nowrap;"
+          },
+          {
+            "v": "6%",
+            "style": "padding: 10px 8px; text-align: right; white-space: nowrap;"
+          },
+          {
+            "v": "31%",
+            "style": "padding: 10px 8px; text-align: right; white-space: nowrap;"
+          },
+          {
+            "v": "4%",
+            "style": "padding: 10px 8px; text-align: right; white-space: nowrap;"
+          }
+        ]
+      },
+      {
+        "m": "Top format",
+        "basis": "Observed",
+        "cells": [
+          {
+            "v": "UGC",
+            "style": "padding: 10px 8px; text-align: right; white-space: nowrap; background: #F0FBFC; font-weight: 600"
+          },
+          {
+            "v": "Founder-led",
+            "style": "padding: 10px 8px; text-align: right; white-space: nowrap;"
+          },
+          {
+            "v": "Founder-led",
+            "style": "padding: 10px 8px; text-align: right; white-space: nowrap;"
+          },
+          {
+            "v": "Studio product",
+            "style": "padding: 10px 8px; text-align: right; white-space: nowrap;"
+          },
+          {
+            "v": "UGC",
+            "style": "padding: 10px 8px; text-align: right; white-space: nowrap;"
+          },
+          {
+            "v": "Static graphic",
+            "style": "padding: 10px 8px; text-align: right; white-space: nowrap;"
+          }
+        ]
+      },
+      {
+        "m": "Top hook",
+        "basis": "Observed",
+        "cells": [
+          {
+            "v": "Problem",
+            "style": "padding: 10px 8px; text-align: right; white-space: nowrap; background: #F0FBFC; font-weight: 600"
+          },
+          {
+            "v": "Offer-led",
+            "style": "padding: 10px 8px; text-align: right; white-space: nowrap;"
+          },
+          {
+            "v": "Problem",
+            "style": "padding: 10px 8px; text-align: right; white-space: nowrap;"
+          },
+          {
+            "v": "Demo",
+            "style": "padding: 10px 8px; text-align: right; white-space: nowrap;"
+          },
+          {
+            "v": "Trend",
+            "style": "padding: 10px 8px; text-align: right; white-space: nowrap;"
+          },
+          {
+            "v": "Offer-led",
+            "style": "padding: 10px 8px; text-align: right; white-space: nowrap;"
+          }
+        ]
+      },
+      {
+        "m": "Top angle",
+        "basis": "Observed",
+        "cells": [
+          {
+            "v": "Problem-solution",
+            "style": "padding: 10px 8px; text-align: right; white-space: nowrap; background: #F0FBFC; font-weight: 600"
+          },
+          {
+            "v": "Value or bundle",
+            "style": "padding: 10px 8px; text-align: right; white-space: nowrap;"
+          },
+          {
+            "v": "Quality",
+            "style": "padding: 10px 8px; text-align: right; white-space: nowrap;"
+          },
+          {
+            "v": "Gifting",
+            "style": "padding: 10px 8px; text-align: right; white-space: nowrap;"
+          },
+          {
+            "v": "Newness",
+            "style": "padding: 10px 8px; text-align: right; white-space: nowrap;"
+          },
+          {
+            "v": "Value or bundle",
+            "style": "padding: 10px 8px; text-align: right; white-space: nowrap;"
+          }
+        ]
+      },
+      {
+        "m": "Top offer",
+        "basis": "Observed",
+        "cells": [
+          {
+            "v": "Percent off",
+            "style": "padding: 10px 8px; text-align: right; white-space: nowrap; background: #F0FBFC; font-weight: 600"
+          },
+          {
+            "v": "Bundle",
+            "style": "padding: 10px 8px; text-align: right; white-space: nowrap;"
+          },
+          {
+            "v": "None",
+            "style": "padding: 10px 8px; text-align: right; white-space: nowrap;"
+          },
+          {
+            "v": "Free gift",
+            "style": "padding: 10px 8px; text-align: right; white-space: nowrap;"
+          },
+          {
+            "v": "Free shipping",
+            "style": "padding: 10px 8px; text-align: right; white-space: nowrap;"
+          },
+          {
+            "v": "Percent off",
+            "style": "padding: 10px 8px; text-align: right; white-space: nowrap;"
+          }
+        ]
+      }
+    ],
+    "legend": [
+      {
+        "name": "UGC",
+        "sw": "width: 12px; height: 12px; border-radius: 3px; background: #0C1F96"
+      },
+      {
+        "name": "Founder-led",
+        "sw": "width: 12px; height: 12px; border-radius: 3px; background: #00C0CB"
+      },
+      {
+        "name": "Studio product",
+        "sw": "width: 12px; height: 12px; border-radius: 3px; background: #8B9CF4"
+      },
+      {
+        "name": "Lifestyle",
+        "sw": "width: 12px; height: 12px; border-radius: 3px; background: #F2A541"
+      },
+      {
+        "name": "Motion graphics",
+        "sw": "width: 12px; height: 12px; border-radius: 3px; background: #9AA5B4"
+      },
+      {
+        "name": "Static graphic",
+        "sw": "width: 12px; height: 12px; border-radius: 3px; background: #E07A5F"
+      }
+    ],
+    "mix": [
+      {
+        "name": "You",
+        "n": 46,
+        "segs": [
+          {
+            "title": "UGC 22%",
+            "style": "flex: 0 0 calc(22% - 2px); background: #0C1F96"
+          },
+          {
+            "title": "Founder-led 4%",
+            "style": "flex: 0 0 calc(4% - 2px); background: #00C0CB"
+          },
+          {
+            "title": "Studio product 26%",
+            "style": "flex: 0 0 calc(26% - 2px); background: #8B9CF4"
+          },
+          {
+            "title": "Lifestyle 20%",
+            "style": "flex: 0 0 calc(20% - 2px); background: #F2A541"
+          },
+          {
+            "title": "Motion graphics 8%",
+            "style": "flex: 0 0 calc(8% - 2px); background: #9AA5B4"
+          },
+          {
+            "title": "Static graphic 20%",
+            "style": "flex: 0 0 calc(20% - 2px); background: #E07A5F"
+          }
+        ]
+      },
+      {
+        "name": "Halvane",
+        "n": 58,
+        "segs": [
+          {
+            "title": "UGC 8%",
+            "style": "flex: 0 0 calc(8% - 2px); background: #0C1F96"
+          },
+          {
+            "title": "Founder-led 34%",
+            "style": "flex: 0 0 calc(34% - 2px); background: #00C0CB"
+          },
+          {
+            "title": "Studio product 20%",
+            "style": "flex: 0 0 calc(20% - 2px); background: #8B9CF4"
+          },
+          {
+            "title": "Lifestyle 18%",
+            "style": "flex: 0 0 calc(18% - 2px); background: #F2A541"
+          },
+          {
+            "title": "Motion graphics 6%",
+            "style": "flex: 0 0 calc(6% - 2px); background: #9AA5B4"
+          },
+          {
+            "title": "Static graphic 14%",
+            "style": "flex: 0 0 calc(14% - 2px); background: #E07A5F"
+          }
+        ]
+      },
+      {
+        "name": "Corrie & Moss",
+        "n": 41,
+        "segs": [
+          {
+            "title": "UGC 12%",
+            "style": "flex: 0 0 calc(12% - 2px); background: #0C1F96"
+          },
+          {
+            "title": "Founder-led 40%",
+            "style": "flex: 0 0 calc(40% - 2px); background: #00C0CB"
+          },
+          {
+            "title": "Studio product 14%",
+            "style": "flex: 0 0 calc(14% - 2px); background: #8B9CF4"
+          },
+          {
+            "title": "Lifestyle 22%",
+            "style": "flex: 0 0 calc(22% - 2px); background: #F2A541"
+          },
+          {
+            "title": "Motion graphics 4%",
+            "style": "flex: 0 0 calc(4% - 2px); background: #9AA5B4"
+          },
+          {
+            "title": "Static graphic 8%",
+            "style": "flex: 0 0 calc(8% - 2px); background: #E07A5F"
+          }
+        ]
+      },
+      {
+        "name": "Fennick Home",
+        "n": 49,
+        "segs": [
+          {
+            "title": "UGC 6%",
+            "style": "flex: 0 0 calc(6% - 2px); background: #0C1F96"
+          },
+          {
+            "title": "Founder-led 10%",
+            "style": "flex: 0 0 calc(10% - 2px); background: #00C0CB"
+          },
+          {
+            "title": "Studio product 38%",
+            "style": "flex: 0 0 calc(38% - 2px); background: #8B9CF4"
+          },
+          {
+            "title": "Lifestyle 24%",
+            "style": "flex: 0 0 calc(24% - 2px); background: #F2A541"
+          },
+          {
+            "title": "Motion graphics 6%",
+            "style": "flex: 0 0 calc(6% - 2px); background: #9AA5B4"
+          },
+          {
+            "title": "Static graphic 16%",
+            "style": "flex: 0 0 calc(16% - 2px); background: #E07A5F"
+          }
+        ]
+      },
+      {
+        "name": "Otterly Scents",
+        "n": 33,
+        "segs": [
+          {
+            "title": "UGC 31%",
+            "style": "flex: 0 0 calc(31% - 2px); background: #0C1F96"
+          },
+          {
+            "title": "Founder-led 12%",
+            "style": "flex: 0 0 calc(12% - 2px); background: #00C0CB"
+          },
+          {
+            "title": "Studio product 18%",
+            "style": "flex: 0 0 calc(18% - 2px); background: #8B9CF4"
+          },
+          {
+            "title": "Lifestyle 14%",
+            "style": "flex: 0 0 calc(14% - 2px); background: #F2A541"
+          },
+          {
+            "title": "Motion graphics 15%",
+            "style": "flex: 0 0 calc(15% - 2px); background: #9AA5B4"
+          },
+          {
+            "title": "Static graphic 10%",
+            "style": "flex: 0 0 calc(10% - 2px); background: #E07A5F"
+          }
+        ]
+      },
+      {
+        "name": "Brightmoor",
+        "n": 33,
+        "segs": [
+          {
+            "title": "UGC 4%",
+            "style": "flex: 0 0 calc(4% - 2px); background: #0C1F96"
+          },
+          {
+            "title": "Founder-led 2%",
+            "style": "flex: 0 0 calc(2% - 2px); background: #00C0CB"
+          },
+          {
+            "title": "Studio product 22%",
+            "style": "flex: 0 0 calc(22% - 2px); background: #8B9CF4"
+          },
+          {
+            "title": "Lifestyle 12%",
+            "style": "flex: 0 0 calc(12% - 2px); background: #F2A541"
+          },
+          {
+            "title": "Motion graphics 18%",
+            "style": "flex: 0 0 calc(18% - 2px); background: #9AA5B4"
+          },
+          {
+            "title": "Static graphic 42%",
+            "style": "flex: 0 0 calc(42% - 2px); background: #E07A5F"
+          }
+        ]
+      }
+    ],
+    "cards": [
+      {
+        "name": "Halvane",
+        "ads": 58,
+        "lean": "Founder-led offers around refills and bundles. Keeps winners running for months and versions them often.",
+        "news": "4 ads, all refill bundles",
+        "thumbs": [
+          {
+            "style": "width: 44px; height: 55px; border-radius: 6px; background: #D9E4DC"
+          },
+          {
+            "style": "width: 44px; height: 55px; border-radius: 6px; background: #E6E1D3"
+          },
+          {
+            "style": "width: 44px; height: 55px; border-radius: 6px; background: #E9E2D6"
+          }
+        ]
+      },
+      {
+        "name": "Corrie & Moss",
+        "ads": 41,
+        "lean": "Founder at the pour, provenance and craft. Rarely discounts.",
+        "news": "6 founder-led videos",
+        "thumbs": [
+          {
+            "style": "width: 44px; height: 55px; border-radius: 6px; background: #E3E0EC"
+          },
+          {
+            "style": "width: 44px; height: 55px; border-radius: 6px; background: #EADCD8"
+          },
+          {
+            "style": "width: 44px; height: 55px; border-radius: 6px; background: #E2E8E4"
+          }
+        ]
+      },
+      {
+        "name": "Fennick Home",
+        "ads": 49,
+        "lean": "Polished studio gift sets with a free-gift offer, heavier in Q4.",
+        "news": "Stopped all discount-led ads",
+        "thumbs": [
+          {
+            "style": "width: 44px; height: 55px; border-radius: 6px; background: #E6E1D3"
+          },
+          {
+            "style": "width: 44px; height: 55px; border-radius: 6px; background: #EFE6DA"
+          },
+          {
+            "style": "width: 44px; height: 55px; border-radius: 6px; background: #DCE3EC"
+          }
+        ]
+      },
+      {
+        "name": "Otterly Scents",
+        "ads": 33,
+        "lean": "Fast-testing newcomer: UGC, trends and new scent ideas.",
+        "news": "£5 sample box and scent layering",
+        "thumbs": [
+          {
+            "style": "width: 44px; height: 55px; border-radius: 6px; background: #EFE6DA"
+          },
+          {
+            "style": "width: 44px; height: 55px; border-radius: 6px; background: #E2E8E4"
+          },
+          {
+            "style": "width: 44px; height: 55px; border-radius: 6px; background: #E3E0EC"
+          }
+        ]
+      },
+      {
+        "name": "Brightmoor",
+        "ads": 33,
+        "lean": "Static discount graphics, short runs, many switched off within a week.",
+        "news": "2 flash-sale statics",
+        "thumbs": [
+          {
+            "style": "width: 44px; height: 55px; border-radius: 6px; background: #DCE3EC"
+          },
+          {
+            "style": "width: 44px; height: 55px; border-radius: 6px; background: #E9E2D6"
+          },
+          {
+            "style": "width: 44px; height: 55px; border-radius: 6px; background: #EADCD8"
+          }
+        ]
+      }
+    ],
+    "summary": "260 active ads across 6 brands · checked today 03:00 · select a number to see its ads"
+  },
+  "Creatives": {
+    "filters": [
+      {
+        "label": "1 Oct to 2 Nov",
+        "style": "display: inline-flex; align-items: center; gap: 6px; min-height: 36px; padding: 0 12px; border-radius: 999px; font: inherit; font-size: 13px; cursor: pointer; border: 1px solid #D6DBE3; background: #FFFFFF; color: #1F2937; font-weight: 500",
+        "icon": "M6 9l6 6 6-6"
+      },
+      {
+        "label": "Brand: all 6",
+        "style": "display: inline-flex; align-items: center; gap: 6px; min-height: 36px; padding: 0 12px; border-radius: 999px; font: inherit; font-size: 13px; cursor: pointer; border: 1px solid #D6DBE3; background: #FFFFFF; color: #1F2937; font-weight: 500",
+        "icon": "M6 9l6 6 6-6"
+      },
+      {
+        "label": "Format",
+        "style": "display: inline-flex; align-items: center; gap: 6px; min-height: 36px; padding: 0 12px; border-radius: 999px; font: inherit; font-size: 13px; cursor: pointer; border: 1px solid #D6DBE3; background: #FFFFFF; color: #1F2937; font-weight: 500",
+        "icon": "M6 9l6 6 6-6"
+      },
+      {
+        "label": "Hook",
+        "style": "display: inline-flex; align-items: center; gap: 6px; min-height: 36px; padding: 0 12px; border-radius: 999px; font: inherit; font-size: 13px; cursor: pointer; border: 1px solid #D6DBE3; background: #FFFFFF; color: #1F2937; font-weight: 500",
+        "icon": "M6 9l6 6 6-6"
+      },
+      {
+        "label": "Angle",
+        "style": "display: inline-flex; align-items: center; gap: 6px; min-height: 36px; padding: 0 12px; border-radius: 999px; font: inherit; font-size: 13px; cursor: pointer; border: 1px solid #D6DBE3; background: #FFFFFF; color: #1F2937; font-weight: 500",
+        "icon": "M6 9l6 6 6-6"
+      },
+      {
+        "label": "Offer",
+        "style": "display: inline-flex; align-items: center; gap: 6px; min-height: 36px; padding: 0 12px; border-radius: 999px; font: inherit; font-size: 13px; cursor: pointer; border: 1px solid #D6DBE3; background: #FFFFFF; color: #1F2937; font-weight: 500",
+        "icon": "M6 9l6 6 6-6"
+      },
+      {
+        "label": "UGC with proof",
+        "style": "display: inline-flex; align-items: center; gap: 6px; min-height: 36px; padding: 0 12px; border-radius: 999px; font: inherit; font-size: 13px; cursor: pointer; border: 1px solid #D6DBE3; background: #FFFFFF; color: #1F2937; font-weight: 500",
+        "icon": "M6 9l6 6 6-6"
+      },
+      {
+        "label": "Label: proven or rising",
+        "style": "display: inline-flex; align-items: center; gap: 6px; min-height: 36px; padding: 0 12px; border-radius: 999px; font: inherit; font-size: 13px; cursor: pointer; border: 1px solid #00C0CB; background: #E6F9FA; color: #075E66; font-weight: 600",
+        "icon": "M6 6l12 12 M18 6L6 18"
+      },
+      {
+        "label": "Add filter",
+        "style": "display: inline-flex; align-items: center; gap: 6px; min-height: 36px; padding: 0 12px; border-radius: 999px; font: inherit; font-size: 13px; cursor: pointer; border: 1px dashed #A3ACB9; background: #FFFFFF; color: #1F2937; font-weight: 600",
+        "icon": "M12 5v14 M5 12h14"
+      }
+    ],
+    "cards": [
+      {
+        "src": "Yours",
+        "dur": "0:24",
+        "bg": "#E9E2D6",
+        "status": "Winner",
+        "tone": "win",
+        "title": "Refill ritual, Ama",
+        "meta": "Meta · video · live since 9 Oct",
+        "tags": [
+          {
+            "label": "Problem hook"
+          },
+          {
+            "label": "UGC"
+          },
+          {
+            "label": "Refill"
+          }
+        ],
+        "metrics": [
+          {
+            "k": "Spend",
+            "v": "£4,120",
+            "style": "font-size: 15px; font-weight: 600"
+          },
+          {
+            "k": "ROAS",
+            "v": "3.1",
+            "style": "font-size: 15px; font-weight: 600"
+          },
+          {
+            "k": "Hook rate",
+            "v": "34%",
+            "style": "font-size: 15px; font-weight: 600"
+          }
+        ],
+        "thumbStyle": "position: relative; aspect-ratio: 4 / 5; background: #E9E2D6; display: flex; align-items: center; justify-content: center",
+        "isImage": false,
+        "isVideo": true,
+        "srcStyle": "position: absolute; top: 10px; left: 10px; font-size: 12px; font-weight: 700; padding: 3px 9px; border-radius: 999px; background: #00C0CB; color: #0B1736",
+        "hasStatus": true,
+        "statusStyle": "position: absolute; bottom: 10px; left: 10px; font-size: 12px; font-weight: 600; padding: 3px 9px; border-radius: 999px; background: #E7F6EC; color: #14532D"
+      },
+      {
+        "src": "Halvane",
+        "dur": "0:19",
+        "bg": "#D9E4DC",
+        "status": "Proven winner · High",
+        "tone": "win",
+        "title": "Refill and save",
+        "meta": "Meta Ad Library · since 31 Aug · 5 versions",
+        "tags": [
+          {
+            "label": "Offer led"
+          },
+          {
+            "label": "Founder-led"
+          },
+          {
+            "label": "Refill"
+          }
+        ],
+        "metrics": [
+          {
+            "k": "Working Score",
+            "v": "86",
+            "style": "font-size: 15px; font-weight: 600"
+          },
+          {
+            "k": "Days running",
+            "v": "64",
+            "style": "font-size: 15px; font-weight: 600"
+          },
+          {
+            "k": "Reach, UK",
+            "v": "1.2M",
+            "style": "font-size: 15px; font-weight: 600"
+          }
+        ],
+        "thumbStyle": "position: relative; aspect-ratio: 4 / 5; background: #D9E4DC; display: flex; align-items: center; justify-content: center",
+        "isImage": false,
+        "isVideo": true,
+        "srcStyle": "position: absolute; top: 10px; left: 10px; font-size: 12px; font-weight: 600; padding: 3px 9px; border-radius: 999px; background: #FFFFFF; color: #0C1F96",
+        "hasStatus": true,
+        "statusStyle": "position: absolute; bottom: 10px; left: 10px; font-size: 12px; font-weight: 600; padding: 3px 9px; border-radius: 999px; background: #E7F6EC; color: #14532D"
+      },
+      {
+        "src": "Yours",
+        "dur": "0:15",
+        "bg": "#EADCD8",
+        "status": "",
+        "tone": "",
+        "title": "Gift box reveal",
+        "meta": "Meta · video · live since 14 Oct",
+        "tags": [
+          {
+            "label": "Unboxing"
+          },
+          {
+            "label": "Studio product"
+          },
+          {
+            "label": "Gifting"
+          }
+        ],
+        "metrics": [
+          {
+            "k": "Spend",
+            "v": "£2,860",
+            "style": "font-size: 15px; font-weight: 600"
+          },
+          {
+            "k": "ROAS",
+            "v": "2.9",
+            "style": "font-size: 15px; font-weight: 600"
+          },
+          {
+            "k": "Hook rate",
+            "v": "27%",
+            "style": "font-size: 15px; font-weight: 600"
+          }
+        ],
+        "thumbStyle": "position: relative; aspect-ratio: 4 / 5; background: #EADCD8; display: flex; align-items: center; justify-content: center",
+        "isImage": false,
+        "isVideo": true,
+        "srcStyle": "position: absolute; top: 10px; left: 10px; font-size: 12px; font-weight: 700; padding: 3px 9px; border-radius: 999px; background: #00C0CB; color: #0B1736",
+        "hasStatus": false,
+        "statusStyle": ""
+      },
+      {
+        "src": "Corrie & Moss",
+        "dur": "0:28",
+        "bg": "#E3E0EC",
+        "status": "Rising · Medium",
+        "tone": "rise",
+        "title": "Hand-poured in Bristol",
+        "meta": "Meta Ad Library · since 29 Oct · 6 versions",
+        "tags": [
+          {
+            "label": "Founder-led"
+          },
+          {
+            "label": "Provenance"
+          }
+        ],
+        "metrics": [
+          {
+            "k": "Working Score",
+            "v": "74",
+            "style": "font-size: 15px; font-weight: 600"
+          },
+          {
+            "k": "Days running",
+            "v": "5",
+            "style": "font-size: 15px; font-weight: 600"
+          },
+          {
+            "k": "Reach, UK",
+            "v": "310K",
+            "style": "font-size: 15px; font-weight: 600"
+          }
+        ],
+        "thumbStyle": "position: relative; aspect-ratio: 4 / 5; background: #E3E0EC; display: flex; align-items: center; justify-content: center",
+        "isImage": false,
+        "isVideo": true,
+        "srcStyle": "position: absolute; top: 10px; left: 10px; font-size: 12px; font-weight: 600; padding: 3px 9px; border-radius: 999px; background: #FFFFFF; color: #0C1F96",
+        "hasStatus": true,
+        "statusStyle": "position: absolute; bottom: 10px; left: 10px; font-size: 12px; font-weight: 600; padding: 3px 9px; border-radius: 999px; background: #EEF2FF; color: #1E3A8A"
+      },
+      {
+        "src": "Yours",
+        "dur": "Image",
+        "bg": "#DCE3EC",
+        "status": "Fatigue signal",
+        "tone": "warn",
+        "title": "Cosy evenings",
+        "meta": "Meta · static · live since 22 Sep",
+        "tags": [
+          {
+            "label": "Lifestyle"
+          },
+          {
+            "label": "Seasonal"
+          }
+        ],
+        "metrics": [
+          {
+            "k": "Spend",
+            "v": "£1,940",
+            "style": "font-size: 15px; font-weight: 600"
+          },
+          {
+            "k": "ROAS",
+            "v": "1.6",
+            "style": "font-size: 15px; font-weight: 600"
+          },
+          {
+            "k": "Hook rate",
+            "v": "Image ad",
+            "style": "font-size: 13px; font-weight: 500; color: #515B6B; padding-top: 2px"
+          }
+        ],
+        "thumbStyle": "position: relative; aspect-ratio: 4 / 5; background: #DCE3EC; display: flex; align-items: center; justify-content: center",
+        "isImage": true,
+        "isVideo": false,
+        "srcStyle": "position: absolute; top: 10px; left: 10px; font-size: 12px; font-weight: 700; padding: 3px 9px; border-radius: 999px; background: #00C0CB; color: #0B1736",
+        "hasStatus": true,
+        "statusStyle": "position: absolute; bottom: 10px; left: 10px; font-size: 12px; font-weight: 600; padding: 3px 9px; border-radius: 999px; background: #FEF3C7; color: #78350F"
+      },
+      {
+        "src": "Fennick Home",
+        "dur": "0:33",
+        "bg": "#E6E1D3",
+        "status": "Steady · Medium",
+        "tone": "steady",
+        "title": "Burns to the last drop",
+        "meta": "Meta Ad Library · since 23 Sep · 3 versions",
+        "tags": [
+          {
+            "label": "Demo"
+          },
+          {
+            "label": "Performance claim"
+          }
+        ],
+        "metrics": [
+          {
+            "k": "Working Score",
+            "v": "68",
+            "style": "font-size: 15px; font-weight: 600"
+          },
+          {
+            "k": "Days running",
+            "v": "41",
+            "style": "font-size: 15px; font-weight: 600"
+          },
+          {
+            "k": "Reach, UK",
+            "v": "640K",
+            "style": "font-size: 15px; font-weight: 600"
+          }
+        ],
+        "thumbStyle": "position: relative; aspect-ratio: 4 / 5; background: #E6E1D3; display: flex; align-items: center; justify-content: center",
+        "isImage": false,
+        "isVideo": true,
+        "srcStyle": "position: absolute; top: 10px; left: 10px; font-size: 12px; font-weight: 600; padding: 3px 9px; border-radius: 999px; background: #FFFFFF; color: #0C1F96",
+        "hasStatus": true,
+        "statusStyle": "position: absolute; bottom: 10px; left: 10px; font-size: 12px; font-weight: 600; padding: 3px 9px; border-radius: 999px; background: #F3F4F6; color: #374151"
+      },
+      {
+        "src": "Yours",
+        "dur": "0:18",
+        "bg": "#E2E8E4",
+        "status": "",
+        "tone": "",
+        "title": "Scent quiz",
+        "meta": "Meta · video · live since 28 Oct",
+        "tags": [
+          {
+            "label": "Question hook"
+          },
+          {
+            "label": "Motion graphics"
+          }
+        ],
+        "metrics": [
+          {
+            "k": "Spend",
+            "v": "£380",
+            "style": "font-size: 15px; font-weight: 600"
+          },
+          {
+            "k": "ROAS",
+            "v": "Too early",
+            "style": "font-size: 13px; font-weight: 500; color: #515B6B; padding-top: 2px"
+          },
+          {
+            "k": "Hook rate",
+            "v": "31%",
+            "style": "font-size: 15px; font-weight: 600"
+          }
+        ],
+        "thumbStyle": "position: relative; aspect-ratio: 4 / 5; background: #E2E8E4; display: flex; align-items: center; justify-content: center",
+        "isImage": false,
+        "isVideo": true,
+        "srcStyle": "position: absolute; top: 10px; left: 10px; font-size: 12px; font-weight: 700; padding: 3px 9px; border-radius: 999px; background: #00C0CB; color: #0B1736",
+        "hasStatus": false,
+        "statusStyle": ""
+      },
+      {
+        "src": "Otterly Scents",
+        "dur": "0:21",
+        "bg": "#EFE6DA",
+        "status": "Rising · Low",
+        "tone": "rise",
+        "title": "Layer your scents",
+        "meta": "Meta Ad Library · since 26 Oct · 2 versions",
+        "tags": [
+          {
+            "label": "Trend"
+          },
+          {
+            "label": "Scent layering"
+          }
+        ],
+        "metrics": [
+          {
+            "k": "Working Score",
+            "v": "61",
+            "style": "font-size: 15px; font-weight: 600"
+          },
+          {
+            "k": "Days running",
+            "v": "9",
+            "style": "font-size: 15px; font-weight: 600"
+          },
+          {
+            "k": "Reach, UK",
+            "v": "95K",
+            "style": "font-size: 15px; font-weight: 600"
+          }
+        ],
+        "thumbStyle": "position: relative; aspect-ratio: 4 / 5; background: #EFE6DA; display: flex; align-items: center; justify-content: center",
+        "isImage": false,
+        "isVideo": true,
+        "srcStyle": "position: absolute; top: 10px; left: 10px; font-size: 12px; font-weight: 600; padding: 3px 9px; border-radius: 999px; background: #FFFFFF; color: #0C1F96",
+        "hasStatus": true,
+        "statusStyle": "position: absolute; bottom: 10px; left: 10px; font-size: 12px; font-weight: 600; padding: 3px 9px; border-radius: 999px; background: #EEF2FF; color: #1E3A8A"
+      }
+    ]
+  },
+  "CreativeDetail": {
+    "scenes": [
+      {
+        "t": "0:00",
+        "label": "Hook",
+        "style": "display: block; aspect-ratio: 9 / 16; border-radius: 6px; background: #E9E2D6"
+      },
+      {
+        "t": "0:05",
+        "label": "Product",
+        "style": "display: block; aspect-ratio: 9 / 16; border-radius: 6px; background: #E2DACB"
+      },
+      {
+        "t": "0:11",
+        "label": "How to pour",
+        "style": "display: block; aspect-ratio: 9 / 16; border-radius: 6px; background: #DDE5DE"
+      },
+      {
+        "t": "0:16",
+        "label": "Burn time",
+        "style": "display: block; aspect-ratio: 9 / 16; border-radius: 6px; background: #E6E1D3"
+      },
+      {
+        "t": "0:20",
+        "label": "Offer",
+        "style": "display: block; aspect-ratio: 9 / 16; border-radius: 6px; background: #EADCD8"
+      },
+      {
+        "t": "0:23",
+        "label": "Call to action",
+        "style": "display: block; aspect-ratio: 9 / 16; border-radius: 6px; background: #DCE3EC"
+      }
+    ],
+    "history": [
+      {
+        "k": "First seen",
+        "v": "9 Oct 2026"
+      },
+      {
+        "k": "Last seen",
+        "v": "Today, still running"
+      },
+      {
+        "k": "Days running",
+        "v": "25 · Observed"
+      },
+      {
+        "k": "Ads using this file",
+        "v": "3 · Observed"
+      },
+      {
+        "k": "Versions of concept",
+        "v": "2 within 45 days · Estimated"
+      },
+      {
+        "k": "Placements",
+        "v": "Facebook, Instagram"
+      }
+    ],
+    "perf": [
+      {
+        "k": "Spend",
+        "v": "£4,120",
+        "n": "28% of account"
+      },
+      {
+        "k": "ROAS",
+        "v": "3.1",
+        "n": "Benchmark 2.4"
+      },
+      {
+        "k": "Cost per purchase",
+        "v": "£14.20",
+        "n": "Account £18.70"
+      },
+      {
+        "k": "Hook rate",
+        "v": "34%",
+        "n": "Account 28%"
+      },
+      {
+        "k": "Hold rate",
+        "v": "41%",
+        "n": "Account 35%"
+      },
+      {
+        "k": "Frequency",
+        "v": "2.1",
+        "n": "Last 7 days"
+      }
+    ],
+    "signals": [
+      {
+        "k": "Survival",
+        "w": "35%",
+        "v": "92nd percentile",
+        "bar": "height: 6px; border-radius: 3px; background: #0C1F96; width: 92%"
+      },
+      {
+        "k": "Scaling",
+        "w": "25%",
+        "v": "3 ads, 2 versions",
+        "bar": "height: 6px; border-radius: 3px; background: #0C1F96; width: 80%"
+      },
+      {
+        "k": "Reach velocity",
+        "w": "25%",
+        "v": "61st percentile",
+        "bar": "height: 6px; border-radius: 3px; background: #0C1F96; width: 61%"
+      },
+      {
+        "k": "Organic response",
+        "w": "15%",
+        "v": "No matching post",
+        "bar": "height: 6px; border-radius: 3px; background: #0C1F96; width: 0%"
+      }
+    ],
+    "checks": [
+      {
+        "k": "Hook in 2 seconds",
+        "v": "Problem spoken at 0:00",
+        "mark": "Yes",
+        "markStyle": "flex: 0 0 22px; height: 22px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 700; background: #E7F6EC; color: #14532D"
+      },
+      {
+        "k": "Product early",
+        "v": "First appears at 0:05; aim for 0:03",
+        "mark": "No",
+        "markStyle": "flex: 0 0 22px; height: 22px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 700; background: #FEF3C7; color: #78350F"
+      },
+      {
+        "k": "Captions on",
+        "v": "Burned-in captions throughout",
+        "mark": "Yes",
+        "markStyle": "flex: 0 0 22px; height: 22px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 700; background: #E7F6EC; color: #14532D"
+      },
+      {
+        "k": "Clear offer",
+        "v": "15% off shown at 0:20",
+        "mark": "Yes",
+        "markStyle": "flex: 0 0 22px; height: 22px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 700; background: #E7F6EC; color: #14532D"
+      },
+      {
+        "k": "Call to action",
+        "v": "Spoken and on screen at 0:23",
+        "mark": "Yes",
+        "markStyle": "flex: 0 0 22px; height: 22px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 700; background: #E7F6EC; color: #14532D"
+      },
+      {
+        "k": "Proof",
+        "v": "Burn time stated, no review shown",
+        "mark": "Part",
+        "markStyle": "flex: 0 0 22px; height: 22px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 700; background: #FEF3C7; color: #78350F"
+      }
+    ],
+    "lines": [
+      {
+        "t": "0:00",
+        "said": "\"I used to buy a new candle every single month.\"",
+        "shown": "On screen: Every month?",
+        "tag": "Hook: problem"
+      },
+      {
+        "t": "0:05",
+        "said": "\"Now I just refill the jar I already love.\"",
+        "shown": "On screen: none",
+        "tag": "Angle: problem and solution"
+      },
+      {
+        "t": "0:11",
+        "said": "\"Pour, wick, done. It takes two minutes.\"",
+        "shown": "On screen: 2 minutes",
+        "tag": "Demo"
+      },
+      {
+        "t": "0:16",
+        "said": "\"Every refill burns for 50 hours.\"",
+        "shown": "On screen: 50 hours",
+        "tag": "Claim: performance"
+      },
+      {
+        "t": "0:20",
+        "said": "\"Your first refill kit is 15% off this week.\"",
+        "shown": "On screen: 15% off, code REFILL",
+        "tag": "Offer: percent off"
+      }
+    ],
+    "fields": [
+      {
+        "k": "Format",
+        "v": "UGC",
+        "e": "Creator credit visible at 0:01"
+      },
+      {
+        "k": "Hook type",
+        "v": "Problem",
+        "e": "Spoken at 0:00"
+      },
+      {
+        "k": "Angle",
+        "v": "Problem and solution",
+        "e": "Spoken at 0:05"
+      },
+      {
+        "k": "Offer",
+        "v": "Percent off",
+        "e": "On screen at 0:20"
+      },
+      {
+        "k": "Claims",
+        "v": "Performance",
+        "e": "\"50 hours\" at 0:16"
+      },
+      {
+        "k": "Audio",
+        "v": "On-camera speech",
+        "e": "No music bed"
+      },
+      {
+        "k": "People",
+        "v": "On camera, talking",
+        "e": "Face from 0:00"
+      },
+      {
+        "k": "Pacing",
+        "v": "2 cuts in first 3 seconds",
+        "e": "Product at 0:05"
+      },
+      {
+        "k": "Call to action",
+        "v": "\"Tap shop now for your first refill\"",
+        "e": "At 0:23"
+      },
+      {
+        "k": "Creator",
+        "v": "Ama",
+        "e": "Branded-content label"
+      }
+    ],
+    "similar": [
+      {
+        "thumb": "flex: 0 0 36px; height: 45px; border-radius: 6px; background: #D9E4DC",
+        "brand": "Halvane",
+        "title": "Refill and save",
+        "note": "Working Score 86 · 64 days"
+      },
+      {
+        "thumb": "flex: 0 0 36px; height: 45px; border-radius: 6px; background: #E6E1D3",
+        "brand": "Fennick Home",
+        "title": "Never buy another candle",
+        "note": "Working Score 70 · 33 days"
+      },
+      {
+        "thumb": "flex: 0 0 36px; height: 45px; border-radius: 6px; background: #E3E0EC",
+        "brand": "Otterly Scents",
+        "title": "Tired of tunnelling wicks?",
+        "note": "Working Score 58 · 12 days"
+      }
+    ],
+    "working": {
+      "score": 81,
+      "label": "Proven winner",
+      "confidence": "High confidence · driven by scaling and survival"
+    },
+    "score": 83,
+    "marketNote": "How your 5 competitors use the same hook and angle · 214 active ads",
+    "subtitle": "Meta · video 0:24, vertical · running since 9 Oct 2026 · the same file in 3 ads",
+    "mediaLabel": "Saved file · 0:24 · captions on",
+    "predictiveNote": "Predictive score: not available yet. It ships once it beats simple baselines on newer ads, after about 3,000 resolved ads.",
+    "retention": {
+      "average": "9.8 sec",
+      "benchmark": "7.4 sec",
+      "points": [
+        {
+          "label": "Start",
+          "creative": 1,
+          "benchmark": 1
+        },
+        {
+          "label": "25%",
+          "creative": 0.61,
+          "benchmark": 0.52
+        },
+        {
+          "label": "50%",
+          "creative": 0.44,
+          "benchmark": 0.35
+        },
+        {
+          "label": "75%",
+          "creative": 0.33,
+          "benchmark": 0.26
+        },
+        {
+          "label": "95%",
+          "creative": 0.25,
+          "benchmark": 0.19
+        },
+        {
+          "label": "End",
+          "creative": 0.21,
+          "benchmark": 0.16
+        }
+      ],
+      "note": "Keeps 9 more viewers in every 100 than your average at the halfway point. The biggest drop comes before the product appears at 0:05."
+    },
+    "copy": "Stop buying new candles. Refill the jar you already love, with 50 hours of burn in every refill.",
+    "copyNote": "Headline: Refill kits from £18 · Button: Shop now",
+    "claimCheck": "Claim check: “burns for 50 hours” is a performance claim. Keep the burn-test evidence on file in case it needs substantiating under ASA rules.",
+    "readingNote": "Read once by the low-cost pipeline on 10 Oct and checked by a strategist. Unknown fields stay unknown.",
+    "market": [
+      {
+        "label": "18%",
+        "value": "18%",
+        "note": "of competitors’ ads open with a problem hook; 41% of those are proven winners"
+      },
+      {
+        "label": "19 ads",
+        "value": "19 ads",
+        "note": "use a refill angle; the longest has run 64 days"
+      },
+      {
+        "label": "58",
+        "value": "58",
+        "note": "reviews mention running out or buying again"
+      }
+    ]
+  },
+  "Formats": {
+    "formats": [
+      {
+        "name": "Founder-led",
+        "m": 20,
+        "y": 4,
+        "win": "39%",
+        "days": 33,
+        "roas": "Too early",
+        "trend": "Rising",
+        "trendStyle": "font-size: 12px; font-weight: 600; padding: 3px 9px; border-radius: 999px; background: #EEF2FF; color: #1E3A8A",
+        "roasStyle": "font-size: 14px; text-align: right; color: #515B6B",
+        "mBar": "height: 10px; border-radius: 5px; background: #0C1F96; width: 66.66666666666666%; max-width: 100%",
+        "yBar": "height: 10px; border-radius: 5px; background: #00C0CB; width: 13.333333333333334%; max-width: 100%",
+        "thumbs": [
+          {
+            "style": "width: 36px; height: 45px; border-radius: 6px; background: #E3E0EC"
+          },
+          {
+            "style": "width: 36px; height: 45px; border-radius: 6px; background: #D9E4DC"
+          },
+          {
+            "style": "width: 36px; height: 45px; border-radius: 6px; background: #EADCD8"
+          }
+        ]
+      },
+      {
+        "name": "UGC",
+        "m": 12,
+        "y": 22,
+        "win": "34%",
+        "days": 27,
+        "roas": "3.0",
+        "trend": "Rising",
+        "trendStyle": "font-size: 12px; font-weight: 600; padding: 3px 9px; border-radius: 999px; background: #EEF2FF; color: #1E3A8A",
+        "roasStyle": "font-size: 14px; text-align: right; font-weight: 600",
+        "mBar": "height: 10px; border-radius: 5px; background: #0C1F96; width: 40%; max-width: 100%",
+        "yBar": "height: 10px; border-radius: 5px; background: #00C0CB; width: 73.33333333333333%; max-width: 100%",
+        "thumbs": [
+          {
+            "style": "width: 36px; height: 45px; border-radius: 6px; background: #E9E2D6"
+          },
+          {
+            "style": "width: 36px; height: 45px; border-radius: 6px; background: #EFE6DA"
+          },
+          {
+            "style": "width: 36px; height: 45px; border-radius: 6px; background: #E2E8E4"
+          }
+        ]
+      },
+      {
+        "name": "Studio product",
+        "m": 23,
+        "y": 26,
+        "win": "27%",
+        "days": 30,
+        "roas": "2.5",
+        "trend": "Steady",
+        "trendStyle": "font-size: 12px; font-weight: 600; padding: 3px 9px; border-radius: 999px; background: #F3F4F6; color: #374151",
+        "roasStyle": "font-size: 14px; text-align: right; font-weight: 600",
+        "mBar": "height: 10px; border-radius: 5px; background: #0C1F96; width: 76.66666666666667%; max-width: 100%",
+        "yBar": "height: 10px; border-radius: 5px; background: #00C0CB; width: 86.66666666666667%; max-width: 100%",
+        "thumbs": [
+          {
+            "style": "width: 36px; height: 45px; border-radius: 6px; background: #E6E1D3"
+          },
+          {
+            "style": "width: 36px; height: 45px; border-radius: 6px; background: #EADCD8"
+          },
+          {
+            "style": "width: 36px; height: 45px; border-radius: 6px; background: #DCE3EC"
+          }
+        ]
+      },
+      {
+        "name": "Lifestyle",
+        "m": 18,
+        "y": 20,
+        "win": "21%",
+        "days": 24,
+        "roas": "2.1",
+        "trend": "Steady",
+        "trendStyle": "font-size: 12px; font-weight: 600; padding: 3px 9px; border-radius: 999px; background: #F3F4F6; color: #374151",
+        "roasStyle": "font-size: 14px; text-align: right; font-weight: 600",
+        "mBar": "height: 10px; border-radius: 5px; background: #0C1F96; width: 60%; max-width: 100%",
+        "yBar": "height: 10px; border-radius: 5px; background: #00C0CB; width: 66.66666666666666%; max-width: 100%",
+        "thumbs": [
+          {
+            "style": "width: 36px; height: 45px; border-radius: 6px; background: #DCE3EC"
+          },
+          {
+            "style": "width: 36px; height: 45px; border-radius: 6px; background: #E9E2D6"
+          },
+          {
+            "style": "width: 36px; height: 45px; border-radius: 6px; background: #E3E0EC"
+          }
+        ]
+      },
+      {
+        "name": "Motion graphics",
+        "m": 9,
+        "y": 8,
+        "win": "15%",
+        "days": 16,
+        "roas": "1.9",
+        "trend": "Falling",
+        "trendStyle": "font-size: 12px; font-weight: 600; padding: 3px 9px; border-radius: 999px; background: #FEF3C7; color: #78350F",
+        "roasStyle": "font-size: 14px; text-align: right; font-weight: 600",
+        "mBar": "height: 10px; border-radius: 5px; background: #0C1F96; width: 30%; max-width: 100%",
+        "yBar": "height: 10px; border-radius: 5px; background: #00C0CB; width: 26.666666666666668%; max-width: 100%",
+        "thumbs": [
+          {
+            "style": "width: 36px; height: 45px; border-radius: 6px; background: #E2E8E4"
+          },
+          {
+            "style": "width: 36px; height: 45px; border-radius: 6px; background: #DCE3EC"
+          },
+          {
+            "style": "width: 36px; height: 45px; border-radius: 6px; background: #EFE6DA"
+          }
+        ]
+      },
+      {
+        "name": "Static graphic",
+        "m": 18,
+        "y": 20,
+        "win": "11%",
+        "days": 12,
+        "roas": "1.7",
+        "trend": "Falling",
+        "trendStyle": "font-size: 12px; font-weight: 600; padding: 3px 9px; border-radius: 999px; background: #FEF3C7; color: #78350F",
+        "roasStyle": "font-size: 14px; text-align: right; font-weight: 600",
+        "mBar": "height: 10px; border-radius: 5px; background: #0C1F96; width: 60%; max-width: 100%",
+        "yBar": "height: 10px; border-radius: 5px; background: #00C0CB; width: 66.66666666666666%; max-width: 100%",
+        "thumbs": [
+          {
+            "style": "width: 36px; height: 45px; border-radius: 6px; background: #DCE3EC"
+          },
+          {
+            "style": "width: 36px; height: 45px; border-radius: 6px; background: #E6E1D3"
+          },
+          {
+            "style": "width: 36px; height: 45px; border-radius: 6px; background: #E9E2D6"
+          }
+        ]
+      }
+    ],
+    "build": [
+      {
+        "m": "Median length",
+        "w": "22 sec",
+        "o": "31 sec",
+        "y": "24 sec",
+        "read": "Winners are shorter"
+      },
+      {
+        "m": "Cuts in the first 3 seconds",
+        "w": "2",
+        "o": "1",
+        "y": "2",
+        "read": "You match winners"
+      },
+      {
+        "m": "Product appears by",
+        "w": "0:03",
+        "o": "0:07",
+        "y": "0:05",
+        "read": "Show the product sooner"
+      },
+      {
+        "m": "Captions on",
+        "w": "92%",
+        "o": "64%",
+        "y": "70%",
+        "read": "Caption every video"
+      },
+      {
+        "m": "Person on camera",
+        "w": "71%",
+        "o": "48%",
+        "y": "54%",
+        "read": "Faces win in this category"
+      },
+      {
+        "m": "Talking to camera",
+        "w": "52%",
+        "o": "30%",
+        "y": "39%",
+        "read": "More direct-to-camera"
+      },
+      {
+        "m": "Vertical 9:16",
+        "w": "78%",
+        "o": "55%",
+        "y": "61%",
+        "read": "Shoot vertical first"
+      }
+    ]
+  },
+  "Patterns": {
+    "dims": [
+      {
+        "label": "Hook type",
+        "pressed": "true",
+        "style": "min-height: 40px; padding: 0 14px; border: none; font: inherit; font-size: 13px; cursor: pointer; background: #0C1F96; color: #FFFFFF; font-weight: 600"
+      },
+      {
+        "label": "Angle",
+        "pressed": "false",
+        "style": "min-height: 40px; padding: 0 14px; border: none; font: inherit; font-size: 13px; cursor: pointer; background: #FFFFFF; color: #1F2937; border-left: 1px solid #D6DBE3"
+      },
+      {
+        "label": "Offer",
+        "pressed": "false",
+        "style": "min-height: 40px; padding: 0 14px; border: none; font: inherit; font-size: 13px; cursor: pointer; background: #FFFFFF; color: #1F2937; border-left: 1px solid #D6DBE3"
+      },
+      {
+        "label": "Format",
+        "pressed": "false",
+        "style": "min-height: 40px; padding: 0 14px; border: none; font: inherit; font-size: 13px; cursor: pointer; background: #FFFFFF; color: #1F2937; border-left: 1px solid #D6DBE3"
+      },
+      {
+        "label": "Claim type",
+        "pressed": "false",
+        "style": "min-height: 40px; padding: 0 14px; border: none; font: inherit; font-size: 13px; cursor: pointer; background: #FFFFFF; color: #1F2937; border-left: 1px solid #D6DBE3"
+      },
+      {
+        "label": "Creator",
+        "pressed": "false",
+        "style": "min-height: 40px; padding: 0 14px; border: none; font: inherit; font-size: 13px; cursor: pointer; background: #FFFFFF; color: #1F2937; border-left: 1px solid #D6DBE3"
+      },
+      {
+        "label": "Length",
+        "pressed": "false",
+        "style": "min-height: 40px; padding: 0 14px; border: none; font: inherit; font-size: 13px; cursor: pointer; background: #FFFFFF; color: #1F2937; border-left: 1px solid #D6DBE3"
+      }
+    ],
+    "rows": [
+      {
+        "name": "Demo",
+        "m": 19,
+        "yLabel": "4%",
+        "gap": "+15",
+        "win": "44%",
+        "dem": "7%",
+        "roas": "Too early",
+        "action": "Test now",
+        "actionStyle": "font-size: 12px; font-weight: 600; padding: 3px 9px; border-radius: 999px; white-space: nowrap; background: #E6F9FA; color: #075E66; align-self: flex-start",
+        "mBar": "height: 10px; border-radius: 5px; background: #0C1F96; width: 52.77777777777778%",
+        "yBar": "height: 10px; border-radius: 5px; background: #00C0CB; width: 11.11111111111111%",
+        "winStyle": "font-size: 14px; text-align: right; font-weight: 600",
+        "demStyle": "font-size: 14px; text-align: right; font-weight: 600",
+        "roasStyle": "font-size: 14px; text-align: right; color: #515B6B; font-size: 13px"
+      },
+      {
+        "name": "Problem",
+        "m": 18,
+        "yLabel": "34%",
+        "gap": "-16",
+        "win": "41%",
+        "dem": "6%",
+        "roas": "2.9",
+        "action": "Scale",
+        "actionStyle": "font-size: 12px; font-weight: 600; padding: 3px 9px; border-radius: 999px; white-space: nowrap; background: #E7F6EC; color: #14532D; align-self: flex-start",
+        "mBar": "height: 10px; border-radius: 5px; background: #0C1F96; width: 50%",
+        "yBar": "height: 10px; border-radius: 5px; background: #00C0CB; width: 94.44444444444444%",
+        "winStyle": "font-size: 14px; text-align: right; font-weight: 600",
+        "demStyle": "font-size: 14px; text-align: right; font-weight: 600",
+        "roasStyle": "font-size: 14px; text-align: right; font-weight: 600"
+      },
+      {
+        "name": "Offer-led",
+        "m": 21,
+        "yLabel": "30%",
+        "gap": "-9",
+        "win": "22%",
+        "dem": "3%",
+        "roas": "2.0",
+        "action": "Fix",
+        "actionStyle": "font-size: 12px; font-weight: 600; padding: 3px 9px; border-radius: 999px; white-space: nowrap; background: #FEF3C7; color: #78350F; align-self: flex-start",
+        "mBar": "height: 10px; border-radius: 5px; background: #0C1F96; width: 58.333333333333336%",
+        "yBar": "height: 10px; border-radius: 5px; background: #00C0CB; width: 83.33333333333334%",
+        "winStyle": "font-size: 14px; text-align: right; font-weight: 600",
+        "demStyle": "font-size: 14px; text-align: right; font-weight: 600",
+        "roasStyle": "font-size: 14px; text-align: right; font-weight: 600"
+      },
+      {
+        "name": "Question",
+        "m": 5,
+        "yLabel": "15%",
+        "gap": "-10",
+        "win": "12%",
+        "dem": "None linked",
+        "roas": "1.7",
+        "action": "Reduce",
+        "actionStyle": "font-size: 12px; font-weight: 600; padding: 3px 9px; border-radius: 999px; white-space: nowrap; background: #FDE8E8; color: #8B1D1D; align-self: flex-start",
+        "mBar": "height: 10px; border-radius: 5px; background: #0C1F96; width: 13.88888888888889%",
+        "yBar": "height: 10px; border-radius: 5px; background: #00C0CB; width: 41.66666666666667%",
+        "winStyle": "font-size: 14px; text-align: right; font-weight: 600",
+        "demStyle": "font-size: 14px; text-align: right; color: #515B6B; font-size: 13px",
+        "roasStyle": "font-size: 14px; text-align: right; font-weight: 600"
+      },
+      {
+        "name": "Testimonial",
+        "m": 8,
+        "yLabel": "None",
+        "gap": "+8",
+        "win": "35%",
+        "dem": "4%",
+        "roas": "None",
+        "action": "Watch",
+        "actionStyle": "font-size: 12px; font-weight: 600; padding: 3px 9px; border-radius: 999px; white-space: nowrap; background: #EEF2FF; color: #1E3A8A; align-self: flex-start",
+        "mBar": "height: 10px; border-radius: 5px; background: #0C1F96; width: 22.22222222222222%",
+        "yBar": "height: 10px; border-radius: 5px; background: #00C0CB; width: 0%",
+        "winStyle": "font-size: 14px; text-align: right; font-weight: 600",
+        "demStyle": "font-size: 14px; text-align: right; font-weight: 600",
+        "roasStyle": "font-size: 14px; text-align: right; color: #515B6B; font-size: 13px"
+      },
+      {
+        "name": "Trend",
+        "m": 3,
+        "yLabel": "None",
+        "gap": "+3",
+        "win": "Under 10 ads",
+        "dem": "None linked",
+        "roas": "None",
+        "action": "Watch",
+        "actionStyle": "font-size: 12px; font-weight: 600; padding: 3px 9px; border-radius: 999px; white-space: nowrap; background: #EEF2FF; color: #1E3A8A; align-self: flex-start",
+        "mBar": "height: 10px; border-radius: 5px; background: #0C1F96; width: 8.333333333333332%",
+        "yBar": "height: 10px; border-radius: 5px; background: #00C0CB; width: 0%",
+        "winStyle": "font-size: 14px; text-align: right; color: #515B6B; font-size: 13px",
+        "demStyle": "font-size: 14px; text-align: right; color: #515B6B; font-size: 13px",
+        "roasStyle": "font-size: 14px; text-align: right; color: #515B6B; font-size: 13px"
+      },
+      {
+        "name": "Unboxing",
+        "m": 8,
+        "yLabel": "2%",
+        "gap": "+6",
+        "win": "39%",
+        "dem": "8%",
+        "roas": "Too early",
+        "action": "In line",
+        "actionStyle": "font-size: 12px; font-weight: 600; padding: 3px 9px; border-radius: 999px; white-space: nowrap; background: #F3F4F6; color: #374151; align-self: flex-start",
+        "mBar": "height: 10px; border-radius: 5px; background: #0C1F96; width: 22.22222222222222%",
+        "yBar": "height: 10px; border-radius: 5px; background: #00C0CB; width: 5.555555555555555%",
+        "winStyle": "font-size: 14px; text-align: right; font-weight: 600",
+        "demStyle": "font-size: 14px; text-align: right; font-weight: 600",
+        "roasStyle": "font-size: 14px; text-align: right; color: #515B6B; font-size: 13px"
+      },
+      {
+        "name": "Social proof",
+        "m": 12,
+        "yLabel": "11%",
+        "gap": "+1",
+        "win": "30%",
+        "dem": "5%",
+        "roas": "2.4",
+        "action": "In line",
+        "actionStyle": "font-size: 12px; font-weight: 600; padding: 3px 9px; border-radius: 999px; white-space: nowrap; background: #F3F4F6; color: #374151; align-self: flex-start",
+        "mBar": "height: 10px; border-radius: 5px; background: #0C1F96; width: 33.33333333333333%",
+        "yBar": "height: 10px; border-radius: 5px; background: #00C0CB; width: 30.555555555555557%",
+        "winStyle": "font-size: 14px; text-align: right; font-weight: 600",
+        "demStyle": "font-size: 14px; text-align: right; font-weight: 600",
+        "roasStyle": "font-size: 14px; text-align: right; font-weight: 600"
+      },
+      {
+        "name": "Scarcity or restock",
+        "m": 6,
+        "yLabel": "4%",
+        "gap": "+2",
+        "win": "25%",
+        "dem": "None linked",
+        "roas": "2.2",
+        "action": "In line",
+        "actionStyle": "font-size: 12px; font-weight: 600; padding: 3px 9px; border-radius: 999px; white-space: nowrap; background: #F3F4F6; color: #374151; align-self: flex-start",
+        "mBar": "height: 10px; border-radius: 5px; background: #0C1F96; width: 16.666666666666664%",
+        "yBar": "height: 10px; border-radius: 5px; background: #00C0CB; width: 11.11111111111111%",
+        "winStyle": "font-size: 14px; text-align: right; font-weight: 600",
+        "demStyle": "font-size: 14px; text-align: right; color: #515B6B; font-size: 13px",
+        "roasStyle": "font-size: 14px; text-align: right; font-weight: 600"
+      }
+    ],
+    "actions": [
+      {
+        "name": "Test now",
+        "style": "font-size: 12px; font-weight: 600; padding: 3px 9px; border-radius: 999px; white-space: nowrap; background: #E6F9FA; color: #075E66; align-self: flex-start",
+        "when": "it wins often in the category and you use it 15+ points less.",
+        "what": "a brief with 3 variants, linked to the ads that prove it."
+      },
+      {
+        "name": "Scale",
+        "style": "font-size: 12px; font-weight: 600; padding: 3px 9px; border-radius: 999px; white-space: nowrap; background: #E7F6EC; color: #14532D; align-self: flex-start",
+        "when": "your own winners sit where competitors barely go.",
+        "what": "more versions of the winning concept and new creators."
+      },
+      {
+        "name": "Fix",
+        "style": "font-size: 12px; font-weight: 600; padding: 3px 9px; border-radius: 999px; white-space: nowrap; background: #FEF3C7; color: #78350F; align-self: flex-start",
+        "when": "you use it a lot but win less than the category.",
+        "what": "new hooks or formats for the same idea."
+      },
+      {
+        "name": "Reduce",
+        "style": "font-size: 12px; font-weight: 600; padding: 3px 9px; border-radius: 999px; white-space: nowrap; background: #FDE8E8; color: #8B1D1D; align-self: flex-start",
+        "when": "it wins rarely everywhere and you overuse it.",
+        "what": "move budget to Test now items."
+      },
+      {
+        "name": "Watch",
+        "style": "font-size: 12px; font-weight: 600; padding: 3px 9px; border-radius: 999px; white-space: nowrap; background: #EEF2FF; color: #1E3A8A; align-self: flex-start",
+        "when": "a competitor idea is new or rising this week.",
+        "what": "a note in the report; test if it is still rising next week."
+      }
+    ]
+  },
+  "Audience": {
+    "tabs": [
+      {
+        "label": "All 8",
+        "pressed": "true",
+        "style": "min-height: 40px; padding: 0 14px; border: none; font: inherit; font-size: 13px; cursor: pointer; background: #0C1F96; color: #FFFFFF; font-weight: 600"
+      },
+      {
+        "label": "Needs",
+        "pressed": "false",
+        "style": "min-height: 40px; padding: 0 14px; border: none; font: inherit; font-size: 13px; cursor: pointer; background: #FFFFFF; color: #1F2937; border-left: 1px solid #D6DBE3"
+      },
+      {
+        "label": "Objections",
+        "pressed": "false",
+        "style": "min-height: 40px; padding: 0 14px; border: none; font: inherit; font-size: 13px; cursor: pointer; background: #FFFFFF; color: #1F2937; border-left: 1px solid #D6DBE3"
+      },
+      {
+        "label": "Outcomes",
+        "pressed": "false",
+        "style": "min-height: 40px; padding: 0 14px; border: none; font: inherit; font-size: 13px; cursor: pointer; background: #FFFFFF; color: #1F2937; border-left: 1px solid #D6DBE3"
+      },
+      {
+        "label": "Desires",
+        "pressed": "false",
+        "style": "min-height: 40px; padding: 0 14px; border: none; font: inherit; font-size: 13px; cursor: pointer; background: #FFFFFF; color: #1F2937; border-left: 1px solid #D6DBE3"
+      }
+    ],
+    "themes": [
+      {
+        "type": "Need",
+        "typeStyle": "font-size: 12px; font-weight: 600; padding: 3px 9px; border-radius: 999px; justify-self: start; background: #E6F9FA; color: #075E66",
+        "name": "A gift that feels special",
+        "n": 96,
+        "share": "8%",
+        "q1": "Bought it for my mum and she loved the box",
+        "q2": "Looks far more expensive than it was",
+        "angle": "Gifting",
+        "bar": "height: 6px; border-radius: 3px; background: #0C1F96; width: 100%"
+      },
+      {
+        "type": "Need",
+        "typeStyle": "font-size: 12px; font-weight: 600; padding: 3px 9px; border-radius: 999px; justify-self: start; background: #E6F9FA; color: #075E66",
+        "name": "Lasts a long time",
+        "n": 71,
+        "share": "6%",
+        "q1": "Still going after weeks of evenings",
+        "q2": "Burns evenly right to the bottom",
+        "angle": "Burn-time proof",
+        "bar": "height: 6px; border-radius: 3px; background: #0C1F96; width: 73.95833333333334%"
+      },
+      {
+        "type": "Outcome",
+        "typeStyle": "font-size: 12px; font-weight: 600; padding: 3px 9px; border-radius: 999px; justify-self: start; background: #E7F6EC; color: #14532D",
+        "name": "The room smells amazing",
+        "n": 64,
+        "share": "5%",
+        "q1": "The whole downstairs smells of fig",
+        "q2": "Guests always ask what it is",
+        "angle": "Social proof",
+        "bar": "height: 6px; border-radius: 3px; background: #0C1F96; width: 66.66666666666666%"
+      },
+      {
+        "type": "Desire",
+        "typeStyle": "font-size: 12px; font-weight: 600; padding: 3px 9px; border-radius: 999px; justify-self: start; background: #EEF2FF; color: #1E3A8A",
+        "name": "Less waste, refill instead",
+        "n": 58,
+        "share": "5%",
+        "q1": "Love that I can refill the jar",
+        "q2": "Finally a candle I do not bin",
+        "angle": "Refill ritual",
+        "bar": "height: 6px; border-radius: 3px; background: #0C1F96; width: 60.416666666666664%"
+      },
+      {
+        "type": "Need",
+        "typeStyle": "font-size: 12px; font-weight: 600; padding: 3px 9px; border-radius: 999px; justify-self: start; background: #E6F9FA; color: #075E66",
+        "name": "Clean burn, no soot",
+        "n": 52,
+        "share": "4%",
+        "q1": "No black marks on the ceiling",
+        "q2": "Burns so cleanly",
+        "angle": "Quality",
+        "bar": "height: 6px; border-radius: 3px; background: #0C1F96; width: 54.166666666666664%"
+      },
+      {
+        "type": "Objection",
+        "typeStyle": "font-size: 12px; font-weight: 600; padding: 3px 9px; border-radius: 999px; justify-self: start; background: #FEF3C7; color: #78350F",
+        "name": "Expensive for the size",
+        "n": 38,
+        "share": "3%",
+        "q1": "Pricey for what you get",
+        "q2": "Wish there was a smaller trial size",
+        "angle": "Value or bundle",
+        "bar": "height: 6px; border-radius: 3px; background: #0C1F96; width: 39.58333333333333%"
+      },
+      {
+        "type": "Objection",
+        "typeStyle": "font-size: 12px; font-weight: 600; padding: 3px 9px; border-radius: 999px; justify-self: start; background: #FEF3C7; color: #78350F",
+        "name": "Scent too faint",
+        "n": 22,
+        "share": "2%",
+        "q1": "Could be stronger",
+        "q2": "Barely smell it in a big room",
+        "angle": "Scent strength",
+        "bar": "height: 6px; border-radius: 3px; background: #0C1F96; width: 22.916666666666664%"
+      },
+      {
+        "type": "Objection",
+        "typeStyle": "font-size: 12px; font-weight: 600; padding: 3px 9px; border-radius: 999px; justify-self: start; background: #FEF3C7; color: #78350F",
+        "name": "Arrived damaged",
+        "n": 9,
+        "share": "1%",
+        "q1": "The lid was cracked",
+        "q2": "Wax had melted in transit",
+        "angle": "Not for ads",
+        "bar": "height: 6px; border-radius: 3px; background: #0C1F96; width: 9.375%"
+      }
+    ],
+    "phrases": [
+      {
+        "t": "smells like a hotel",
+        "n": 41
+      },
+      {
+        "t": "burns evenly",
+        "n": 38
+      },
+      {
+        "t": "perfect gift",
+        "n": 36
+      },
+      {
+        "t": "refill is so easy",
+        "n": 29
+      },
+      {
+        "t": "cosy evenings",
+        "n": 24
+      },
+      {
+        "t": "fills the room",
+        "n": 22
+      },
+      {
+        "t": "beautiful packaging",
+        "n": 21
+      },
+      {
+        "t": "worth every penny",
+        "n": 17
+      },
+      {
+        "t": "no soot",
+        "n": 15
+      },
+      {
+        "t": "my new favourite scent",
+        "n": 14
+      },
+      {
+        "t": "bought a second one",
+        "n": 12
+      },
+      {
+        "t": "lasts ages",
+        "n": 11
+      }
+    ],
+    "bands": [
+      {
+        "label": "18 to 24"
+      },
+      {
+        "label": "25 to 34"
+      },
+      {
+        "label": "35 to 44"
+      },
+      {
+        "label": "45 to 54"
+      },
+      {
+        "label": "55+"
+      }
+    ],
+    "reach": [
+      {
+        "name": "You",
+        "women": "84%",
+        "target": "Women 25 to 65+, UK",
+        "cells": [
+          {
+            "v": 6,
+            "style": "padding: 8px; text-align: center; border-radius: 6px; background: rgba(12, 31, 150, 0.12); color: #111B38; font-weight: 600"
+          },
+          {
+            "v": 24,
+            "style": "padding: 8px; text-align: center; border-radius: 6px; background: rgba(12, 31, 150, 0.32); color: #111B38; font-weight: 600"
+          },
+          {
+            "v": 31,
+            "style": "padding: 8px; text-align: center; border-radius: 6px; background: rgba(12, 31, 150, 0.39); color: #111B38; font-weight: 600"
+          },
+          {
+            "v": 22,
+            "style": "padding: 8px; text-align: center; border-radius: 6px; background: rgba(12, 31, 150, 0.29); color: #111B38; font-weight: 600"
+          },
+          {
+            "v": 17,
+            "style": "padding: 8px; text-align: center; border-radius: 6px; background: rgba(12, 31, 150, 0.24); color: #111B38; font-weight: 600"
+          }
+        ]
+      },
+      {
+        "name": "Halvane",
+        "women": "81%",
+        "target": "All adults, UK and Ireland",
+        "cells": [
+          {
+            "v": 4,
+            "style": "padding: 8px; text-align: center; border-radius: 6px; background: rgba(12, 31, 150, 0.09); color: #111B38; font-weight: 600"
+          },
+          {
+            "v": 21,
+            "style": "padding: 8px; text-align: center; border-radius: 6px; background: rgba(12, 31, 150, 0.28); color: #111B38; font-weight: 600"
+          },
+          {
+            "v": 33,
+            "style": "padding: 8px; text-align: center; border-radius: 6px; background: rgba(12, 31, 150, 0.42); color: #111B38; font-weight: 600"
+          },
+          {
+            "v": 25,
+            "style": "padding: 8px; text-align: center; border-radius: 6px; background: rgba(12, 31, 150, 0.33); color: #111B38; font-weight: 600"
+          },
+          {
+            "v": 17,
+            "style": "padding: 8px; text-align: center; border-radius: 6px; background: rgba(12, 31, 150, 0.24); color: #111B38; font-weight: 600"
+          }
+        ]
+      },
+      {
+        "name": "Corrie & Moss",
+        "women": "77%",
+        "target": "Women 25 to 54, UK",
+        "cells": [
+          {
+            "v": 9,
+            "style": "padding: 8px; text-align: center; border-radius: 6px; background: rgba(12, 31, 150, 0.15); color: #111B38; font-weight: 600"
+          },
+          {
+            "v": 30,
+            "style": "padding: 8px; text-align: center; border-radius: 6px; background: rgba(12, 31, 150, 0.38); color: #111B38; font-weight: 600"
+          },
+          {
+            "v": 28,
+            "style": "padding: 8px; text-align: center; border-radius: 6px; background: rgba(12, 31, 150, 0.36); color: #111B38; font-weight: 600"
+          },
+          {
+            "v": 19,
+            "style": "padding: 8px; text-align: center; border-radius: 6px; background: rgba(12, 31, 150, 0.26); color: #111B38; font-weight: 600"
+          },
+          {
+            "v": 14,
+            "style": "padding: 8px; text-align: center; border-radius: 6px; background: rgba(12, 31, 150, 0.21); color: #111B38; font-weight: 600"
+          }
+        ]
+      },
+      {
+        "name": "Fennick Home",
+        "women": "86%",
+        "target": "All adults 35+, UK",
+        "cells": [
+          {
+            "v": 3,
+            "style": "padding: 8px; text-align: center; border-radius: 6px; background: rgba(12, 31, 150, 0.08); color: #111B38; font-weight: 600"
+          },
+          {
+            "v": 15,
+            "style": "padding: 8px; text-align: center; border-radius: 6px; background: rgba(12, 31, 150, 0.22); color: #111B38; font-weight: 600"
+          },
+          {
+            "v": 27,
+            "style": "padding: 8px; text-align: center; border-radius: 6px; background: rgba(12, 31, 150, 0.35); color: #111B38; font-weight: 600"
+          },
+          {
+            "v": 29,
+            "style": "padding: 8px; text-align: center; border-radius: 6px; background: rgba(12, 31, 150, 0.37); color: #111B38; font-weight: 600"
+          },
+          {
+            "v": 26,
+            "style": "padding: 8px; text-align: center; border-radius: 6px; background: rgba(12, 31, 150, 0.34); color: #111B38; font-weight: 600"
+          }
+        ]
+      },
+      {
+        "name": "Otterly Scents",
+        "women": "72%",
+        "target": "Women 18 to 44, UK",
+        "cells": [
+          {
+            "v": 18,
+            "style": "padding: 8px; text-align: center; border-radius: 6px; background: rgba(12, 31, 150, 0.25); color: #111B38; font-weight: 600"
+          },
+          {
+            "v": 38,
+            "style": "padding: 8px; text-align: center; border-radius: 6px; background: rgba(12, 31, 150, 0.47); color: #111B38; font-weight: 600"
+          },
+          {
+            "v": 24,
+            "style": "padding: 8px; text-align: center; border-radius: 6px; background: rgba(12, 31, 150, 0.32); color: #111B38; font-weight: 600"
+          },
+          {
+            "v": 12,
+            "style": "padding: 8px; text-align: center; border-radius: 6px; background: rgba(12, 31, 150, 0.18); color: #111B38; font-weight: 600"
+          },
+          {
+            "v": 8,
+            "style": "padding: 8px; text-align: center; border-radius: 6px; background: rgba(12, 31, 150, 0.14); color: #111B38; font-weight: 600"
+          }
+        ]
+      },
+      {
+        "name": "Brightmoor",
+        "women": "80%",
+        "target": "All adults, UK",
+        "cells": [
+          {
+            "v": 7,
+            "style": "padding: 8px; text-align: center; border-radius: 6px; background: rgba(12, 31, 150, 0.13); color: #111B38; font-weight: 600"
+          },
+          {
+            "v": 22,
+            "style": "padding: 8px; text-align: center; border-radius: 6px; background: rgba(12, 31, 150, 0.29); color: #111B38; font-weight: 600"
+          },
+          {
+            "v": 26,
+            "style": "padding: 8px; text-align: center; border-radius: 6px; background: rgba(12, 31, 150, 0.34); color: #111B38; font-weight: 600"
+          },
+          {
+            "v": 24,
+            "style": "padding: 8px; text-align: center; border-radius: 6px; background: rgba(12, 31, 150, 0.32); color: #111B38; font-weight: 600"
+          },
+          {
+            "v": 21,
+            "style": "padding: 8px; text-align: center; border-radius: 6px; background: rgba(12, 31, 150, 0.28); color: #111B38; font-weight: 600"
+          }
+        ]
+      }
+    ],
+    "talk": [
+      {
+        "name": "You",
+        "tone": "Warm, practical, first person",
+        "claim": "Burns for 50 hours",
+        "cta": "Shop now"
+      },
+      {
+        "name": "Halvane",
+        "tone": "Calm, founder voice, value-minded",
+        "claim": "Refill and save 30%",
+        "cta": "Start your refill"
+      },
+      {
+        "name": "Corrie & Moss",
+        "tone": "Crafted, story-led, unhurried",
+        "claim": "Hand-poured in Bristol",
+        "cta": "Meet the makers"
+      },
+      {
+        "name": "Fennick Home",
+        "tone": "Polished, giftable, premium",
+        "claim": "The gift they will remember",
+        "cta": "Find the perfect gift"
+      },
+      {
+        "name": "Otterly Scents",
+        "tone": "Playful, trend-aware, quick",
+        "claim": "Layer scents like a pro",
+        "cta": "Try the sample box"
+      },
+      {
+        "name": "Brightmoor",
+        "tone": "Loud, urgent, price-first",
+        "claim": "40% off today only",
+        "cta": "Grab the deal"
+      }
+    ],
+    "reviewCount": 1240
+  },
+  "Winners": {
+    "weights": [
+      {
+        "k": "Survival",
+        "v": "35%"
+      },
+      {
+        "k": "Scaling",
+        "v": "25%"
+      },
+      {
+        "k": "Reach velocity",
+        "v": "25%"
+      },
+      {
+        "k": "Organic response",
+        "v": "15%"
+      }
+    ],
+    "labels": [
+      {
+        "name": "Proven winner",
+        "style": "font-size: 12px; font-weight: 600; padding: 3px 9px; border-radius: 999px; background: #E7F6EC; color: #14532D; white-space: nowrap",
+        "count": "31",
+        "rule": "Score 75+ and running 30+ days"
+      },
+      {
+        "name": "Rising",
+        "style": "font-size: 12px; font-weight: 600; padding: 3px 9px; border-radius: 999px; background: #EEF2FF; color: #1E3A8A; white-space: nowrap",
+        "count": "12",
+        "rule": "Under 14 days, fast reach or copied"
+      },
+      {
+        "name": "Steady",
+        "style": "font-size: 12px; font-weight: 600; padding: 3px 9px; border-radius: 999px; background: #F3F4F6; color: #374151; white-space: nowrap",
+        "count": "118",
+        "rule": "Score 40 to 74"
+      },
+      {
+        "name": "Switched off fast",
+        "style": "font-size: 12px; font-weight: 600; padding: 3px 9px; border-radius: 999px; background: #FDE8E8; color: #8B1D1D; white-space: nowrap",
+        "count": "22",
+        "rule": "Stopped within 7 days"
+      }
+    ],
+    "rows": [
+      {
+        "n": 1,
+        "title": "Refill and save",
+        "brand": "Halvane",
+        "fmt": "Founder-led",
+        "label": "Proven winner",
+        "labelStyle": "font-size: 12px; font-weight: 600; padding: 3px 9px; border-radius: 999px; background: #E7F6EC; color: #14532D; white-space: nowrap",
+        "score": 86,
+        "conf": "High",
+        "s": "94",
+        "c": "5 ads",
+        "rv": "88",
+        "o": "Missing",
+        "days": 64,
+        "thumb": "flex: 0 0 36px; height: 45px; border-radius: 6px; background: #D9E4DC",
+        "bar": "height: 6px; border-radius: 3px; background: #0C1F96; width: 86%"
+      },
+      {
+        "n": 2,
+        "title": "Refill ritual, Ama",
+        "brand": "You",
+        "fmt": "UGC",
+        "label": "Proven winner",
+        "labelStyle": "font-size: 12px; font-weight: 600; padding: 3px 9px; border-radius: 999px; background: #E7F6EC; color: #14532D; white-space: nowrap",
+        "score": 81,
+        "conf": "High",
+        "s": "92",
+        "c": "3 ads",
+        "rv": "61",
+        "o": "Missing",
+        "days": 25,
+        "thumb": "flex: 0 0 36px; height: 45px; border-radius: 6px; background: #E9E2D6",
+        "bar": "height: 6px; border-radius: 3px; background: #0C1F96; width: 81%"
+      },
+      {
+        "n": 3,
+        "title": "Autumn glow bundle",
+        "brand": "Fennick Home",
+        "fmt": "Studio product",
+        "label": "Proven winner",
+        "labelStyle": "font-size: 12px; font-weight: 600; padding: 3px 9px; border-radius: 999px; background: #E7F6EC; color: #14532D; white-space: nowrap",
+        "score": 78,
+        "conf": "High",
+        "s": "89",
+        "c": "4 ads",
+        "rv": "57",
+        "o": "71",
+        "days": 52,
+        "thumb": "flex: 0 0 36px; height: 45px; border-radius: 6px; background: #E6E1D3",
+        "bar": "height: 6px; border-radius: 3px; background: #0C1F96; width: 78%"
+      },
+      {
+        "n": 4,
+        "title": "Hand-poured in Bristol",
+        "brand": "Corrie & Moss",
+        "fmt": "Founder-led",
+        "label": "Rising",
+        "labelStyle": "font-size: 12px; font-weight: 600; padding: 3px 9px; border-radius: 999px; background: #EEF2FF; color: #1E3A8A; white-space: nowrap",
+        "score": 74,
+        "conf": "Medium",
+        "s": "Too new",
+        "c": "6 ads",
+        "rv": "93",
+        "o": "Missing",
+        "days": 5,
+        "thumb": "flex: 0 0 36px; height: 45px; border-radius: 6px; background: #E3E0EC",
+        "bar": "height: 6px; border-radius: 3px; background: #0C1F96; width: 74%"
+      },
+      {
+        "n": 5,
+        "title": "Burns to the last drop",
+        "brand": "Fennick Home",
+        "fmt": "Demo",
+        "label": "Steady",
+        "labelStyle": "font-size: 12px; font-weight: 600; padding: 3px 9px; border-radius: 999px; background: #F3F4F6; color: #374151; white-space: nowrap",
+        "score": 68,
+        "conf": "Medium",
+        "s": "70",
+        "c": "3 ads",
+        "rv": "66",
+        "o": "Missing",
+        "days": 41,
+        "thumb": "flex: 0 0 36px; height: 45px; border-radius: 6px; background: #EFE6DA",
+        "bar": "height: 6px; border-radius: 3px; background: #0C1F96; width: 68%"
+      },
+      {
+        "n": 6,
+        "title": "Gift box reveal",
+        "brand": "You",
+        "fmt": "Studio product",
+        "label": "Steady",
+        "labelStyle": "font-size: 12px; font-weight: 600; padding: 3px 9px; border-radius: 999px; background: #F3F4F6; color: #374151; white-space: nowrap",
+        "score": 63,
+        "conf": "High",
+        "s": "58",
+        "c": "2 ads",
+        "rv": "64",
+        "o": "Missing",
+        "days": 20,
+        "thumb": "flex: 0 0 36px; height: 45px; border-radius: 6px; background: #EADCD8",
+        "bar": "height: 6px; border-radius: 3px; background: #0C1F96; width: 63%"
+      },
+      {
+        "n": 7,
+        "title": "Layer your scents",
+        "brand": "Otterly Scents",
+        "fmt": "Trend",
+        "label": "Rising",
+        "labelStyle": "font-size: 12px; font-weight: 600; padding: 3px 9px; border-radius: 999px; background: #EEF2FF; color: #1E3A8A; white-space: nowrap",
+        "score": 61,
+        "conf": "Low",
+        "s": "Too new",
+        "c": "2 ads",
+        "rv": "79",
+        "o": "Missing",
+        "days": 9,
+        "thumb": "flex: 0 0 36px; height: 45px; border-radius: 6px; background: #E2E8E4",
+        "bar": "height: 6px; border-radius: 3px; background: #0C1F96; width: 61%"
+      },
+      {
+        "n": 8,
+        "title": "Flash sale, 40% off",
+        "brand": "Brightmoor",
+        "fmt": "Static graphic",
+        "label": "Switched off fast",
+        "labelStyle": "font-size: 12px; font-weight: 600; padding: 3px 9px; border-radius: 999px; background: #FDE8E8; color: #8B1D1D; white-space: nowrap",
+        "score": 12,
+        "conf": "Medium",
+        "s": "4",
+        "c": "1 ad",
+        "rv": "22",
+        "o": "Missing",
+        "days": 5,
+        "thumb": "flex: 0 0 36px; height: 45px; border-radius: 6px; background: #DCE3EC",
+        "bar": "height: 6px; border-radius: 3px; background: #0C1F96; width: 12%"
+      }
+    ],
+    "own": [
+      {
+        "n": 1,
+        "title": "Refill ritual, Ama",
+        "fmt": "Problem hook · UGC · 0:24",
+        "spend": "£4,120",
+        "roas": "3.1",
+        "cpa": "£14.20",
+        "vs": "29% better",
+        "ws": "81",
+        "thumb": "flex: 0 0 36px; height: 45px; border-radius: 6px; background: #E9E2D6"
+      },
+      {
+        "n": 2,
+        "title": "Gift box reveal",
+        "fmt": "Unboxing · studio product · 0:15",
+        "spend": "£2,860",
+        "roas": "2.9",
+        "cpa": "£15.90",
+        "vs": "21% better",
+        "ws": "63",
+        "thumb": "flex: 0 0 36px; height: 45px; border-radius: 6px; background: #EADCD8"
+      },
+      {
+        "n": 3,
+        "title": "50 hour burn test",
+        "fmt": "Demo · 0:31",
+        "spend": "£1,040",
+        "roas": "2.9",
+        "cpa": "£16.10",
+        "vs": "21% better",
+        "ws": "57",
+        "thumb": "flex: 0 0 36px; height: 45px; border-radius: 6px; background: #D9E4DC"
+      }
+    ]
+  },
+  "Briefs": {
+    "opps": [
+      {
+        "action": "Test now",
+        "actionStyle": "font-size: 12px; font-weight: 600; padding: 3px 9px; border-radius: 999px; background: #E6F9FA; color: #075E66",
+        "title": "Gift-ready unboxing",
+        "score": "11.9",
+        "status": "Brief drafted · 3 variants",
+        "pressed": "true",
+        "style": "text-align: left; padding: 12px 14px; border-radius: 10px; font: inherit; color: #1F2937; cursor: pointer; border: 2px solid #00C0CB; background: #F0FBFC"
+      },
+      {
+        "action": "Scale",
+        "actionStyle": "font-size: 12px; font-weight: 600; padding: 3px 9px; border-radius: 999px; background: #E7F6EC; color: #14532D",
+        "title": "Refill ritual",
+        "score": "9.4",
+        "status": "Brief approved · 2 creators asked",
+        "pressed": "false",
+        "style": "text-align: left; padding: 12px 14px; border-radius: 10px; font: inherit; color: #1F2937; cursor: pointer; border: 1px solid #E5E7EB; background: #FFFFFF"
+      },
+      {
+        "action": "Test now",
+        "actionStyle": "font-size: 12px; font-weight: 600; padding: 3px 9px; border-radius: 999px; background: #E6F9FA; color: #075E66",
+        "title": "Demo: timed burn test",
+        "score": "7.1",
+        "status": "Brief drafted",
+        "pressed": "false",
+        "style": "text-align: left; padding: 12px 14px; border-radius: 10px; font: inherit; color: #1F2937; cursor: pointer; border: 1px solid #E5E7EB; background: #FFFFFF"
+      },
+      {
+        "action": "Fix",
+        "actionStyle": "font-size: 12px; font-weight: 600; padding: 3px 9px; border-radius: 999px; background: #FEF3C7; color: #78350F",
+        "title": "Offer-led hooks",
+        "score": "5.2",
+        "status": "Needs new hooks",
+        "pressed": "false",
+        "style": "text-align: left; padding: 12px 14px; border-radius: 10px; font: inherit; color: #1F2937; cursor: pointer; border: 1px solid #E5E7EB; background: #FFFFFF"
+      },
+      {
+        "action": "Watch",
+        "actionStyle": "font-size: 12px; font-weight: 600; padding: 3px 9px; border-radius: 999px; background: #EEF2FF; color: #1E3A8A",
+        "title": "Scent layering",
+        "score": "3.0",
+        "status": "Rising at 2 brands",
+        "pressed": "false",
+        "style": "text-align: left; padding: 12px 14px; border-radius: 10px; font: inherit; color: #1F2937; cursor: pointer; border: 1px solid #E5E7EB; background: #FFFFFF"
+      },
+      {
+        "action": "Watch",
+        "actionStyle": "font-size: 12px; font-weight: 600; padding: 3px 9px; border-radius: 999px; background: #EEF2FF; color: #1E3A8A",
+        "title": "Testimonial openers",
+        "score": "2.9",
+        "status": "Rising this month",
+        "pressed": "false",
+        "style": "text-align: left; padding: 12px 14px; border-radius: 10px; font: inherit; color: #1F2937; cursor: pointer; border: 1px solid #E5E7EB; background: #FFFFFF"
+      },
+      {
+        "action": "Reduce",
+        "actionStyle": "font-size: 12px; font-weight: 600; padding: 3px 9px; border-radius: 999px; background: #FDE8E8; color: #8B1D1D",
+        "title": "Question hooks",
+        "score": "1.1",
+        "status": "Move budget to Test now",
+        "pressed": "false",
+        "style": "text-align: left; padding: 12px 14px; border-radius: 10px; font: inherit; color: #1F2937; cursor: pointer; border: 1px solid #E5E7EB; background: #FFFFFF"
+      }
+    ],
+    "evidence": [
+      {
+        "k": "Usage gap",
+        "v": "29 pts",
+        "d": "Competitors 31% of ads, you 2%"
+      },
+      {
+        "k": "Category win rate",
+        "v": "38%",
+        "d": "16 of 42 gifting ads are proven winners"
+      },
+      {
+        "k": "Customer demand",
+        "v": "8%",
+        "d": "96 of 1,240 reviews mention gifting"
+      }
+    ],
+    "proof": [
+      {
+        "thumb": "flex: 0 0 32px; height: 40px; border-radius: 6px; background: #E6E1D3",
+        "brand": "Fennick Home",
+        "title": "Autumn glow bundle",
+        "note": "Working Score 78 · 52 days"
+      },
+      {
+        "thumb": "flex: 0 0 32px; height: 40px; border-radius: 6px; background: #E3E0EC",
+        "brand": "Corrie & Moss",
+        "title": "Wrapped by hand",
+        "note": "Working Score 71 · 38 days"
+      },
+      {
+        "thumb": "flex: 0 0 32px; height: 40px; border-radius: 6px; background: #D9E4DC",
+        "brand": "Halvane",
+        "title": "The gift set, unboxed",
+        "note": "Working Score 69 · 44 days"
+      }
+    ],
+    "quotes": [
+      {
+        "t": "Bought it for my mum and she loved the box",
+        "src": "Review, 5 stars, 12 Oct"
+      },
+      {
+        "t": "Looks far more expensive than it was",
+        "src": "Review, 5 stars, 28 Sep"
+      }
+    ],
+    "hooks": [
+      {
+        "t": "Wrapped in ten seconds, no paper needed"
+      },
+      {
+        "t": "The gift that looks twice the price"
+      },
+      {
+        "t": "She opened it and asked where it was from"
+      }
+    ],
+    "format": [
+      {
+        "t": "UGC, with creator credit shown"
+      },
+      {
+        "t": "15 to 25 seconds, vertical 9:16"
+      },
+      {
+        "t": "Box and product in the first 2 seconds"
+      },
+      {
+        "t": "Captions on, talking to camera"
+      },
+      {
+        "t": "Offer: [your gifting offer]"
+      }
+    ],
+    "beats": [
+      {
+        "t": "0:00",
+        "k": "Hook",
+        "v": "Creator holds the closed gift box to camera and says the hook."
+      },
+      {
+        "t": "0:03",
+        "k": "Reveal",
+        "v": "Lid off: tissue, card, candle. Close-up of the label."
+      },
+      {
+        "t": "0:08",
+        "k": "First light",
+        "v": "Candle lit, room warms, scent named out loud."
+      },
+      {
+        "t": "0:14",
+        "k": "Proof",
+        "v": "4.8 from 1,240 reviews on screen; burn time stated."
+      },
+      {
+        "t": "0:20",
+        "k": "Offer and action",
+        "v": "Offer on screen, spoken call to action, gift-delivery date."
+      }
+    ],
+    "points": [
+      {
+        "t": "4.8 from 1,240 reviews"
+      },
+      {
+        "t": "Up to 50 hours burn time"
+      },
+      {
+        "t": "Hand-poured in Yorkshire"
+      },
+      {
+        "t": "Gift box included"
+      }
+    ],
+    "variants": [
+      {
+        "k": "Variant A",
+        "v": "Hook 1 · UGC · 0:18"
+      },
+      {
+        "k": "Variant B",
+        "v": "Hook 2 · studio product · 0:15"
+      },
+      {
+        "k": "Variant C",
+        "v": "Hook 3 · creator-led · 0:24"
+      }
+    ],
+    "creatorProfile": "UK based, women 25 to 44, home or lifestyle content, warm talking to camera, under 50K followers.",
+    "claimCheck": "Claim check: hook 2 (“looks twice the price”) is comparative. Keep it as a customer quote, or hold evidence that would satisfy ASA rules."
+  },
+  "Creators": {
+    "filters": [
+      {
+        "t": "Instagram and TikTok"
+      },
+      {
+        "t": "UK and Ireland"
+      },
+      {
+        "t": "English"
+      },
+      {
+        "t": "5K to 50K followers"
+      },
+      {
+        "t": "Home and lifestyle"
+      },
+      {
+        "t": "Posted in last 30 days"
+      }
+    ],
+    "creators": [
+      {
+        "name": "Ama",
+        "platform": "Instagram",
+        "followers": "24K",
+        "place": "Leeds",
+        "views": "18K",
+        "eng": "6.1%",
+        "posts": "14",
+        "ads": "Already in your Refill ritual ads, with a branded-content label.",
+        "initial": "A",
+        "avatar": "flex: 0 0 48px; height: 48px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 18px; font-weight: 700; color: #0C1F96; background: #E9E2D6",
+        "pressed": "true",
+        "btn": "Shortlisted",
+        "btnStyle": "min-height: 40px; padding: 0 12px; border: 1px solid #00C0CB; border-radius: 8px; background: #E6F9FA; font: inherit; font-size: 13px; font-weight: 600; color: #075E66; cursor: pointer",
+        "fit": [
+          {
+            "k": "Relevance to the brand",
+            "v": "92%",
+            "bar": "height: 6px; border-radius: 3px; background: #0C1F96; width: 92%"
+          },
+          {
+            "k": "Tone match",
+            "v": "88%",
+            "bar": "height: 6px; border-radius: 3px; background: #0C1F96; width: 88%"
+          },
+          {
+            "k": "Language",
+            "v": "100%",
+            "bar": "height: 6px; border-radius: 3px; background: #0C1F96; width: 100%"
+          },
+          {
+            "k": "Location",
+            "v": "100%",
+            "bar": "height: 6px; border-radius: 3px; background: #0C1F96; width: 100%"
+          },
+          {
+            "k": "Engagement consistency",
+            "v": "81%",
+            "bar": "height: 6px; border-radius: 3px; background: #0C1F96; width: 81%"
+          }
+        ],
+        "thumbs": [
+          {
+            "style": "width: 40px; height: 50px; border-radius: 6px; background: #D9E4DC"
+          },
+          {
+            "style": "width: 40px; height: 50px; border-radius: 6px; background: #E3E0EC"
+          },
+          {
+            "style": "width: 40px; height: 50px; border-radius: 6px; background: #EADCD8"
+          }
+        ]
+      },
+      {
+        "name": "Hana",
+        "platform": "TikTok",
+        "followers": "41K",
+        "place": "Manchester",
+        "views": "52K",
+        "eng": "4.3%",
+        "posts": "22",
+        "ads": "Appears in 1 Otterly Scents ad (visible handle).",
+        "initial": "H",
+        "avatar": "flex: 0 0 48px; height: 48px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 18px; font-weight: 700; color: #0C1F96; background: #D9E4DC",
+        "pressed": "true",
+        "btn": "Shortlisted",
+        "btnStyle": "min-height: 40px; padding: 0 12px; border: 1px solid #00C0CB; border-radius: 8px; background: #E6F9FA; font: inherit; font-size: 13px; font-weight: 600; color: #075E66; cursor: pointer",
+        "fit": [
+          {
+            "k": "Relevance to the brand",
+            "v": "85%",
+            "bar": "height: 6px; border-radius: 3px; background: #0C1F96; width: 85%"
+          },
+          {
+            "k": "Tone match",
+            "v": "90%",
+            "bar": "height: 6px; border-radius: 3px; background: #0C1F96; width: 90%"
+          },
+          {
+            "k": "Language",
+            "v": "100%",
+            "bar": "height: 6px; border-radius: 3px; background: #0C1F96; width: 100%"
+          },
+          {
+            "k": "Location",
+            "v": "100%",
+            "bar": "height: 6px; border-radius: 3px; background: #0C1F96; width: 100%"
+          },
+          {
+            "k": "Engagement consistency",
+            "v": "64%",
+            "bar": "height: 6px; border-radius: 3px; background: #0C1F96; width: 64%"
+          }
+        ],
+        "thumbs": [
+          {
+            "style": "width: 40px; height: 50px; border-radius: 6px; background: #E3E0EC"
+          },
+          {
+            "style": "width: 40px; height: 50px; border-radius: 6px; background: #EADCD8"
+          },
+          {
+            "style": "width: 40px; height: 50px; border-radius: 6px; background: #DCE3EC"
+          }
+        ]
+      },
+      {
+        "name": "Cleo",
+        "platform": "TikTok",
+        "followers": "12K",
+        "place": "Bristol",
+        "views": "9.4K",
+        "eng": "7.8%",
+        "posts": "9",
+        "ads": "Featured on your website. No paid work found.",
+        "initial": "C",
+        "avatar": "flex: 0 0 48px; height: 48px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 18px; font-weight: 700; color: #0C1F96; background: #E3E0EC",
+        "pressed": "false",
+        "btn": "Shortlist",
+        "btnStyle": "min-height: 40px; padding: 0 12px; border: 1px solid #D6DBE3; border-radius: 8px; background: #FFFFFF; font: inherit; font-size: 13px; font-weight: 600; color: #1F2937; cursor: pointer",
+        "fit": [
+          {
+            "k": "Relevance to the brand",
+            "v": "78%",
+            "bar": "height: 6px; border-radius: 3px; background: #0C1F96; width: 78%"
+          },
+          {
+            "k": "Tone match",
+            "v": "94%",
+            "bar": "height: 6px; border-radius: 3px; background: #0C1F96; width: 94%"
+          },
+          {
+            "k": "Language",
+            "v": "100%",
+            "bar": "height: 6px; border-radius: 3px; background: #0C1F96; width: 100%"
+          },
+          {
+            "k": "Location",
+            "v": "100%",
+            "bar": "height: 6px; border-radius: 3px; background: #0C1F96; width: 100%"
+          },
+          {
+            "k": "Engagement consistency",
+            "v": "88%",
+            "bar": "height: 6px; border-radius: 3px; background: #0C1F96; width: 88%"
+          }
+        ],
+        "thumbs": [
+          {
+            "style": "width: 40px; height: 50px; border-radius: 6px; background: #EADCD8"
+          },
+          {
+            "style": "width: 40px; height: 50px; border-radius: 6px; background: #DCE3EC"
+          },
+          {
+            "style": "width: 40px; height: 50px; border-radius: 6px; background: #EFE6DA"
+          }
+        ]
+      },
+      {
+        "name": "Priya",
+        "platform": "Instagram",
+        "followers": "33K",
+        "place": "London",
+        "views": "15K",
+        "eng": "3.9%",
+        "posts": "18",
+        "ads": "No brand ads found.",
+        "initial": "P",
+        "avatar": "flex: 0 0 48px; height: 48px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 18px; font-weight: 700; color: #0C1F96; background: #EADCD8",
+        "pressed": "false",
+        "btn": "Shortlist",
+        "btnStyle": "min-height: 40px; padding: 0 12px; border: 1px solid #D6DBE3; border-radius: 8px; background: #FFFFFF; font: inherit; font-size: 13px; font-weight: 600; color: #1F2937; cursor: pointer",
+        "fit": [
+          {
+            "k": "Relevance to the brand",
+            "v": "81%",
+            "bar": "height: 6px; border-radius: 3px; background: #0C1F96; width: 81%"
+          },
+          {
+            "k": "Tone match",
+            "v": "72%",
+            "bar": "height: 6px; border-radius: 3px; background: #0C1F96; width: 72%"
+          },
+          {
+            "k": "Language",
+            "v": "100%",
+            "bar": "height: 6px; border-radius: 3px; background: #0C1F96; width: 100%"
+          },
+          {
+            "k": "Location",
+            "v": "100%",
+            "bar": "height: 6px; border-radius: 3px; background: #0C1F96; width: 100%"
+          },
+          {
+            "k": "Engagement consistency",
+            "v": "77%",
+            "bar": "height: 6px; border-radius: 3px; background: #0C1F96; width: 77%"
+          }
+        ],
+        "thumbs": [
+          {
+            "style": "width: 40px; height: 50px; border-radius: 6px; background: #DCE3EC"
+          },
+          {
+            "style": "width: 40px; height: 50px; border-radius: 6px; background: #EFE6DA"
+          },
+          {
+            "style": "width: 40px; height: 50px; border-radius: 6px; background: #E9E2D6"
+          }
+        ]
+      },
+      {
+        "name": "Megan",
+        "platform": "Instagram",
+        "followers": "47K",
+        "place": "Glasgow",
+        "views": "21K",
+        "eng": "2.8%",
+        "posts": "25",
+        "ads": "Appears in 3 Fennick Home ads (branded-content label).",
+        "initial": "M",
+        "avatar": "flex: 0 0 48px; height: 48px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 18px; font-weight: 700; color: #0C1F96; background: #DCE3EC",
+        "pressed": "false",
+        "btn": "Shortlist",
+        "btnStyle": "min-height: 40px; padding: 0 12px; border: 1px solid #D6DBE3; border-radius: 8px; background: #FFFFFF; font: inherit; font-size: 13px; font-weight: 600; color: #1F2937; cursor: pointer",
+        "fit": [
+          {
+            "k": "Relevance to the brand",
+            "v": "70%",
+            "bar": "height: 6px; border-radius: 3px; background: #0C1F96; width: 70%"
+          },
+          {
+            "k": "Tone match",
+            "v": "80%",
+            "bar": "height: 6px; border-radius: 3px; background: #0C1F96; width: 80%"
+          },
+          {
+            "k": "Language",
+            "v": "100%",
+            "bar": "height: 6px; border-radius: 3px; background: #0C1F96; width: 100%"
+          },
+          {
+            "k": "Location",
+            "v": "100%",
+            "bar": "height: 6px; border-radius: 3px; background: #0C1F96; width: 100%"
+          },
+          {
+            "k": "Engagement consistency",
+            "v": "59%",
+            "bar": "height: 6px; border-radius: 3px; background: #0C1F96; width: 59%"
+          }
+        ],
+        "thumbs": [
+          {
+            "style": "width: 40px; height: 50px; border-radius: 6px; background: #EFE6DA"
+          },
+          {
+            "style": "width: 40px; height: 50px; border-radius: 6px; background: #E9E2D6"
+          },
+          {
+            "style": "width: 40px; height: 50px; border-radius: 6px; background: #D9E4DC"
+          }
+        ]
+      },
+      {
+        "name": "Sofia",
+        "platform": "TikTok",
+        "followers": "8.9K",
+        "place": "Dublin",
+        "views": "6K",
+        "eng": "8.2%",
+        "posts": "11",
+        "ads": "No brand ads found. Based in Ireland.",
+        "initial": "S",
+        "avatar": "flex: 0 0 48px; height: 48px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 18px; font-weight: 700; color: #0C1F96; background: #EFE6DA",
+        "pressed": "false",
+        "btn": "Shortlist",
+        "btnStyle": "min-height: 40px; padding: 0 12px; border: 1px solid #D6DBE3; border-radius: 8px; background: #FFFFFF; font: inherit; font-size: 13px; font-weight: 600; color: #1F2937; cursor: pointer",
+        "fit": [
+          {
+            "k": "Relevance to the brand",
+            "v": "88%",
+            "bar": "height: 6px; border-radius: 3px; background: #0C1F96; width: 88%"
+          },
+          {
+            "k": "Tone match",
+            "v": "85%",
+            "bar": "height: 6px; border-radius: 3px; background: #0C1F96; width: 85%"
+          },
+          {
+            "k": "Language",
+            "v": "100%",
+            "bar": "height: 6px; border-radius: 3px; background: #0C1F96; width: 100%"
+          },
+          {
+            "k": "Location",
+            "v": "70%",
+            "bar": "height: 6px; border-radius: 3px; background: #0C1F96; width: 70%"
+          },
+          {
+            "k": "Engagement consistency",
+            "v": "90%",
+            "bar": "height: 6px; border-radius: 3px; background: #0C1F96; width: 90%"
+          }
+        ],
+        "thumbs": [
+          {
+            "style": "width: 40px; height: 50px; border-radius: 6px; background: #E9E2D6"
+          },
+          {
+            "style": "width: 40px; height: 50px; border-radius: 6px; background: #D9E4DC"
+          },
+          {
+            "style": "width: 40px; height: 50px; border-radius: 6px; background: #E3E0EC"
+          }
+        ]
+      }
+    ],
+    "summary": "42 creators found · 6 shown · sorted by relevance to this brief"
+  },
+  "Scores": {
+    "checks": [
+      {
+        "k": "Hook in 2 seconds",
+        "v": "Spoken hook starts at 0:01: \"Wrapped in ten seconds\".",
+        "mark": "Yes",
+        "markStyle": "width: 26px; height: 26px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 11px; font-weight: 700; background: #E7F6EC; color: #14532D"
+      },
+      {
+        "k": "Product early",
+        "v": "Box first visible at 0:04. Winners in your category show it by 0:03.",
+        "mark": "No",
+        "markStyle": "width: 26px; height: 26px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 11px; font-weight: 700; background: #FEF3C7; color: #78350F"
+      },
+      {
+        "k": "Captions on",
+        "v": "Captions on throughout.",
+        "mark": "Yes",
+        "markStyle": "width: 26px; height: 26px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 11px; font-weight: 700; background: #E7F6EC; color: #14532D"
+      },
+      {
+        "k": "Clear offer",
+        "v": "Gift-delivery date shown; no price or offer yet.",
+        "mark": "Part",
+        "markStyle": "width: 26px; height: 26px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 11px; font-weight: 700; background: #FEF3C7; color: #78350F"
+      },
+      {
+        "k": "Call to action",
+        "v": "\"Order by the 18th for Christmas\" at 0:19.",
+        "mark": "Yes",
+        "markStyle": "width: 26px; height: 26px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 11px; font-weight: 700; background: #E7F6EC; color: #14532D"
+      },
+      {
+        "k": "Proof",
+        "v": "No review, rating or burn-time proof on screen.",
+        "mark": "No",
+        "markStyle": "width: 26px; height: 26px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 11px; font-weight: 700; background: #FEF3C7; color: #78350F"
+      }
+    ],
+    "recent": [
+      {
+        "name": "Gift box, version 2",
+        "type": "Draft",
+        "typeStyle": "font-size: 12px; font-weight: 600; padding: 3px 9px; border-radius: 999px; background: #EEF2FF; color: #1E3A8A",
+        "score": "71",
+        "missing": "Product early, proof",
+        "ws": "Not live"
+      },
+      {
+        "name": "Gift box, version 1",
+        "type": "Draft",
+        "typeStyle": "font-size: 12px; font-weight: 600; padding: 3px 9px; border-radius: 999px; background: #EEF2FF; color: #1E3A8A",
+        "score": "58",
+        "missing": "Hook, product early, proof",
+        "ws": "Not live"
+      },
+      {
+        "name": "Refill ritual, Ama",
+        "type": "Live ad",
+        "typeStyle": "font-size: 12px; font-weight: 600; padding: 3px 9px; border-radius: 999px; background: #E7F6EC; color: #14532D",
+        "score": "83",
+        "missing": "Product early",
+        "ws": "81"
+      },
+      {
+        "name": "Gift box reveal",
+        "type": "Live ad",
+        "typeStyle": "font-size: 12px; font-weight: 600; padding: 3px 9px; border-radius: 999px; background: #E7F6EC; color: #14532D",
+        "score": "76",
+        "missing": "Proof",
+        "ws": "63"
+      },
+      {
+        "name": "Cosy evenings",
+        "type": "Live ad",
+        "typeStyle": "font-size: 12px; font-weight: 600; padding: 3px 9px; border-radius: 999px; background: #E7F6EC; color: #14532D",
+        "score": "42",
+        "missing": "Hook, offer, proof, call to action",
+        "ws": "38"
+      }
+    ]
+  },
+  "Ask": {
+    "suggested": [
+      {
+        "t": "What changed for Fennick Home this week?"
+      },
+      {
+        "t": "Which of our ads are tiring?"
+      },
+      {
+        "t": "What do customers complain about most?"
+      },
+      {
+        "t": "Which creators fit the refill brief?"
+      }
+    ],
+    "cites": [
+      {
+        "n": 1,
+        "t": "Halvane · Refill and save",
+        "d": "Ad · Working Score 86 · 5 copies · 64 days",
+        "thumb": "flex: 0 0 28px; height: 35px; border-radius: 5px; background: #D9E4DC"
+      },
+      {
+        "n": 2,
+        "t": "Patterns · hook type",
+        "d": "Demo: category win rate 44%, your share 4%",
+        "thumb": "flex: 0 0 28px; height: 35px; border-radius: 5px; background: #DCE3EC"
+      },
+      {
+        "n": 3,
+        "t": "Corrie & Moss · 6 new videos",
+        "d": "Launched 27 Oct to 2 Nov · founder-led",
+        "thumb": "flex: 0 0 28px; height: 35px; border-radius: 5px; background: #E3E0EC"
+      },
+      {
+        "n": 4,
+        "t": "Customer voice · lasts a long time",
+        "d": "71 of 1,240 reviews",
+        "thumb": "flex: 0 0 28px; height: 35px; border-radius: 5px; background: #E6E1D3"
+      }
+    ],
+    "history": [
+      {
+        "t": "Which competitor ads ran longest in October?"
+      },
+      {
+        "t": "Do UGC ads beat studio ads for us?"
+      },
+      {
+        "t": "What offers is Otterly Scents testing?"
+      },
+      {
+        "t": "Summarise Brightmoor for a pitch"
+      }
+    ]
+  },
+  "Reports": {
+    "weeks": [
+      {
+        "t": "27 Oct to 2 Nov",
+        "d": "Frozen Mon 3 Nov, 06:00 · sent",
+        "pressed": "true",
+        "style": "text-align: left; padding: 10px 12px; border-radius: 8px; font: inherit; color: #1F2937; cursor: pointer; border: 2px solid #00C0CB; background: #F0FBFC"
+      },
+      {
+        "t": "20 Oct to 26 Oct",
+        "d": "Frozen Mon 27 Oct, 06:00",
+        "pressed": "false",
+        "style": "text-align: left; padding: 10px 12px; border-radius: 8px; font: inherit; color: #1F2937; cursor: pointer; border: 1px solid #E5E7EB; background: #FFFFFF"
+      },
+      {
+        "t": "13 Oct to 19 Oct",
+        "d": "Frozen Mon 20 Oct, 06:00",
+        "pressed": "false",
+        "style": "text-align: left; padding: 10px 12px; border-radius: 8px; font: inherit; color: #1F2937; cursor: pointer; border: 1px solid #E5E7EB; background: #FFFFFF"
+      },
+      {
+        "t": "6 Oct to 12 Oct",
+        "d": "Frozen Mon 13 Oct, 06:00",
+        "pressed": "false",
+        "style": "text-align: left; padding: 10px 12px; border-radius: 8px; font: inherit; color: #1F2937; cursor: pointer; border: 1px solid #E5E7EB; background: #FFFFFF"
+      }
+    ],
+    "headline": [
+      {
+        "t": "Your refill ad is now a proven winner: ROAS 3.1 against a 2.4 benchmark, Working Score 81."
+      },
+      {
+        "t": "Gifting is the biggest gap: competitors use it in 31% of ads, you in 2%, and 96 reviews ask for it."
+      },
+      {
+        "t": "Share of voice rose from 12% to 14%, but competitors test 8 new concepts a month to your 5."
+      }
+    ],
+    "top": [
+      {
+        "title": "Refill ritual, Ama",
+        "brand": "You",
+        "score": "81",
+        "label": "Proven winner",
+        "thumb": "aspect-ratio: 4 / 5; border-radius: 8px; background: #E9E2D6"
+      },
+      {
+        "title": "Refill and save",
+        "brand": "Halvane",
+        "score": "86",
+        "label": "Proven winner",
+        "thumb": "aspect-ratio: 4 / 5; border-radius: 8px; background: #D9E4DC"
+      },
+      {
+        "title": "Autumn glow bundle",
+        "brand": "Fennick Home",
+        "score": "78",
+        "label": "Proven winner",
+        "thumb": "aspect-ratio: 4 / 5; border-radius: 8px; background: #E6E1D3"
+      },
+      {
+        "title": "Hand-poured in Bristol",
+        "brand": "Corrie & Moss",
+        "score": "74",
+        "label": "Rising",
+        "thumb": "aspect-ratio: 4 / 5; border-radius: 8px; background: #E3E0EC"
+      },
+      {
+        "title": "Gift box reveal",
+        "brand": "You",
+        "score": "63",
+        "label": "Steady",
+        "thumb": "aspect-ratio: 4 / 5; border-radius: 8px; background: #EADCD8"
+      }
+    ],
+    "rising": [
+      {
+        "t": "Corrie & Moss, Hand-poured in Bristol: 6 versions in 5 days"
+      },
+      {
+        "t": "Otterly Scents, Layer your scents: fast reach, 9 days old"
+      },
+      {
+        "t": "Your Scent quiz: early hook rate 31%, too early for ROAS"
+      }
+    ],
+    "changed": [
+      {
+        "t": "18 competitor ads launched, 7 stopped"
+      },
+      {
+        "t": "Fennick Home stopped all discount-led ads"
+      },
+      {
+        "t": "New angle: scent layering, 4 ads from 2 brands"
+      },
+      {
+        "t": "Otterly Scents is testing a £5 sample box"
+      }
+    ],
+    "score": [
+      {
+        "m": "Share of voice",
+        "a": "14%",
+        "b": "12%",
+        "c": "17%"
+      },
+      {
+        "m": "Active ads",
+        "a": "46",
+        "b": "44",
+        "c": "43"
+      },
+      {
+        "m": "Median days running",
+        "a": "21",
+        "b": "20",
+        "c": "28"
+      },
+      {
+        "m": "Proven winners",
+        "a": "13%",
+        "b": "11%",
+        "c": "18%"
+      }
+    ],
+    "work": [
+      {
+        "a": "Test now",
+        "style": "font-size: 12px; font-weight: 600; padding: 2px 8px; border-radius: 999px; background: #E6F9FA; color: #075E66",
+        "t": "Gift-ready unboxing",
+        "d": "gap 29 pts · win rate 38% · 8% of reviews"
+      },
+      {
+        "a": "Scale",
+        "style": "font-size: 12px; font-weight: 600; padding: 2px 8px; border-radius: 999px; background: #E7F6EC; color: #14532D",
+        "t": "Refill ritual",
+        "d": "ROAS 3.1 · 9% of competitor ads"
+      },
+      {
+        "a": "Fix",
+        "style": "font-size: 12px; font-weight: 600; padding: 2px 8px; border-radius: 999px; background: #FEF3C7; color: #78350F",
+        "t": "Offer-led hooks",
+        "d": "you 30% of ads · ROAS 2.0"
+      }
+    ],
+    "tests": [
+      {
+        "t": "50 hour burn test: Working Score 57 after 6 days, ROAS 2.9"
+      },
+      {
+        "t": "Scent quiz: Working Score 44 after 6 days, too early"
+      },
+      {
+        "t": "Autumn bundle static: switched off after 5 days"
+      }
+    ],
+    "coverage": [
+      {
+        "t": "260 active ads observed across 6 brands; 1,240 reviews"
+      },
+      {
+        "t": "Sources: your Meta account, Meta Ad Library by browser capture, reviews, websites"
+      },
+      {
+        "t": "Last successful checks: Meta account 06:00, ad library 03:00"
+      },
+      {
+        "t": "Estimated: Working Score, share of voice, win rates. Not shown: competitor sales, TikTok ads"
+      }
+    ],
+    "commentary": "The sample week favours refill demos and gifting. Test three gift-box hooks, keep the refill ritual running and review the static creative for fatigue.",
+    "client": {
+      "status": "Active",
+      "expires": "3 Dec 2026",
+      "opened": "4 times, last Mon 09:12"
+    }
+  },
+  "DataSources": {
+    "sources": [
+      {
+        "name": "Your Meta ad account",
+        "gives": "Spend, ROAS, video retention, ad names",
+        "status": "Connected",
+        "statusStyle": "font-size: 12px; font-weight: 600; padding: 3px 9px; border-radius: 999px; white-space: nowrap; background: #E7F6EC; color: #14532D",
+        "last": "Today 06:00",
+        "records": "46 ads · 90 days",
+        "detail": "Read-only system user",
+        "action": "Sync now"
+      },
+      {
+        "name": "Meta Ad Library API",
+        "gives": "Competitor ads, reach, age and gender",
+        "status": "Waiting on Meta",
+        "statusStyle": "font-size: 12px; font-weight: 600; padding: 3px 9px; border-radius: 999px; white-space: nowrap; background: #FEF3C7; color: #78350F",
+        "last": "Never",
+        "records": "None",
+        "detail": "App Review sent 2 Nov; access error reported to Meta",
+        "action": "Check again"
+      },
+      {
+        "name": "Meta Ad Library, browser capture",
+        "gives": "Competitor ads and files until the API is live",
+        "status": "Active",
+        "statusStyle": "font-size: 12px; font-weight: 600; padding: 3px 9px; border-radius: 999px; white-space: nowrap; background: #E7F6EC; color: #14532D",
+        "last": "Today 03:00",
+        "records": "214 ads",
+        "detail": "Bounded sample, no reach figures",
+        "action": "Run now"
+      },
+      {
+        "name": "TikTok Commercial Content API",
+        "gives": "Competitor TikTok ads, reach, targeting",
+        "status": "Not applied",
+        "statusStyle": "font-size: 12px; font-weight: 600; padding: 3px 9px; border-radius: 999px; white-space: nowrap; background: #F3F4F6; color: #374151",
+        "last": "Never",
+        "records": "None",
+        "detail": "Apply with the Exter Media email",
+        "action": "Apply"
+      },
+      {
+        "name": "Your TikTok ad account",
+        "gives": "Spend, conversions, video views",
+        "status": "Not connected",
+        "statusStyle": "font-size: 12px; font-weight: 600; padding: 3px 9px; border-radius: 999px; white-space: nowrap; background: #F3F4F6; color: #374151",
+        "last": "Never",
+        "records": "None",
+        "detail": "Needs advertiser authorisation",
+        "action": "Connect"
+      },
+      {
+        "name": "Customer reviews",
+        "gives": "Needs, objections, outcomes, quotes",
+        "status": "Connected",
+        "statusStyle": "font-size: 12px; font-weight: 600; padding: 3px 9px; border-radius: 999px; white-space: nowrap; background: #E7F6EC; color: #14532D",
+        "last": "Mon 3 Nov",
+        "records": "1,240 reviews",
+        "detail": "Brand website and review sites",
+        "action": "Refresh"
+      },
+      {
+        "name": "Brand websites",
+        "gives": "Prices, offers, claims, creators featured",
+        "status": "Connected",
+        "statusStyle": "font-size: 12px; font-weight: 600; padding: 3px 9px; border-radius: 999px; white-space: nowrap; background: #E7F6EC; color: #14532D",
+        "last": "Mon 3 Nov",
+        "records": "6 sites",
+        "detail": "Public pages only",
+        "action": "Refresh"
+      },
+      {
+        "name": "Google Ads Transparency Center",
+        "gives": "Search and YouTube ads",
+        "status": "Phase 2",
+        "statusStyle": "font-size: 12px; font-weight: 600; padding: 3px 9px; border-radius: 999px; white-space: nowrap; background: #EEF2FF; color: #1E3A8A",
+        "last": "Never",
+        "records": "None",
+        "detail": "Planned after Meta and TikTok",
+        "action": "Details"
+      },
+      {
+        "name": "Instagram and YouTube organic",
+        "gives": "Organic posts and engagement",
+        "status": "Phase 2",
+        "statusStyle": "font-size: 12px; font-weight: 600; padding: 3px 9px; border-radius: 999px; white-space: nowrap; background: #EEF2FF; color: #1E3A8A",
+        "last": "Never",
+        "records": "None",
+        "detail": "Planned after Meta and TikTok",
+        "action": "Details"
+      }
+    ],
+    "accounts": [
+      {
+        "name": "Meta · Northwick main",
+        "status": "Connected",
+        "statusStyle": "font-size: 12px; font-weight: 600; padding: 3px 9px; border-radius: 999px; white-space: nowrap; background: #E7F6EC; color: #14532D",
+        "rows": [
+          {
+            "k": "Account ID",
+            "v": "act 1043 0021 77"
+          },
+          {
+            "k": "Currency",
+            "v": "GBP"
+          },
+          {
+            "k": "Attribution",
+            "v": "7-day click, 1-day view"
+          },
+          {
+            "k": "Conversion event",
+            "v": "Purchase"
+          },
+          {
+            "k": "Latest data",
+            "v": "2 Nov 2026 · synced today 06:00"
+          }
+        ]
+      },
+      {
+        "name": "TikTok · Northwick",
+        "status": "Not connected",
+        "statusStyle": "font-size: 12px; font-weight: 600; padding: 3px 9px; border-radius: 999px; white-space: nowrap; background: #F3F4F6; color: #374151",
+        "rows": [
+          {
+            "k": "Advertiser ID",
+            "v": "Not added"
+          },
+          {
+            "k": "Currency",
+            "v": "GBP"
+          },
+          {
+            "k": "Attribution",
+            "v": "As set in the account"
+          },
+          {
+            "k": "Conversion event",
+            "v": "As set in the account"
+          },
+          {
+            "k": "Latest data",
+            "v": "None"
+          }
+        ]
+      }
+    ],
+    "parts": [
+      {
+        "n": 1,
+        "t": "concept"
+      },
+      {
+        "n": 2,
+        "t": "creator"
+      },
+      {
+        "n": 3,
+        "t": "hook"
+      },
+      {
+        "n": 4,
+        "t": "format"
+      }
+    ],
+    "budgets": [
+      {
+        "k": "AI reading budget",
+        "v": "£38 of £100 this month",
+        "note": "1,240 creatives read so far; full-video checks on about 1 in 10",
+        "bar": "height: 8px; border-radius: 4px; background: #0C1F96; width: 38%"
+      },
+      {
+        "k": "Data provider budget",
+        "v": "£0 of £20 this month",
+        "note": "Must be set before your ad account syncs run",
+        "bar": "height: 8px; border-radius: 4px; background: #0C1F96; width: 0%"
+      }
+    ],
+    "users": [
+      {
+        "i": "R",
+        "n": "Rowan",
+        "d": "Exter AI",
+        "r": "Owner",
+        "avatar": "flex: 0 0 34px; height: 34px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 13px; font-weight: 700; background: #E6F9FA; color: #0C1F96"
+      },
+      {
+        "i": "S",
+        "n": "Strategist",
+        "d": "Exter AI",
+        "r": "Editor",
+        "avatar": "flex: 0 0 34px; height: 34px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 13px; font-weight: 700; background: #E6F9FA; color: #0C1F96"
+      },
+      {
+        "i": "N",
+        "n": "Northwick marketing lead",
+        "d": "Client · via expiring link",
+        "r": "Viewer",
+        "avatar": "flex: 0 0 34px; height: 34px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 13px; font-weight: 700; background: #E6F9FA; color: #0C1F96"
+      },
+      {
+        "i": "L",
+        "n": "Larch & Linen founder",
+        "d": "Prospect teardown · link expires 10 Nov",
+        "r": "Viewer",
+        "avatar": "flex: 0 0 34px; height: 34px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 13px; font-weight: 700; background: #E6F9FA; color: #0C1F96"
+      }
+    ],
+    "naming": {
+      "example": "REFILL__UGC__PROBLEM__AMA__V2",
+      "coverage": "43 of 46 ad names match · 3 flagged",
+      "separator": "Underscore"
+    },
+    "schedule": [
+      {
+        "key": "Collection",
+        "value": "Daily at 03:00"
+      },
+      {
+        "key": "Your account sync",
+        "value": "Daily at 06:00 · last 7 days re-pulled"
+      },
+      {
+        "key": "Weekly data pack",
+        "value": "Monday at 06:00"
+      }
+    ]
+  }
+}

@@ -1,3 +1,4 @@
+import { SAMPLE_BRAND_ID, isSampleId } from "../shared/sample/identity";
 import { useEffect, useRef, useState } from "react";
 import { ArrowRight, ArrowUpRight, Check, ChevronRight, CircleHelp, Globe2, LoaderCircle, Menu, MessageSquareText, Plus, Search, X } from "lucide-react";
 import type { Brand, Category, Page } from "../shared/types";
@@ -98,7 +99,7 @@ function BrandModal({
             </button>
           ))}
         </div>
-        <form onSubmit={create}>
+        <form onSubmit={create}><fieldset disabled={brands.some(brand=>brand.mode==="demo")} style={{border:0,padding:0,margin:0,display:"contents"}}>
           <h3>Add your own brand</h3>
           <div className="form-row">
             <label>
@@ -159,7 +160,7 @@ function BrandModal({
             )}{" "}
             Create workspace
           </button>
-        </form>
+        </fieldset></form>
       </section>
     </div>
   );
@@ -167,18 +168,25 @@ function BrandModal({
 
 function WorkspaceApp() {
   const [route,setRoute]=useState(()=>resolveNavigation(window.location.href));
-  const [brandId,setBrandId]=useState(()=>new URLSearchParams(window.location.search).get("brandId")||localStorage.getItem("exter-brand")||"valentte");
+  const [brandId,setBrandId]=useState(()=>new URLSearchParams(window.location.search).get("demo")==="1"?(isSampleId(new URLSearchParams(window.location.search).get("brandId"))?new URLSearchParams(window.location.search).get("brandId")!:SAMPLE_BRAND_ID):(new URLSearchParams(window.location.search).get("brandId")||localStorage.getItem("exter-brand")||"valentte"));
   const [brands,setBrands]=useState<Brand[]>([]),[brandOpen,setBrandOpen]=useState(false),[menuOpen,setMenuOpen]=useState(false),[helpOpen,setHelpOpen]=useState(false),[error,setError]=useState("");
   const demoEnabled=route.url.searchParams.get("demo")==="1",brand=brands.find(item=>item.id===brandId);
   const page=route.screen,current=navigation.find(item=>item.id===route.id)!;
   useEffect(()=>{const sync=()=>{const next=canonicaliseLocation();setRoute(next);if(next.brandId)setBrandId(next.brandId);setMenuOpen(false);};sync();window.addEventListener("popstate",sync);window.addEventListener(NAVIGATION_EVENT,sync);return()=>{window.removeEventListener("popstate",sync);window.removeEventListener(NAVIGATION_EVENT,sync);};},[]);
-  useEffect(()=>{let active=true;api<Brand[]>("/api/brands").then(list=>{if(!active)return;const available=list.filter(item=>item.mode!=="demo"||demoEnabled);setBrands(available);if(!available.some(item=>item.id===brandId)&&available.length)setBrandId((available.find(item=>item.domain.replace(/^www\./,"")==="valentte.com")||available[0]).id);}).catch(()=>setError("Saved brands could not be read."));return()=>{active=false;};},[demoEnabled]);
-  useEffect(()=>{localStorage.setItem("exter-brand",brandId);const url=new URL(window.location.href);if(url.searchParams.get("brandId")!==brandId){url.searchParams.set("brandId",brandId);window.history.replaceState({},"",url);setRoute(resolveNavigation(url.href));}},[brandId]);
+  useEffect(()=>{let active=true;api<Brand[]>("/api/brands").then(list=>{if(!active)return;const available=list.filter(item=>demoEnabled?item.mode==="demo":item.mode!=="demo");setBrands(available);if(!available.some(item=>item.id===brandId)&&available.length)setBrandId((available.find(item=>item.domain.replace(/^www\./,"")==="valentte.com")||available[0]).id);}).catch(()=>setError("Saved brands could not be read."));return()=>{active=false;};},[demoEnabled]);
+  useEffect(()=>{if(!isSampleId(brandId))localStorage.setItem("exter-brand",brandId);const url=new URL(window.location.href);if(url.searchParams.get("brandId")!==brandId){url.searchParams.set("brandId",brandId);window.history.replaceState({},"",url);setRoute(resolveNavigation(url.href));}},[brandId]);
   useEffect(()=>{const key=(event:KeyboardEvent)=>{if(event.key==="Escape"){setBrandOpen(false);setHelpOpen(false);setMenuOpen(false);}};window.addEventListener("keydown",key);return()=>window.removeEventListener("keydown",key);},[]);
   const modalIsOpen=brandOpen||helpOpen;
   useEffect(()=>{if(!modalIsOpen)return;const previous=document.activeElement as HTMLElement|null,dialog=document.querySelector<HTMLElement>('[role="dialog"]');if(!dialog)return;const targets=()=>Array.from(dialog.querySelectorAll<HTMLElement>('button:not([disabled]),a[href],input,select,textarea,[tabindex="0"]')).filter(el=>el.getClientRects().length);targets()[0]?.focus();const trap=(event:KeyboardEvent)=>{if(event.key!=="Tab")return;const list=targets(),first=list[0],last=list.at(-1);if(event.shiftKey&&document.activeElement===first){event.preventDefault();last?.focus();}else if(!event.shiftKey&&document.activeElement===last){event.preventDefault();first?.focus();}};document.addEventListener("keydown",trap);return()=>{document.removeEventListener("keydown",trap);previous?.focus();};},[modalIsOpen]);
   useEffect(()=>{const id=window.location.hash.slice(1);if(!id)return;const timer=window.setTimeout(()=>document.getElementById(id)?.scrollIntoView({block:"start"}),300);return()=>window.clearTimeout(timer);},[route.id,brandId]);
   function navigate(id:ViewId){navigateTo(id,brandId);window.scrollTo(0,0);}
+  useEffect(()=>{
+    if(!demoEnabled)return;
+    const keepSample=(event:MouseEvent)=>{const target=event.target instanceof Element?event.target.closest<HTMLAnchorElement>('a[href]'):null;if(!target)return;const url=new URL(target.href,window.location.origin);if(url.origin===window.location.origin && url.pathname==="/"){url.searchParams.set("demo","1");target.href=url.href;}};
+    const scopeLinks=()=>document.querySelectorAll<HTMLAnchorElement>('a[href]').forEach(link=>{const url=new URL(link.href,window.location.origin);if(url.origin===window.location.origin&&url.pathname==="/"&&url.searchParams.get("demo")!=="1"){url.searchParams.set("demo","1");link.href=url.href;}});
+    scopeLinks();const observer=new MutationObserver(scopeLinks);observer.observe(document.body,{childList:true,subtree:true,attributes:true,attributeFilter:["href"]});
+    document.addEventListener("click",keepSample,true);return()=>{observer.disconnect();document.removeEventListener("click",keepSample,true);};
+  },[demoEnabled]);
   function select(b:Brand){navigateTo("brands",b.id);setBrandOpen(false);}
   const context=route.id==="data"?"Settings":route.id==="brands"?"Research":`${brand?.name||"Workspace"} · ${current.group}`;
   const utility=route.id!=="ask"?<button className="reference-ask icon-button" aria-label="Ask Exter" title="Ask Exter" onClick={()=>navigate("ask")}><MessageSquareText size={18}/></button>:null;
@@ -188,8 +196,8 @@ function WorkspaceApp() {
     <div className="main-shell"><header className="topbar"><div className="breadcrumb"><button className="icon-button mobile-menu" aria-label="Toggle navigation" aria-expanded={menuOpen} aria-controls="main-sidebar" onClick={()=>setMenuOpen(!menuOpen)}><Menu size={21}/></button><span>{current.group}</span><ChevronRight size={14}/><strong>{current.label}</strong></div>{utility}</header>
       <PageHeaderContext.Provider value={{eyebrow:context,demo:brand?.mode==="demo"&&demoEnabled,utility}}><main className="reference-ui" data-screen={route.id}>
       {error&&<p role="alert">{error}</p>}
-      {(REBUILT_RESEARCH_VIEWS as readonly string[]).includes(route.id)?<ResearchWorkspace key={brandId} brandId={brandId} brands={brands} route={route} onManageBrands={()=>setBrandOpen(true)}/>:route.id==="creatives"||route.id==="creative"?<CreativeBrowserPage key={brandId} brandId={brandId} route={route} refresh={0}/>:ACTION_VIEWS.includes(route.id)?<ActionWorkspace key={brandId} brandId={brandId} brand={brand} route={route}/>:page==="settings"?<div className="reference-page"><PageHeader title="Tests and preparation" subtitle="Existing collection, website evidence and analysis controls."/><nav className="settings-shortcuts" aria-label="Settings sections"><a href="#brand-demo-preparation">Website evidence & client demo</a><a href="#pattern-labels">Pattern labels</a><a href="#demo-collection">Competitor collection</a><a href={`/?view=data&brandId=${encodeURIComponent(brandId)}#monthly-budgets`}>Budgets and schedule</a><a href="#gemini-smoke-test">Gemini smoke test</a></nav><DemoPreparation key={brandId} brandId={brandId} onBrandChange={id=>navigateTo("settings",id)}/><PatternLabelControls brandId={brandId}/><DemoCollectionControls brandId={brandId}/><GeminiSmokeTest/></div>:page==="labelling"?<div className="reference-page"><PageHeader title="Labelling" subtitle="Review saved source ads."/><LabellingTool brandId={brandId}/></div>:page==="demo"?<BrandDemoReport brandId={brandId}/>:null}
-      {page!=="demo"&&<footer className="main-footer"><span className="footer-logo">Exter AI</span><details className="workspace-data-note" id="about-data"><summary><CircleHelp size={14}/> About this data</summary><p>Saved source observations only. Unknown values remain unavailable. Public ad activity does not establish sales or performance. Both live checks are still awaiting account-owner confirmation; owned sync remains off unless separately enabled.</p><div id="screen-caveats"/><InfrastructureStatus/></details></footer>}
+      {(REBUILT_RESEARCH_VIEWS as readonly string[]).includes(route.id)?<ResearchWorkspace key={brandId} brandId={brandId} brands={brands} route={route} onManageBrands={()=>setBrandOpen(true)}/>:route.id==="creatives"||route.id==="creative"?<CreativeBrowserPage key={brandId} brandId={brandId} route={route} refresh={0}/>:ACTION_VIEWS.includes(route.id)?<ActionWorkspace key={brandId} brandId={brandId} brand={brand} route={route}/>:page==="settings"&&demoEnabled?<div className="reference-page"><PageHeader title="Tests and preparation" subtitle="Sample workspace is read-only."/><p>Collection and analysis are disabled for sample data.</p></div>:page==="settings"?<div className="reference-page"><PageHeader title="Tests and preparation" subtitle="Existing collection, website evidence and analysis controls."/><nav className="settings-shortcuts" aria-label="Settings sections"><a href="#brand-demo-preparation">Website evidence & client demo</a><a href="#pattern-labels">Pattern labels</a><a href="#demo-collection">Competitor collection</a><a href={`/?view=data&brandId=${encodeURIComponent(brandId)}#monthly-budgets`}>Budgets and schedule</a><a href="#gemini-smoke-test">Gemini smoke test</a></nav><DemoPreparation key={brandId} brandId={brandId} onBrandChange={id=>navigateTo("settings",id)}/><PatternLabelControls brandId={brandId}/><DemoCollectionControls brandId={brandId}/><GeminiSmokeTest/></div>:page==="labelling"&&demoEnabled?<div className="reference-page"><PageHeader title="Labelling" subtitle="Sample workspace is read-only."/><p>Sample labels are fixed fixture values.</p></div>:page==="labelling"?<div className="reference-page"><PageHeader title="Labelling" subtitle="Review saved source ads."/><LabellingTool brandId={brandId}/></div>:page==="demo"&&demoEnabled?<ActionWorkspace key={brandId} brandId={brandId} brand={brand} route={{...route,id:"reports",screen:"reports"}}/>:page==="demo"?<BrandDemoReport brandId={brandId}/>:null}
+      {(page!=="demo"||demoEnabled)&&<footer className="main-footer"><span className="footer-logo">Exter AI</span><details className="workspace-data-note" id="about-data"><summary><CircleHelp size={14}/> About this data</summary><p>{demoEnabled?"Fictional sample data from Exter’s approved designs. These illustrative scores, metrics and answers are fixed fixtures, not live verification. Actions cannot run providers, analysis, sync, collection or budget spending.":"Saved source observations only. Unknown values remain unavailable. Public ad activity does not establish sales or performance. Both live checks are still awaiting account-owner confirmation; owned sync remains off unless separately enabled."}</p><div id="screen-caveats"/><InfrastructureStatus/></details></footer>}
       </main></PageHeaderContext.Provider>
     </div>
     {brandOpen&&<BrandModal brands={brands} current={brandId} onClose={()=>setBrandOpen(false)} onSelect={select} onCreated={b=>{setBrands(list=>[...list.filter(item=>item.id!==b.id),b]);select(b);}}/>}

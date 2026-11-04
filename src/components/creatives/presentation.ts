@@ -20,6 +20,7 @@ export function onlyCohort(row: BrowserCreative, cohortId?: string): CreativePer
     return row.owned && row.workspaceBrand ? cohortId ? row.performance.find(item=>item.id===cohortId) : row.performance.length===1 ? row.performance[0] : undefined : undefined;
 }
 export function cardMetrics(row: BrowserCreative, cohortId?: string) {
+    if(row.presentation)return row.presentation.metrics;
     if (!row.workspaceBrand)
         return [{ label: "Days running", value: row.daysRunning, basis: "Observed" as const, reason: "A source delivery start and observed endpoint are missing." }];
     const cohort = onlyCohort(row,cohortId);

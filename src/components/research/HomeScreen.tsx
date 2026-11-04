@@ -1,3 +1,4 @@
+import { HomeReadModel } from "./ResearchReadModels";
 import { Caveat } from "../ui/Caveat";
 import { useState } from "react";
 import { brandSnapshots, competitorAverage, evidenceUrl, longestRunning, selectResearchAds, staleCapture, type EvidenceMeasure } from "../../../shared/creative-research";
@@ -9,6 +10,7 @@ import { Measure, metadata, number, type ScreenProps } from "./common";
 import type { CreativePerformance } from "../../../shared/creative-browser";
 
 export function HomeScreen({data,selection,refresh}:ScreenProps) {
+  if(data.library.presentation)return <HomeReadModel library={data.library} model={data.library.presentation}/>;
   const brands=brandSnapshots(data.library,data.window,selection.platform),you=brands[0],top=longestRunning(data.library.creatives,selection,5);
   const collection={href:`/?view=settings&brandId=${encodeURIComponent(data.library.brand.id)}#demo-collection`,linkLabel:"Collect competitor ads"};
   const source={href:`/?view=data&brandId=${encodeURIComponent(data.library.brand.id)}`,linkLabel:"Data sources"};
