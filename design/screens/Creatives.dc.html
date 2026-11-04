@@ -1,0 +1,154 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Exter AI creatives</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0}
+a{color:#007C85}a:hover{color:#0C1F96}
+</style>
+</helmet>
+<div style="font-family: Inter, sans-serif; color: #1F2937; background: #F8FAFC; min-height: 100vh; display: flex; flex-wrap: wrap; align-items: stretch">
+<div style="flex: 1 1 240px; max-width: 100%; background: #FFFFFF; border-right: 1px solid #E5E7EB"><dc-import name="Sidebar" active="creatives" hint-size="100%,980px"></dc-import></div>
+<main style="flex: 999 1 560px; min-width: 0; box-sizing: border-box; padding: 32px 40px 48px; display: flex; flex-direction: column; gap: 20px">
+
+<div style="display: flex; flex-wrap: wrap; align-items: flex-end; justify-content: space-between; gap: 16px">
+<div>
+<div style="font-size: 13px; color: #515B6B">Northwick Candle Co. · Research</div>
+<h1 style="margin: 4px 0 0; font-size: 28px; font-weight: 700; letter-spacing: -0.02em; color: #0C1F96">Creatives</h1>
+<p style="margin: 4px 0 0; font-size: 15px; color: #515B6B">Every ad from you and your competitors, read and tagged the same way.</p>
+</div>
+<div style="display: flex; flex-wrap: wrap; align-items: center; gap: 8px">
+<span style="font-size: 12px; font-weight: 600; padding: 4px 10px; border-radius: 999px; background: #FEF3C7; color: #78350F">Sample data</span>
+<div role="group" aria-label="Layout" style="display: inline-flex; border: 1px solid #D6DBE3; border-radius: 8px; overflow: hidden; background: #FFFFFF">
+<button type="button" aria-pressed="true" style="min-height: 44px; padding: 0 14px; border: none; background: #0C1F96; color: #FFFFFF; font: inherit; font-size: 14px; font-weight: 600; cursor: pointer">Grid</button>
+<button type="button" aria-pressed="false" style="min-height: 44px; padding: 0 14px; border: none; background: #FFFFFF; color: #1F2937; font: inherit; font-size: 14px; font-weight: 600; cursor: pointer">Table</button>
+</div>
+<button type="button" style="min-height: 44px; padding: 0 16px; border: 1px solid #D6DBE3; border-radius: 8px; background: #FFFFFF; font: inherit; font-size: 14px; font-weight: 600; color: #1F2937; cursor: pointer">Export CSV</button>
+</div>
+</div>
+
+<section aria-label="Filters" style="background: #FFFFFF; border: 1px solid #E5E7EB; border-radius: 12px; padding: 16px 20px; display: flex; flex-direction: column; gap: 14px">
+<div style="display: flex; flex-wrap: wrap; align-items: center; gap: 12px">
+<div role="group" aria-label="Show" style="display: inline-flex; border: 1px solid #D6DBE3; border-radius: 8px; overflow: hidden">
+<button type="button" aria-pressed="false" style="min-height: 44px; padding: 0 14px; border: none; border-right: 1px solid #D6DBE3; background: #FFFFFF; color: #1F2937; font: inherit; font-size: 14px; font-weight: 500; cursor: pointer">Yours <span style="color: #515B6B">46</span></button>
+<button type="button" aria-pressed="false" style="min-height: 44px; padding: 0 14px; border: none; border-right: 1px solid #D6DBE3; background: #FFFFFF; color: #1F2937; font: inherit; font-size: 14px; font-weight: 500; cursor: pointer">Competitors <span style="color: #515B6B">214</span></button>
+<button type="button" aria-pressed="true" style="min-height: 44px; padding: 0 14px; border: none; background: #E6F9FA; color: #0C1F96; font: inherit; font-size: 14px; font-weight: 600; cursor: pointer">Both <span style="color: #075E66">260</span></button>
+</div>
+<label style="flex: 1 1 280px; display: flex; align-items: center; gap: 8px; min-height: 44px; padding: 0 12px; border: 1px solid #D6DBE3; border-radius: 8px; box-sizing: border-box">
+<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#515B6B" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="11" cy="11" r="7"></circle><path d="M20 20l-3.5-3.5"></path></svg>
+<span style="position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0)">Search</span>
+<input type="search" placeholder="Search transcripts, on-screen text and ad copy" style="flex: 1; min-width: 0; border: none; outline: none; font: inherit; font-size: 14px; color: #1F2937; background: transparent">
+</label>
+<label style="display: flex; align-items: center; gap: 8px; font-size: 14px; color: #515B6B">Sort by
+<select style="min-height: 44px; padding: 0 12px; border: 1px solid #D6DBE3; border-radius: 8px; background: #FFFFFF; font: inherit; font-size: 14px; color: #1F2937"><option>Working Score</option><option>Spend</option><option>ROAS</option><option>Days running</option><option>Newest</option></select>
+</label>
+</div>
+<div style="display: flex; flex-wrap: wrap; align-items: center; gap: 8px">
+<sc-for list="{{filters}}" as="f" hint-placeholder-count="8">
+<button type="button" style="{{f.style}}">{{f.label}}<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="{{f.icon}}"></path></svg></button>
+</sc-for>
+<span style="flex: 1"></span>
+<span style="font-size: 13px; color: #515B6B">Saved views:</span>
+<a href="#" style="font-size: 13px; font-weight: 600">UGC hooks</a>
+<a href="#" style="font-size: 13px; font-weight: 600">Gifting angle</a>
+<a href="#" style="font-size: 13px; font-weight: 600">Rising this week</a>
+</div>
+</section>
+
+<div style="display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 12px">
+<p style="margin: 0; font-size: 14px; color: #515B6B">Showing 8 of 260 · 4 yours, 4 from competitors · 1 Oct to 2 Nov 2026</p>
+<div style="display: flex; flex-wrap: wrap; align-items: center; gap: 14px; font-size: 13px; color: #515B6B">
+<span>Yours: spend, ROAS, hook rate <span style="font-size: 11px; padding: 1px 6px; border-radius: 4px; border: 1px solid #D6DBE3; color: #374151">Observed</span></span>
+<span>Competitors: Working Score <span style="font-size: 11px; padding: 1px 6px; border-radius: 4px; border: 1px solid #D6DBE3; color: #374151">Estimated</span>, days running and reach <span style="font-size: 11px; padding: 1px 6px; border-radius: 4px; border: 1px solid #D6DBE3; color: #374151">Observed</span></span>
+</div>
+</div>
+
+<div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 20px">
+<sc-for list="{{cards}}" as="c" hint-placeholder-count="8">
+<article style="background: #FFFFFF; border: 1px solid #E5E7EB; border-radius: 12px; overflow: hidden; display: flex; flex-direction: column">
+<div style="{{c.thumbStyle}}">
+<sc-if value="{{c.isImage}}" hint-placeholder-val="{{ false }}">
+<svg width="44" height="44" viewBox="0 0 24 24" fill="none" stroke="#1F2937" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="4" width="18" height="16" rx="2"></rect><circle cx="9" cy="10" r="2"></circle><path d="M21 16l-5-5-9 9"></path></svg>
+</sc-if>
+<sc-if value="{{c.isVideo}}" hint-placeholder-val="{{ true }}">
+<svg width="44" height="44" viewBox="0 0 24 24" fill="none" stroke="#1F2937" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"></circle><path d="M10 8.5l5 3.5-5 3.5z"></path></svg>
+</sc-if>
+<span style="{{c.srcStyle}}">{{c.src}}</span>
+<span style="position: absolute; top: 10px; right: 10px; font-size: 12px; font-weight: 600; padding: 3px 8px; border-radius: 6px; background: #111B38; color: #FFFFFF">{{c.dur}}</span>
+<sc-if value="{{c.hasStatus}}" hint-placeholder-val="{{ true }}"><span style="{{c.statusStyle}}">{{c.status}}</span></sc-if>
+</div>
+<div style="padding: 14px 16px 16px; display: flex; flex-direction: column; gap: 10px">
+<div><a href="CreativeDetail.dc.html" style="font-size: 15px; font-weight: 600; color: #1F2937; text-decoration: none">{{c.title}}</a><div style="font-size: 12px; color: #515B6B; margin-top: 2px">{{c.meta}}</div></div>
+<div style="display: flex; flex-wrap: wrap; gap: 6px"><sc-for list="{{c.tags}}" as="t" hint-placeholder-count="3"><span style="font-size: 12px; padding: 2px 8px; border-radius: 6px; background: #F3F4F6; color: #374151">{{t.label}}</span></sc-for></div>
+<div style="display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; border-top: 1px solid #EEF0F3; padding-top: 10px">
+<sc-for list="{{c.metrics}}" as="m" hint-placeholder-count="3"><div><div style="font-size: 11px; color: #515B6B">{{m.k}}</div><div style="{{m.style}}">{{m.v}}</div></div></sc-for>
+</div>
+</div>
+</article>
+</sc-for>
+</div>
+
+<div style="display: flex; justify-content: center; padding-top: 8px">
+<button type="button" style="min-height: 44px; padding: 0 20px; border: 1px solid #D6DBE3; border-radius: 8px; background: #FFFFFF; font: inherit; font-size: 14px; font-weight: 600; color: #1F2937; cursor: pointer">Show 24 more</button>
+</div>
+
+</main>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1440,"height":1720}}'>
+class Component extends DCLogic {
+  renderVals() {
+    const pill = 'display: inline-flex; align-items: center; gap: 6px; min-height: 36px; padding: 0 12px; border-radius: 999px; font: inherit; font-size: 13px; cursor: pointer;';
+    const plain = pill + ' border: 1px solid #D6DBE3; background: #FFFFFF; color: #1F2937; font-weight: 500';
+    const on = pill + ' border: 1px solid #00C0CB; background: #E6F9FA; color: #075E66; font-weight: 600';
+    const add = pill + ' border: 1px dashed #A3ACB9; background: #FFFFFF; color: #1F2937; font-weight: 600';
+    const down = 'M6 9l6 6 6-6', x = 'M6 6l12 12 M18 6L6 18', plus = 'M12 5v14 M5 12h14';
+    const chip = (bg, fg) => 'position: absolute; bottom: 10px; left: 10px; font-size: 12px; font-weight: 600; padding: 3px 9px; border-radius: 999px; background: ' + bg + '; color: ' + fg;
+    const yours = 'position: absolute; top: 10px; left: 10px; font-size: 12px; font-weight: 700; padding: 3px 9px; border-radius: 999px; background: #00C0CB; color: #0B1736';
+    const theirs = 'position: absolute; top: 10px; left: 10px; font-size: 12px; font-weight: 600; padding: 3px 9px; border-radius: 999px; background: #FFFFFF; color: #0C1F96';
+    const big = 'font-size: 15px; font-weight: 600', soft = 'font-size: 13px; font-weight: 500; color: #515B6B; padding-top: 2px';
+    const st = { win: chip('#E7F6EC', '#14532D'), rise: chip('#EEF2FF', '#1E3A8A'), steady: chip('#F3F4F6', '#374151'), warn: chip('#FEF3C7', '#78350F') };
+    const card = (o) => ({
+      ...o,
+      thumbStyle: 'position: relative; aspect-ratio: 4 / 5; background: ' + o.bg + '; display: flex; align-items: center; justify-content: center',
+      isImage: o.dur === 'Image', isVideo: o.dur !== 'Image',
+      srcStyle: o.src === 'Yours' ? yours : theirs,
+      hasStatus: Boolean(o.status), statusStyle: o.status ? st[o.tone] : '',
+      tags: o.tags.map(label => ({ label })),
+      metrics: o.metrics.map(([k, v]) => ({ k, v, style: /^[£0-9]/.test(v) ? big : soft }))
+    });
+    return {
+      filters: [
+        { label: '1 Oct to 2 Nov', style: plain, icon: down },
+        { label: 'Brand: all 6', style: plain, icon: down },
+        { label: 'Format', style: plain, icon: down },
+        { label: 'Hook', style: plain, icon: down },
+        { label: 'Angle', style: plain, icon: down },
+        { label: 'Offer', style: plain, icon: down },
+        { label: 'UGC with proof', style: plain, icon: down },
+        { label: 'Label: proven or rising', style: on, icon: x },
+        { label: 'Add filter', style: add, icon: plus }
+      ],
+      cards: [
+        card({ src: 'Yours', dur: '0:24', bg: '#E9E2D6', status: 'Winner', tone: 'win', title: 'Refill ritual, Ama', meta: 'Meta · video · live since 9 Oct', tags: ['Problem hook', 'UGC', 'Refill'], metrics: [['Spend', '£4,120'], ['ROAS', '3.1'], ['Hook rate', '34%']] }),
+        card({ src: 'Halvane', dur: '0:19', bg: '#D9E4DC', status: 'Proven winner · High', tone: 'win', title: 'Refill and save', meta: 'Meta Ad Library · since 31 Aug · 5 versions', tags: ['Offer led', 'Founder-led', 'Refill'], metrics: [['Working Score', '86'], ['Days running', '64'], ['Reach, UK', '1.2M']] }),
+        card({ src: 'Yours', dur: '0:15', bg: '#EADCD8', status: '', tone: '', title: 'Gift box reveal', meta: 'Meta · video · live since 14 Oct', tags: ['Unboxing', 'Studio product', 'Gifting'], metrics: [['Spend', '£2,860'], ['ROAS', '2.9'], ['Hook rate', '27%']] }),
+        card({ src: 'Corrie & Moss', dur: '0:28', bg: '#E3E0EC', status: 'Rising · Medium', tone: 'rise', title: 'Hand-poured in Bristol', meta: 'Meta Ad Library · since 29 Oct · 6 versions', tags: ['Founder-led', 'Provenance'], metrics: [['Working Score', '74'], ['Days running', '5'], ['Reach, UK', '310K']] }),
+        card({ src: 'Yours', dur: 'Image', bg: '#DCE3EC', status: 'Fatigue signal', tone: 'warn', title: 'Cosy evenings', meta: 'Meta · static · live since 22 Sep', tags: ['Lifestyle', 'Seasonal'], metrics: [['Spend', '£1,940'], ['ROAS', '1.6'], ['Hook rate', 'Image ad']] }),
+        card({ src: 'Fennick Home', dur: '0:33', bg: '#E6E1D3', status: 'Steady · Medium', tone: 'steady', title: 'Burns to the last drop', meta: 'Meta Ad Library · since 23 Sep · 3 versions', tags: ['Demo', 'Performance claim'], metrics: [['Working Score', '68'], ['Days running', '41'], ['Reach, UK', '640K']] }),
+        card({ src: 'Yours', dur: '0:18', bg: '#E2E8E4', status: '', tone: '', title: 'Scent quiz', meta: 'Meta · video · live since 28 Oct', tags: ['Question hook', 'Motion graphics'], metrics: [['Spend', '£380'], ['ROAS', 'Too early'], ['Hook rate', '31%']] }),
+        card({ src: 'Otterly Scents', dur: '0:21', bg: '#EFE6DA', status: 'Rising · Low', tone: 'rise', title: 'Layer your scents', meta: 'Meta Ad Library · since 26 Oct · 2 versions', tags: ['Trend', 'Scent layering'], metrics: [['Working Score', '61'], ['Days running', '9'], ['Reach, UK', '95K']] })
+      ]
+    };
+  }
+}
+</script>
+</body>
+</html>

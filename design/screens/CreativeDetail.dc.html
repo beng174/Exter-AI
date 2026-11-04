@@ -1,0 +1,203 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Exter AI creative detail</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0}
+a{color:#007C85}a:hover{color:#0C1F96}
+</style>
+</helmet>
+<div style="font-family: Inter, sans-serif; color: #1F2937; background: #F8FAFC; min-height: 100vh; display: flex; flex-wrap: wrap; align-items: stretch">
+<div style="flex: 1 1 240px; max-width: 100%; background: #FFFFFF; border-right: 1px solid #E5E7EB"><dc-import name="Sidebar" active="creatives" hint-size="100%,980px"></dc-import></div>
+<main style="flex: 999 1 560px; min-width: 0; box-sizing: border-box; padding: 32px 40px 48px; display: flex; flex-direction: column; gap: 20px">
+
+<div style="display: flex; flex-direction: column; gap: 6px">
+<div style="font-size: 13px; color: #515B6B"><a href="Creatives.dc.html" style="font-weight: 600">Creatives</a> / Refill ritual, Ama</div>
+<div style="display: flex; flex-wrap: wrap; align-items: flex-end; justify-content: space-between; gap: 16px">
+<div>
+<div style="display: flex; flex-wrap: wrap; align-items: center; gap: 10px">
+<h1 style="margin: 0; font-size: 28px; font-weight: 700; letter-spacing: -0.02em; color: #0C1F96">Refill ritual, Ama</h1>
+<span style="font-size: 12px; font-weight: 700; padding: 3px 9px; border-radius: 999px; background: #00C0CB; color: #0B1736">Yours</span>
+<span style="font-size: 12px; font-weight: 600; padding: 3px 9px; border-radius: 999px; background: #E7F6EC; color: #14532D">Proven winner</span>
+<span style="font-size: 12px; font-weight: 600; padding: 3px 9px; border-radius: 999px; background: #FEF3C7; color: #78350F">Sample data</span>
+</div>
+<p style="margin: 6px 0 0; font-size: 14px; color: #515B6B">Meta · video 0:24, vertical · running since 9 Oct 2026 · the same file in 3 ads · <a href="#" style="font-weight: 600">Open in Meta Ad Library</a></p>
+</div>
+<div style="display: flex; flex-wrap: wrap; gap: 8px">
+<button type="button" aria-label="Previous creative" style="min-height: 44px; min-width: 44px; border: 1px solid #D6DBE3; border-radius: 8px; background: #FFFFFF; color: #1F2937; cursor: pointer; display: inline-flex; align-items: center; justify-content: center"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 6l-6 6 6 6"></path></svg></button>
+<button type="button" aria-label="Next creative" style="min-height: 44px; min-width: 44px; border: 1px solid #D6DBE3; border-radius: 8px; background: #FFFFFF; color: #1F2937; cursor: pointer; display: inline-flex; align-items: center; justify-content: center"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 6l6 6-6 6"></path></svg></button>
+<a href="Patterns.dc.html" style="display: inline-flex; align-items: center; min-height: 44px; padding: 0 16px; border: 1px solid #D6DBE3; border-radius: 8px; background: #FFFFFF; font-size: 14px; font-weight: 600; color: #1F2937; text-decoration: none">Compare with market</a>
+<a href="Briefs.dc.html" style="display: inline-flex; align-items: center; min-height: 44px; padding: 0 18px; border-radius: 8px; background: #00C0CB; font-size: 14px; font-weight: 600; color: #0B1736; text-decoration: none">Add to brief</a>
+</div>
+</div>
+</div>
+
+<div style="display: flex; flex-wrap: wrap; align-items: flex-start; gap: 24px">
+
+<div style="flex: 1 1 320px; max-width: 400px; min-width: 0; display: flex; flex-direction: column; gap: 16px">
+<div style="position: relative; aspect-ratio: 9 / 16; border-radius: 12px; background: #E9E2D6; display: flex; align-items: center; justify-content: center; overflow: hidden">
+<button type="button" aria-label="Play video" style="width: 64px; height: 64px; border-radius: 50%; border: none; background: #FFFFFF; display: flex; align-items: center; justify-content: center; cursor: pointer"><svg width="26" height="26" viewBox="0 0 24 24" fill="#1F2937" aria-hidden="true"><path d="M8 5l12 7-12 7z"></path></svg></button>
+<span style="position: absolute; bottom: 12px; left: 12px; font-size: 12px; font-weight: 600; padding: 4px 9px; border-radius: 6px; background: #111B38; color: #FFFFFF">Saved file · 0:24 · captions on</span>
+</div>
+<section aria-labelledby="scenes-heading" style="background: #FFFFFF; border: 1px solid #E5E7EB; border-radius: 12px; padding: 16px; display: flex; flex-direction: column; gap: 12px">
+<h2 id="scenes-heading" style="margin: 0; font-size: 15px; font-weight: 600">Scenes · jump to a moment</h2>
+<div style="display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px">
+<sc-for list="{{scenes}}" as="s" hint-placeholder-count="6"><button type="button" style="padding: 0; border: none; background: none; text-align: left; font: inherit; color: #1F2937; cursor: pointer"><span style="{{s.style}}"></span><span style="display: block; margin-top: 4px; font-size: 12px"><strong style="font-weight: 600">{{s.t}}</strong> {{s.label}}</span></button></sc-for>
+</div>
+</section>
+<section aria-labelledby="history-heading" style="background: #FFFFFF; border: 1px solid #E5E7EB; border-radius: 12px; padding: 16px; display: flex; flex-direction: column; gap: 10px">
+<h2 id="history-heading" style="margin: 0; font-size: 15px; font-weight: 600">Source and running history</h2>
+<dl style="margin: 0; display: grid; grid-template-columns: 130px minmax(0, 1fr); row-gap: 8px; font-size: 13px">
+<sc-for list="{{history}}" as="h" hint-placeholder-count="6"><dt style="color: #515B6B">{{h.k}}</dt><dd style="margin: 0">{{h.v}}</dd></sc-for>
+</dl>
+<h3 style="margin: 6px 0 0; font-size: 13px; font-weight: 600">Ad copy</h3>
+<p style="margin: 0; font-size: 14px; line-height: 1.5">Stop buying new candles. Refill the jar you already love, with 50 hours of burn in every refill.</p>
+<p style="margin: 0; font-size: 13px; color: #515B6B">Headline: Refill kits from £18 · Button: Shop now</p>
+</section>
+</div>
+
+<div style="flex: 999 1 480px; min-width: 0; display: flex; flex-direction: column; gap: 16px">
+
+<section aria-labelledby="perf-heading" style="background: #FFFFFF; border: 1px solid #E5E7EB; border-radius: 12px; padding: 20px 24px; display: flex; flex-direction: column; gap: 14px">
+<div style="display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: 8px"><h2 id="perf-heading" style="margin: 0; font-size: 20px; font-weight: 600; color: #0C1F96">Performance</h2><span style="font-size: 13px; color: #515B6B">Last 30 days · your Meta account · Observed</span></div>
+<div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(128px, 1fr)); gap: 12px">
+<sc-for list="{{perf}}" as="m" hint-placeholder-count="6"><div style="background: #F8FAFC; border-radius: 8px; padding: 12px 14px"><div style="font-size: 12px; color: #515B6B">{{m.k}}</div><div style="font-size: 22px; font-weight: 700">{{m.v}}</div><div style="font-size: 12px; color: #515B6B">{{m.n}}</div></div></sc-for>
+</div>
+<div style="display: flex; flex-wrap: wrap; gap: 12px; align-items: center; padding: 12px 14px; border-radius: 8px; border: 1px solid #E5E7EB">
+<div style="font-size: 13px; font-weight: 600; min-width: 150px">Working Score <span style="font-size: 22px; font-weight: 700; color: #0C1F96; margin-left: 6px">81</span></div>
+<sc-for list="{{signals}}" as="g" hint-placeholder-count="4"><div style="flex: 1 1 110px"><div style="font-size: 12px; color: #515B6B">{{g.k}} · {{g.w}}</div><div style="margin-top: 4px; height: 6px; border-radius: 3px; background: #EEF0F3"><div style="{{g.bar}}"></div></div><div style="font-size: 12px; margin-top: 2px">{{g.v}}</div></div></sc-for>
+<span style="font-size: 12px; color: #515B6B">High confidence · Estimated</span>
+</div>
+</section>
+
+<section aria-labelledby="cscore-heading" style="background: #FFFFFF; border: 1px solid #E5E7EB; border-radius: 12px; padding: 20px 24px; display: flex; flex-direction: column; gap: 12px">
+<div style="display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: 8px"><h2 id="cscore-heading" style="margin: 0; font-size: 20px; font-weight: 600; color: #0C1F96">Creative score <span style="color: #1F2937">83</span><span style="font-size: 14px; color: #515B6B"> / 100</span></h2><span style="font-size: 13px; color: #515B6B">Best-practice checklist · Estimated, rules-based</span></div>
+<div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 8px">
+<sc-for list="{{checks}}" as="c" hint-placeholder-count="6"><div style="display: flex; gap: 8px; align-items: flex-start; padding: 10px 12px; border-radius: 8px; background: #F8FAFC"><span style="{{c.markStyle}}">{{c.mark}}</span><div><div style="font-size: 13px; font-weight: 600">{{c.k}}</div><div style="font-size: 12px; color: #515B6B">{{c.v}}</div></div></div></sc-for>
+</div>
+<p style="margin: 0; font-size: 13px; color: #515B6B">Predictive score: not available yet. It ships once it beats simple baselines on newer ads, after about 3,000 resolved ads. <a href="Scores.dc.html" style="font-weight: 600">How scores work</a></p>
+</section>
+
+<section aria-labelledby="retention-heading" style="background: #FFFFFF; border: 1px solid #E5E7EB; border-radius: 12px; padding: 20px 24px; display: flex; flex-direction: column; gap: 12px">
+<div style="display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: 8px"><h2 id="retention-heading" style="margin: 0; font-size: 20px; font-weight: 600; color: #0C1F96">Viewer retention</h2>
+<div style="display: flex; gap: 16px; font-size: 13px; color: #515B6B"><span style="display: inline-flex; align-items: center; gap: 6px"><span style="width: 16px; height: 3px; background: #00A3AD" aria-hidden="true"></span>This creative</span><span style="display: inline-flex; align-items: center; gap: 6px"><span style="width: 16px; height: 0; border-top: 2px dashed #6B7280" aria-hidden="true"></span>Account average</span></div></div>
+<svg viewBox="0 0 640 220" role="img" aria-label="Retention: this creative keeps 44 percent of viewers at the halfway point against an account average of 35 percent" style="width: 100%; height: auto; display: block">
+<line x1="48" y1="20" x2="624" y2="20" stroke="#EEF0F3" stroke-width="1"></line>
+<line x1="48" y1="100" x2="624" y2="100" stroke="#EEF0F3" stroke-width="1"></line>
+<line x1="48" y1="180" x2="624" y2="180" stroke="#D6DBE3" stroke-width="1"></line>
+<text x="40" y="24" text-anchor="end" font-size="12" fill="#515B6B">100%</text>
+<text x="40" y="104" text-anchor="end" font-size="12" fill="#515B6B">50%</text>
+<text x="40" y="184" text-anchor="end" font-size="12" fill="#515B6B">0%</text>
+<polyline points="48,20 163,96.8 278,124 394,138.4 509,149.6 624,154.4" fill="none" stroke="#6B7280" stroke-width="2" stroke-dasharray="6 5"></polyline>
+<polyline points="48,20 163,82.4 278,109.6 394,127.2 509,140 624,146.4" fill="none" stroke="#00A3AD" stroke-width="3" stroke-linejoin="round"></polyline>
+<circle cx="278" cy="109.6" r="5" fill="#00A3AD"></circle>
+<text x="286" y="104" font-size="12" font-weight="600" fill="#1F2937">44%</text>
+<text x="48" y="206" text-anchor="middle" font-size="12" fill="#515B6B">Start</text>
+<text x="163" y="206" text-anchor="middle" font-size="12" fill="#515B6B">25%</text>
+<text x="278" y="206" text-anchor="middle" font-size="12" fill="#515B6B">50%</text>
+<text x="394" y="206" text-anchor="middle" font-size="12" fill="#515B6B">75%</text>
+<text x="509" y="206" text-anchor="middle" font-size="12" fill="#515B6B">95%</text>
+<text x="624" y="206" text-anchor="end" font-size="12" fill="#515B6B">End</text>
+</svg>
+<p style="margin: 0; font-size: 14px; color: #515B6B">Keeps 9 more viewers in every 100 than your average at the halfway point. The biggest drop comes before the product appears at 0:05.</p>
+</section>
+
+<section aria-labelledby="said-heading" style="background: #FFFFFF; border: 1px solid #E5E7EB; border-radius: 12px; padding: 20px 24px; display: flex; flex-direction: column; gap: 8px">
+<div><h2 id="said-heading" style="margin: 0; font-size: 20px; font-weight: 600; color: #0C1F96">What is said and shown</h2><p style="margin: 4px 0 0; font-size: 13px; color: #515B6B">Transcript and on-screen text with timestamps · Observed</p></div>
+<ol style="list-style: none; margin: 0; padding: 0">
+<sc-for list="{{lines}}" as="l" hint-placeholder-count="5"><li style="display: grid; grid-template-columns: 52px minmax(0, 1fr); gap: 12px; padding: 10px 0; border-top: 1px solid #EEF0F3"><span style="font-size: 13px; font-weight: 600; color: #075E66">{{l.t}}</span><div style="display: flex; flex-direction: column; gap: 4px"><span style="font-size: 14px">{{l.said}}</span><span style="font-size: 12px; color: #515B6B">{{l.shown}}</span><span><span style="font-size: 12px; padding: 2px 8px; border-radius: 6px; background: #E6F9FA; color: #075E66">{{l.tag}}</span></span></div></li></sc-for>
+</ol>
+</section>
+
+<section aria-labelledby="tags-heading" style="background: #FFFFFF; border: 1px solid #E5E7EB; border-radius: 12px; padding: 20px 24px; display: flex; flex-direction: column; gap: 14px">
+<div style="display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: 8px"><h2 id="tags-heading" style="margin: 0; font-size: 20px; font-weight: 600; color: #0C1F96">How Exter reads it</h2><button type="button" style="min-height: 44px; padding: 0 16px; border: 1px solid #D6DBE3; border-radius: 8px; background: #FFFFFF; font: inherit; font-size: 14px; font-weight: 600; color: #1F2937; cursor: pointer">Correct a tag</button></div>
+<div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); gap: 10px">
+<sc-for list="{{fields}}" as="f" hint-placeholder-count="10"><div style="border: 1px solid #E5E7EB; border-radius: 8px; padding: 10px 12px"><div style="font-size: 12px; color: #515B6B">{{f.k}}</div><div style="font-size: 14px; font-weight: 600">{{f.v}}</div><div style="font-size: 12px; color: #515B6B">{{f.e}}</div></div></sc-for>
+</div>
+<div style="display: flex; gap: 10px; align-items: flex-start; padding: 12px 14px; border-radius: 8px; background: #FFFBEB"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#92400E" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3l10 18H2z"></path><path d="M12 10v5"></path><path d="M12 18h.01"></path></svg><p style="margin: 0; font-size: 13px">Claim check: "burns for 50 hours" is a performance claim. Keep the burn-test evidence on file in case it needs substantiating under ASA rules.</p></div>
+<p style="margin: 0; font-size: 12px; color: #515B6B">Read once by the low-cost pipeline on 10 Oct and checked by a strategist. Unknown fields stay unknown.</p>
+</section>
+
+<section aria-labelledby="market-ctx-heading" style="background: #FFFFFF; border: 1px solid #E5E7EB; border-radius: 12px; padding: 20px 24px; display: flex; flex-direction: column; gap: 14px">
+<div style="display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: 8px"><div><h2 id="market-ctx-heading" style="margin: 0; font-size: 20px; font-weight: 600; color: #0C1F96">In the market</h2><p style="margin: 4px 0 0; font-size: 13px; color: #515B6B">How your 5 competitors use the same hook and angle · 214 active ads</p></div><a href="Patterns.dc.html" style="font-size: 14px; font-weight: 600">Compare side by side</a></div>
+<div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 12px">
+<div style="background: #F8FAFC; border-radius: 8px; padding: 12px 14px"><div style="font-size: 22px; font-weight: 700">18%</div><div style="font-size: 13px; color: #515B6B">of competitors' ads open with a problem hook; 41% of those are proven winners</div></div>
+<div style="background: #F8FAFC; border-radius: 8px; padding: 12px 14px"><div style="font-size: 22px; font-weight: 700">19 ads</div><div style="font-size: 13px; color: #515B6B">use a refill angle; the longest has run 64 days</div></div>
+<div style="background: #F8FAFC; border-radius: 8px; padding: 12px 14px"><div style="font-size: 22px; font-weight: 700">58</div><div style="font-size: 13px; color: #515B6B">reviews mention running out or buying again</div></div>
+</div>
+<ul style="list-style: none; margin: 0; padding: 0">
+<sc-for list="{{similar}}" as="s" hint-placeholder-count="3"><li style="display: flex; align-items: center; gap: 12px; padding: 10px 0; border-top: 1px solid #EEF0F3"><span style="{{s.thumb}}" aria-hidden="true"></span><span style="flex: 1; min-width: 0; font-size: 14px"><strong style="font-weight: 600">{{s.brand}}</strong> · {{s.title}}</span><span style="font-size: 13px; color: #515B6B">{{s.note}}</span><a href="#" style="font-size: 14px; font-weight: 600">Open</a></li></sc-for>
+</ul>
+<p style="margin: 0; font-size: 12px; color: #515B6B">Competitor figures come from public ad libraries. Their sales are not public and are never shown.</p>
+</section>
+
+</div>
+</div>
+
+</main>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1440,"height":2320}}'>
+class Component extends DCLogic {
+  renderVals() {
+    const frame = (bg) => 'display: block; aspect-ratio: 9 / 16; border-radius: 6px; background: ' + bg;
+    const thumb = (bg) => 'flex: 0 0 36px; height: 45px; border-radius: 6px; background: ' + bg;
+    const pass = 'flex: 0 0 22px; height: 22px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 700; background: #E7F6EC; color: #14532D';
+    const miss = 'flex: 0 0 22px; height: 22px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 700; background: #FEF3C7; color: #78350F';
+    const bar = (pct) => 'height: 6px; border-radius: 3px; background: #0C1F96; width: ' + pct + '%';
+    return {
+      scenes: [['0:00', 'Hook', '#E9E2D6'], ['0:05', 'Product', '#E2DACB'], ['0:11', 'How to pour', '#DDE5DE'], ['0:16', 'Burn time', '#E6E1D3'], ['0:20', 'Offer', '#EADCD8'], ['0:23', 'Call to action', '#DCE3EC']].map(([t, label, bg]) => ({ t, label, style: frame(bg) })),
+      history: [
+        { k: 'First seen', v: '9 Oct 2026' }, { k: 'Last seen', v: 'Today, still running' },
+        { k: 'Days running', v: '25 · Observed' }, { k: 'Ads using this file', v: '3 · Observed' },
+        { k: 'Versions of concept', v: '2 within 45 days · Estimated' }, { k: 'Placements', v: 'Facebook, Instagram' }
+      ],
+      perf: [
+        { k: 'Spend', v: '£4,120', n: '28% of account' }, { k: 'ROAS', v: '3.1', n: 'Benchmark 2.4' },
+        { k: 'Cost per purchase', v: '£14.20', n: 'Account £18.70' }, { k: 'Hook rate', v: '34%', n: 'Account 28%' },
+        { k: 'Hold rate', v: '41%', n: 'Account 35%' }, { k: 'Frequency', v: '2.1', n: 'Last 7 days' }
+      ],
+      signals: [
+        { k: 'Survival', w: '35%', v: '92nd percentile', bar: bar(92) }, { k: 'Scaling', w: '25%', v: '3 ads, 2 versions', bar: bar(80) },
+        { k: 'Reach velocity', w: '25%', v: '61st percentile', bar: bar(61) }, { k: 'Organic response', w: '15%', v: 'No matching post', bar: bar(0) }
+      ],
+      checks: [
+        { k: 'Hook in 2 seconds', v: 'Problem spoken at 0:00', mark: 'Yes', markStyle: pass },
+        { k: 'Product early', v: 'First appears at 0:05; aim for 0:03', mark: 'No', markStyle: miss },
+        { k: 'Captions on', v: 'Burned-in captions throughout', mark: 'Yes', markStyle: pass },
+        { k: 'Clear offer', v: '15% off shown at 0:20', mark: 'Yes', markStyle: pass },
+        { k: 'Call to action', v: 'Spoken and on screen at 0:23', mark: 'Yes', markStyle: pass },
+        { k: 'Proof', v: 'Burn time stated, no review shown', mark: 'Part', markStyle: miss }
+      ],
+      lines: [
+        { t: '0:00', said: '"I used to buy a new candle every single month."', shown: 'On screen: Every month?', tag: 'Hook: problem' },
+        { t: '0:05', said: '"Now I just refill the jar I already love."', shown: 'On screen: none', tag: 'Angle: problem and solution' },
+        { t: '0:11', said: '"Pour, wick, done. It takes two minutes."', shown: 'On screen: 2 minutes', tag: 'Demo' },
+        { t: '0:16', said: '"Every refill burns for 50 hours."', shown: 'On screen: 50 hours', tag: 'Claim: performance' },
+        { t: '0:20', said: '"Your first refill kit is 15% off this week."', shown: 'On screen: 15% off, code REFILL', tag: 'Offer: percent off' }
+      ],
+      fields: [
+        { k: 'Format', v: 'UGC', e: 'Creator credit visible at 0:01' }, { k: 'Hook type', v: 'Problem', e: 'Spoken at 0:00' },
+        { k: 'Angle', v: 'Problem and solution', e: 'Spoken at 0:05' }, { k: 'Offer', v: 'Percent off', e: 'On screen at 0:20' },
+        { k: 'Claims', v: 'Performance', e: '"50 hours" at 0:16' }, { k: 'Audio', v: 'On-camera speech', e: 'No music bed' },
+        { k: 'People', v: 'On camera, talking', e: 'Face from 0:00' }, { k: 'Pacing', v: '2 cuts in first 3 seconds', e: 'Product at 0:05' },
+        { k: 'Call to action', v: '"Tap shop now for your first refill"', e: 'At 0:23' }, { k: 'Creator', v: 'Ama', e: 'Branded-content label' }
+      ],
+      similar: [
+        { thumb: thumb('#D9E4DC'), brand: 'Halvane', title: 'Refill and save', note: 'Working Score 86 · 64 days' },
+        { thumb: thumb('#E6E1D3'), brand: 'Fennick Home', title: 'Never buy another candle', note: 'Working Score 70 · 33 days' },
+        { thumb: thumb('#E3E0EC'), brand: 'Otterly Scents', title: 'Tired of tunnelling wicks?', note: 'Working Score 58 · 12 days' }
+      ]
+    };
+  }
+}
+</script>
+</body>
+</html>

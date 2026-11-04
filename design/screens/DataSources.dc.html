@@ -1,0 +1,114 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Exter AI data sources</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0}
+a{color:#007C85}a:hover{color:#0C1F96}
+</style>
+</helmet>
+<div style="font-family: Inter, sans-serif; color: #1F2937; background: #F8FAFC; min-height: 100vh; display: flex; flex-wrap: wrap; align-items: stretch">
+<div style="flex: 1 1 240px; max-width: 100%; background: #FFFFFF; border-right: 1px solid #E5E7EB"><dc-import name="Sidebar" active="data" hint-size="100%,980px"></dc-import></div>
+<main style="flex: 999 1 560px; min-width: 0; box-sizing: border-box; padding: 32px 40px 48px; display: flex; flex-direction: column; gap: 24px">
+
+<div style="display: flex; flex-wrap: wrap; align-items: flex-end; justify-content: space-between; gap: 16px">
+<div>
+<div style="font-size: 13px; color: #515B6B">Settings</div>
+<h1 style="margin: 4px 0 0; font-size: 28px; font-weight: 700; letter-spacing: -0.02em; color: #0C1F96">Data sources</h1>
+<p style="margin: 4px 0 0; font-size: 15px; color: #515B6B">Where every number comes from, whether it is working, and the rules applied to it.</p>
+</div>
+<span style="font-size: 12px; font-weight: 600; padding: 4px 10px; border-radius: 999px; background: #FEF3C7; color: #78350F">Sample data</span>
+</div>
+
+<section aria-labelledby="health-heading" style="background: #FFFFFF; border: 1px solid #E5E7EB; border-radius: 12px; padding: 24px; display: flex; flex-direction: column; gap: 12px">
+<div><h2 id="health-heading" style="margin: 0; font-size: 20px; font-weight: 600; color: #0C1F96">Source health</h2><p style="margin: 4px 0 0; font-size: 13px; color: #515B6B">A failed source shows as failed with its reason, never as an empty result</p></div>
+<div style="overflow-x: auto">
+<table style="width: 100%; border-collapse: collapse; font-size: 14px; min-width: 900px">
+<thead><tr style="text-align: left; color: #515B6B; font-size: 12px"><th style="padding: 0 8px 8px 0; font-weight: 600">Source</th><th style="padding: 0 8px 8px; font-weight: 600">Status</th><th style="padding: 0 8px 8px; font-weight: 600">Last successful check</th><th style="padding: 0 8px 8px; font-weight: 600; text-align: right">Records</th><th style="padding: 0 8px 8px; font-weight: 600">Detail</th><th style="padding: 0 0 8px 8px; font-weight: 600"></th></tr></thead>
+<tbody>
+<sc-for list="{{sources}}" as="s" hint-placeholder-count="9"><tr style="border-top: 1px solid #EEF0F3"><td style="padding: 11px 8px 11px 0"><div style="font-weight: 600">{{s.name}}</div><div style="font-size: 12px; color: #515B6B">{{s.gives}}</div></td><td style="padding: 11px 8px"><span style="{{s.statusStyle}}">{{s.status}}</span></td><td style="padding: 11px 8px">{{s.last}}</td><td style="padding: 11px 8px; text-align: right">{{s.records}}</td><td style="padding: 11px 8px; font-size: 13px; color: #515B6B">{{s.detail}}</td><td style="padding: 11px 0 11px 8px; text-align: right"><button type="button" style="min-height: 36px; padding: 0 12px; border: 1px solid #D6DBE3; border-radius: 8px; background: #FFFFFF; font: inherit; font-size: 13px; font-weight: 600; color: #1F2937; cursor: pointer; white-space: nowrap">{{s.action}}</button></td></tr></sc-for>
+</tbody>
+</table>
+</div>
+</section>
+
+<div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(440px, 1fr)); gap: 24px">
+
+<section aria-labelledby="owned-heading" style="background: #FFFFFF; border: 1px solid #E5E7EB; border-radius: 12px; padding: 24px; display: flex; flex-direction: column; gap: 12px; min-width: 0">
+<div style="display: flex; justify-content: space-between; align-items: baseline; gap: 8px"><div><h2 id="owned-heading" style="margin: 0; font-size: 20px; font-weight: 600; color: #0C1F96">Your ad accounts</h2><p style="margin: 4px 0 0; font-size: 13px; color: #515B6B">Read-only. Tokens stay in secure server settings and are never entered here.</p></div><button type="button" style="min-height: 44px; padding: 0 14px; border: 1px solid #D6DBE3; border-radius: 8px; background: #FFFFFF; font: inherit; font-size: 14px; font-weight: 600; color: #1F2937; cursor: pointer">Add account</button></div>
+<sc-for list="{{accounts}}" as="a" hint-placeholder-count="2"><div style="border: 1px solid #E5E7EB; border-radius: 10px; padding: 14px 16px; display: flex; flex-direction: column; gap: 8px"><div style="display: flex; justify-content: space-between; align-items: center; gap: 8px"><span style="font-size: 15px; font-weight: 600">{{a.name}}</span><span style="{{a.statusStyle}}">{{a.status}}</span></div><dl style="margin: 0; display: grid; grid-template-columns: 140px minmax(0, 1fr); row-gap: 4px; font-size: 13px"><sc-for list="{{a.rows}}" as="r" hint-placeholder-count="5"><dt style="color: #515B6B">{{r.k}}</dt><dd style="margin: 0">{{r.v}}</dd></sc-for></dl></div></sc-for>
+</section>
+
+<section aria-labelledby="naming-heading" style="background: #FFFFFF; border: 1px solid #E5E7EB; border-radius: 12px; padding: 24px; display: flex; flex-direction: column; gap: 12px; min-width: 0">
+<div><h2 id="naming-heading" style="margin: 0; font-size: 20px; font-weight: 600; color: #0C1F96">Ad naming convention</h2><p style="margin: 4px 0 0; font-size: 13px; color: #515B6B">Turns your ad names into filters. Names that do not fit are flagged, never guessed.</p></div>
+<div style="display: flex; flex-wrap: wrap; align-items: center; gap: 10px">
+<label style="display: flex; align-items: center; gap: 8px; font-size: 13px; font-weight: 600">Separator<select style="min-height: 40px; padding: 0 10px; border: 1px solid #D6DBE3; border-radius: 8px; background: #FFFFFF; font: inherit; font-size: 14px"><option>Underscore _</option><option>Pipe |</option><option>Hyphen -</option></select></label>
+</div>
+<div style="display: flex; flex-wrap: wrap; align-items: center; gap: 6px"><span style="font-size: 13px; color: #515B6B; margin-right: 4px">Parts, in order:</span><sc-for list="{{parts}}" as="p" hint-placeholder-count="4"><span style="font-size: 13px; font-weight: 600; padding: 4px 10px; border-radius: 6px; background: #E6F9FA; color: #075E66">{{p.n}}. {{p.t}}</span></sc-for><button type="button" style="font: inherit; font-size: 13px; font-weight: 600; padding: 4px 10px; border-radius: 6px; border: 1px dashed #A3ACB9; background: #FFFFFF; cursor: pointer">Add part</button></div>
+<div style="padding: 12px 14px; border-radius: 8px; background: #F8FAFC; font-size: 13px"><div style="color: #515B6B">Example</div><div style="font-family: ui-monospace, Menlo, monospace; font-size: 14px; margin: 4px 0 6px">refill_ama_problem_ugc</div><div>concept: refill · creator: Ama · hook: problem · format: UGC</div></div>
+<p style="margin: 0; font-size: 13px">41 of 46 ad names parse. <a href="Creatives.dc.html" style="font-weight: 600">See the 5 flagged names</a></p>
+</section>
+
+<section aria-labelledby="budget-heading" style="background: #FFFFFF; border: 1px solid #E5E7EB; border-radius: 12px; padding: 24px; display: flex; flex-direction: column; gap: 12px; min-width: 0">
+<div><h2 id="budget-heading" style="margin: 0; font-size: 20px; font-weight: 600; color: #0C1F96">Budgets and schedule</h2><p style="margin: 4px 0 0; font-size: 13px; color: #515B6B">Paid calls stop when a budget is reached; nothing is silently retried</p></div>
+<sc-for list="{{budgets}}" as="b" hint-placeholder-count="2"><div><div style="display: flex; justify-content: space-between; font-size: 14px"><span style="font-weight: 600">{{b.k}}</span><span>{{b.v}}</span></div><div style="margin-top: 6px; height: 8px; border-radius: 4px; background: #EEF0F3"><div style="{{b.bar}}"></div></div><div style="margin-top: 4px; font-size: 12px; color: #515B6B">{{b.note}}</div></div></sc-for>
+<dl style="margin: 0; display: grid; grid-template-columns: 180px minmax(0, 1fr); row-gap: 6px; font-size: 13px; border-top: 1px solid #EEF0F3; padding-top: 12px"><dt style="color: #515B6B">Collection</dt><dd style="margin: 0">Daily at 03:00</dd><dt style="color: #515B6B">Your account sync</dt><dd style="margin: 0">Daily at 06:00, last 7 days re-pulled</dd><dt style="color: #515B6B">Weekly data pack</dt><dd style="margin: 0">Mondays at 06:00</dd><dt style="color: #515B6B">Cost per 1,000 creatives</dt><dd style="margin: 0">About £2.10 with the low-cost reading</dd></dl>
+</section>
+
+<section aria-labelledby="users-heading" style="background: #FFFFFF; border: 1px solid #E5E7EB; border-radius: 12px; padding: 24px; display: flex; flex-direction: column; gap: 12px; min-width: 0">
+<div style="display: flex; justify-content: space-between; align-items: baseline; gap: 8px"><h2 id="users-heading" style="margin: 0; font-size: 20px; font-weight: 600; color: #0C1F96">Users and client access</h2><button type="button" style="min-height: 44px; padding: 0 14px; border: 1px solid #D6DBE3; border-radius: 8px; background: #FFFFFF; font: inherit; font-size: 14px; font-weight: 600; color: #1F2937; cursor: pointer">Invite</button></div>
+<ul style="list-style: none; margin: 0; padding: 0"><sc-for list="{{users}}" as="u" hint-placeholder-count="4"><li style="display: flex; align-items: center; gap: 12px; padding: 10px 0; border-top: 1px solid #EEF0F3"><span style="{{u.avatar}}" aria-hidden="true">{{u.i}}</span><span style="flex: 1; min-width: 0; font-size: 14px"><strong style="font-weight: 600">{{u.n}}</strong><span style="display: block; font-size: 12px; color: #515B6B">{{u.d}}</span></span><span style="font-size: 12px; font-weight: 600; padding: 3px 9px; border-radius: 999px; background: #F3F4F6; color: #374151">{{u.r}}</span></li></sc-for></ul>
+</section>
+
+</div>
+
+</main>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1440,"height":2000}}'>
+class Component extends DCLogic {
+  renderVals() {
+    const chip = (bg, fg) => 'font-size: 12px; font-weight: 600; padding: 3px 9px; border-radius: 999px; white-space: nowrap; background: ' + bg + '; color: ' + fg;
+    const S = { ok: chip('#E7F6EC', '#14532D'), wait: chip('#FEF3C7', '#78350F'), off: chip('#F3F4F6', '#374151'), later: chip('#EEF2FF', '#1E3A8A') };
+    const src = (name, gives, st, status, last, records, detail, action) => ({ name, gives, status, statusStyle: S[st], last, records, detail, action });
+    const avatar = 'flex: 0 0 34px; height: 34px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 13px; font-weight: 700; background: #E6F9FA; color: #0C1F96';
+    return {
+      sources: [
+        src('Your Meta ad account', 'Spend, ROAS, video retention, ad names', 'ok', 'Connected', 'Today 06:00', '46 ads · 90 days', 'Read-only system user', 'Sync now'),
+        src('Meta Ad Library API', 'Competitor ads, reach, age and gender', 'wait', 'Waiting on Meta', 'Never', 'None', 'App Review sent 2 Nov; access error reported to Meta', 'Check again'),
+        src('Meta Ad Library, browser capture', 'Competitor ads and files until the API is live', 'ok', 'Active', 'Today 03:00', '214 ads', 'Bounded sample, no reach figures', 'Run now'),
+        src('TikTok Commercial Content API', 'Competitor TikTok ads, reach, targeting', 'off', 'Not applied', 'Never', 'None', 'Apply with the Exter Media email', 'Apply'),
+        src('Your TikTok ad account', 'Spend, conversions, video views', 'off', 'Not connected', 'Never', 'None', 'Needs advertiser authorisation', 'Connect'),
+        src('Customer reviews', 'Needs, objections, outcomes, quotes', 'ok', 'Connected', 'Mon 3 Nov', '1,240 reviews', 'Brand website and review sites', 'Refresh'),
+        src('Brand websites', 'Prices, offers, claims, creators featured', 'ok', 'Connected', 'Mon 3 Nov', '6 sites', 'Public pages only', 'Refresh'),
+        src('Google Ads Transparency Center', 'Search and YouTube ads', 'later', 'Phase 2', 'Never', 'None', 'Planned after Meta and TikTok', 'Details'),
+        src('Instagram and YouTube organic', 'Organic posts and engagement', 'later', 'Phase 2', 'Never', 'None', 'Planned after Meta and TikTok', 'Details')
+      ],
+      accounts: [
+        { name: 'Meta · Northwick main', status: 'Connected', statusStyle: S.ok, rows: [{ k: 'Account ID', v: 'act 1043 0021 77' }, { k: 'Currency', v: 'GBP' }, { k: 'Attribution', v: '7-day click, 1-day view' }, { k: 'Conversion event', v: 'Purchase' }, { k: 'Latest data', v: '2 Nov 2026 · synced today 06:00' }] },
+        { name: 'TikTok · Northwick', status: 'Not connected', statusStyle: S.off, rows: [{ k: 'Advertiser ID', v: 'Not added' }, { k: 'Currency', v: 'GBP' }, { k: 'Attribution', v: 'As set in the account' }, { k: 'Conversion event', v: 'As set in the account' }, { k: 'Latest data', v: 'None' }] }
+      ],
+      parts: ['concept', 'creator', 'hook', 'format'].map((t, i) => ({ n: i + 1, t })),
+      budgets: [
+        { k: 'AI reading budget', v: '£38 of £100 this month', note: '1,240 creatives read so far; full-video checks on about 1 in 10', bar: 'height: 8px; border-radius: 4px; background: #0C1F96; width: 38%' },
+        { k: 'Data provider budget', v: '£0 of £20 this month', note: 'Must be set before your ad account syncs run', bar: 'height: 8px; border-radius: 4px; background: #0C1F96; width: 0%' }
+      ],
+      users: [
+        { i: 'B', n: 'Benjamin', d: 'Exter Media', r: 'Owner', avatar },
+        { i: 'S', n: 'Strategist', d: 'Exter Media', r: 'Editor', avatar },
+        { i: 'N', n: 'Northwick marketing lead', d: 'Client · via expiring link', r: 'Viewer', avatar },
+        { i: 'L', n: 'Larch & Linen founder', d: 'Prospect teardown · link expires 10 Nov', r: 'Viewer', avatar }
+      ]
+    };
+  }
+}
+</script>
+</body>
+</html>

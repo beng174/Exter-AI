@@ -1,0 +1,119 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Exter AI competitors</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0}
+a{color:#007C85}a:hover{color:#0C1F96}
+</style>
+</helmet>
+<div style="font-family: Inter, sans-serif; color: #1F2937; background: #F8FAFC; min-height: 100vh; display: flex; flex-wrap: wrap; align-items: stretch">
+<div style="flex: 1 1 240px; max-width: 100%; background: #FFFFFF; border-right: 1px solid #E5E7EB"><dc-import name="Sidebar" active="competitors" hint-size="100%,980px"></dc-import></div>
+<main style="flex: 999 1 560px; min-width: 0; box-sizing: border-box; padding: 32px 40px 48px; display: flex; flex-direction: column; gap: 24px">
+
+<div style="display: flex; flex-wrap: wrap; align-items: flex-end; justify-content: space-between; gap: 16px">
+<div>
+<div style="font-size: 13px; color: #515B6B">Northwick Candle Co. · Research</div>
+<h1 style="margin: 4px 0 0; font-size: 28px; font-weight: 700; letter-spacing: -0.02em; color: #0C1F96">Competitors</h1>
+<p style="margin: 4px 0 0; font-size: 15px; color: #515B6B">You against 5 competitors on the same measures, every week.</p>
+</div>
+<div style="display: flex; flex-wrap: wrap; align-items: center; gap: 8px">
+<span style="font-size: 12px; font-weight: 600; padding: 4px 10px; border-radius: 999px; background: #FEF3C7; color: #78350F">Sample data</span>
+<label style="display: flex; align-items: center; gap: 8px; font-size: 14px; color: #515B6B">Week<select style="min-height: 44px; padding: 0 12px; border: 1px solid #D6DBE3; border-radius: 8px; background: #FFFFFF; font: inherit; font-size: 14px; color: #1F2937"><option>27 Oct to 2 Nov</option><option>20 Oct to 26 Oct</option></select></label>
+<a href="Brands.dc.html" style="display: inline-flex; align-items: center; min-height: 44px; padding: 0 16px; border: 1px solid #D6DBE3; border-radius: 8px; background: #FFFFFF; font-size: 14px; font-weight: 600; color: #1F2937; text-decoration: none">Edit watchlist</a>
+</div>
+</div>
+
+<section aria-labelledby="sc-heading" style="background: #FFFFFF; border: 1px solid #E5E7EB; border-radius: 12px; padding: 24px; display: flex; flex-direction: column; gap: 14px">
+<div style="display: flex; flex-wrap: wrap; justify-content: space-between; align-items: baseline; gap: 8px"><div><h2 id="sc-heading" style="margin: 0; font-size: 20px; font-weight: 600; color: #0C1F96">Scorecard</h2><p style="margin: 4px 0 0; font-size: 13px; color: #515B6B">260 active ads across 6 brands · checked today 03:00 · select a number to see its ads</p></div><button type="button" style="min-height: 44px; padding: 0 16px; border: 1px solid #D6DBE3; border-radius: 8px; background: #FFFFFF; font: inherit; font-size: 14px; font-weight: 600; color: #1F2937; cursor: pointer">Export</button></div>
+<div style="overflow-x: auto">
+<table style="width: 100%; border-collapse: collapse; font-size: 14px; min-width: 980px">
+<thead><tr style="text-align: left; font-size: 12px; color: #515B6B"><th style="padding: 0 8px 10px 0; font-weight: 600">Measure</th><sc-for list="{{brands}}" as="b" hint-placeholder-count="6"><th style="{{b.headStyle}}">{{b.name}}</th></sc-for><th style="padding: 0 0 10px 8px; font-weight: 600">Basis</th></tr></thead>
+<tbody>
+<sc-for list="{{rows}}" as="r" hint-placeholder-count="13">
+<tr style="border-top: 1px solid #EEF0F3"><td style="padding: 10px 8px 10px 0; font-weight: 500">{{r.m}}</td><sc-for list="{{r.cells}}" as="c" hint-placeholder-count="6"><td style="{{c.style}}">{{c.v}}</td></sc-for><td style="padding: 10px 0 10px 8px"><span style="font-size: 11px; padding: 1px 6px; border-radius: 4px; border: 1px solid #D6DBE3; color: #374151">{{r.basis}}</span></td></tr>
+</sc-for>
+</tbody>
+</table>
+</div>
+<p style="margin: 0; font-size: 12px; color: #515B6B">Share of voice is the share of active ads until Meta reach is connected, then estimated impressions. Competitors' sales are never shown.</p>
+</section>
+
+<section aria-labelledby="mix-heading" style="background: #FFFFFF; border: 1px solid #E5E7EB; border-radius: 12px; padding: 24px; display: flex; flex-direction: column; gap: 16px">
+<div style="display: flex; flex-wrap: wrap; justify-content: space-between; align-items: flex-end; gap: 12px">
+<div><h2 id="mix-heading" style="margin: 0; font-size: 20px; font-weight: 600; color: #0C1F96">Creative mix by brand</h2><p style="margin: 4px 0 0; font-size: 13px; color: #515B6B">Share of each brand's active ads · Observed format, read by Exter</p></div>
+<div role="group" aria-label="Mix by" style="display: inline-flex; flex-wrap: wrap; border: 1px solid #D6DBE3; border-radius: 8px; overflow: hidden">
+<button type="button" aria-pressed="true" style="min-height: 40px; padding: 0 14px; border: none; background: #0C1F96; color: #FFFFFF; font: inherit; font-size: 13px; font-weight: 600; cursor: pointer">Format</button>
+<button type="button" aria-pressed="false" style="min-height: 40px; padding: 0 14px; border: none; border-left: 1px solid #D6DBE3; background: #FFFFFF; color: #1F2937; font: inherit; font-size: 13px; cursor: pointer">Hook</button>
+<button type="button" aria-pressed="false" style="min-height: 40px; padding: 0 14px; border: none; border-left: 1px solid #D6DBE3; background: #FFFFFF; color: #1F2937; font: inherit; font-size: 13px; cursor: pointer">Angle</button>
+<button type="button" aria-pressed="false" style="min-height: 40px; padding: 0 14px; border: none; border-left: 1px solid #D6DBE3; background: #FFFFFF; color: #1F2937; font: inherit; font-size: 13px; cursor: pointer">Offer</button>
+<button type="button" aria-pressed="false" style="min-height: 40px; padding: 0 14px; border: none; border-left: 1px solid #D6DBE3; background: #FFFFFF; color: #1F2937; font: inherit; font-size: 13px; cursor: pointer">Claim</button>
+</div>
+</div>
+<div style="display: flex; flex-wrap: wrap; gap: 14px; font-size: 13px; color: #515B6B"><sc-for list="{{legend}}" as="l" hint-placeholder-count="6"><span style="display: inline-flex; align-items: center; gap: 6px"><span style="{{l.sw}}" aria-hidden="true"></span>{{l.name}}</span></sc-for></div>
+<div style="display: flex; flex-direction: column; gap: 10px">
+<sc-for list="{{mix}}" as="m" hint-placeholder-count="6"><div style="display: grid; grid-template-columns: 130px minmax(0, 1fr) 70px; gap: 12px; align-items: center"><span style="font-size: 14px; font-weight: 600">{{m.name}}</span><div style="display: flex; height: 18px; border-radius: 4px; overflow: hidden; gap: 2px"><sc-for list="{{m.segs}}" as="s" hint-placeholder-count="6"><div style="{{s.style}}" title="{{s.title}}"></div></sc-for></div><span style="font-size: 12px; color: #515B6B; text-align: right">{{m.n}} ads</span></div></sc-for>
+</div>
+</section>
+
+<section aria-labelledby="lean-heading" style="display: flex; flex-direction: column; gap: 12px">
+<h2 id="lean-heading" style="margin: 0; font-size: 20px; font-weight: 600; color: #0C1F96">What each competitor leans on</h2>
+<div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 16px">
+<sc-for list="{{cards}}" as="c" hint-placeholder-count="5"><article style="background: #FFFFFF; border: 1px solid #E5E7EB; border-radius: 12px; padding: 18px; display: flex; flex-direction: column; gap: 10px"><div style="display: flex; justify-content: space-between; align-items: baseline"><h3 style="margin: 0; font-size: 16px; font-weight: 600">{{c.name}}</h3><span style="font-size: 12px; color: #515B6B">{{c.ads}} ads</span></div><p style="margin: 0; font-size: 14px">{{c.lean}}</p><p style="margin: 0; font-size: 13px; color: #515B6B">New this week: {{c.news}}</p><div style="display: flex; gap: 6px"><sc-for list="{{c.thumbs}}" as="t" hint-placeholder-count="3"><span style="{{t.style}}" aria-hidden="true"></span></sc-for></div><a href="Creatives.dc.html" style="font-size: 14px; font-weight: 600">Open their ads</a></article></sc-for>
+</div>
+</section>
+
+</main>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1440,"height":1700}}'>
+class Component extends DCLogic {
+  renderVals() {
+    const names = ['You', 'Halvane', 'Corrie & Moss', 'Fennick Home', 'Otterly Scents', 'Brightmoor'];
+    const head = (i) => 'padding: 0 8px 10px; font-weight: 600; text-align: right; white-space: nowrap;' + (i === 0 ? ' color: #075E66' : '');
+    const cell = (i) => 'padding: 10px 8px; text-align: right; white-space: nowrap;' + (i === 0 ? ' background: #F0FBFC; font-weight: 600' : '');
+    const r = (m, basis, vals) => ({ m, basis, cells: vals.map((v, i) => ({ v: String(v), style: cell(i) })) });
+    const colors = ['#0C1F96', '#00C0CB', '#8B9CF4', '#F2A541', '#9AA5B4', '#E07A5F'];
+    const fmts = ['UGC', 'Founder-led', 'Studio product', 'Lifestyle', 'Motion graphics', 'Static graphic'];
+    const mixData = [[22, 4, 26, 20, 8, 20], [8, 34, 20, 18, 6, 14], [12, 40, 14, 22, 4, 8], [6, 10, 38, 24, 6, 16], [31, 12, 18, 14, 15, 10], [4, 2, 22, 12, 18, 42]];
+    const counts = [46, 58, 41, 49, 33, 33];
+    const thumb = (bg) => ({ style: 'width: 44px; height: 55px; border-radius: 6px; background: ' + bg });
+    return {
+      brands: names.map((name, i) => ({ name, headStyle: head(i) })),
+      rows: [
+        r('Share of voice', 'Estimated', ['14%', '24%', '15%', '22%', '11%', '14%']),
+        r('Active ads', 'Observed', counts),
+        r('New this week', 'Observed', [3, 4, 6, 3, 3, 2]),
+        r('Stopped this week', 'Observed', [2, 1, 0, 4, 1, 1]),
+        r('Median days running', 'Observed', [21, 38, 26, 35, 19, 22]),
+        r('Proven winners', 'Estimated', ['13%', '28%', '18%', '24%', '12%', '8%']),
+        r('New concepts per month', 'Estimated', [5, 9, 11, 7, 8, 5]),
+        r('Versions per concept', 'Estimated', [2.1, 4.2, 2.6, 3.8, 2.9, 3.5]),
+        r('UGC with proof', 'Observed', ['22%', '8%', '12%', '6%', '31%', '4%']),
+        r('Top format', 'Observed', ['UGC', 'Founder-led', 'Founder-led', 'Studio product', 'UGC', 'Static graphic']),
+        r('Top hook', 'Observed', ['Problem', 'Offer-led', 'Problem', 'Demo', 'Trend', 'Offer-led']),
+        r('Top angle', 'Observed', ['Problem-solution', 'Value or bundle', 'Quality', 'Gifting', 'Newness', 'Value or bundle']),
+        r('Top offer', 'Observed', ['Percent off', 'Bundle', 'None', 'Free gift', 'Free shipping', 'Percent off'])
+      ],
+      legend: fmts.map((name, i) => ({ name, sw: 'width: 12px; height: 12px; border-radius: 3px; background: ' + colors[i] })),
+      mix: names.map((name, b) => ({ name, n: counts[b], segs: mixData[b].map((v, i) => ({ title: fmts[i] + ' ' + v + '%', style: 'flex: 0 0 calc(' + v + '% - 2px); background: ' + colors[i] })) })),
+      cards: [
+        { name: 'Halvane', ads: 58, lean: 'Founder-led offers around refills and bundles. Keeps winners running for months and versions them often.', news: '4 ads, all refill bundles', thumbs: [thumb('#D9E4DC'), thumb('#E6E1D3'), thumb('#E9E2D6')] },
+        { name: 'Corrie & Moss', ads: 41, lean: 'Founder at the pour, provenance and craft. Rarely discounts.', news: '6 founder-led videos', thumbs: [thumb('#E3E0EC'), thumb('#EADCD8'), thumb('#E2E8E4')] },
+        { name: 'Fennick Home', ads: 49, lean: 'Polished studio gift sets with a free-gift offer, heavier in Q4.', news: 'Stopped all discount-led ads', thumbs: [thumb('#E6E1D3'), thumb('#EFE6DA'), thumb('#DCE3EC')] },
+        { name: 'Otterly Scents', ads: 33, lean: 'Fast-testing newcomer: UGC, trends and new scent ideas.', news: '£5 sample box and scent layering', thumbs: [thumb('#EFE6DA'), thumb('#E2E8E4'), thumb('#E3E0EC')] },
+        { name: 'Brightmoor', ads: 33, lean: 'Static discount graphics, short runs, many switched off within a week.', news: '2 flash-sale statics', thumbs: [thumb('#DCE3EC'), thumb('#E9E2D6'), thumb('#EADCD8')] }
+      ]
+    };
+  }
+}
+</script>
+</body>
+</html>

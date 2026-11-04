@@ -1,0 +1,104 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Exter AI formats</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0}
+a{color:#007C85}a:hover{color:#0C1F96}
+</style>
+</helmet>
+<div style="font-family: Inter, sans-serif; color: #1F2937; background: #F8FAFC; min-height: 100vh; display: flex; flex-wrap: wrap; align-items: stretch">
+<div style="flex: 1 1 240px; max-width: 100%; background: #FFFFFF; border-right: 1px solid #E5E7EB"><dc-import name="Sidebar" active="formats" hint-size="100%,980px"></dc-import></div>
+<main style="flex: 999 1 560px; min-width: 0; box-sizing: border-box; padding: 32px 40px 48px; display: flex; flex-direction: column; gap: 24px">
+
+<div style="display: flex; flex-wrap: wrap; align-items: flex-end; justify-content: space-between; gap: 16px">
+<div>
+<div style="font-size: 13px; color: #515B6B">Northwick Candle Co. · Research</div>
+<h1 style="margin: 4px 0 0; font-size: 28px; font-weight: 700; letter-spacing: -0.02em; color: #0C1F96">Formats</h1>
+<p style="margin: 4px 0 0; font-size: 15px; color: #515B6B">Which formats win in your category, how winning ads are built, and how your mix compares.</p>
+</div>
+<div style="display: flex; flex-wrap: wrap; align-items: center; gap: 8px">
+<span style="font-size: 12px; font-weight: 600; padding: 4px 10px; border-radius: 999px; background: #FEF3C7; color: #78350F">Sample data</span>
+<button type="button" style="display: inline-flex; align-items: center; gap: 8px; min-height: 44px; padding: 0 16px; border: 1px solid #D6DBE3; border-radius: 8px; background: #FFFFFF; font: inherit; font-size: 14px; font-weight: 600; color: #1F2937; cursor: pointer">Last 90 days<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9l6 6 6-6"></path></svg></button>
+<button type="button" style="display: inline-flex; align-items: center; gap: 8px; min-height: 44px; padding: 0 16px; border: 1px solid #D6DBE3; border-radius: 8px; background: #FFFFFF; font: inherit; font-size: 14px; font-weight: 600; color: #1F2937; cursor: pointer">Paid ads<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9l6 6 6-6"></path></svg></button>
+</div>
+</div>
+
+<section aria-labelledby="fmt-heading" style="background: #FFFFFF; border: 1px solid #E5E7EB; border-radius: 12px; padding: 24px; display: flex; flex-direction: column; gap: 16px">
+<div style="display: flex; flex-wrap: wrap; justify-content: space-between; align-items: flex-end; gap: 12px">
+<div><h2 id="fmt-heading" style="margin: 0; font-size: 20px; font-weight: 600; color: #0C1F96">Format league table</h2><p style="margin: 4px 0 0; font-size: 13px; color: #515B6B">214 competitor ads and your 46 · select a format to filter Creatives</p></div>
+<div style="display: flex; flex-wrap: wrap; gap: 16px; font-size: 13px; color: #515B6B"><span style="display: inline-flex; align-items: center; gap: 6px"><span style="width: 14px; height: 10px; border-radius: 3px; background: #0C1F96" aria-hidden="true"></span>Share of competitor ads</span><span style="display: inline-flex; align-items: center; gap: 6px"><span style="width: 14px; height: 10px; border-radius: 3px; background: #00C0CB" aria-hidden="true"></span>Share of your ads</span></div>
+</div>
+<div style="overflow-x: auto">
+<div style="min-width: 900px">
+<div style="display: grid; grid-template-columns: 150px minmax(0, 1fr) 110px 100px 90px 90px 140px; gap: 14px; padding-bottom: 8px; font-size: 12px; font-weight: 600; color: #515B6B"><span>Format</span><span>Market and you</span><span style="text-align: right">Category win rate</span><span style="text-align: right">Median days</span><span style="text-align: right">Your ROAS</span><span>Trend</span><span>Examples</span></div>
+<sc-for list="{{formats}}" as="f" hint-placeholder-count="6">
+<div style="display: grid; grid-template-columns: 150px minmax(0, 1fr) 110px 100px 90px 90px 140px; gap: 14px; align-items: center; padding: 12px 0; border-top: 1px solid #EEF0F3">
+<a href="Creatives.dc.html" style="font-size: 14px; font-weight: 600; color: #1F2937; text-decoration: none">{{f.name}}</a>
+<div style="display: flex; flex-direction: column; gap: 5px"><div style="display: flex; align-items: center; gap: 8px"><div style="{{f.mBar}}"></div><span style="font-size: 12px; color: #515B6B">{{f.m}}%</span></div><div style="display: flex; align-items: center; gap: 8px"><div style="{{f.yBar}}"></div><span style="font-size: 12px; color: #515B6B">{{f.y}}%</span></div></div>
+<span style="font-size: 14px; font-weight: 600; text-align: right">{{f.win}}</span>
+<span style="font-size: 14px; text-align: right">{{f.days}}</span>
+<span style="{{f.roasStyle}}">{{f.roas}}</span>
+<span><span style="{{f.trendStyle}}">{{f.trend}}</span></span>
+<div style="display: flex; gap: 6px"><sc-for list="{{f.thumbs}}" as="t" hint-placeholder-count="3"><span style="{{t.style}}" aria-hidden="true"></span></sc-for></div>
+</div>
+</sc-for>
+</div>
+</div>
+<p style="margin: 0; font-size: 12px; color: #515B6B">Category win rate = proven winners in that format divided by all category ads in it, shown only when 10 or more ads use it. Your ROAS is from your own account.</p>
+</section>
+
+<section aria-labelledby="build-heading" style="background: #FFFFFF; border: 1px solid #E5E7EB; border-radius: 12px; padding: 24px; display: flex; flex-direction: column; gap: 14px">
+<div><h2 id="build-heading" style="margin: 0; font-size: 20px; font-weight: 600; color: #0C1F96">How winning ads are built</h2><p style="margin: 4px 0 0; font-size: 13px; color: #515B6B">Pacing and production of 31 proven winners against 183 other competitor ads and your 46 · Observed</p></div>
+<div style="overflow-x: auto">
+<table style="width: 100%; border-collapse: collapse; font-size: 14px; min-width: 620px">
+<thead><tr style="text-align: left; color: #515B6B; font-size: 12px"><th style="padding: 0 8px 8px 0; font-weight: 600">Measure</th><th style="padding: 0 8px 8px; font-weight: 600; text-align: right">Proven winners</th><th style="padding: 0 8px 8px; font-weight: 600; text-align: right">Other competitor ads</th><th style="padding: 0 8px 8px; font-weight: 600; text-align: right">Yours</th><th style="padding: 0 0 8px 8px; font-weight: 600">Read</th></tr></thead>
+<tbody>
+<sc-for list="{{build}}" as="b" hint-placeholder-count="7"><tr style="border-top: 1px solid #EEF0F3"><td style="padding: 10px 8px 10px 0">{{b.m}}</td><td style="padding: 10px 8px; text-align: right; font-weight: 600">{{b.w}}</td><td style="padding: 10px 8px; text-align: right">{{b.o}}</td><td style="padding: 10px 8px; text-align: right; background: #F0FBFC; font-weight: 600">{{b.y}}</td><td style="padding: 10px 0 10px 8px; font-size: 13px; color: #515B6B">{{b.read}}</td></tr></sc-for>
+</tbody>
+</table>
+</div>
+</section>
+
+</main>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1440,"height":1560}}'>
+class Component extends DCLogic {
+  renderVals() {
+    const chip = (bg, fg) => 'font-size: 12px; font-weight: 600; padding: 3px 9px; border-radius: 999px; background: ' + bg + '; color: ' + fg;
+    const trend = { Rising: chip('#EEF2FF', '#1E3A8A'), Steady: chip('#F3F4F6', '#374151'), Falling: chip('#FEF3C7', '#78350F') };
+    const bar = (v, c) => 'height: 10px; border-radius: 5px; background: ' + c + '; width: ' + (v / 30 * 100) + '%; max-width: 100%';
+    const thumb = (bg) => ({ style: 'width: 36px; height: 45px; border-radius: 6px; background: ' + bg });
+    const f = (name, m, y, win, days, roas, t, bgs) => ({ name, m, y, win, days, roas, trend: t, trendStyle: trend[t], roasStyle: 'font-size: 14px; text-align: right; ' + (/^[0-9]/.test(roas) ? 'font-weight: 600' : 'color: #515B6B'), mBar: bar(m, '#0C1F96'), yBar: bar(y, '#00C0CB'), thumbs: bgs.map(thumb) });
+    return {
+      formats: [
+        f('Founder-led', 20, 4, '39%', 33, 'Too early', 'Rising', ['#E3E0EC', '#D9E4DC', '#EADCD8']),
+        f('UGC', 12, 22, '34%', 27, '3.0', 'Rising', ['#E9E2D6', '#EFE6DA', '#E2E8E4']),
+        f('Studio product', 23, 26, '27%', 30, '2.5', 'Steady', ['#E6E1D3', '#EADCD8', '#DCE3EC']),
+        f('Lifestyle', 18, 20, '21%', 24, '2.1', 'Steady', ['#DCE3EC', '#E9E2D6', '#E3E0EC']),
+        f('Motion graphics', 9, 8, '15%', 16, '1.9', 'Falling', ['#E2E8E4', '#DCE3EC', '#EFE6DA']),
+        f('Static graphic', 18, 20, '11%', 12, '1.7', 'Falling', ['#DCE3EC', '#E6E1D3', '#E9E2D6'])
+      ],
+      build: [
+        { m: 'Median length', w: '22 sec', o: '31 sec', y: '24 sec', read: 'Winners are shorter' },
+        { m: 'Cuts in the first 3 seconds', w: '2', o: '1', y: '2', read: 'You match winners' },
+        { m: 'Product appears by', w: '0:03', o: '0:07', y: '0:05', read: 'Show the product sooner' },
+        { m: 'Captions on', w: '92%', o: '64%', y: '70%', read: 'Caption every video' },
+        { m: 'Person on camera', w: '71%', o: '48%', y: '54%', read: 'Faces win in this category' },
+        { m: 'Talking to camera', w: '52%', o: '30%', y: '39%', read: 'More direct-to-camera' },
+        { m: 'Vertical 9:16', w: '78%', o: '55%', y: '61%', read: 'Shoot vertical first' }
+      ]
+    };
+  }
+}
+</script>
+</body>
+</html>

@@ -1,0 +1,107 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Exter AI patterns</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0}
+a{color:#007C85}a:hover{color:#0C1F96}
+</style>
+</helmet>
+<div style="font-family: Inter, sans-serif; color: #1F2937; background: #F8FAFC; min-height: 100vh; display: flex; flex-wrap: wrap; align-items: stretch">
+<div style="flex: 1 1 240px; max-width: 100%; background: #FFFFFF; border-right: 1px solid #E5E7EB"><dc-import name="Sidebar" active="patterns" hint-size="100%,980px"></dc-import></div>
+<main style="flex: 999 1 560px; min-width: 0; box-sizing: border-box; padding: 32px 40px 48px; display: flex; flex-direction: column; gap: 24px">
+
+<div style="display: flex; flex-wrap: wrap; align-items: flex-end; justify-content: space-between; gap: 16px">
+<div>
+<div style="font-size: 13px; color: #515B6B">Northwick Candle Co. · Research</div>
+<h1 style="margin: 4px 0 0; font-size: 28px; font-weight: 700; letter-spacing: -0.02em; color: #0C1F96">Patterns</h1>
+<p style="margin: 4px 0 0; font-size: 15px; color: #515B6B">What the category does, what wins, where you differ, and what to do about it.</p>
+</div>
+<div style="display: flex; flex-wrap: wrap; align-items: center; gap: 8px">
+<span style="font-size: 12px; font-weight: 600; padding: 4px 10px; border-radius: 999px; background: #FEF3C7; color: #78350F">Sample data</span>
+<button type="button" style="display: inline-flex; align-items: center; gap: 8px; min-height: 44px; padding: 0 16px; border: 1px solid #D6DBE3; border-radius: 8px; background: #FFFFFF; font: inherit; font-size: 14px; font-weight: 600; color: #1F2937; cursor: pointer">Last 90 days<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9l6 6 6-6"></path></svg></button>
+</div>
+</div>
+
+<section aria-labelledby="vs-heading" style="background: #FFFFFF; border: 1px solid #E5E7EB; border-radius: 12px; padding: 24px; display: flex; flex-direction: column; gap: 16px">
+<div style="display: flex; flex-wrap: wrap; align-items: flex-end; justify-content: space-between; gap: 12px">
+<div><h2 id="vs-heading" style="margin: 0; font-size: 20px; font-weight: 600; color: #0C1F96">You against the category</h2><p style="margin: 4px 0 0; font-size: 13px; color: #515B6B">214 competitor ads and your 46 · select a row to see its ads</p></div>
+<div role="group" aria-label="Group by" style="display: inline-flex; flex-wrap: wrap; border: 1px solid #D6DBE3; border-radius: 8px; overflow: hidden">
+<sc-for list="{{dims}}" as="d" hint-placeholder-count="7"><button type="button" aria-pressed="{{d.pressed}}" style="{{d.style}}">{{d.label}}</button></sc-for>
+</div>
+</div>
+<div style="display: flex; flex-wrap: wrap; gap: 18px; font-size: 13px; color: #515B6B">
+<span style="display: inline-flex; align-items: center; gap: 6px"><span style="width: 14px; height: 10px; border-radius: 3px; background: #0C1F96" aria-hidden="true"></span>Share of competitor ads</span>
+<span style="display: inline-flex; align-items: center; gap: 6px"><span style="width: 14px; height: 10px; border-radius: 3px; background: #00C0CB" aria-hidden="true"></span>Share of your ads</span>
+</div>
+<div style="overflow-x: auto">
+<div style="min-width: 980px">
+<div style="display: grid; grid-template-columns: 130px minmax(0, 1fr) 90px 110px 110px 80px 110px; gap: 14px; padding-bottom: 8px; font-size: 12px; font-weight: 600; color: #515B6B"><span>Hook type</span><span>Category and you</span><span style="text-align: right">Usage gap</span><span style="text-align: right">Category win rate</span><span style="text-align: right">Customer demand</span><span style="text-align: right">Your ROAS</span><span>Action</span></div>
+<sc-for list="{{rows}}" as="r" hint-placeholder-count="9">
+<div style="display: grid; grid-template-columns: 130px minmax(0, 1fr) 90px 110px 110px 80px 110px; gap: 14px; align-items: center; padding: 11px 0; border-top: 1px solid #EEF0F3">
+<a href="Creatives.dc.html" style="font-size: 14px; font-weight: 600; color: #1F2937; text-decoration: none">{{r.name}}</a>
+<div style="display: flex; flex-direction: column; gap: 5px"><div style="display: flex; align-items: center; gap: 8px"><div style="{{r.mBar}}"></div><span style="font-size: 12px; color: #515B6B">{{r.m}}%</span></div><div style="display: flex; align-items: center; gap: 8px"><div style="{{r.yBar}}"></div><span style="font-size: 12px; color: #515B6B">{{r.yLabel}}</span></div></div>
+<span style="font-size: 14px; text-align: right; font-weight: 600">{{r.gap}}</span>
+<span style="{{r.winStyle}}">{{r.win}}</span>
+<span style="{{r.demStyle}}">{{r.dem}}</span>
+<span style="{{r.roasStyle}}">{{r.roas}}</span>
+<span><span style="{{r.actionStyle}}">{{r.action}}</span></span>
+</div>
+</sc-for>
+</div>
+</div>
+<p style="margin: 0; font-size: 13px; padding: 10px 14px; border-radius: 8px; background: #F8FAFC">Priority = category win rate × usage gap × (1 + customer demand). Usage gap is competitors' share minus yours, in points. Win rate is shown only when 10 or more category ads use the value.</p>
+</section>
+
+<section aria-labelledby="actions-heading" style="background: #FFFFFF; border: 1px solid #E5E7EB; border-radius: 12px; padding: 24px; display: flex; flex-direction: column; gap: 14px">
+<h2 id="actions-heading" style="margin: 0; font-size: 20px; font-weight: 600; color: #0C1F96">What each action means</h2>
+<div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 12px">
+<sc-for list="{{actions}}" as="a" hint-placeholder-count="5"><div style="border: 1px solid #E5E7EB; border-radius: 10px; padding: 14px 16px; display: flex; flex-direction: column; gap: 8px"><span style="{{a.style}}">{{a.name}}</span><div style="font-size: 13px"><strong style="font-weight: 600">When:</strong> {{a.when}}</div><div style="font-size: 13px; color: #515B6B"><strong style="font-weight: 600; color: #1F2937">Exter suggests:</strong> {{a.what}}</div></div></sc-for>
+</div>
+</section>
+
+</main>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1440,"height":1480}}'>
+class Component extends DCLogic {
+  renderVals() {
+    const chip = (bg, fg) => 'font-size: 12px; font-weight: 600; padding: 3px 9px; border-radius: 999px; white-space: nowrap; background: ' + bg + '; color: ' + fg + '; align-self: flex-start';
+    const A = { 'Test now': chip('#E6F9FA', '#075E66'), 'Scale': chip('#E7F6EC', '#14532D'), 'Fix': chip('#FEF3C7', '#78350F'), 'Reduce': chip('#FDE8E8', '#8B1D1D'), 'Watch': chip('#EEF2FF', '#1E3A8A'), 'In line': chip('#F3F4F6', '#374151') };
+    const bar = (v, c) => 'height: 10px; border-radius: 5px; background: ' + c + '; width: ' + (v / 36 * 100) + '%';
+    const num = (v) => 'font-size: 14px; text-align: right; ' + (/^[0-9]/.test(v) ? 'font-weight: 600' : 'color: #515B6B; font-size: 13px');
+    const btn = 'min-height: 40px; padding: 0 14px; border: none; font: inherit; font-size: 13px; cursor: pointer;';
+    const row = (name, m, y, gap, win, dem, roas, action) => ({ name, m, yLabel: y ? y + '%' : 'None', gap, win, dem, roas, action, actionStyle: A[action], mBar: bar(m, '#0C1F96'), yBar: bar(y, '#00C0CB'), winStyle: num(win), demStyle: num(dem), roasStyle: num(roas) });
+    return {
+      dims: ['Hook type', 'Angle', 'Offer', 'Format', 'Claim type', 'Creator', 'Length'].map((label, i) => ({ label, pressed: i === 0 ? 'true' : 'false', style: btn + (i === 0 ? ' background: #0C1F96; color: #FFFFFF; font-weight: 600' : ' background: #FFFFFF; color: #1F2937; border-left: 1px solid #D6DBE3') })),
+      rows: [
+        row('Demo', 19, 4, '+15', '44%', '7%', 'Too early', 'Test now'),
+        row('Problem', 18, 34, '-16', '41%', '6%', '2.9', 'Scale'),
+        row('Offer-led', 21, 30, '-9', '22%', '3%', '2.0', 'Fix'),
+        row('Question', 5, 15, '-10', '12%', 'None linked', '1.7', 'Reduce'),
+        row('Testimonial', 8, 0, '+8', '35%', '4%', 'None', 'Watch'),
+        row('Trend', 3, 0, '+3', 'Under 10 ads', 'None linked', 'None', 'Watch'),
+        row('Unboxing', 8, 2, '+6', '39%', '8%', 'Too early', 'In line'),
+        row('Social proof', 12, 11, '+1', '30%', '5%', '2.4', 'In line'),
+        row('Scarcity or restock', 6, 4, '+2', '25%', 'None linked', '2.2', 'In line')
+      ],
+      actions: [
+        { name: 'Test now', style: A['Test now'], when: 'it wins often in the category and you use it 15+ points less.', what: 'a brief with 3 variants, linked to the ads that prove it.' },
+        { name: 'Scale', style: A['Scale'], when: 'your own winners sit where competitors barely go.', what: 'more versions of the winning concept and new creators.' },
+        { name: 'Fix', style: A['Fix'], when: 'you use it a lot but win less than the category.', what: 'new hooks or formats for the same idea.' },
+        { name: 'Reduce', style: A['Reduce'], when: 'it wins rarely everywhere and you overuse it.', what: 'move budget to Test now items.' },
+        { name: 'Watch', style: A['Watch'], when: 'a competitor idea is new or rising this week.', what: 'a note in the report; test if it is still rising next week.' }
+      ]
+    };
+  }
+}
+</script>
+</body>
+</html>
