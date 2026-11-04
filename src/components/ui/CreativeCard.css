@@ -18,3 +18,7 @@
 .ui-creative-poster.ui-creative-no-poster { aspect-ratio:auto;min-height:140px; }.ui-creative-no-poster .ui-creative-missing { min-height:140px;align-items:center; }
 
 .ui-creative-card dl.ui-creative-single-metric { grid-template-columns:1fr; }
+
+.ui-creative-card .ui-creative-id { color:var(--muted);font-size:12px; }.ui-creative-tags { align-items:center; }.ui-creative-tags>.ui-data-label { flex:0 0 auto;display:inline-flex;width:auto;align-self:center; }.ui-creative-tags>.ui-data-label-modelled { padding:2px 8px;background:var(--surface);color:var(--text);border:1px solid var(--line);border-radius:4px; }
+
+.ui-creative-card h3 { display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:2;overflow:hidden; }

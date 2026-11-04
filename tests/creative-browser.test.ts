@@ -100,6 +100,7 @@ test("UI-02 read endpoint is authenticated, read-only, scoped and does not turn 
         assert.equal(data.creatives.length, 2);
         const own = data.creatives.find(row => row.workspaceBrand)!;
         assert.equal(own.performance.length, 3);
+        assert.equal(own.publicEvidence,true,"a matched owned ad retains its independent public source evidence");
         assert.deepEqual(own.performance.map(item => item.metrics.Spend.value), [120, 300, 40]);
         assert.deepEqual(own.performance.map(item => item.benchmark.Spend.value), [120, 300, 40]);
         assert.equal(data.creatives.find(row => !row.workspaceBrand)!.performance.length, 0);

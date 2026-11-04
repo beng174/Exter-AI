@@ -1,1 +1,3 @@
 .ui-meta-line { font-size:12px;line-height:1.5;color:var(--muted);padding-top:12px;overflow-wrap:anywhere; }
+
+.ui-meta-line a { color:var(--exter-blue);display:inline-flex;align-items:center;min-height:44px; }

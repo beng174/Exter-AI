@@ -6,7 +6,7 @@ import type { Page } from "../shared/types.js";
 test("UI-00 config has unique canonical IDs, ordered groups and only existing ready screens",()=>{
   assert.equal(new Set(navigation.map(item=>item.id)).size,navigation.length);
   assert.deepEqual(navigationGroups,["Overview","Research","Act","Share","Settings"]);
-  const screens:Page[]=["overview","brand","competitors","ads","formats","audiences","creators","reports","sources","settings","demo","labelling"];
+  const screens:Page[]=["overview","brand","competitors","ads","formats","audiences","creators","reports","sources","settings","demo","labelling","patterns","winners"];
   for(const item of navigation) {
     assert.ok(navigationGroups.includes(item.group));
     if(item.ready)assert.ok(item.screen && screens.includes(item.screen),item.id);
@@ -14,7 +14,7 @@ test("UI-00 config has unique canonical IDs, ordered groups and only existing re
   }
   for(const screen of screens)assert.equal(resolveNavigation(`/?view=${viewForScreen(screen)}&demo=1`).screen,screen);
   const visible=visibleNavigation().flatMap(group=>group.items.map(item=>item.id));
-  assert.deepEqual(visible,["overview","brands","competitors","creatives","formats","audience","creators","reports","data","settings","labelling"]);
+  assert.deepEqual(visible,["overview","brands","competitors","creatives","formats","patterns","audience","winners","creators","reports","data","settings","labelling"]);
   assert.ok(visibleNavigation(true).flatMap(group=>group.items).some(item=>item.id==="demo"));
 });
 test("UI-00 legacy aliases redirect canonically and preserve brand, filters and hashes",()=>{
@@ -55,3 +55,5 @@ test("UI-02/UI-03 canonical creatives and full-page detail are rebuilt and ready
   const route=resolveNavigation("/?view=creative&brandId=workspace-a&id=creative-a&angle=gifting&layout=table");
   assert.equal(route.id,"creative");assert.equal(route.adId,"creative-a");assert.equal(route.url.searchParams.get("layout"),"table");
 });
+
+test("UI-C/UI-D all seven rebuilt routes are ready with correct sidebar titles/groups",()=>{for(const [id,code] of Object.entries({overview:"04",brands:"05",competitors:"06",formats:"07",patterns:"08",audience:"09",winners:"10"})){const item=navigation.find(item=>item.id===id)!;assert.equal(item.ready,true);assert.equal(item.rebuilt,`UI-${code}`);assert.equal(resolveNavigation(`/?view=${id}&brandId=known`).id,id);}assert.equal(navigation.find(item=>item.id==="winners")?.group,"Act");});

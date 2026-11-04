@@ -1,5 +1,6 @@
 import type { DemoGalleryCreative } from "./creative-gallery.js";
 import type { DemoAdScore } from "./brand-demo.js";
+import { measurementEligible, selectResearchAds, type EvidenceSelection } from "./creative-research.js";
 import { creativeTitle } from "./creative-presentation.js";
 import type { OwnedMetric, MetricName } from "./owned-metrics.js";
 export interface CreativePerformance {
@@ -18,6 +19,7 @@ export interface CreativePerformance {
 }
 export interface BrowserCreative extends DemoGalleryCreative {
     platform: string;
+    publicEvidence?:boolean;
     owned: boolean;
     workspaceBrand: boolean;
     sourceKind: "public" | "owned";
@@ -56,7 +58,7 @@ export interface CreativeBrowserResponse {
         to: string;
     };
 }
-export interface BrowserFilters {
+export interface BrowserFilters extends EvidenceSelection {
     cohort?: string;
     show?: string;
     brand?: string;
@@ -73,14 +75,15 @@ export interface BrowserFilters {
     sort?: string;
     layout?: string;
 }
-export const BROWSER_FILTERS = ["cohort", "show", "brand", "platform", "format", "hook", "angle", "offer", "ugc", "status", "from", "to", "search", "sort", "layout"] as const;
+export const BROWSER_FILTERS = ["measure","take","dimension","value","kind","activityFrom","activityTo","asOf","ad","cohort", "show", "brand", "platform", "format", "hook", "angle", "offer", "ugc", "status", "from", "to", "search", "sort", "layout"] as const;
 export function browserFilters(params: URLSearchParams): BrowserFilters {
     return Object.fromEntries(BROWSER_FILTERS.flatMap(key => params.get(key) ? [[key, params.get(key)!]] : []));
 }
 export function filterBrowserCreatives(rows: BrowserCreative[], filters: BrowserFilters) {
     const match = (selected: string | undefined, value: string | null | undefined) => !selected || selected === "all" || value === selected;
     const needle = filters.search?.trim().toLocaleLowerCase();
-    const result = rows.filter(row => (!filters.show || filters.show === "all" || filters.show === "yours" && row.workspaceBrand || filters.show === "competitors" && !row.workspaceBrand) &&
+    const researchSelection=filters.kind||filters.dimension||filters.asOf||filters.ad?new Set(selectResearchAds(rows,{...filters,take:undefined,measure:undefined}).map(row=>row.adId)):null;
+    const result = rows.filter(row => (!researchSelection||researchSelection.has(row.adId))&& (!filters.show || filters.show === "all" || filters.show === "yours" && row.workspaceBrand || filters.show === "competitors" && !row.workspaceBrand) &&
         (!filters.cohort || row.workspaceBrand && row.owned && row.performance.some(item => item.id === filters.cohort)) &&
         match(filters.brand, row.brandId) && match(filters.platform, row.platform) &&
         (!filters.format || filters.format === "all" || [row.creativeFormat, row.mediaKind].includes(filters.format)) &&
@@ -90,13 +93,14 @@ export function filterBrowserCreatives(rows: BrowserCreative[], filters: Browser
         (!filters.from || row.performance.length > 0 || Boolean(row.observedAt && row.observedAt.slice(0, 10) >= filters.from)) &&
         (!filters.to || row.performance.length > 0 || Boolean(row.observedAt && row.observedAt.slice(0, 10) <= filters.to)) &&
         (!needle || row.searchText.toLocaleLowerCase().includes(needle)));
-    return result.sort((a, b) => {
+    const ordered=result.sort((a, b) => {
         if (filters.sort === "days")
             return (b.daysRunning ?? -1) - (a.daysRunning ?? -1) || a.adId.localeCompare(b.adId);
         if (filters.sort === "title")
             return creativeTitle(a).localeCompare(creativeTitle(b)) || a.adId.localeCompare(b.adId);
         return (b.observedAt || "").localeCompare(a.observedAt || "") || a.adId.localeCompare(b.adId);
     });
+    const take=Number(filters.take);const limited=filters.take&&Number.isInteger(take)&&take>0&&take<=100?ordered.slice(0,take):ordered;return filters.measure?limited.filter(row=>measurementEligible(row,filters.measure!)):limited;
 }
 export function similarPublicCreatives(selected: BrowserCreative, rows: BrowserCreative[]) {
     if (!selected.angle && !selected.creativeFormat)

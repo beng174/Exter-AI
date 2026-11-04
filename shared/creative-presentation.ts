@@ -2,12 +2,24 @@ import type { DemoGalleryCreative } from "./creative-gallery.js";
 import { ANGLE_OPTIONS, AUDIO_TYPE_OPTIONS, CLAIM_TYPE_OPTIONS, CREATIVE_BOOLEAN_TAG_OPTIONS, FORMAT_OPTIONS, HOOK_TYPE_OPTIONS, OFFER_TYPE_OPTIONS } from "./creative-taxonomy.js";
 
 /** UI-02/UI-03 presentation only. Saved source text remains immutable. */
-export function creativeTitle(row:Pick<DemoGalleryCreative,"title"|"copy"|"nativeId"|"adId">):string {
-  const usable=(value:string|undefined)=>Boolean(value?.trim())&&!/{{|}}/.test(value!)&&!/^(unknown|unavailable|unsure)$/i.test(value!.trim());
-  if(usable(row.title))return row.title.trim();
+type CreativeIdentityInput=Pick<DemoGalleryCreative,"title"|"copy"|"nativeId"|"adId">&Partial<Pick<DemoGalleryCreative,"brandName"|"creativeFormat"|"angle">>;
+const visibleLabel=(value:string|null|undefined)=>Boolean(value?.trim())&&!/{{|}}/.test(value!)&&!/^(unknown|unavailable|unsure|none)$/i.test(value!.trim());
+export function creativeIdentity(row:CreativeIdentityInput):{title:string;secondary:string|null} {
   const firstLine=row.copy?.split(/\r?\n/).find(line=>line.trim())?.trim();
-  return usable(firstLine)?firstLine!:`Ad ${row.nativeId||row.adId}`;
+  if(visibleLabel(firstLine))return {title:firstLine!,secondary:null};
+  const shortFormats:Record<string,string>={UGC:"UGC",studio:"Studio",static:"Static image","founder-led":"Founder led",animation:"Animation",mixed:"Mixed formats"};
+  const format=visibleLabel(row.creativeFormat)?shortFormats[row.creativeFormat!]||plainEnum(row.creativeFormat!):null;
+  const angle=visibleLabel(row.angle)?plainEnum(row.angle!).toLowerCase():null;
+  if(format||angle)return {title:format&&angle?`${format}, ${angle}`:format||plainEnum(angle!),secondary:null};
+  return {title:`${row.brandName||"Brand"} ad`,secondary:`Ad ${row.nativeId||row.adId}`};
 }
+export function creativeTitle(row:CreativeIdentityInput):string {return creativeIdentity(row).title;}
+export function creativeSecondary(row:CreativeIdentityInput):string|null {return creativeIdentity(row).secondary;}
+export function videoLength(seconds:number|null|undefined):string|null {
+  if(typeof seconds!=="number"||!Number.isFinite(seconds)||seconds<0)return null;
+  const whole=Math.round(seconds);return `${Math.floor(whole/60)}:${String(whole%60).padStart(2,"0")}`;
+}
+export function creativeTags(values:readonly (string|null|undefined)[]):string[] {return [...new Set(values.filter((value):value is string=>visibleLabel(value)).map(plainEnum))].slice(0,3);}
 const enumLabels=new Map<string,string>([...FORMAT_OPTIONS,...HOOK_TYPE_OPTIONS,...ANGLE_OPTIONS,...OFFER_TYPE_OPTIONS,...AUDIO_TYPE_OPTIONS,...CLAIM_TYPE_OPTIONS,...CREATIVE_BOOLEAN_TAG_OPTIONS]);
 const sourceLabels:Record<string,string>={facebook:"Facebook",instagram:"Instagram",audience_network:"Audience Network",messenger:"Messenger",threads:"Threads",meta:"Meta",tiktok:"TikTok",ugc:"UGC",cta:"CTA",gbp:"GBP",usd:"USD",eur:"EUR",uk:"UK",gb:"GB",none:"None",active:"Active",inactive:"Inactive"};
 export function plainEnum(value:string):string {
