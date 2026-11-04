@@ -1,0 +1,4 @@
+.ui-bar-list ul { list-style:none;padding:0; }
+.ui-bar-list li { margin-bottom:12px; }
+.ui-bar-list button { display:grid;grid-template-columns:1fr auto;gap:8px;width:100%;min-height:44px;border:0;background:transparent;color:var(--text);text-align:left;padding:8px 0; }
+.ui-bar-list i { display:block;grid-column:1/-1;height:8px;width:var(--bar-width);background:var(--exter-teal);border-radius:4px; }

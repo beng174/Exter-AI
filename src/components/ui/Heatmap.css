@@ -1,0 +1,6 @@
+.ui-heatmap { min-width:0; }
+.ui-heatmap-scroll { overflow:auto; }
+.ui-heatmap table { width:100%;border-collapse:collapse;font-size:14px; }
+.ui-heatmap caption { text-align:left;padding:12px 0; }
+.ui-heatmap th,.ui-heatmap td { padding:8px;border:1px solid var(--line-soft);text-align:left; }
+.ui-heatmap button { min-width:44px;min-height:44px;width:100%;border:0;border-radius:4px;color:var(--text);background:color-mix(in srgb,var(--exter-teal) calc(var(--cell-opacity) * 100%),white);font-weight:600; }

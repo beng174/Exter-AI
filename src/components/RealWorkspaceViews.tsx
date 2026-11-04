@@ -1,3 +1,5 @@
+import { openCreativeRoute, closeCreativeRoute, resolveNavigation, NAVIGATION_EVENT } from "../navigation";
+import { Unavailable } from "./ui/Unavailable";
 import { workspaceEvidence } from "../../shared/workspace-evidence";
 import { useEffect, useMemo, useRef, useState } from "react";
 import type { Brand } from "../../shared/types";
@@ -147,6 +149,17 @@ export function RealWorkspaceView({ brandId, view, brands = [], onSelectBrand, o
   const creators = useMemo(() => (data.creators?.candidates || []).filter(creator => creatorEligibility(creator).status === "eligible"), [data.creators]);
   const attributedCreators = data.creators?.seeds || [];
   const detail = creatives.find(creative => creative.adId === openAdId) || null;
+  useEffect(()=>{
+    function syncDetail() {
+      const route=resolveNavigation(window.location.href);
+      const target=route.brandId===brandId ? creatives.find(creative=>creative.adId===route.adId||creative.nativeId===route.adId):null;
+      setOpenAdId(target?.adId || null);
+    }
+    syncDetail();window.addEventListener("popstate",syncDetail);window.addEventListener(NAVIGATION_EVENT,syncDetail);
+    return()=>{window.removeEventListener("popstate",syncDetail);window.removeEventListener(NAVIGATION_EVENT,syncDetail);};
+  },[data.gallery,brandId]);
+  function selectCreative(id:string|null) {if(id)openCreativeRoute(id,brandId);else closeCreativeRoute(brandId);}
+
 
   function revealGallery(next: CreativeGalleryFilters = {}, supporting?: DemoGalleryCreative[]) {
     setFilters(next); setEvidenceAdIds(supporting ? supporting.map(creative => creative.adId) : null); setShowGallery(true);
@@ -154,7 +167,7 @@ export function RealWorkspaceView({ brandId, view, brands = [], onSelectBrand, o
   }
   function openCreative(adId: string) {
     const creative = creatives.find(value => value.adId === adId || value.nativeId === adId);
-    if (creative) setOpenAdId(creative.adId);
+    if (creative) selectCreative(creative.adId);
   }
   function AdReferences({ ads, limit = 5 }: { ads: DemoGalleryCreative[]; limit?: number }) {
     return <div className="rws-ad-references">{ads.slice(0, limit).map(ad => <button key={ad.adId} className="rws-source" type="button" onClick={() => openCreative(ad.adId)}>Ad {ad.nativeId}</button>)}{ads.length > limit && <button className="rws-source" type="button" onClick={() => revealGallery({}, ads)}>View all {ads.length} supporting ads</button>}</div>;
@@ -202,7 +215,7 @@ export function RealWorkspaceView({ brandId, view, brands = [], onSelectBrand, o
     return <section id="workspace-creatives" ref={galleryRef} className="rws-gallery-section" aria-label="Creative library">
       {view !== "ads" && <SectionTitle title="Creatives" />}
       {evidenceAdIds && <div className="rws-brand-actions"><p className="rws-secondary">Showing {supportingCreatives.length} supporting ads.</p><button type="button" className="rws-source" onClick={() => revealGallery({})}>Show all collected ads</button></div>}
-      {data.gallery && creatives.length ? <CreativeGallery brandControl={<label>Brand<select aria-label="Brand" value={brandId} onChange={event => onSelectBrand?.(event.target.value)}>{brands.length ? brands.map(brand => <option key={brand.id} value={brand.id}>{brand.name}</option>) : <option value={brandId}>{brandName}</option>}</select></label>} creatives={supportingCreatives} filters={filters} onFiltersChange={setFilters} openAdId={openAdId} onOpenAd={setOpenAdId} />
+      {data.gallery && creatives.length ? <CreativeGallery brandControl={<label>Brand<select aria-label="Brand" value={brandId} onChange={event => onSelectBrand?.(event.target.value)}>{brands.length ? brands.map(brand => <option key={brand.id} value={brand.id}>{brand.name}</option>) : <option value={brandId}>{brandName}</option>}</select></label>} creatives={supportingCreatives} filters={filters} onFiltersChange={setFilters} openAdId={openAdId} onOpenAd={selectCreative} />
         : data.gallery ? <Empty title="No source creatives collected yet" action={onOpenSettings} actionLabel="Collect or prepare source ads">Collected ads and their available media appear here. No sample creatives are substituted.</Empty>
         : <Empty title="Creatives are temporarily unavailable" action={() => setRefresh(value => value + 1)} actionLabel="Refresh creative data">Your saved sources have not been replaced with sample content.</Empty>}
     </section>;
@@ -211,6 +224,7 @@ export function RealWorkspaceView({ brandId, view, brands = [], onSelectBrand, o
   if (loading) return <div className="rws-loading" role="status"><LoaderCircle size={18} className="spin" />Loading saved source evidence…</div>;
   return <div className="real-workspace-view">
     <div className="rws-page-tools"><span className="rws-source-note">Auto-refresh every minute{checkedAt ? ` · checked ${new Date(checkedAt).toLocaleTimeString("en-GB",{timeZone:"Europe/London",hour:"2-digit",minute:"2-digit"})}` : ""} · source dates retained</span><button type="button" className="rws-secondary-button" onClick={() => setRefresh(value => value + 1)} disabled={Boolean(busy)}><RefreshCw size={14} />Refresh</button></div>
+    {resolveNavigation(window.location.href).id==="creative" && !detail && <Unavailable reason="This ad is not available in the selected workspace." unlock="Choose an ad from the stored Creative library." href={`/?${new URLSearchParams({view:"creatives",brandId})}`} linkLabel="Creatives"/>}
     {notice && <p className="rws-notice" role="status">{notice}</p>}
     {actionError && <p className="rws-error" role="alert">{actionError}</p>}
 
@@ -290,6 +304,6 @@ export function RealWorkspaceView({ brandId, view, brands = [], onSelectBrand, o
     </>}
 
     <details className="rws-about"><summary><Info size={14} />About this data</summary><div><p>This workspace uses all saved real-source records. It does not apply the sample dashboard's rolling date filter.</p><p>Ad collection, stored media and completed analysis are separate counts. Missing metrics remain unavailable. Repeated source observations do not prove continuous delivery or ad performance.</p>{unavailable.length > 0 && <p>Some source sections could not be loaded: {unavailable.join(", ")}. Refresh to retry.</p>}</div></details>
-    {detail && view !== "ads" && !showGallery && <CreativeAdDetail creative={detail} creatives={creatives} onClose={() => setOpenAdId(null)} onSelect={setOpenAdId} />}
+    {detail && view !== "ads" && !showGallery && <CreativeAdDetail creative={detail} creatives={creatives} onClose={() => selectCreative(null)} onSelect={selectCreative} />}
   </div>;
 }

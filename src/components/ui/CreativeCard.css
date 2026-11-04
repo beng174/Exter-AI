@@ -1,0 +1,9 @@
+.ui-creative-card { background:var(--surface);border:1px solid var(--line-soft);border-radius:12px;overflow:hidden;min-width:0; }
+.ui-creative-open { display:block;width:100%;text-align:left;border:0;background:transparent;padding:16px;min-height:44px; }
+.ui-creative-card img { aspect-ratio:4/5;object-fit:cover;width:100%;border-radius:8px; }
+.ui-creative-missing { display:flex;align-items:center;min-height:160px;background:var(--surface-subtle);padding:16px;color:var(--muted); }
+.ui-creative-tags { display:flex;flex-wrap:wrap;gap:4px; }
+.ui-creative-tags > span { padding:2px 8px;background:var(--surface-muted);border-radius:4px;font-size:12px; }
+.ui-creative-card dl { padding:0 16px; }
+.ui-creative-card dd { margin:0; }
+.ui-creative-card dd button { min-height:44px;border:0;background:transparent; }

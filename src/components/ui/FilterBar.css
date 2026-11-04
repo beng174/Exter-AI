@@ -1,0 +1,2 @@
+.ui-filter-bar { display:flex;flex-wrap:wrap;justify-content:space-between;align-items:center;gap:16px;padding:16px;background:var(--surface);border:1px solid var(--line-soft);border-radius:8px;min-width:0; }
+.ui-filter-bar select,.ui-filter-bar button,.ui-filter-bar input { min-height:44px; }

@@ -85,3 +85,5 @@ archived skill.
   platform, currency, attribution and conversion-event cohorts separate.
 - Treat Phase 1 as fixture-tested, not live-verified. Keep M1 status and the main
   product spec references above alongside these own-account module rules.
+
+UI work follows research/UI-SPEC.md and design/screens/.

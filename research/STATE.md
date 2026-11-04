@@ -150,3 +150,16 @@ and blockers below remain unchanged.
   browser captures were attempted on 3 November but failed without new output.
 - Production build, 331 existing tests, seven scoring tests and browser regression
   passed, including five visible subscores and absence of Beta labels.
+
+## UI-A shell and shared components (UI-00, UI-01)
+
+- Added grouped navigation with existing-screen ready flags, canonical view IDs,
+  legacy aliases, native back/forward and URLs for the existing creative modal.
+  Individual screen bodies and metric calculations are retained.
+- Added all UI-01 presentation components with individual CSS and approved tokens.
+  Missing values render Unavailable; observed zero remains zero.
+- Validation: check, 359 tests, build and secrets:check passed. Browser acceptance
+  covered all ready pages and desktop/mobile navigation. Real-record screenshots
+  at 1440px and 390px are in output/playwright/ui-a-*.png.
+- No sample data, dependencies, schemas or provider calls were added. Both live
+  gates remain open and owned sync remains default off.

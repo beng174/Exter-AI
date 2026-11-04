@@ -1,0 +1,5 @@
+.ui-confidence { display:inline-flex;flex-direction:column;gap:4px;font-size:12px;color:var(--muted); }
+.ui-confidence-bar { height:4px;width:48px;border-radius:3px;background:var(--line-soft); }
+.ui-confidence-bar i { display:block;height:100%;background:var(--exter-blue);width:33%; }
+.ui-confidence-medium i { width:66%; }
+.ui-confidence-high i { width:100%; }
