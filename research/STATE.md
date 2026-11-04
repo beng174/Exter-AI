@@ -1,10 +1,19 @@
 # Product renewal and M1 handoff
 
 Current source of truth: research/PRODUCT-SPEC.md, uploaded 4 November 2026.
-Implement M1 only: public creative evidence and original Exter screens. M2 to M5
-remain planned, not started. The earlier creative-analytics and low-cost kernel
-priorities are superseded by this request. Preserve their implementation and
-historical evidence below; do not run kernel:next without a request.
+research/CREATIVE-ANALYTICS-SPEC.md is its own-account module. The current priority
+remains creative analytics Phase 0 then Phase 1 (CA-01, CA-02). Kernel work stays
+paused until Phase 2; do not run kernel:next without a request.
+
+This PR retains M1's public creative evidence and original Exter screens. M1's
+M2 to M5 remain planned, not started here. The separately authorised CA-01/CA-02
+fixture-only work is tracked in PR #4, not introduced by this reconciliation.
+
+- Phase 0 live gate: OPEN, awaiting Meta identity verification and user confirmation
+  on Exter Media's own ad account.
+- Phase 1 live gate: OPEN, awaiting the user's own-account reporting parity check.
+- The user's explicit authorisation permits Phase 1 fixture work while Phase 0
+  remains open. Fixtures are not live verification; keep live dispatch disabled.
 
 M1 reuses the retained-record projection, immutable analyses and media routes.
 58 genuine captured ad records are available locally; production media and the
@@ -14,11 +23,45 @@ analysis and playback separately. No live provider calls, production writes,
 Gemini method changes, Render settings changes or budget changes were made.
 See .agent/plans/weeks-1-2.md for validation, screenshots and remaining gates.
 
-## Earlier handoff (historical)
+## PR #3 branch reconciliation (2026-11-04 01:53 UTC)
 
-# Current handoff
+- Merged exter-test-drive at 4636ddc. Preserved M1 and Phase 0 handoff evidence,
+  the creative analytics priority and module rules, and all M1 working guidance.
+- PRODUCT-SPEC.md remains the main product spec; CREATIVE-ANALYTICS-SPEC.md is
+  its own-account module. Added the four requested environment-variable names.
+- The connector config tests, default version and INSIGHTS.md are identical to
+  the target branch and no longer appear as duplicate changes in this PR.
+- Validation: npm run check, npm test (341 passed), npm run build and
+  npm run secrets:check passed. No UI changes or live provider calls were made.
 
-Priority: stable low-cost kernel. Use npm run kernel:next and one listed task.
+
+## Phase 0 and earlier handoff (retained notes)
+
+### Creative analytics priority
+
+Priority: creative analytics module in research/CREATIVE-ANALYTICS-SPEC.md,
+Phase 0 then Phase 1 (CA-01 and CA-02).
+
+The low-cost kernel work is paused until Phase 2. Its code, tests,
+research/PRODUCT-SPEC.md and this handoff remain in place. Do not pick kernel
+tasks or run npm run kernel:next unless the user asks. Existing kernel evidence
+and blockers below remain unchanged.
+
+## Creative analytics set-up (Phase 0; CA-01, CA-02)
+
+- Added module scope, commit ID, original-layout and metric-source rules to
+  AGENTS.md; removed external screen references from docs/INSIGHTS.md.
+- Default owned-account Meta Graph version is v25.0; explicit version overrides
+  remain supported. UI and kernel implementation are unchanged.
+- No live provider calls were made. The Phase 0 gate (system user reading Exter
+  Media's own ad account) remains unverified. The earlier instruction to wait on
+  Phase 1 is superseded only for fixture development by the user's authorisation;
+  both live gates remain open.
+
+- Validation: npm test passed all 336 tests; npm run check and
+  npm run secrets:check passed. Fixtures do not verify live-account gates.
+
+## Retained kernel handoff
 
 - Baseline before K05: 5fba1bd. K04 CI passed all jobs after an install timeout retry.
 - K04 audio code is implemented behind EXTER_KERNEL_AUDIO_ENABLED, default off.

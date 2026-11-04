@@ -5,7 +5,9 @@
 Make retained Valentte ads usable for Exter strategists, then plan economical
 analysis, survival/scaling scores and evidence-backed creative decisions.
 research/PRODUCT-SPEC.md (uploaded 4 November 2026) is the source of truth.
-Only M1 is authorised for implementation. M2 to M5 below are plans, not releases.
+This plan covers M1 implementation only. CA-01/CA-02 fixture development is
+separately authorised under the own-account module and tracked in PR #4. M2 to M5
+below remain plans, not releases.
 The dated weeks in the spec are 3 to 9 and 10 to 16 November 2026; dates are
 sequencing targets, not evidence that provider approvals or human labels exist.
 
@@ -15,6 +17,7 @@ sequencing targets, not evidence that provider approvals or human labels exist.
 - [x] 2026-11-04: Replace the older stub and establish specification precedence.
 - [x] 2026-11-04: Add working instructions, plan format and this execution plan.
 - [x] 2026-11-04 01:25 UTC: M1 implementation and local validation complete; production media/paid-output verification remains external.
+- [x] 2026-11-04 01:53 UTC: PR #3 reconciled with exter-test-drive; check, all 341 tests, build and secrets:check passed.
 - [ ] M2: Low-cost video pipeline, gated by human evaluation. Not started.
 - [ ] M3: Working Score and Winners. Not started.
 - [ ] M4: Scorecard, gaps and What to work on. Not started.
@@ -35,6 +38,16 @@ Visual review exposed detail overlay containment after scroll. Render the modal 
 a document-root portal and test its bounds to prevent it opening below the viewport.
 
 ## Decision log
+
+2026-11-04 01:52 UTC: Reconcile PR #3 with exter-test-drive per the latest user
+instruction. PRODUCT-SPEC.md is the main product spec; CREATIVE-ANALYTICS-SPEC.md
+is its own-account module. Preserve the target branch's creative analytics priority
+and module rules alongside all M1 guidance. Phase 1 fixtures are authorised while
+both live gates remain open. This supersedes the earlier M1 priority decision below.
+The Phase 0 changes are now merged into the target branch: use its identical
+connector config test, default-version code and INSIGHTS.md without duplicate PR
+diffs. Preserve both M1 and Phase 0 STATE.md notes. No UI or provider changes here.
+
 
 2026-11-04: Follow the uploaded public-first spec rather than the creative-analytics
 spec and kernel priorities. Preserve those files and implementations. No CA-only
