@@ -83,3 +83,14 @@ test("Fidelity hides fully unavailable columns once, retains observed zero and p
  assert.equal((html.match(/Not yet available:/g)||[]).length,1);assert.ok(!html.includes('data-label="Working Score"'));assert.match(html,/data-label="Count">0/);assert.match(html,/title="This value has not been recorded/);assert.match(html,/>Basis</);
  const empty=render(ui.SectionCard,{title:"Designed chart",empty:{reason:"No saved observations."}});assert.match(empty,/<header><div><h2>Designed chart/);assert.equal((empty.match(/No saved observations/g)||[]).length,1);
 });
+
+test("Basis follows row evidence, preserving observed zero and explicit modelled measurements",()=>{
+ const rows=[{id:"missing",label:"Missing measurement",value:null,basis:"Unavailable"},{id:"zero",label:"Measured zero",value:0,basis:"Observed"},{id:"model",label:"Saved analysis",value:12,basis:"Modelled"}];
+ const html=render(ui.DataTable,{caption:"Evidence",rows,columns:[{key:"label",label:"Measure",value:(row:any)=>row.label},{key:"value",label:"Value",value:(row:any)=>row.value}],rowKey:(row:any)=>row.id,basis:"Observed",rowBasis:(row:any)=>row.basis});
+ const labels=[...html.matchAll(/data-label="Basis"><span[^>]*>([^<]+)</g)].map(match=>match[1]);
+ assert.deepEqual(labels,["Unavailable","Observed","Modelled"]);assert.match(html,/data-label="Value">0/);assert.match(html,/data-label="Measure">Missing measurement/);
+ const absent=render(ui.DataTable,{caption:"Absent",rows:[{id:"missing",value:null}],columns:[{key:"value",label:"Value",value:(row:any)=>row.value}],rowKey:(row:any)=>row.id,basis:"Observed",hideUnavailable:false});
+ assert.match(absent,/data-label="Basis"><span[^>]*>Unavailable</);
+ const ineligible=render(ui.DataTable,{caption:"Ineligible",rows:[{id:"one",value:12}],columns:[{key:"value",label:"Value",value:(row:any)=>row.value,basis:()=>"Unavailable"}],rowKey:(row:any)=>row.id,basis:"Observed"});
+ assert.match(ineligible,/data-label="Basis"><span[^>]*>Unavailable</);
+});

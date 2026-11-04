@@ -35,3 +35,15 @@ test("Review fixes hide universal unavailable winner columns and mark uncollecte
  const competitors=render("CompetitorsScreen",source);assert.equal((competitors.match(/not-collected-header/g)||[]).length,1);
  for(const name of ["HomeScreen","BrandScreen","CompetitorsScreen","FormatsScreen","PatternsScreen","AudienceScreen","WinnersScreen"])assert.doesNotMatch(render(name,source),/\b(?:CA|UI)-\d+/);
 });
+
+test("Scorecards never label unsupported share of voice Observed, and keep genuine observed zero",()=>{
+ const source=data();source.library.competitors.push({key:"pending",brandId:null,name:"Pending advertiser",status:"not-started"});
+ for(const name of ["HomeScreen","CompetitorsScreen"]) {
+  const html=render(name,source),row=html.match(/<tr[^>]*><td[^>]*>Share of voice<\/td>.*?<\/tr>/)?.[0];
+  assert.ok(row,name);assert.match(row,/data-label="Basis"><span[^>]*>Unavailable</,name);
+  const active=html.match(/<tr[^>]*><td[^>]*>Active ads<\/td>.*?<\/tr>/)?.[0];assert.match(active!,/data-label="Basis"><span[^>]*>Observed</,name);
+ }
+ const production=render("FormatsScreen",source),unknown=production.match(/<tr[^>]*><td[^>]*>Captions on<\/td>.*?<\/tr>/)?.[0],talking=production.match(/<tr[^>]*><td[^>]*>Talking to camera \(%\)<\/td>.*?<\/tr>/)?.[0];
+ assert.match(unknown!,/data-label="Basis"><span[^>]*>Unavailable</);assert.match(talking!,/data-label="Basis"><span[^>]*>Modelled</);
+ const audience=render("AudienceScreen",source),pending=audience.match(/<tr[^>]*><td[^>]*>Pending advertiser<\/td>.*?<\/tr>/)?.[0];assert.match(pending!,/data-label="Basis"><span[^>]*>Unavailable</);
+});

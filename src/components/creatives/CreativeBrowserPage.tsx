@@ -1,12 +1,12 @@
 import { Caveat } from "../ui/Caveat";
 import { Disabled } from "../workspace/ActionWorkspace";
 import { useEffect, useState } from "react";
-import { Grid2X2, List, Search, RotateCcw } from "lucide-react";
 import { browserFilters, filterBrowserCreatives, type BrowserFilters, type BrowserCreative, type CreativeBrowserResponse } from "../../../shared/creative-browser";
 import { NAVIGATION_EVENT, openCreativeRoute, type resolveNavigation } from "../../navigation";
-import { adCount, creativeTitle, creativeSecondary, plainEnum, ukDate } from "../../../shared/creative-presentation";
+import { creativeTitle, creativeSecondary, plainEnum, ukDate } from "../../../shared/creative-presentation";
 import { api } from "../../lib/api";
-import { PageHeader, FilterBar, CreativeCard, DataTable, DataLabel, MetaLine, EmptyState, Unavailable, type UnavailableProps } from "../ui";
+import { PageHeader, CreativeCard, DataTable, DataLabel, MetaLine, EmptyState, Unavailable, type UnavailableProps } from "../ui";
+import { CreativeFilters } from "./CreativeFilters";
 import { CreativeDetailPage } from "./CreativeDetailPage";
 import { cardMetrics, creativeMeta, onlyCohort, metricReason } from "./presentation";
 import "./CreativeBrowserPage.css";
@@ -15,10 +15,9 @@ export function CreativeBrowserPage({ brandId, route, refresh }: {
     route: ReturnType<typeof resolveNavigation>;
     refresh: number;
 }) {
-    const [data, setData] = useState<CreativeBrowserResponse | null>(null), [error, setError] = useState(false), [loading, setLoading] = useState(true), [attempt, setAttempt] = useState(0), [expanded, setExpanded] = useState(() => window.innerWidth >= 720), [visibleCount,setVisibleCount]=useState(8);
+    const [data, setData] = useState<CreativeBrowserResponse | null>(null), [error, setError] = useState(false), [loading, setLoading] = useState(true), [attempt, setAttempt] = useState(0), [datesOpen, setDatesOpen] = useState(false), [visibleCount,setVisibleCount]=useState(8);
     const filters = browserFilters(route.url.searchParams);
     useEffect(()=>setVisibleCount(8),[JSON.stringify(filters)]);
-    useEffect(() => { const media = window.matchMedia("(min-width:720px)"); const update = () => setExpanded(media.matches); media.addEventListener("change", update); return () => media.removeEventListener("change", update); }, []);
     useEffect(() => {
         let active = true;
         setLoading(true);
@@ -49,20 +48,14 @@ export function CreativeBrowserPage({ brandId, route, refresh }: {
     const rows = filterBrowserCreatives(data.creatives, filters), open = (row: BrowserCreative) => openCreativeRoute(row.adId, brandId);
     if (route.id === "creative")
         return <CreativeDetailPage data={data} adId={route.adId!} filtered={rows} onOpen={open} onRefresh={()=>setAttempt(value=>value+1)}/>;
-    const values = (field: keyof BrowserCreative) => [...new Set(data.creatives.map(row => row[field]).filter((value): value is string => typeof value === "string" && Boolean(value) && value !== "unknown" && value !== "Unavailable"))].sort();
-    const select = (key: keyof BrowserFilters, label: string, options: string[] | {
-        value: string;
-        label: string;
-    }[]) => <label key={key}>{label}<select aria-label={label} value={filters[key] || (key === "sort" ? "newest" : "all")} onChange={event => change({ [key]: event.target.value })}>{key !== "sort" && <option value="all">All</option>}{options.map(item => typeof item === "string" ? <option key={item} value={item}>{plainEnum(item)}</option> : <option key={item.value} value={item.value}>{item.label}</option>)}</select></label>;
     const meta = { sampleSize: rows.length, from: data.dateRange.from, to: data.dateRange.to, lastChecked: data.lastChecked };
     const coverage=data.sources.filter(source=>!["complete","succeeded","collected"].includes(source.status));
     const missingOwned=rows.filter(row=>row.workspaceBrand&&cardMetrics(row,filters.cohort).some(metric=>metric.value===null));
     const ambiguous=missingOwned.find(row=>row.performance.length>1&&!filters.cohort);
-    const ownedGap:UnavailableProps=data.ownedStatus==="error"?{reason:"Saved owned metrics could not be read.",action:{label:"Retry",onClick:()=>setAttempt(value=>value+1)}}:data.ownedStatus==="not_configured"?{reason:"Owned metrics are not synced.",href:`/?view=data&brandId=${encodeURIComponent(brandId)}`,linkLabel:"Connect account"}:ambiguous?{reason:"Choose one account reporting scope to see owned metrics.",action:{label:"Choose scope",onClick:()=>open(ambiguous)}}:{reason:"Some owned metrics lack reported data or the minimum sample in this date range.",action:{label:"Change dates",onClick:()=>setExpanded(true)}};
+    const ownedGap:UnavailableProps=data.ownedStatus==="error"?{reason:"Saved owned metrics could not be read.",action:{label:"Retry",onClick:()=>setAttempt(value=>value+1)}}:data.ownedStatus==="not_configured"?{reason:"Owned metrics are not synced.",href:`/?view=data&brandId=${encodeURIComponent(brandId)}`,linkLabel:"Connect account"}:ambiguous?{reason:"Choose one account reporting scope to see owned metrics.",action:{label:"Choose scope",onClick:()=>open(ambiguous)}}:{reason:"Some owned metrics lack reported data or the minimum sample in this date range.",action:{label:"Change dates",onClick:()=>setDatesOpen(true)}};
     return <div className="creative-browser"><PageHeader title="Creatives" subtitle="Every ad from you and your competitors, read and tagged the same way." actions={<div className="creative-header-actions"><div className="creative-layout-toggle" role="group" aria-label="Creative layout"><button aria-pressed={filters.layout !== "table"} onClick={() => change({ layout: "grid" })}>Grid</button><button aria-pressed={filters.layout === "table"} onClick={() => change({ layout: "table" })}>Table</button></div><Disabled reason="Creative CSV export is not available yet.">Export CSV</Disabled></div>}/>
-    <section id="creative-filters" className="creative-filter-card" aria-label="Creative filters"><div className="creative-filter-top"><div className="creative-show" role="group" aria-label="Show creatives"><span>Show</span>{[["all", "Both"], ["yours", "Yours"], ["competitors", "Competitors"]].map(([value, label]) => <button key={value} aria-pressed={(filters.show || "all") === value} onClick={() => change({ show: value })}>{label} <span>{data.creatives.filter(row => value === "all" || value === "yours" && row.workspaceBrand || value === "competitors" && !row.workspaceBrand).length}</span></button>)}<DataLabel basis="Observed"/></div><label className="creative-search"><Search size={16}/><span className="sr-only">Search copy, transcript and on-screen text</span><input type="search" value={filters.search || ""} placeholder="Search copy, transcript, on-screen text" onChange={event => change({ search: event.target.value })}/></label>{select("sort", "Sort", [{ value: "newest", label: "Last observed" }, { value: "days", label: "Days running" }, { value: "title", label: "Ad title" }])}</div>
-    <details className="creative-advanced-filters" open={expanded} onToggle={event => setExpanded(event.currentTarget.open)}><summary>Filters</summary><FilterBar label="Filter stored creatives">{select("brand", "Brand", [...new Map(data.creatives.map(row => [row.brandId, { value: row.brandId, label: row.brandName }])).values()])}{select("platform", "Platform", values("platform"))}{select("format", "Format", [...new Set([...values("creativeFormat"), ...values("mediaKind")])])}{select("hook", "Hook", values("hookType"))}{select("angle", "Angle", values("angle"))}{select("offer", "Offer", values("offerType"))}{select("ugc", "UGC", [{ value: "yes", label: "Yes" }, { value: "no", label: "No" }, { value: "unknown", label: "Unavailable" }])}{select("status", "Status at capture", [{ value: "active", label: "Active" }, { value: "inactive", label: "Inactive" }, { value: "unknown", label: "Unavailable" }])}<label>Observed from<input type="date" value={filters.from || ""} max={filters.to} onChange={event => change({ from: event.target.value })}/></label><label>Observed to<input type="date" value={filters.to || ""} min={filters.from} onChange={event => change({ to: event.target.value })}/></label><button className="button secondary" onClick={() => change(Object.fromEntries(Object.keys(filters).map(key => [key, ""])))}><RotateCcw size={14}/> Reset</button></FilterBar></details>
-    </section><div className="creative-results"><span><button onClick={() => change({ show: filters.show || "all" })}>{adCount(rows.length)}</button> <DataLabel basis="Observed"/></span><span>{data.dateRange.from&&data.dateRange.to?`${ukDate(data.dateRange.from)} to ${ukDate(data.dateRange.to)}`:""}</span></div>
+    <CreativeFilters creatives={data.creatives} filters={filters} onChange={change} datesOpen={datesOpen} onDatesOpen={setDatesOpen}/>
+    <div className="creative-results"><span>Showing {filters.layout === "table" ? rows.length : Math.min(visibleCount, rows.length)} of {rows.length} · {rows.slice(0, filters.layout === "table" ? rows.length : visibleCount).filter(row=>row.workspaceBrand).length} yours, {rows.slice(0, filters.layout === "table" ? rows.length : visibleCount).filter(row=>!row.workspaceBrand).length} from competitors <DataLabel basis="Observed"/></span><span>{data.dateRange.from&&data.dateRange.to?`${ukDate(data.dateRange.from)} to ${ukDate(data.dateRange.to)}`:""}</span></div>
     {(missingOwned.length>0||data.ownedStatus==="error")&&<div className="creative-owned-gap" role="region" aria-label="Owned metrics availability"><Unavailable label="" {...ownedGap}/></div>}
     <Caveat><p>Owned account outcomes: {ukDate(data.reportingRange.from)} to {ukDate(data.reportingRange.to)}. Account, currency, attribution and conversion-event scopes stay separate.</p><MetaLine {...meta}/>{coverage.length>0&&<p>{coverage.map(source=>`${source.name}: ${source.status==="not-started"?"not collected":plainEnum(source.status)}`).join("; ")}</p>}</Caveat>
     {filters.layout === "table" ? <DataTable<BrowserCreative> caption="Stored creatives" basis="Observed" rows={rows} rowKey={row => row.adId} onRow={open} meta={meta} columns={[
