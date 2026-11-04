@@ -379,3 +379,8 @@ and blockers below remain unchanged.
 - Both live gates remain open; EXTER_OWNED_SYNC_ENABLED stays absent/false and
   kernel work remains paused. After merge: Render > exter-ai > Manual Deploy >
   Deploy latest commit. No migration or worker change is needed.
+
+- Review: https://github.com/beng174/Exter-AI/pull/10 on
+  fix/creative-filters-basis, against exter-test-drive. The description includes
+  before/after screenshots for all three requested screens at both widths,
+  the ten-table audit, data classifications and kept reference differences.

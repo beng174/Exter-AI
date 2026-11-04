@@ -8,7 +8,7 @@ Bring the Creatives filter controls into line with Exter's approved reference an
 - [x] 2026-11-04 UTC: Implemented labelled filter pills, right-aligned sort, showing counts and row-aware Basis labels; focused regressions pass.
 - [x] 2026-11-04 UTC: All ten Basis tables pass at 1440px and 1280px (30 retained/synthetic table checks); visually reviewed populated table captures. Six before/after pairs captured.
 - [x] 2026-11-04 UTC: npm run check, npm test (405 passed), npm run build and npm run secrets:check pass.
-- [ ] Publish a PR against exter-test-drive.
+- [x] 2026-11-04 UTC: Published https://github.com/beng174/Exter-AI/pull/10 against exter-test-drive, with all six before/after pairs and kept differences.
 
 ## Surprises and discoveries
 The reference stylesheet sets select labels to font-size zero. Home's 488px table viewport contains a table with a forced 540px minimum width, clipping the final evidence chip; at 1280px the viewport is only 408px. DataTable originally assigned its table-level basis to every row, including Share of voice with no supported measurements. The browser pass also exposed an extra-filter popover positioned under the sidebar when its trigger wrapped; it now anchors within the filter row, verified on desktop and mobile.
