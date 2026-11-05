@@ -17,8 +17,10 @@ import { LabellingTool } from "./components/LabellingTool";
 import { InfrastructureStatus } from "./components/InfrastructureStatus";
 import { BrandDemoReport } from "./components/BrandDemoReport";
 import { BrandLogo } from "./components/BrandLogo";
+import { BrandIdentityProvider, BrandMark, BrandName } from "./components/ui/BrandIdentity";
 import "./shell.css";
 import "./reference.css";
+import "./alignment.css";
 
 function BrandModal({
   brands,
@@ -78,12 +80,7 @@ function BrandModal({
         <div className="brand-options">
           {brands.map((b) => (
             <button key={b.id} onClick={() => onSelect(b)}>
-              <span
-                className="workspace-avatar"
-                style={{ background: b.color }}
-              >
-                {b.initials}
-              </span>
+              <BrandMark name={b.name} size={32} nameBeside/>
               <span>
                 <strong>{b.name}</strong>
                 <small>
@@ -188,9 +185,9 @@ function WorkspaceApp() {
     document.addEventListener("click",keepSample,true);return()=>{observer.disconnect();document.removeEventListener("click",keepSample,true);};
   },[demoEnabled]);
   function select(b:Brand){navigateTo("brands",b.id);setBrandOpen(false);}
-  const context=route.id==="data"?"Settings":route.id==="brands"?"Research":`${brand?.name||"Workspace"} · ${current.group}`;
+  const context=route.id==="data"?"Settings":route.id==="brands"?"Research":<><BrandName name={brand?.name||"Workspace"} size={32}/> · {current.group}</>;
   const utility=route.id!=="ask"?<button className="reference-ask icon-button" aria-label="Ask Exter" title="Ask Exter" onClick={()=>navigate("ask")}><MessageSquareText size={18}/></button>:null;
-  return <div className="app-shell reference-shell">
+  return <BrandIdentityProvider brands={brands} brandId={brandId}><div className="app-shell reference-shell">
     <Sidebar brand={brand} brandId={brandId} current={route.id} demo={demoEnabled} open={menuOpen} onNavigate={navigate} onSwitchBrand={()=>setBrandOpen(true)} onHelp={()=>setHelpOpen(true)} onClose={()=>setMenuOpen(false)}/>
     {menuOpen&&<button className="ui-mobile-scrim" aria-label="Close navigation" onClick={()=>setMenuOpen(false)}/>}
     <div className="main-shell"><header className="topbar"><div className="breadcrumb"><button className="icon-button mobile-menu" aria-label="Toggle navigation" aria-expanded={menuOpen} aria-controls="main-sidebar" onClick={()=>setMenuOpen(!menuOpen)}><Menu size={21}/></button><span>{current.group}</span><ChevronRight size={14}/><strong>{current.label}</strong></div>{utility}</header>
@@ -202,7 +199,7 @@ function WorkspaceApp() {
     </div>
     {brandOpen&&<BrandModal brands={brands} current={brandId} onClose={()=>setBrandOpen(false)} onSelect={select} onCreated={b=>{setBrands(list=>[...list.filter(item=>item.id!==b.id),b]);select(b);}}/>}
     {helpOpen&&<div className="modal-backdrop" onClick={()=>setHelpOpen(false)}><section className="modal help-modal" role="dialog" aria-modal="true" aria-label="Getting started" onClick={event=>event.stopPropagation()}><button className="modal-close icon-button" aria-label="Close help" onClick={()=>setHelpOpen(false)}><X size={20}/></button><h2>Getting started</h2><p>Choose your brand, review its saved sources and open any creative to inspect its evidence.</p><button className="button primary" onClick={()=>{setHelpOpen(false);navigate("data");}}>Explore data sources</button></section></div>}
-  </div>;
+  </div></BrandIdentityProvider>;
 }
 
 export default function App() {

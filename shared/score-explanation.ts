@@ -1,5 +1,5 @@
 import type { DemoAdScore, DemoScoreCriterion } from "./brand-demo.js";
-export function explainScore(score: DemoAdScore) {
+export function explainScore(score: Pick<DemoAdScore,"criteria"|"totalWeight">) {
   const earned = score.criteria.reduce((sum,criterion)=>sum+(criterion.status==="met"?criterion.weight:0),0);
   const assessed = score.criteria.reduce((sum,criterion)=>sum+(criterion.status==="unknown"?0:criterion.weight),0);
   return {earned,assessed,total:score.totalWeight,percent:assessed?Math.round(100*earned/assessed):null,

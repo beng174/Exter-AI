@@ -5,6 +5,7 @@ import { visibleNavigation, type ViewId } from "../navigation";
 import { api } from "../lib/api";
 import { brandContext } from "../lib/brand-context";
 import "./Sidebar.css";
+import { BrandMark } from "./ui/BrandIdentity";
 
 export function Sidebar({brand,brandId,current,demo,open,onNavigate,onSwitchBrand,onHelp,onClose}:{brand?:Brand;brandId:string;current:ViewId;demo:boolean;open:boolean;onNavigate:(id:ViewId)=>void;onSwitchBrand:()=>void;onHelp:()=>void;onClose:()=>void}) {
   const sidebar=useRef<HTMLElement>(null);
@@ -51,7 +52,7 @@ export function Sidebar({brand,brandId,current,demo,open,onNavigate,onSwitchBran
   const context=brandContext(brand,competitors.brandId===brandId?competitors.count:null);
   return <aside ref={sidebar} className={`sidebar ui-sidebar ${open?"sidebar-open":""}`} id="main-sidebar">
     <a className="wordmark" href={`/?view=overview&brandId=${encodeURIComponent(brandId)}`} aria-label="Exter AI home" onClick={event=>{if(!event.metaKey&&!event.ctrlKey&&!event.shiftKey&&!event.altKey){event.preventDefault();onNavigate("overview");}}}><span className="exter-wordmark">EXTER <small>AI</small></span></a>
-    <button className="workspace-switch" onClick={()=>{onClose();onSwitchBrand();}} aria-label="Switch brand"><span className="workspace-avatar">{brand?.initials||"?"}</span><span><strong>{brand?.name||"Brand unavailable"}</strong><small>{context}</small></span><ChevronDown size={16}/></button>
+    <button className="workspace-switch" onClick={()=>{onClose();onSwitchBrand();}} aria-label="Switch brand"><BrandMark name={brand?.name||"Brand unavailable"} size={32} nameBeside/><span><strong>{brand?.name||"Brand unavailable"}</strong><small>{context}</small></span><ChevronDown size={16}/></button>
     <nav aria-label="Main navigation">{visibleNavigation(demo).map(group=><section className="ui-nav-group" key={group.label} aria-label={group.label}><h2>{group.label}</h2>{group.items.map(item=>{
       const Icon=item.icon,selected=current===item.id || current==="creative"&&item.id==="creatives";
       const href=new URLSearchParams({view:item.id,brandId,...(demo?{demo:"1"}:{})});

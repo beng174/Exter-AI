@@ -50,12 +50,33 @@ These rules sit on top of `research/UI-SPEC.md` and decide every layout question
    `lucide-react` icon.
 5. **Missing data keeps the design.** A section keeps its frame, title and place.
    Inside it, show one muted line and at most one action where the content would
-   be. In tables, hide columns that are unavailable for every row and say so in one
-   line above the table; a brand with no collected ads says "Not collected" once in
-   its column header. Never swap a designed chart, card row or tile grid for a
+   be. In tables, hide columns and measure rows with no usable data and say so in one
+   line above the table. Omit uncollected brands from metric columns and explain
+   the uncollected set once, with its collection action. Never swap a designed chart, card row or tile grid for a
    different layout. Buttons for features that are not built yet stay in place,
    disabled, with a tooltip saying what they need.
 6. **Check every screen.** Screenshot each screen at 1440px, put it beside the
    reference PNG and fix every difference in layout, spacing, type size, colour,
    icon and copy that real data does not explain. Attach both images per screen in
    the PR, and list any difference you kept and why.
+7. **Alignment on every screen, in real and sample workspaces.**
+   - Centre the main content column in the area right of the sidebar, with a
+     maximum content width of 1280px. Every section on a page shares its left edge.
+   - Cards in a row have equal height. Use CSS grid and subgrid so sibling chip
+     and priority lines, titles, descriptions, metrics, proof rows and actions
+     share rows. Pin actions to the bottom; never truncate text for alignment.
+     Empty sections still collapse under rule 5 instead of stretching blank space.
+   - Number and label rows use a fixed-width number column and the same first-line
+     baseline. Labels wrap under themselves. Corresponding rows start at the same
+     height across sibling cards.
+   - Use tabular figures everywhere. Right-align numeric table cells and headers;
+     left-align text. Basis and Label columns have fixed widths and centred chips.
+   - Metric tiles have equal heights and shared label, value and note rows, with
+     values on one baseline.
+   - Section titles and right-hand actions share a baseline. Action rows have
+     centred controls with 44px target heights.
+   - Use the spacing scale 4, 8, 12, 16, 24, 32px consistently: 16px from section
+     title to content, 16px between cards and 24px between sections.
+   - Left-align headings, labels and paragraphs. Centre only chips, badges,
+     thumbnail empty states and reference-centred single-value cells.
+   Check every screen at 1280px, 1440px and 1920px, in both workspaces.

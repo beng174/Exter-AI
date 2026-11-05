@@ -1,3 +1,4 @@
+import { CreativeScoreBreakdown } from "../ui/CreativeScoreBreakdown";
 import { CreativeDetailReadModel } from "./CreativeDetailReadModel";
 import { Caveat } from "../ui/Caveat";
 import { useEffect, useRef, useState } from "react";
@@ -9,6 +10,7 @@ import type { MetricName } from "../../../shared/owned-metrics";
 import type { VideoField } from "../../../shared/video-analysis";
 import type { ImageField } from "../../../shared/image-analysis";
 import { closeCreativeRoute, NAVIGATION_EVENT } from "../../navigation";
+import { BrandName } from "../ui/BrandIdentity";
 import { PageHeader, SectionCard, MetricTile, DataLabel, MetaLine, Unavailable, CreativeCard, DataTable, RetentionChart, ExpandableCopy, hasValue, type UnavailableProps } from "../ui";
 import { cardMetrics, creativeMeta, metricReason, metricText, timestamp } from "./presentation";
 import "./CreativeDetailPage.css";
@@ -39,6 +41,13 @@ function Detail({row,data,filtered,onOpen,onRefresh}:DetailProps&{row:BrowserCre
   const retry={action:{label:"Retry",onClick:onRefresh||(()=>window.location.reload())}};
   const collection={href:`/?view=settings&brandId=${encodeURIComponent(data.brand.id)}#demo-collection`,linkLabel:"Collect competitor ads"};
   const evidence=()=>document.getElementById("creative-source")?.scrollIntoView({behavior:"smooth"});
+  useEffect(()=>{
+    const player=video.current,params=new URLSearchParams(window.location.search),raw=params.get("t"),seconds=raw===null?NaN:Number(raw);
+    const image=Number(params.get("slide"));if(params.has("slide")&&Number.isInteger(image)&&image>=0&&image<row.imageUrls.length)setSlide(image);
+    if(!player||!Number.isFinite(seconds)||seconds<0)return;
+    const jump=()=>{player.currentTime=Number.isFinite(player.duration)?Math.min(seconds,player.duration):seconds;player.scrollIntoView({block:"center"});};
+    if(player.readyState>=1)jump();else player.addEventListener("loadedmetadata",jump,{once:true});return()=>player.removeEventListener("loadedmetadata",jump);
+  },[row.adId,row.videoUrl]);
   const seek=(seconds:number)=>{if(video.current&&!mediaError){video.current.currentTime=seconds;video.current.focus();video.current.scrollIntoView({behavior:"smooth",block:"center"});}};
   const renderField=(field:EvidenceField|undefined,isEnum=false)=>{
     if(!hasValue(field?.value))return <Unavailable compact reason="This field was not recorded in the saved analysis."/>;
@@ -67,7 +76,7 @@ function Detail({row,data,filtered,onOpen,onRefresh}:DetailProps&{row:BrowserCre
   const marketGap:UnavailableProps|false=unknownMatch?{reason:"An analysed angle or format is needed to find similar ads.",...analyse}:similar.length?false:data.sources.some(source=>source.status==="error")?{reason:"Saved competitor evidence could not be read.",...retry}:data.sources.some(source=>!["complete","succeeded","collected"].includes(source.status))?{reason:"Configured competitor ads are not fully collected.",...collection}:{label:"",reason:"No similar competitor ads in this saved sample.",href:`/?view=creatives&brandId=${encodeURIComponent(data.brand.id)}&show=competitors`,linkLabel:"Browse competitor ads"};
   const hasReadings=readings.some(item=>hasValue(item.field?.value))||claims.length>0;
   return <div className="creative-detail creative-browser">
-    <PageHeader title={title} subtitle={<>{plainEnum(row.platform)}{row.mediaKind!=="unknown"?` · ${plainEnum(row.mediaKind)}`:""}{row.deliveryStartAt?` · running since ${ukDate(row.deliveryStartAt)}`:""}{row.sourceUrl&&<> · <a href={row.sourceUrl} target="_blank" rel="noopener noreferrer">Open in {row.platform==="Meta"?"Meta Ad Library":"ad library"}</a></>}</>} eyebrow={<a href={library} onClick={event=>{if(!event.ctrlKey&&!event.metaKey&&!event.shiftKey&&!event.altKey){event.preventDefault();closeCreativeRoute(data.brand.id);}}}>Creatives</a>} actions={<>
+    <PageHeader title={title} subtitle={<><BrandName name={row.brandName} size={32}/> · {plainEnum(row.platform)}{row.mediaKind!=="unknown"?` · ${plainEnum(row.mediaKind)}`:""}{row.deliveryStartAt?` · running since ${ukDate(row.deliveryStartAt)}`:""}{row.sourceUrl&&<> · <a href={row.sourceUrl} target="_blank" rel="noopener noreferrer">Open in {row.platform==="Meta"?"Meta Ad Library":"ad library"}</a></>}</>} eyebrow={<a href={library} onClick={event=>{if(!event.ctrlKey&&!event.metaKey&&!event.shiftKey&&!event.altKey){event.preventDefault();closeCreativeRoute(data.brand.id);}}}>Creatives</a>} actions={<>
       <button className="button secondary" aria-label="Previous creative" disabled={index<=0} onClick={()=>onOpen(filtered[index-1])}><ArrowLeft size={18}/></button>
       <button className="button secondary" aria-label="Next creative" disabled={index<0||index===filtered.length-1} onClick={()=>onOpen(filtered[index+1])}><ArrowRight size={18}/></button>
       <a className="button secondary" href="#creative-market">Compare with market</a><button className="button primary" disabled title="Adding saved creatives to briefs is not available yet.">Add to brief</button>
@@ -98,10 +107,8 @@ function Detail({row,data,filtered,onOpen,onRefresh}:DetailProps&{row:BrowserCre
         </SectionCard>
 
         <SectionCard title="Creative score" help="Best-practice checklist · Estimated, rules-based" meta={{...analysisMeta,lastChecked:row.score?.analysedAt||analysisMeta.lastChecked}} empty={!row.score&&scoreGap}>
-          {row.score&&<><MetricTile label="Creative score out of 100" value={row.score.score} basis="Estimated" onEvidence={evidence} reason="Known checklist evidence is insufficient to calculate a score."/>
-            <Caveat>{row.score.method}{row.score.provisional?" Provisional: some criteria are unknown.":""}</Caveat>
-            <div className="creative-checklist">{row.score.criteria.map(criterion=><article key={criterion.id}><strong>{criterion.label}</strong>{criterion.status==="unknown"?<Unavailable compact reason={criterion.explanation}/>:<><span>{criterion.status==="met"?"Met":"Not met"}</span><p>{criterion.explanation}</p><DataLabel basis="Estimated"/>{criterion.evidence.map((item,index)=><div key={index}><p>{item.quote}</p>{item.timestamps?.map((time,i)=><button className="creative-time" key={i} disabled={!row.videoUrl||mediaError} onClick={()=>seek(time.startSeconds)}>{timestamp(time.startSeconds)} to {timestamp(time.endSeconds)}</button>)}</div>)}</>}</article>)}</div>
-          </>}
+          {row.score&&<CreativeScoreBreakdown score={row.score} workspaceId={data.brand.id} evidenceTarget={(row.videoUrl||row.imageUrls.length)&&!mediaError?"creative":"original"} onSeek={row.videoUrl&&!mediaError?seek:undefined} onSlide={row.mediaKind!=="video"?n=>{setSlide(n);document.getElementById("creative-media")?.scrollIntoView({behavior:"smooth"});}:undefined}/>}
+
         </SectionCard>
         {row.workspaceBrand&&<SectionCard title="Viewer retention"  meta={retentionMeta} empty={!hasRetention&&{reason:!cohort?"No owned retention data is selected.":"No retention counts were reported in this date range.",...(!cohort&&data.ownedStatus==="not_configured"?connect:dates)}}>
           {cohort&&hasRetention&&<><RetentionChart points={retentionNames.map(name=>({label:name,creative:cohort.metrics[name].value,benchmark:cohort.benchmark[name].value}))} onCreative={evidence} onBenchmark={openBenchmark}/>

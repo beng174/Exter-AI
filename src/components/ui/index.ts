@@ -16,3 +16,5 @@ export * from "./Sparkline";
 export * from "./value";
 export * from "./RetentionChart";
 export * from "./ExpandableCopy";
+export * from "./BrandIdentity";
+export * from "./CreativeScoreBreakdown";

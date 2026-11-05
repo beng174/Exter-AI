@@ -1,0 +1,26 @@
+.creative-score-breakdown { min-width:0;display:flex;flex-direction:column;gap:16px; }
+.creative-score-summary { display:flex;align-items:baseline;gap:12px;flex-wrap:wrap; }
+.creative-score-headline { display:inline-flex;align-items:baseline;gap:8px;flex-wrap:wrap;font-size:13px;line-height:1.5; }
+.creative-score-headline>strong { font-size:28px;color:var(--exter-blue);font-variant-numeric:tabular-nums; }
+.creative-score-headline.score-headline-compact>strong { font-size:16px; }
+.creative-score-headline .ui-status-chip { align-self:center; }
+.creative-score-scroll { overflow:auto;max-width:100%; }
+.creative-score-scroll table { width:100%;border-collapse:collapse;font-size:13px;table-layout:fixed;min-width:620px; }
+.creative-score-scroll :is(th,td) { padding:12px 8px;vertical-align:top;border-bottom:1px solid var(--line-soft);text-align:left;overflow-wrap:anywhere; }
+.creative-score-scroll thead th { color:var(--muted);font-size:12px; }
+.creative-score-scroll :is(th,td):first-child { width:112px;text-align:center;padding-left:0; }
+.creative-score-scroll :is(th,td).score-points { width:88px;text-align:right;white-space:nowrap; }
+.creative-score-scroll th:nth-child(3) { width:22%; }
+.creative-score-scroll :is(th,td):last-child { padding-right:0; }
+.creative-score-scroll tbody th { font-weight:600; }
+.creative-score-scroll .ui-status-chip { white-space:nowrap;min-width:max-content;width:auto;max-width:none;overflow:visible;border-radius:999px; }
+.creative-score-scroll ul { list-style:none;padding:0;margin:0;display:flex;flex-direction:column;gap:8px; }
+.creative-score-scroll li { display:flex;flex-wrap:wrap;gap:4px 8px; }
+.creative-score-scroll :is(a,button) { min-height:44px;display:inline-flex;align-items:center;text-align:left;line-height:1.5; }
+.creative-score-scroll button { border:0;border-radius:4px;padding:0 8px;background:var(--surface-subtle);color:var(--reference-link,#007c85); }
+.creative-score-scroll .score-evidence-quote { flex-basis:100%; }
+.creative-score-scroll tfoot :is(th,td) { border-top:2px solid var(--line);border-bottom:0;font-weight:600;padding-top:16px; }
+.creative-score-method { font-size:13px;line-height:1.5; }
+.creative-score-method summary { display:flex;align-items:center;min-height:44px;cursor:pointer;color:var(--reference-link,#007c85);text-decoration:underline; }
+.creative-score-method p,.creative-score-method li { margin:8px 0; }
+.score-no-evidence { color:var(--muted); }

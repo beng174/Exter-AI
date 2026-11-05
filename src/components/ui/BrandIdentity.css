@@ -1,0 +1,18 @@
+.brand-name { display:inline-flex;align-items:center;gap:8px;max-width:100%;vertical-align:middle;text-align:left;line-height:inherit; }
+.brand-name>span:last-child { min-width:0;overflow-wrap:normal; }
+.brand-mark { width:var(--brand-size);height:var(--brand-size);flex:0 0 var(--brand-size);position:relative;display:inline-flex;align-items:center;justify-content:center;vertical-align:middle;overflow:hidden;border:1px solid var(--line,#dce0e7);border-radius:4px;background:#fff;box-sizing:border-box; }
+.brand-mark[data-size="32"] { border-radius:8px; }
+.brand-monogram { display:flex;align-items:center;justify-content:center;width:100%;height:100%;background:var(--brand-colour);color:var(--brand-ink,#fff);font-size:calc(var(--brand-size)*.38);font-weight:700;line-height:1; }
+.brand-mark img { position:absolute;inset:0;width:100%;height:100%;object-fit:contain;background:#fff; }
+.brand-logo-settings { display:flex;flex-direction:column;gap:8px; }
+.brand-logo-setting { display:flex;align-items:center;flex-wrap:wrap;gap:8px;justify-content:space-between;border-top:1px solid var(--line-soft);padding:8px 0; }
+.brand-logo-setting>.brand-name { flex:1;min-width:120px; }
+.brand-logo-editor { flex-basis:100%;display:flex;flex-wrap:wrap;align-items:center;gap:12px;padding:12px;background:var(--surface-subtle);border-radius:8px; }
+.brand-logo-editor small { flex-basis:100%;color:var(--muted); }
+.brand-logo-editor label { min-width:0;max-width:100%; }
+.brand-logo-editor input { max-width:100%; }
+.ui-creative-card .brand-mark img { object-fit:contain; }
+.ui-creative-source:has(.brand-name) { display:flex;align-items:center; }
+
+.ui-data-table .brand-name { gap:4px; }
+.ui-data-table .brand-name>span:last-child { white-space:nowrap; }

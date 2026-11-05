@@ -1,0 +1,157 @@
+/* Reference rule 7: common geometry for real and explicitly labelled sample data. */
+:root { font-variant-numeric:tabular-nums;--section-gap:24px;--card-gap:16px;--section-content-gap:16px; }
+body,input,select,textarea,button,table { font-variant-numeric:tabular-nums; }
+.reference-shell .main-shell>main { max-width:1360px;width:100%;box-sizing:border-box;margin-inline:auto;padding:32px 40px; }
+.reference-shell .reference-ui :is(h1,h2,h3,h4,p,blockquote,dt,dd,label) { text-align:left; }
+.reference-shell .reference-ui :is(.creative-browser,.reference-page,.reference-stack,.research-column,.creative-detail-media-column,.creative-detail-evidence-column) { gap:var(--section-gap); }
+.reference-shell .reference-ui :is(.research-grid-two,.reference-two,.reference-three,.data-source-grid,.report-sections) { gap:var(--card-gap);align-items:stretch; }
+.reference-shell .reference-ui .ui-section-card { gap:var(--section-content-gap);padding:24px; }
+.reference-shell .reference-ui .ui-section-card>header { display:flex;align-items:baseline;justify-content:space-between;gap:16px; }
+.reference-shell .reference-ui .ui-section-card>header>div:first-child { min-width:0;flex:1; }
+.reference-shell .reference-ui .ui-section-card>header :is(h2,p) { margin:0; }
+.reference-shell .reference-ui .ui-section-card>header p { margin-top:8px; }
+.reference-shell .reference-ui .ui-section-card>div:not(.ui-unavailable) { gap:16px; }
+.reference-shell .reference-ui .ui-section-card>header>div:not(:first-child) { flex:0 1 auto; }
+.reference-shell .reference-ui .ui-section-card>header>a { flex-shrink:0;display:inline-flex;align-items:center;min-height:44px; }
+.reference-shell .reference-ui :is(.reference-actions,.ui-page-actions,.creative-header-actions,.read-model-priorities footer) { display:flex;align-items:center;flex-wrap:wrap;gap:8px; }
+.reference-shell .reference-ui :is(.reference-actions,.ui-page-actions,.creative-header-actions,.read-model-priorities footer)>:is(a,button,.disabled-control) { min-height:44px;box-sizing:border-box;display:inline-flex;align-items:center; }
+.reference-shell .reference-ui :is(.reference-actions,.ui-page-actions) .button { min-height:44px; }
+.reference-shell .reference-ui :is(.ui-creative-card h3,.reference-creative-row strong) { display:block;-webkit-line-clamp:unset;line-clamp:unset;overflow:visible;white-space:normal; }
+
+/* Shared row tracks make long text contribute to the height of every sibling. */
+.reference-shell .reference-ui .read-model-priorities { display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:16px;align-items:stretch; }
+.reference-shell .reference-ui .read-model-priorities>article { display:grid;grid-template-rows:subgrid;grid-row:span 8;gap:16px;padding:24px; }
+.reference-shell .reference-ui .read-model-priorities :is(h3,p,dl,footer) { margin:0;min-height:0; }
+.reference-shell .reference-ui .read-model-priorities>article>header { align-items:baseline; }
+.reference-shell .reference-ui .read-model-priorities dl { display:grid;grid-template-rows:subgrid;grid-row:span 3;gap:16px; }
+.reference-shell .reference-ui .read-model-priorities dl>div { display:grid;grid-template-columns:64px minmax(0,1fr);gap:12px;align-items:first baseline; }
+.reference-shell .reference-ui .read-model-priorities dt { font-size:18px;line-height:1.5;white-space:nowrap; }
+.reference-shell .reference-ui .read-model-priorities dd { line-height:1.5; }
+.reference-shell .reference-ui .read-model-priorities .read-model-proof-thumbs { margin:0;flex-wrap:wrap; }
+.reference-shell .reference-ui .read-model-priorities footer { align-self:end; }
+.reference-shell .reference-ui .read-model-priorities footer>a { padding:0 8px; }
+.reference-shell .reference-ui :is(.read-model-competitor-cards,.research-competitor-grid) { display:grid;gap:16px;align-items:stretch; }
+.reference-shell .reference-ui .read-model-competitor-cards>article { display:grid;grid-template-rows:subgrid;grid-row:span 5;gap:16px;padding:24px; }
+.reference-shell .reference-ui .read-model-competitor-cards :is(h3,p,.read-model-proof-thumbs) { margin:0; }
+.reference-shell .reference-ui .read-model-competitor-cards header { align-items:first baseline;flex-wrap:wrap;gap:8px; }
+.reference-shell .reference-ui .read-model-competitor-cards>article>a { align-self:end; }
+.reference-shell .reference-ui .creator-card-grid { display:grid;gap:16px; }
+.reference-shell .reference-ui .creator-reference-card { display:grid;grid-template-rows:subgrid;grid-row:span 5;gap:16px;padding:24px; }
+.reference-shell .reference-ui .creator-reference-card>p { margin:0; }
+.reference-shell .reference-ui :is(.research-positioning,.research-action-grid,.read-model-variants,.creative-checklist,.creative-readings,.read-model-fields) { gap:16px; }
+.reference-shell .reference-ui .research-positioning>article { display:grid;grid-template-rows:subgrid;grid-row:span 3;gap:8px;padding:16px; }
+.reference-shell .reference-ui .research-action-grid>article { display:grid;grid-template-rows:subgrid;grid-row:span 3;gap:8px;padding:16px; }
+.reference-shell .reference-ui :is(.research-positioning,.research-action-grid)>article>:is(h3,p) { margin:0; }
+
+.reference-shell .reference-ui .read-model-tiles { display:grid;gap:12px;align-items:stretch; }
+.reference-shell .reference-ui .read-model-tiles>div { display:grid;grid-template-rows:subgrid;grid-row:span 3;gap:4px;padding:16px;min-width:0; }
+.reference-shell .reference-ui .read-model-tiles>div>strong { align-self:first baseline;line-height:1.3;overflow-wrap:anywhere; }
+.reference-shell .reference-ui .read-model-tiles>div>small { margin:0; }
+.reference-shell .reference-ui :is(.research-metric-grid,.creative-performance) { display:grid;gap:12px;align-items:stretch; }
+.reference-shell .reference-ui .ui-metric-tile { display:grid;grid-template-rows:subgrid;grid-row:span 4;gap:8px;padding:16px; }
+.reference-shell .reference-ui .ui-metric-tile>h3 { grid-row:1;margin:0; }
+.reference-shell .reference-ui .ui-metric-tile>.ui-data-label { grid-row:2;justify-self:start; }
+.reference-shell .reference-ui .ui-metric-tile>.ui-metric-value,.reference-shell .reference-ui .ui-metric-tile>.ui-unavailable { grid-row:3;align-self:baseline;margin:0; }
+.reference-shell .reference-ui .ui-metric-tile>p { grid-row:4;margin:0; }
+.reference-shell .reference-ui .read-model-labels { gap:16px; }
+.reference-shell .reference-ui .read-model-labels>div { display:grid;grid-template-columns:minmax(0,1fr) auto;grid-template-rows:subgrid;grid-row:span 2;gap:8px;padding:16px; }
+.reference-shell .reference-ui .read-model-labels small { grid-column:1/-1; }
+.reference-shell .reference-ui .read-model-labels a { min-height:44px;display:inline-flex;align-items:center; }
+
+/* Native table layout preserves each row's shared height without wrapping chips. */
+.reference-shell .reference-ui .ui-data-table :is(th,td).ui-table-number { text-align:right; }
+.reference-shell .reference-ui .ui-data-table :is(th,td).ui-table-text { text-align:left; }
+.reference-shell .reference-ui .ui-data-table :is(th,td):is(.ui-table-basis,.ui-table-chip) { text-align:center;width:112px;min-width:112px;white-space:nowrap; }
+.reference-shell .reference-ui .ui-data-table :is(th,td).ui-table-chip { width:148px;min-width:148px; }
+.reference-shell .reference-ui .ui-data-table .ui-table-number>button { text-align:right; }
+.reference-shell .reference-ui .ui-data-table .ui-table-number .research-number { justify-content:flex-end; }
+.reference-shell .reference-ui .ui-data-table .ui-table-number>div { margin-left:auto; }
+.reference-shell .reference-ui .ui-data-table th.ui-table-number .brand-name { justify-content:flex-end; }
+.reference-shell .reference-ui .read-model-score-cell { display:grid;grid-template-columns:auto 64px;justify-content:end;gap:4px 8px;min-width:104px; }
+.reference-shell .reference-ui .read-model-score-cell small { grid-column:1/-1;text-align:right; }
+.reference-shell .reference-ui .reference-mix-row { grid-template-columns:160px minmax(0,1fr) 72px;gap:16px; }
+.reference-shell .reference-ui .read-model-working>div { display:grid;grid-template-columns:minmax(0,1fr) 112px 56px;gap:8px; }
+.reference-shell .reference-ui .read-model-working>div>.ui-status-chip { justify-self:center; }
+.reference-shell .reference-ui .read-model-working>div>strong { text-align:right; }
+.reference-shell .reference-ui .read-model-working>div>strong small { white-space:normal; }
+.reference-shell .reference-ui .read-model-performance .read-model-tiles { grid-template-columns:repeat(auto-fit,minmax(100px,1fr)); }
+.reference-shell .reference-ui .read-model-working-score .read-model-signals>div { display:grid;grid-template-rows:subgrid;grid-row:span 3;gap:8px; }
+.reference-shell .reference-ui .read-model-working-score .read-model-signals { display:grid;gap:16px; }
+.reference-shell .reference-ui .ui-section-card[aria-label="Performance"]>header>div,.reference-shell .reference-ui .ui-section-card[aria-label="Creative score"]>header>div { display:block; }
+.reference-shell .reference-ui .ui-section-card:is([aria-label="Performance"],[aria-label="Creative score"])>header p { text-align:left; }
+.reference-shell .reference-ui .read-model-beats li { align-items:first baseline;gap:12px; }
+.reference-shell .reference-ui .read-model-market .read-model-tiles>div>span { display:block; }
+.reference-shell .reference-ui .read-model-scenes button { align-items:flex-start;text-align:left; }
+.reference-shell .reference-ui .reference-brand-strip>button { padding:16px; }
+.reference-shell .reference-ui .creative-detail[data-read-model] .read-model-working-score .read-model-signals>div { display:grid;grid-template-columns:minmax(0,1fr);grid-template-rows:subgrid;grid-row:span 3;gap:8px; }
+.reference-shell .reference-ui .creative-detail[data-read-model] .read-model-fields>div { display:grid;grid-template-columns:minmax(0,1fr);grid-template-rows:subgrid;grid-row:span 3;gap:4px;padding:16px; }
+.reference-shell .reference-ui .creative-detail[data-read-model] .read-model-fields>div>* { grid-column:1;min-width:0; }
+.reference-shell .reference-ui .creative-detail[data-read-model] .read-model-working-score .read-model-signals>div>* { grid-column:1;min-width:0; }
+.reference-shell .reference-ui .creative-detail[data-read-model] .score-checks article { grid-template-rows:subgrid;grid-row:span 2;gap:4px 8px;padding:12px; }
+.reference-shell .reference-ui .creative-detail[data-read-model] .score-checks article>strong { grid-row:1; }
+.reference-shell .reference-ui .creative-detail[data-read-model] .score-checks article>span:not(.ui-status-chip) { grid-row:2; }
+.reference-shell .reference-ui .read-model-market .read-model-tiles>div:has(>span:empty) { grid-template-rows:subgrid; }
+.reference-shell .reference-ui .research-competitor-card { display:grid;grid-template-rows:subgrid;grid-row:span 3;gap:16px;padding:16px; }
+.reference-shell .reference-ui .research-competitor-card>h3 { margin:0; }
+.reference-shell .reference-ui .research-competitor-card>.ui-unavailable { grid-row:2/4;align-self:end; }
+.reference-shell .reference-ui .creator-reference-card { grid-row:span 12;gap:12px; }
+.reference-shell .reference-ui .creator-reference-card>header { grid-row:1; }
+.reference-shell .reference-ui .creator-reference-card>:is(.creator-fit-list,.read-model-signals) { display:grid;grid-template-rows:subgrid;grid-row:2/span 5;gap:8px; }
+.reference-shell .reference-ui .creator-reference-card>:is(.creator-fit-list,.read-model-signals)>div { align-items:first baseline; }
+.reference-shell .reference-ui .creator-reference-card>.creator-metrics { grid-row:7/span 2;grid-template-rows:subgrid;gap:4px 8px; }
+.reference-shell .reference-ui .creator-metrics>div { display:grid;grid-template-rows:subgrid;grid-row:span 2;gap:4px;min-width:0; }
+.reference-shell .reference-ui .creator-reference-card>:is(.read-model-proof-thumbs,.creator-posts) { grid-row:9;align-self:end;margin:0; }
+.reference-shell .reference-ui .creator-reference-card>:is(.creator-card-note,.creator-ad-links,p.reference-muted) { grid-row:10;margin:0; }
+.reference-shell .reference-ui .creator-reference-card>:is(.ui-data-label,.creator-card-checked) { grid-row:11;align-self:start;justify-self:start; }
+.reference-shell .reference-ui .creator-reference-card>.creator-card-actions { grid-row:12;align-self:end;display:flex;align-items:center;gap:8px;flex-wrap:wrap; }
+.reference-shell .reference-ui .creator-card-actions button { min-height:44px; }
+.reference-shell .reference-ui .creator-reference-card>.creator-card-meta { grid-row:11;display:flex;gap:8px;align-items:center;flex-wrap:wrap; }
+.reference-shell .reference-ui :is(.reference-mix,.read-model-signals,.read-model-proof>a,.read-model-phrases,.read-model-report-work,.creator-posts,.account-reference-card header) { gap:12px; }
+.reference-shell .reference-ui :is(.creator-filters,.account-reference-card,.read-model-attention>div,.read-model-warning,.read-model-commentary) { padding:16px; }
+.reference-shell .reference-ui .read-model-proof>a { padding-block:12px; }
+.reference-shell .reference-ui .ui-data-table td { padding-block:12px; }
+.reference-shell .reference-ui .read-model-labels .ui-status-chip { justify-self:start; }
+.reference-shell .reference-ui .ui-status-chip,.reference-shell .reference-ui .ui-data-label { text-align:center; }
+.reference-shell .reference-ui .reference-source-pills .ui-status-chip { white-space:normal;text-align:left; }
+.reference-shell .reference-ui .score-upload { align-items:flex-start;text-align:left; }
+.reference-shell .reference-ui :is(.read-model-proof-thumbs,.ui-page-title-line,.research-tags) { gap:8px; }
+.reference-shell .reference-ui .creative-detail[data-read-model] .read-model-scenes { gap:12px; }
+/* Missing sections collapse instead of stretching a blank card beside populated data. */
+.reference-shell .reference-ui .research-grid-two:has(>.ui-section-empty) { grid-template-columns:minmax(0,1fr); }
+.reference-shell .reference-ui .ui-section-card.ui-section-empty { display:grid;grid-template-columns:minmax(160px,.35fr) minmax(0,1fr);align-items:baseline;gap:16px;padding:16px 24px; }
+.reference-shell .reference-ui .ui-section-card.ui-section-empty>.ui-unavailable { min-width:0; }
+.reference-shell .reference-ui .creative-detail[data-read-model] .ui-section-card:is([aria-label="Creative score"],[aria-label="Performance"])>header { display:flex;align-items:baseline; }
+.reference-shell .reference-ui .creative-detail[data-read-model] .ui-section-card:is([aria-label="Creative score"],[aria-label="Performance"])>header>div { display:block; }
+.reference-shell .reference-ui .creative-detail[data-read-model] .ui-section-card:is([aria-label="Creative score"],[aria-label="Performance"])>header p { text-align:left;margin-top:8px; }
+.reference-shell .reference-ui .ui-heatmap :is(td,th:not(:first-child)) { text-align:right; }
+.reference-shell .reference-ui .ui-heatmap th:first-child { text-align:left; }
+
+@media(min-width:720px) {
+ .reference-shell .reference-ui :is(.creative-browser-grid,.research-creative-grid,.creative-similar-grid) { display:grid;gap:16px;align-items:stretch; }
+ .reference-shell .reference-ui .ui-creative-card { display:grid;grid-template-rows:subgrid;grid-row:span 8;gap:0; }
+ .reference-shell .reference-ui .ui-creative-open { display:grid;grid-template-rows:subgrid;grid-row:span 6;gap:0; }
+ .reference-shell .reference-ui .ui-creative-body { display:grid;grid-template-rows:subgrid;grid-row:span 5;gap:8px;padding:16px; }
+ .reference-shell .reference-ui .ui-creative-body h3 { grid-row:1; }
+ .reference-shell .reference-ui .ui-creative-facts { grid-row:2; }
+ .reference-shell .reference-ui .ui-creative-id { grid-row:3; }
+ .reference-shell .reference-ui .ui-creative-format { grid-row:4; }
+ .reference-shell .reference-ui .ui-creative-tags { grid-row:5;align-self:start; }
+ .reference-shell .reference-ui .ui-creative-card>dl { grid-row:7/span 2;grid-template-rows:subgrid;align-self:stretch;gap:4px 8px;margin:0;padding:12px 16px; }
+ .reference-shell .reference-ui .ui-creative-card>dl>div { display:grid;grid-template-rows:subgrid;grid-row:span 2;gap:4px;min-width:0; }
+ .reference-shell .reference-ui .ui-creative-card dt { grid-row:1; }
+ .reference-shell .reference-ui .ui-creative-card dd { grid-row:2;align-self:first baseline; }
+}
+@media(max-width:1199px) {
+ .reference-shell .reference-ui .read-model-competitor-cards { grid-template-columns:repeat(2,minmax(0,1fr)); }
+ .reference-shell .reference-ui .read-model-priorities>article { padding:16px; }
+}
+@media(max-width:959px) { .reference-shell .main-shell>main { padding:24px 16px; } }
+@media(max-width:719px) {
+ .reference-shell .reference-ui .ui-section-card.ui-section-empty { grid-template-columns:minmax(0,1fr);padding:16px;gap:8px; }
+ .reference-shell .reference-ui .read-model-priorities { grid-template-columns:1fr; }
+ .reference-shell .reference-ui .read-model-competitor-cards { grid-template-columns:1fr; }
+ .reference-shell .reference-ui .ui-section-card { padding:16px; }
+ .reference-shell .reference-ui .reference-mix-row { grid-template-columns:100px minmax(80px,1fr) 56px;gap:8px; }
+ .reference-shell .reference-ui .read-model-working>div { grid-template-columns:minmax(140px,1fr) 112px 56px; }
+ .reference-shell .reference-ui .read-model-priorities>article { grid-template-rows:subgrid; }
+}

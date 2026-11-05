@@ -1,3 +1,4 @@
+import { attachBrandLogos } from "./brand-logos.js";
 import { attachSampleWorkspace } from "./sample.js";
 import { attachCreativeBrowser } from "./demo/creative-browser.js";
 import { attachOwnedAccounts } from "./owned/api.js";
@@ -261,7 +262,8 @@ export function createApp(db: DatabaseSync = openDatabase()) {
     res.json({ name: "Exter Media", logoMark: existsSync(resolve("public/brand/exter-logo-mark.svg")) ? "/brand/exter-logo-mark.svg" : null, appIcon: existsSync(resolve("public/brand/exter-app-icon.svg")) ? "/brand/exter-app-icon.svg" : null });
   });
   attachSampleWorkspace(app);
-  app.use(["/api/budgets", "/api/gemini-smoke", "/api/labelling", "/api/creator-research", "/api/brands", "/api/brand-research"], protectSettingsMutation);
+  app.use(["/api/budgets", "/api/gemini-smoke", "/api/labelling", "/api/creator-research", "/api/brands", "/api/brand-research", "/api/brand-logos"], protectSettingsMutation);
+  attachBrandLogos(app,db);
   attachInfrastructure(app, db);
   attachOwnedAccounts(app,id=>Boolean(readBrand(db,id)));
   attachKernelStatus(app);

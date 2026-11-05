@@ -39,7 +39,8 @@ def run():
         geometry[name]=page.locator('main').evaluate('(el)=>({mainX:el.getBoundingClientRect().x,padding:getComputedStyle(el).padding,headerY:el.querySelector("h1").getBoundingClientRect().y,sections:Array.from(el.querySelectorAll(".ui-section-card")).map(s=>({title:s.querySelector("h2")?.textContent,x:s.getBoundingClientRect().x,width:s.getBoundingClientRect().width,padding:getComputedStyle(s).padding,radius:getComputedStyle(s).borderRadius}))})')
         if name=='Competitors':
             table=page.get_by_role('region',name='You and configured competitors',exact=True)
-            expect(table.locator('thead .not-collected-header')).to_have_count(3)
+            expect(table.locator('thead .not-collected-header')).to_have_count(0)
+            expect(page.get_by_role('region',name='Scorecard',exact=True)).to_contain_text('3 configured competitors have no collected ads')
             assert table.locator('tbody td').filter(has_text='Not collected').count()==0
         if name=='Winners':
             expect(page.get_by_role('columnheader',name='Working Score',exact=True)).to_have_count(0)

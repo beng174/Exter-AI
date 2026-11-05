@@ -21,7 +21,7 @@ test("UI-04 through UI-10 all seven screens render real evidence with exact Crea
 });
 test("UI-04 accounts stay separated, and unsupported winner/priority/demographic calculations remain unavailable",()=>{
   const source=data(),home=render("HomeScreen",source);assert.ok(home.includes("GBP")&&home.includes("USD"));assert.ok(!home.includes("£100.00"),"multiple account scopes require an explicit choice");
-  assert.match(render("WinnersScreen"),/Your own winners appear once your ad account/);assert.match(render("PatternsScreen"),/Not yet available/);assert.match(render("AudienceScreen"),/Audience demographics are never inferred/);
+  assert.match(render("WinnersScreen"),/Your own winners appear once your ad account/);assert.match(render("PatternsScreen"),/Only available columns are shown/);assert.match(render("AudienceScreen"),/Audience demographics are never inferred/);
   source.library.creatives[0].performance=source.library.creatives[0].performance.slice(0,1);assert.match(render("HomeScreen",source),/£100.00/);
 });
 test("UI-07/UI-08 no saved analysis yields compact gaps rather than guessed formats or actions",()=>{
@@ -32,7 +32,7 @@ test("UI-07/UI-08 no saved analysis yields compact gaps rather than guessed form
 test("Review fixes hide universal unavailable winner columns and mark uncollected brand headers once",()=>{
  const source=data();source.library.competitors.push({key:"pending",brandId:null,name:"Pending advertiser",status:"not-started"});
  const winners=render("WinnersScreen",source);assert.ok(!winners.includes('data-label="Working Score"')&&!winners.includes('data-label="Confidence"'));assert.match(winners,/reference-thumb/);assert.match(winners,/First line/);
- const competitors=render("CompetitorsScreen",source);assert.equal((competitors.match(/not-collected-header/g)||[]).length,1);
+ const competitors=render("CompetitorsScreen",source);assert.equal((competitors.match(/not-collected-header/g)||[]).length,0);assert.match(competitors,/configured competitors have no collected ads/);
  for(const name of ["HomeScreen","BrandScreen","CompetitorsScreen","FormatsScreen","PatternsScreen","AudienceScreen","WinnersScreen"])assert.doesNotMatch(render(name,source),/\b(?:CA|UI)-\d+/);
 });
 
@@ -40,10 +40,10 @@ test("Scorecards never label unsupported share of voice Observed, and keep genui
  const source=data();source.library.competitors.push({key:"pending",brandId:null,name:"Pending advertiser",status:"not-started"});
  for(const name of ["HomeScreen","CompetitorsScreen"]) {
   const html=render(name,source),row=html.match(/<tr[^>]*><td[^>]*>Share of voice<\/td>.*?<\/tr>/)?.[0];
-  assert.ok(row,name);assert.match(row,/data-label="Basis"><span[^>]*>Unavailable</,name);
+  assert.equal(row,undefined,`${name}: wholly unavailable rows are omitted`);
   const active=html.match(/<tr[^>]*><td[^>]*>Active ads<\/td>.*?<\/tr>/)?.[0];assert.match(active!,/data-label="Basis"><span[^>]*>Observed</,name);
  }
  const production=render("FormatsScreen",source),unknown=production.match(/<tr[^>]*><td[^>]*>Captions on<\/td>.*?<\/tr>/)?.[0],talking=production.match(/<tr[^>]*><td[^>]*>Talking to camera \(%\)<\/td>.*?<\/tr>/)?.[0];
- assert.match(unknown!,/data-label="Basis"><span[^>]*>Unavailable</);assert.match(talking!,/data-label="Basis"><span[^>]*>Modelled</);
- const audience=render("AudienceScreen",source),pending=audience.match(/<tr[^>]*><td[^>]*>Pending advertiser<\/td>.*?<\/tr>/)?.[0];assert.match(pending!,/data-label="Basis"><span[^>]*>Unavailable</);
+ assert.equal(unknown,undefined);assert.match(talking!,/data-label="Basis"><span[^>]*>Modelled</);
+ const audience=render("AudienceScreen",source),pending=audience.match(/<tr[^>]*><td[^>]*>Pending advertiser<\/td>.*?<\/tr>/)?.[0];assert.equal(pending,undefined);
 });

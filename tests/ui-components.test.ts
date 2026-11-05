@@ -72,7 +72,7 @@ test("UI-02 repeated missing values have one short label and a reason tooltip",(
   const table=render(ui.DataTable,{hideUnavailable:false,caption:"Ads",rows:[{id:"a",spend:null}],columns:[{key:"spend",label:"Spend",value:(row:any)=>row.spend,unavailable:()=>({reason:"No owned rows."})}],rowKey:(row:any)=>row.id,basis:"Observed"});
   assert.ok(!table.includes("<p"));assert.match(table,/title="No owned rows/);
   const card=render(ui.CreativeCard,{title:"Saved creative",source:"You",onOpen:()=>{},metrics:[{label:"Spend",value:null,basis:"Observed",reason:"No owned rows.",missingLabel:"Not synced"}]});
-  assert.ok(!card.includes("<p"));assert.ok(!card.includes("/?view=data"));assert.match(text(card),/SpendNot synced/);
+  assert.ok(!card.includes("<p"));assert.ok(!card.includes("/?view=data"));assert.match(text(card),/MetricsNot synced/);
 });
 
 test("Creative cards show m:ss, no None tags or unknown-format line, compact Modelled chip and no per-card metadata",()=>{
@@ -82,7 +82,7 @@ test("Creative cards show m:ss, no None tags or unknown-format line, compact Mod
 
 test("Fidelity hides fully unavailable columns once, retains observed zero and preserves empty section frames",()=>{
  const html=render(ui.DataTable,{caption:"Saved rows",rows:[{id:"one",value:0},{id:"two",value:null}],columns:[{key:"value",label:"Count",value:(row:any)=>row.value},{key:"score",label:"Working Score",value:()=>null}],rowKey:(row:any)=>row.id,basis:"Observed"});
- assert.equal((html.match(/Not yet available:/g)||[]).length,1);assert.ok(!html.includes('data-label="Working Score"'));assert.match(html,/data-label="Count">0/);assert.match(html,/title="This value has not been recorded/);assert.match(html,/>Basis</);
+ assert.equal((html.match(/Only available columns are shown/g)||[]).length,1);assert.ok(!html.includes('data-label="Working Score"'));assert.match(html,/data-label="Count">0/);assert.match(html,/title="This value has not been recorded/);assert.match(html,/>Basis</);
  const empty=render(ui.SectionCard,{title:"Designed chart",empty:{reason:"No saved observations."}});assert.match(empty,/<header><div><h2>Designed chart/);assert.equal((empty.match(/No saved observations/g)||[]).length,1);
 });
 
@@ -95,4 +95,40 @@ test("Basis follows row evidence, preserving observed zero and explicit modelled
  assert.match(absent,/data-label="Basis"><span[^>]*>Unavailable</);
  const ineligible=render(ui.DataTable,{caption:"Ineligible",rows:[{id:"one",value:12}],columns:[{key:"value",label:"Value",value:(row:any)=>row.value,basis:()=>"Unavailable"}],rowKey:(row:any)=>row.id,basis:"Observed"});
  assert.match(ineligible,/data-label="Basis"><span[^>]*>Unavailable</);
+});
+
+
+test("UI-00/UI-05 logos have decorative alt beside a name and named standalone fallbacks",()=>{
+  const named=render(ui.BrandName,{name:"Fictional Candle Co."});assert.match(named,/aria-hidden="true"/);assert.match(named,/Fictional Candle Co\./);
+  const standalone=render(ui.BrandMark,{name:"Fictional Candle Co."});assert.match(standalone,/role="img" aria-label="Fictional Candle Co\."/);
+  const table=render(ui.DataTable,{caption:"Aligned",rows:[{id:"one",name:"Creative",count:12,label:"Rising"}],rowKey:(r:any)=>r.id,basis:"Observed",columns:[{key:"name",label:"Creative",value:(r:any)=>r.name},{key:"count",label:"Ads",value:(r:any)=>r.count},{key:"label",label:"Label",value:(r:any)=>r.label}]});
+  assert.match(table,/class="ui-table-text"[^>]*>Creative/);assert.match(table,/class="ui-table-number"/);assert.match(table,/class="ui-table-chip"/);assert.match(table,/class="ui-table-basis"/);
+});
+
+
+test("UI-05 rendered local logo images use the alt contract and sample marks never request images",()=>{
+ const brand={id:"fixture-brand",name:"Fictional Candle Co.",domain:"fictional.example",color:"#233b80",initials:"FC",mode:"imported"};
+ const named=renderToStaticMarkup(h(ui.BrandIdentityProvider,{brands:[brand],brandId:brand.id},h(ui.BrandName,{name:brand.name})));
+ assert.match(named,/<img[^>]*alt=""/);assert.match(named,/src="\/api\/brand-logos\/fixture-brand/);
+ const alone=renderToStaticMarkup(h(ui.BrandIdentityProvider,{brands:[brand],brandId:brand.id},h(ui.BrandMark,{name:brand.name})));
+ assert.match(alone,/<img[^>]*alt="Fictional Candle Co\."/);
+ const sample=renderToStaticMarkup(h(ui.BrandIdentityProvider,{brands:[{...brand,mode:"demo"}],brandId:brand.id},h(ui.BrandName,{name:brand.name})));
+ assert.ok(!sample.includes('<img'));assert.match(sample,/brand-monogram/);
+});
+
+
+test("UI-00 brand decoration preserves custom control children and accessible action labels",()=>{
+ const brand={id:"fixture",name:"Fictional Candle Co.",domain:"fictional.example",color:"#233b80",initials:"FC",mode:"imported"};
+ const Control=({children}:{children:any})=>h("button",{"aria-label":typeof children==="string"?children+": unavailable":undefined},children);
+ const html=renderToStaticMarkup(h(ui.BrandIdentityProvider,{brands:[brand],brandId:brand.id},h(ui.SectionCard,{title:"Score"},h(Control,null,"Score draft"))));
+ assert.match(html,/aria-label="Score draft: unavailable"/);
+});
+
+
+test("UI-03/UI-13 partial score headlines always expose coverage and the complete points breakdown",()=>{
+ const criteria=["met","met","unknown","met","met"].map((status,i)=>({id:["opening-message","claim-specificity","visible-message","cta","offer-clarity"][i],label:"Check",weight:20,status,explanation:"Saved evidence.",evidence:[]}));
+ const score={criteria,score:100,coverage:1,provisional:false,method:"Existing five-check calculation.",adId:"ad",sourceUrl:null};
+ const html=render(ui.CreativeScoreBreakdown,{score,workspaceId:"workspace"}),copy=text(html);
+ assert.match(copy,/100.*4 of 5 checks assessed.*Provisional/);assert.match(copy,/80 of 80 assessed points = 100. 20 points not assessed/);assert.ok(!copy.includes("100 / 100"));assert.match(copy,/not counted/);assert.match(copy,/Not assessed/);assert.match(copy,/How this score works/);assert.match(copy,/no spend or conversion data/);
+ const missing=text(render(ui.ScoreHeadline,{score:{...score,criteria:criteria.map(c=>({...c,status:"unknown"}))}}));assert.match(missing,/Unavailable.*0 of 5 checks assessed.*Provisional/);
 });

@@ -52,6 +52,7 @@ export const NAVIGATION_EVENT="exter:navigation";
 export function navigateTo(view:ViewId|Page,brandId?:string,options:{replace?:boolean;adId?:string}={}) {
   const item=navigation.find(item=>item.id===view || item.screen===view && !item.hidden);
   const url=new URL(window.location.href);
+  if(item?.id!=="creative"||options.adId!==url.searchParams.get("id")){url.searchParams.delete("t");url.searchParams.delete("slide");}
   if(item?.id!==resolveNavigation(window.location.href).id)url.hash="";
   url.searchParams.set("view",item?.id || "overview");
   if(brandId)url.searchParams.set("brandId",brandId);
