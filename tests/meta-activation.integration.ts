@@ -17,6 +17,7 @@ import {basicAuth} from "../server/auth.js";
 import {openDatabase} from "../server/db.js";
 import type {Brand} from "../shared/types.js";
 import {countryReach} from "../shared/meta-public.js";
+import {MetaPageCandidates} from "../server/connectors/meta-page-candidates.js";
 const enabled={EXTER_META_LIBRARY_ENABLED:"true",META_ACCESS_TOKEN:"fixture-only"};
 const poolForTest=()=>{assert.ok(process.env.TEST_DATABASE_URL,"A dedicated disposable TEST_DATABASE_URL is required.");return new pg.Pool({connectionString:process.env.TEST_DATABASE_URL});};
 async function reset(pool:pg.Pool){await migrate(pool);await migrate(pool);await pool.query("TRUNCATE watchlists,collection_runs,collection_jobs,collection_cursors,schedule_slots,ad_observations,public_ads CASCADE");await pool.query("UPDATE budget_settings SET monthly_budget_gbp=10 WHERE cost_type='data_providers'");await pool.query("UPDATE meta_request_gate SET next_request_at=now()");}
@@ -59,6 +60,36 @@ test("Meta gates, per-brand backfill checkpoints, daily slots, restatements and 
   await workOnce(pool,limited,{env:enabled,paceMs:0});const wait=(await pool.query("SELECT extract(epoch FROM (next_request_at-now()))::float8 AS seconds FROM meta_request_gate")).rows[0].seconds;assert.ok(wait>590&&wait<=600);
   const before=calls;assert.equal(await workOnce(pool,connector,{env:enabled}),false);assert.equal(calls,before,"rate limits block all brand jobs, not just the current cursor");
  }finally{await pool.end();}
+});
+
+test("unconfirmed Page searches share the real collection gate and only an explicit watchlist save adopts a candidate",async()=>{
+ const pool=poolForTest(),db=openDatabase(":memory:",false),app=express();let server:ReturnType<typeof createServer>|undefined;
+ try{
+  await reset(pool);db.prepare("INSERT INTO brands VALUES(?,?)").run(fixtureBrand.id,JSON.stringify(fixtureBrand));
+  const env={META_ACCESS_TOKEN:"fixture-only",EXTER_META_LIBRARY_ENABLED:"false"};let searches=0;
+  const connector=new MetaLibraryConnector({token:env.META_ACCESS_TOKEN,fetch:async url=>{
+    searches++;const params=new URL(String(url)).searchParams;assert.equal(params.get("search_terms"),fixtureBrand.name);assert.equal(params.get("ad_type"),"ALL");assert.equal(params.get("ad_active_status"),"ALL");assert.equal(params.get("ad_reached_countries"),'["GB"]');
+    return Response.json({data:[{id:"6001",page_id:"61",page_name:"Fictional Studio",ad_creative_link_captions:[fixtureBrand.domain],ad_creative_bodies:["A fictional gift ad"]}]});
+  }});
+  app.use(express.json());app.use("/api/public/meta",protectSettingsMutation);attachInfrastructure(app,db,()=>pool,{env,connector,paceMs:0});server=createServer(app);await new Promise<void>(resolve=>server!.listen(0,"127.0.0.1",resolve));const base=`http://127.0.0.1:${(server.address() as AddressInfo).port}`,headers={"Content-Type":"application/json"};
+  const before=db.prepare("SELECT total_changes() AS n").get();const request=()=>fetch(base+"/api/public/meta/page-candidates",{method:"POST",headers,body:JSON.stringify({workspaceId:fixtureBrand.id,brandKey:fixtureBrand.id})});
+  const suggestions=await request();assert.equal(suggestions.status,200);const found=await suggestions.json();assert.equal(found.candidates[0].pageId,"61");assert.equal(searches,1);
+  assert.equal((await request()).status,200);assert.equal(searches,1,"cached candidates do not repeat provider calls");
+  for(const table of ["watchlists","public_ads","ad_observations","collection_runs"])assert.equal((await pool.query(`SELECT count(*)::int AS n FROM ${table}`)).rows[0].n,0,table);
+  assert.deepEqual(db.prepare("SELECT total_changes() AS n").get(),before);
+  const confirmed=await fetch(base+"/api/public/meta/watchlists/confirmed-fixture",{method:"PUT",headers,body:JSON.stringify({workspaceId:fixtureBrand.id,brandKey:fixtureBrand.id,purpose:"brand",pageIds:[found.candidates[0].pageId],countries:["GB"]})});assert.equal(confirmed.status,200);assert.deepEqual((await pool.query("SELECT page_ids FROM watchlists WHERE id='confirmed-fixture'")).rows[0].page_ids,["61"]);
+  assert.equal((await request()).status,409,"configured brands are not automatically searched again");
+  assert.equal(await workOnce(pool,connector,{env}),false,"finding a Page does not enable live collection");
+
+  // A collection dispatch blocks lookup dispatch and vice versa through the same durable row.
+  const run=await enqueueCollection(pool,"confirmed-fixture");
+  const collector=new MetaLibraryConnector({token:"fixture-only",fetch:async()=>Response.json({data:[]})});
+  await workOnce(pool,collector,{env:enabled});
+  const lookup=new MetaPageCandidates(()=>pool,{env,connector});const target={workspaceId:fixtureBrand.id,brandKey:"other-fixture",name:fixtureBrand.name,domain:fixtureBrand.domain};
+  assert.equal((await lookup.search(target)).status,429);assert.equal(searches,1);
+  await pool.query("UPDATE meta_request_gate SET next_request_at=now()");assert.equal((await lookup.search(target)).status,200);assert.equal(searches,2);
+  assert.notEqual(await enqueueCollection(pool,"confirmed-fixture"),run);assert.equal(await workOnce(pool,collector,{env:enabled}),false,"lookup pacing also stops the collection worker");
+ }finally{if(server)await new Promise<void>(resolve=>server!.close(()=>resolve()));db.close();await pool.end();}
 });
 
 test("Page ID editing is authenticated, scoped, separate from discovery and feeds the existing automatic logo fallback",async()=>{

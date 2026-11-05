@@ -37,3 +37,22 @@ Kept differences from the sample reference:
 Validation: npm run check, npm test (430 passed), npm run build and the five
 Postgres infrastructure/activation integration fixtures pass. npm run secrets:check
 also passes after staging every new file.
+
+## Page suggestions follow-up
+
+The four page-suggestions-{competitors,data}-{1440,390}.png images show the shared
+editor with fictional candidate responses and local fixture pictures. They are
+not live verification. Candidate website matches outrank a higher-ad-count exact
+name match. The browser check verifies a shared-rate wait, pictures, three
+suggestions, both entry points, no watchlist write before Confirm, a single
+selected-brand write on Confirm, and manual entry as a separate save.
+
+Current follow-up validation: 441 unit tests, six disposable Postgres cases, and
+24 affected screen/width checks plus four candidate entry/width checks pass.
+The prior 90-case alignment audit remains the earlier PR #14 validation; the
+follow-up changes the editor only. No external requests were allowed.
+
+Suggestions have explicit partial coverage and a Search more ads action. They
+never enter collected-ad records. Profile previews have monogram fallback and
+use the existing bounded local raster store. Page ID assignment still requires
+Confirm or manual save; live collection remains default off.

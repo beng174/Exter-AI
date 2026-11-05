@@ -40,7 +40,7 @@ export function iconCandidates(html:string,pageUrl:string) {
   return [...new Set([...rows.sort((a,b)=>Number(b.apple)-Number(a.apple)||b.size-a.size).map(row=>row.url),new URL("/favicon.ico",pageUrl).href])].slice(0,8);
 }
 interface Manifest {uploaded?:string;automatic?:string;checkedAt?:string;domain?:string;metaPageId?:string}
-export interface LogoOptions extends DemoWebsiteOptions {root?:string;convert?:(bytes:Buffer)=>Promise<Buffer>}
+export interface LogoOptions extends DemoWebsiteOptions {root?:string;convert?:(bytes:Buffer)=>Promise<Buffer>;retryAutomatic?:(error:unknown)=>boolean;opaqueMetaIdentity?:boolean}
 async function squareLogo(bytes:Buffer) {
   const dir=await mkdtemp(resolve(tmpdir(),"exter-logo-"));
   try {const input=resolve(dir,"input"),output=resolve(dir,"square.png");await writeFile(input,bytes,{mode:0o600});
@@ -68,15 +68,16 @@ export class BrandLogoStore {
   private async choose(brand:BrandIdentity){const old=await this.manifest(brand.id);if(old.uploaded)return old.uploaded;
     const now=this.options.now?.()||new Date(),checked=new Date(old.checkedAt||0),expires=new Date(checked);expires.setUTCMonth(expires.getUTCMonth()+1);
     const metaPageId=typeof brand.metaPageId==="string"&&/^\d{1,30}$/.test(brand.metaPageId)?brand.metaPageId:undefined;
-    const sameIdentity=old.domain===brand.domain&&old.metaPageId===metaPageId;
+    const cachePageId=this.options.opaqueMetaIdentity&&metaPageId?hash(metaPageId):metaPageId;
+    const sameIdentity=old.domain===brand.domain&&old.metaPageId===cachePageId;
     if(sameIdentity&&now<expires)return old.automatic||null;
     let automatic:string|undefined;
-    if(metaPageId)try{const asset=await fetchMetaPagePicture(metaPageId,LOGO_MAX_BYTES,this.options);validateLogo(asset.bytes,asset.type);automatic=await this.retain(asset.bytes);}catch{}
+    if(metaPageId)try{const asset=await fetchMetaPagePicture(metaPageId,LOGO_MAX_BYTES,this.options);validateLogo(asset.bytes,asset.type);automatic=await this.retain(asset.bytes);}catch(error){if(this.options.retryAutomatic?.(error))throw error;}
     if(!automatic&&brand.domain)try{const page=await fetchWebsiteResource(brand.domain,`https://${brand.domain}/`,1024*1024,this.options);if(!["text/html","application/xhtml+xml"].includes(page.type))throw new Error();
       for(const candidate of iconCandidates(page.bytes.toString("utf8"),page.url))try{const asset=await fetchWebsiteResource(brand.domain,candidate,LOGO_MAX_BYTES,this.options);validateLogo(asset.bytes,asset.type);automatic=await this.retain(asset.bytes);break;}catch{}
     }catch{}
     // Re-read after retrieval so a concurrent uploaded logo always wins.
-    const latest=await this.update(brand.id,value=>({...value,automatic:automatic||(sameIdentity?old.automatic:undefined),domain:brand.domain,metaPageId,checkedAt:now.toISOString()}));return latest.uploaded||automatic||(sameIdentity?old.automatic:undefined)||null;
+    const latest=await this.update(brand.id,value=>({...value,automatic:automatic||(sameIdentity?old.automatic:undefined),domain:brand.domain,metaPageId:cachePageId,checkedAt:now.toISOString()}));return latest.uploaded||automatic||(sameIdentity?old.automatic:undefined)||null;
   }
 }
 /** Prefer an explicit identity, then one unambiguous saved advertiser Page, never a creator Page. */
