@@ -690,3 +690,9 @@ and blockers below remain unchanged.
 - Following authorised work remains separate: full public Performance signals,
   then default-off Apify media retention with cost/disk guards. See the next
   task plan; these are not claimed implemented by the recovery changes.
+
+- Recovery review: https://github.com/beng174/Exter-AI/pull/17, updated with
+  commit 8d43b57, shared diagnostics/retry screenshots and all required checks.
+  After merge, deploy exter-ai first, then exter-worker and exter-scheduler.
+  Use Retry collection per stopped brand after deployment; this implementation
+  has not resumed the live run or established its original Graph failure code.
