@@ -1,0 +1,38 @@
+[
+  {
+    "screen": "Home",
+    "width": 1440,
+    "headingLength": 9,
+    "overflow": false
+  },
+  {
+    "screen": "CreativeDetail",
+    "width": 1440,
+    "headingLength": 729,
+    "overflow": false
+  },
+  {
+    "screen": "DataSources",
+    "width": 1440,
+    "headingLength": 12,
+    "overflow": false
+  },
+  {
+    "screen": "Home",
+    "width": 390,
+    "headingLength": 9,
+    "overflow": false
+  },
+  {
+    "screen": "CreativeDetail",
+    "width": 390,
+    "headingLength": 729,
+    "overflow": false
+  },
+  {
+    "screen": "DataSources",
+    "width": 390,
+    "headingLength": 12,
+    "overflow": false
+  }
+]

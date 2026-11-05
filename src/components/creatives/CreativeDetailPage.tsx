@@ -6,7 +6,7 @@ import { useEffect, useRef, useState } from "react";
 import { ArrowLeft, ArrowRight, ExternalLink } from "lucide-react";
 import type { BrowserCreative, CreativeBrowserResponse } from "../../../shared/creative-browser";
 import { creativeUrl, similarPublicCreatives } from "../../../shared/creative-browser";
-import { analysisUrl, creativeTitle, creativeSecondary, plainEnum, ukDate, adCount } from "../../../shared/creative-presentation";
+import { analysisUrl, creativeTitle, creativeHeading, creativeSecondary, plainEnum, ukDate, adCount } from "../../../shared/creative-presentation";
 import type { MetricName } from "../../../shared/owned-metrics";
 import type { VideoField } from "../../../shared/video-analysis";
 import type { ImageField } from "../../../shared/image-analysis";
@@ -78,7 +78,7 @@ function Detail({row,data,filtered,onOpen,onRefresh}:DetailProps&{row:BrowserCre
   const marketGap:UnavailableProps|false=unknownMatch?{reason:"An analysed angle or format is needed to find similar ads.",...analyse}:similar.length?false:data.sources.some(source=>source.status==="error")?{reason:"Saved competitor evidence could not be read.",...retry}:data.sources.some(source=>!["complete","succeeded","collected"].includes(source.status))?{reason:"Configured competitor ads are not fully collected.",...collection}:{label:"",reason:"No similar competitor ads in this saved sample.",href:`/?view=creatives&brandId=${encodeURIComponent(data.brand.id)}&show=competitors`,linkLabel:"Browse competitor ads"};
   const hasReadings=readings.some(item=>hasValue(item.field?.value))||claims.length>0;
   return <div className="creative-detail creative-browser">
-    <PageHeader title={title} subtitle={<><BrandName name={row.brandName} size={32}/> · {plainEnum(row.platform)}{row.mediaKind!=="unknown"?` · ${plainEnum(row.mediaKind)}`:""}{row.deliveryStartAt?` · running since ${ukDate(row.deliveryStartAt)}`:""}{row.sourceUrl&&<> · <a href={row.sourceUrl} target="_blank" rel="noopener noreferrer">Open in {row.platform==="Meta"?"Meta Ad Library":"ad library"}</a></>}</>} eyebrow={<a href={library} onClick={event=>{if(!event.ctrlKey&&!event.metaKey&&!event.shiftKey&&!event.altKey){event.preventDefault();closeCreativeRoute(data.brand.id);}}}>Creatives</a>} actions={<>
+    <PageHeader title={creativeHeading(row)} decorateTitle={false} subtitle={<><BrandName name={row.brandName} size={32}/> · {plainEnum(row.platform)}{row.mediaKind!=="unknown"?` · ${plainEnum(row.mediaKind)}`:""}{row.deliveryStartAt?` · running since ${ukDate(row.deliveryStartAt)}`:""}{row.sourceUrl&&<> · <a href={row.sourceUrl} target="_blank" rel="noopener noreferrer">Open in {row.platform==="Meta"?"Meta Ad Library":"ad library"}</a></>}</>} eyebrow={<a href={library} onClick={event=>{if(!event.ctrlKey&&!event.metaKey&&!event.shiftKey&&!event.altKey){event.preventDefault();closeCreativeRoute(data.brand.id);}}}>Creatives</a>} actions={<>
       <button className="button secondary" aria-label="Previous creative" disabled={index<=0} onClick={()=>onOpen(filtered[index-1])}><ArrowLeft size={18}/></button>
       <button className="button secondary" aria-label="Next creative" disabled={index<0||index===filtered.length-1} onClick={()=>onOpen(filtered[index+1])}><ArrowRight size={18}/></button>
       <a className="button secondary" href="#creative-market">Compare with market</a><button className="button primary" disabled title="Adding saved creatives to briefs is not available yet.">Add to brief</button>
@@ -104,9 +104,13 @@ function Detail({row,data,filtered,onOpen,onRefresh}:DetailProps&{row:BrowserCre
       <div className="creative-detail-evidence-column">
         <SectionCard title="Performance" help={row.workspaceBrand?"Your saved account outcomes":"Public signals only"} meta={row.workspaceBrand?ownedMeta:meta} empty={!reach&&row.workspaceBrand&&!cohort&&row.performance.length===0?performanceGap:!reach&&!row.workspaceBrand&&!hasValue(row.daysRunning)?{reason:"The source did not supply running history.",...original}:false}>
           {own&&row.performance.length>0&&<label className="creative-scope">Reporting scope<select aria-label="Reporting scope" value={scope} onChange={event=>setScope(event.target.value)}><option value="">Choose one account and reporting scope</option>{row.performance.map(item=><option key={item.id} value={item.id}>{plainEnum(item.platform)} · {item.accountId} · {item.currency} · {plainEnum(item.attribution)} · {plainEnum(item.conversionEvent)} · {ukDate(item.from)} to {ukDate(item.to)}</option>)}</select></label>}
-          {reach&&<><MetricTile label={reach.label} value={new Intl.NumberFormat("en-GB").format(reach.value)} basis="Observed" onEvidence={evidence}/><Caveat>Published lifetime reach at {ukDate(row.reachObservedAt)}. This is not impressions, conversions or sales.</Caveat></>}
-          {!row.workspaceBrand?<MetricTile label="Days running" value={row.daysRunning} basis="Observed" onEvidence={evidence}/>:cohort?<><div className="creative-performance">{(["Spend","ROAS","CPA","Hook rate","Hold rate","Frequency"] as const).map(name=><MetricTile key={name} label={name} value={metricText(cohort.metrics[name],name,cohort.currency)} basis="Observed" onEvidence={evidence} reason={metricReason(cohort.metrics[name])}/>)}</div>
-            <Caveat>{cohort.currency} · {plainEnum(cohort.attribution)} · {plainEnum(cohort.conversionEvent)}. Benchmark: all ads in the same account and dates. Missing values lack required data or the minimum sample.</Caveat></>:<Unavailable reason="Choose one account scope to see its metrics." label=""/>}
+          <div className="creative-performance">
+            {reach&&<MetricTile label={reach.label} value={new Intl.NumberFormat("en-GB").format(reach.value)} basis="Observed" onEvidence={evidence}/>}
+            {!row.workspaceBrand?<MetricTile label="Days running" value={row.daysRunning} basis="Observed" onEvidence={evidence}/>:cohort?(["Spend","ROAS","CPA","Hook rate","Hold rate","Frequency"] as const).map(name=><MetricTile key={name} label={name} value={metricText(cohort.metrics[name],name,cohort.currency)} basis="Observed" onEvidence={evidence} reason={metricReason(cohort.metrics[name])}/>):null}
+          </div>
+          {reach&&<Caveat>Published lifetime reach at {ukDate(row.reachObservedAt)}. This is not impressions, conversions or sales.</Caveat>}
+          {cohort?<Caveat>{cohort.currency} · {plainEnum(cohort.attribution)} · {plainEnum(cohort.conversionEvent)}. Benchmark: all ads in the same account and dates. Missing values lack required data or the minimum sample.</Caveat>:row.workspaceBrand&&<Unavailable reason="Choose one account scope to see its metrics." label=""/>}
+
         </SectionCard>
 
         <SectionCard title="Creative score" help="Best-practice checklist · Estimated, rules-based" meta={{...analysisMeta,lastChecked:row.score?.analysedAt||analysisMeta.lastChecked}} empty={!row.score&&scoreGap}>

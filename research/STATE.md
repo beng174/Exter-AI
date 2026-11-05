@@ -548,3 +548,34 @@ and blockers below remain unchanged.
 - Review: https://github.com/beng174/Exter-AI/pull/14 against exter-test-drive.
   Live collection has not been enabled. Render activation and rollback steps are
   in docs/DEPLOY.md; the existing web disk and Postgres must be retained.
+
+
+## Workspace readability and provider marks, 5 Nov 2026
+
+- The earlier automatic Page lookup task is complete in PR #15:
+  https://github.com/beng174/Exter-AI/pull/15. Page IDs require explicit Confirm
+  or manual save. Its fixture verification is recorded on that branch.
+- This independent UI follow-up starts at exter-test-drive 84131ee. It preserves
+  the owner's enabled EXTER_META_LIBRARY_ENABLED values in render.yaml. No
+  provider calls, deployment changes or live-account verification were made.
+- Creative detail uses a concise first-sentence heading without logos injected
+  into ad copy. Full source copy remains in Show more; card title rules and
+  original records are unchanged. Performance tiles form a compact left-aligned
+  grid with shared label/value rows. Home source statuses stay in one grid.
+- Workspace selection tolerates a missing optional website domain. A genuine
+  brand-list failure has a compact Retry notice, which clears on recovery.
+  Known current-page and sidebar brand identities remain usable independently.
+  The fixture reproduces the client exception; authenticated production HTTP
+  failures have not been inspected.
+- Real and sample Data sources use bundled Meta, TikTok, Google, Instagram and
+  YouTube marks, with review/website icons for generic sources. Source health
+  keeps the four reference columns. Known successful checks and observed record
+  links move into Detail; unknown metadata is omitted rather than repeated.
+- Validation: type check, all 434 unit tests and production build pass. All 90
+  real/sample screen/mode/width cases pass at 1280px, 1440px and 1920px, with no
+  overflow or alignment failures. Six affected-page viewport captures plus
+  brand-list failure/recovery and sample Data sources at 1440px/390px pass.
+  The tracked-file secret scan passes. All four required checks pass.
+- Before/after comparisons, fictional fixture screenshots and audit JSON are in
+  output/playwright/readability/. Fixtures are not live verification. No schema,
+  dependencies, scoring rules, budgets, owned-sync defaults or kernel work changed.
