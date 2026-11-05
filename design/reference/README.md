@@ -70,7 +70,8 @@ These rules sit on top of `research/UI-SPEC.md` and decide every layout question
      baseline. Labels wrap under themselves. Corresponding rows start at the same
      height across sibling cards.
    - Use tabular figures everywhere. Right-align numeric table cells and headers;
-     left-align text. Basis and Label columns have fixed widths and centred chips.
+     left-align text columns. Text values inside a numeric comparison column keep
+     the same right alignment as its numbers and header. Basis and Label columns have fixed widths and centred chips.
    - Metric tiles have equal heights and shared label, value and note rows, with
      values on one baseline.
    - Section titles and right-hand actions share a baseline. Action rows have
@@ -80,3 +81,8 @@ These rules sit on top of `research/UI-SPEC.md` and decide every layout question
    - Left-align headings, labels and paragraphs. Centre only chips, badges,
      thumbnail empty states and reference-centred single-value cells.
    Check every screen at 1280px, 1440px and 1920px, in both workspaces.
+8. **Logos.** Use an uploaded brand logo first. When a saved Meta Page ID is
+   available, use its Facebook Page profile picture before the website icon.
+   Store and refresh it using the same bounded raster validation, small local
+   square copy and monthly cache as other automatic logos. Failed retrieval falls
+   back to the website icon, then a monogram. Sample brands use monograms only.

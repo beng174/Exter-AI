@@ -132,3 +132,12 @@ test("UI-03/UI-13 partial score headlines always expose coverage and the complet
  assert.match(copy,/100.*4 of 5 checks assessed.*Provisional/);assert.match(copy,/80 of 80 assessed points = 100. 20 points not assessed/);assert.ok(!copy.includes("100 / 100"));assert.match(copy,/not counted/);assert.match(copy,/Not assessed/);assert.match(copy,/How this score works/);assert.match(copy,/no spend or conversion data/);
  const missing=text(render(ui.ScoreHeadline,{score:{...score,criteria:criteria.map(c=>({...c,status:"unknown"}))}}));assert.match(missing,/Unavailable.*0 of 5 checks assessed.*Provisional/);
 });
+
+
+test("UI-06 comparison columns align text, numbers and headers as one column",()=>{
+ const html=render(ui.DataTable,{caption:"Brand comparison",rows:[{id:"count",value:12},{id:"format",value:"Founder-led"},{id:"offer",value:"Free shipping"},{id:"missing",value:null}],columns:[{key:"measure",label:"Measure",value:(r:any)=>r.id},{key:"brand",label:"Fixture brand",align:"mixed",value:(r:any)=>r.value}],rowKey:(r:any)=>r.id,basis:"Observed"});
+ assert.match(html,/<th class="ui-table-number"[^>]*>Fixture brand/);
+ assert.equal((html.match(/<td class="ui-table-number" data-label="Fixture brand"/g)||[]).length,4);
+ assert.match(html,/<td class="ui-table-number" data-label="Fixture brand">Founder-led<\/td>/);
+ assert.match(html,/<td class="ui-table-number" data-label="Fixture brand">Free shipping<\/td>/);
+});
