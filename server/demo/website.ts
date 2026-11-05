@@ -48,10 +48,10 @@ async function checkedUrl(raw: string, initialHost: string, options: DemoWebsite
   return { url, addresses };
 }
 /** Pin the DNS result used for the native connection, closing a resolve/fetch rebinding gap. */
-async function nativePage(url: URL, addresses: { address: string; family: number }[]): Promise<Response> {
+async function nativePage(url: URL, addresses: { address: string; family: number }[], maxBytes = MAX_BYTES, accept = "text/html,application/xhtml+xml"): Promise<Response> {
   return new Promise((resolve, reject) => {
     const req = request(url, {
-      method: "GET", agent: false, signal: AbortSignal.timeout(15000), headers: { Accept: "text/html,application/xhtml+xml", "User-Agent": "Exter-Website-Evidence/1.0", "Accept-Encoding": "identity" },
+      method: "GET", agent: false, signal: AbortSignal.timeout(15000), headers: { Accept: accept, "User-Agent": "Exter-Website-Evidence/1.0", "Accept-Encoding": "identity" },
       lookup: (_hostname, lookupOptions, callback) => {
         if (lookupOptions.all) callback(null, addresses);
         else callback(null, addresses[0].address, addresses[0].family);
@@ -61,7 +61,7 @@ async function nativePage(url: URL, addresses: { address: string; family: number
       let bytes = 0;
       response.on("data", (chunk: Buffer) => {
         bytes += chunk.length;
-        if (bytes > MAX_BYTES) { response.destroy(); req.destroy(); reject(new WebsiteEvidenceError("Website response exceeds the 1 MB limit.", 413)); }
+        if (bytes > maxBytes) { response.destroy(); req.destroy(); reject(new WebsiteEvidenceError("Website response exceeds the 1 MB limit.", 413)); }
         else chunks.push(chunk);
       });
       response.on("error", () => reject(new WebsiteEvidenceError("The website response could not be read.", 502)));
@@ -143,4 +143,27 @@ export async function refreshWebsiteEvidence(db: DatabaseSync, brand: Brand, opt
     return result;
   }
   throw new WebsiteEvidenceError("The website could not be refreshed.", 502);
+}
+
+/** Same public-host/DNS-pinned transport for small retained website assets. */
+export async function fetchWebsiteResource(domain: string, raw: string, maxBytes: number, options: DemoWebsiteOptions = {}) {
+  if (!options.fetch && (process.env.HTTPS_PROXY || process.env.HTTP_PROXY || process.env.https_proxy || process.env.http_proxy))
+    throw new WebsiteEvidenceError("Website icons are unavailable with this outbound proxy configuration.", 409);
+  let destination = await checkedUrl(raw, domain, options);
+  const timeout = AbortSignal.timeout(15000);
+  for (let redirects = 0; redirects <= 3; redirects++) {
+    const response = options.fetch ? await options.fetch(destination.url, {redirect:"manual", signal:timeout, headers:{Accept:"text/html,image/png,image/jpeg,image/webp,image/x-icon,image/vnd.microsoft.icon", "Accept-Encoding":"identity"}}) : await nativePage(destination.url,destination.addresses,maxBytes,"text/html,image/png,image/jpeg,image/webp,image/x-icon,image/vnd.microsoft.icon");
+    if (response.status >= 300 && response.status < 400) {
+      const location=response.headers.get("location");await response.body?.cancel();
+      if (!location || redirects===3) throw new WebsiteEvidenceError("Website redirect limit exceeded.");
+      destination=await checkedUrl(new URL(location,destination.url).href,domain,options);continue;
+    }
+    if (!response.ok || !response.body) {await response.body?.cancel();throw new WebsiteEvidenceError("Website asset is unavailable.",502);}
+    if (Number(response.headers.get("content-length"))>=maxBytes || ![null,"identity"].includes(response.headers.get("content-encoding"))) {await response.body.cancel();throw new WebsiteEvidenceError("Website asset exceeds its size or encoding limit.",413);}
+    const reader=response.body.getReader(),chunks:Uint8Array[]=[];let bytes=0;
+    try {while(true){const part=await reader.read();if(part.done)break;bytes+=part.value.byteLength;if(bytes>=maxBytes){await reader.cancel();throw new WebsiteEvidenceError("Website asset exceeds its size limit.",413);}chunks.push(part.value);}}
+    finally{reader.releaseLock();}
+    return {bytes:Buffer.concat(chunks),type:(response.headers.get("content-type")||"").split(";")[0].toLowerCase(),url:destination.url.href};
+  }
+  throw new WebsiteEvidenceError("Website asset is unavailable.",502);
 }

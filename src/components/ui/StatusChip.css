@@ -5,3 +5,5 @@
 .ui-status-chip-blue { background:var(--chip-blue-bg);color:var(--chip-blue-fg); }
 .ui-status-chip-red { background:var(--chip-red-bg);color:var(--chip-red-fg); }
 .ui-status-chip-grey { background:var(--chip-grey-bg);color:var(--chip-grey-fg); }
+
+.ui-status-chip { white-space:nowrap; }

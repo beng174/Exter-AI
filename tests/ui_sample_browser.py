@@ -49,7 +49,7 @@ with sync_playwright() as pw:
   expect(page.locator('.reference-sample')).to_have_text('Sample data')
   expect(page.get_by_label('Switch brand',exact=True)).to_contain_text('Sample · 5 competitors')
   expect(page.locator('main .ui-section-empty')).to_have_count(0)
-  assert page.locator('main h2').all_text_contents()==headings,(name,page.locator('main h2').all_text_contents())
+  assert page.locator('main h2').evaluate_all('els=>els.map(e=>{const copy=e.cloneNode(true);copy.querySelectorAll(".brand-mark").forEach(mark=>mark.remove());return copy.textContent;})')==headings,(name,page.locator('main h2').evaluate_all('els=>els.map(e=>{const copy=e.cloneNode(true);copy.querySelectorAll(".brand-mark").forEach(mark=>mark.remove());return copy.textContent;})'))
   assert not re.search(r'\b(?:CA|UI)-\d+',page.locator('main').inner_text()),name
   assert page.evaluate('document.documentElement.scrollWidth<=innerWidth'),name
   # Every internal link retains the flag, including links opened in a new tab.

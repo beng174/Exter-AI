@@ -445,3 +445,40 @@ and blockers below remain unchanged.
   browser acceptance, ordinary-workspace fidelity regression and PR #10's
   filter/Basis acceptance pass. All sixteen real captures are pixel-identical
   to the clean 60d5f5f base build; sample/reference pairs have been refreshed.
+
+
+## Alignment, brand identity and score transparency (UI-00 to UI-16)
+
+- Built from exter-test-drive at 9029e4e, which includes PR #11. Added reference
+  rule 7 and shared centred content (1280px maximum), subgrid card/metric rows,
+  tabular figures, aligned numeric/chip columns and consistent actions/spacing.
+- Added shared brand marks across the switcher, headers, creatives, tables,
+  proof, sources and reports. Uploaded logos take precedence over own-site icons,
+  then monograms. Own-site retrieval reuses bounded public DNS-pinned HTTPS,
+  rejects SVG and files of 200 KB or more, retains 64px PNGs in existing media
+  storage and caches automatic checks monthly. Upload/reset use existing auth
+  and mutation guards. Configured, uncollected competitors have logo identities.
+  Sample brands use monograms only; their writes and network retrieval stay off.
+- Creative score now shows coverage and Provisional, every check's result and
+  points, plain reasons, linked evidence, the exact assessed-points total and
+  How this score works. The existing server/demo/scores.ts rules and 20-point
+  weights are unchanged. Shared display arithmetic reuses explainScore. The
+  sample's older illustrative six-check scores were replaced with five-check
+  fixtures verified against that scorer. Predictive scoring remains gated.
+- Removed wholly missing measure rows and columns, including uncollected
+  competitor metric columns. Explanations sit in About this data; empty section
+  frames collapse and cards show one missing-metric label instead of three.
+- All 90 screen/mode/width checks pass at 1280, 1440 and 1920, as do existing
+  sample, real fidelity and filter/Basis browser acceptance. The 419 unit tests
+  include all 243 result combinations plus logo fallback, size/type, accessibility
+  and isolation checks. Type check and production build pass. Staged secret scan
+  passes. No external requests or live provider calls occurred in verification.
+- Before/after sample screenshots for Home, Winners, Creative detail, Competitors
+  and Briefs, plus Scores and score-section screenshots, are in
+  output/playwright/alignment/. Ordinary-route score screenshots are labelled
+  fixtures because the retained real preview has no completed scores. Fixtures
+  are not live verification. No stored real data or historical evidence changed.
+- Both live gates remain open, EXTER_OWNED_SYNC_ENABLED remains absent/false and
+  kernel work remains paused. No dependencies, schema, budgets, provider settings
+  or worker changes. After merge: Render > exter-ai > Manual Deploy > Deploy latest
+  commit. Keep existing secrets, budgets and disk; no migration is needed.

@@ -53,7 +53,7 @@ with sync_playwright() as pw:
             basis_tables(page,'retained',width,screen)
             if screen in ('Home','Competitors'):
                 row=page.locator('.ui-data-table tbody tr').filter(has_text='Share of voice')
-                expect(row.locator('td[data-label="Basis"]')).to_have_text('Unavailable')
+                expect(row).to_have_count(0)
                 assert row.locator('.ui-data-label-observed').count()==0
                 page.screenshot(path=str(OUT/f'polish-after-{screen}-{width}.png'),full_page=True)
             if screen=='Home':

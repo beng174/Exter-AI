@@ -17,6 +17,7 @@ export function attachSampleWorkspace(app:Express) {
   if(!sampleBrands.some(brand=>brand.id===id)){res.status(404).json({error:"No sample workspace matches this request."});return;}
   if(req.path==="/ask"&&req.method==="POST") {res.json(sampleCannedAnswer(String(req.body?.question||"")));return;}
   if(!["GET","HEAD"].includes(req.method)){res.status(403).json({error:"Sample workspace is read-only. Provider, analysis, sync, collection and budget actions are disabled."});return;}
+  if(req.path==="/brand-identities"){res.json(sampleBrands);return;}
   if(req.path==="/brands"){res.json(sampleBrands);return;}
   if(/^\/brands\/[^/]+\/creatives$/.test(req.path)){res.json(sampleLibrary(id));return;}
   if(/^\/brands\/[^/]+\/creative-competitors$/.test(req.path)){res.json({competitors:sampleLibrary(id).competitors});return;}
