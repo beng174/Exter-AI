@@ -577,3 +577,7 @@ and blockers below remain unchanged.
   request is a separate implementation step. The owner enabled public collection
   in render.yaml on the latest base; that setting is preserved. No live provider
   calls or deployment-setting changes were made by this follow-up.
+
+- Completed Page discovery review: https://github.com/beng174/Exter-AI/pull/15,
+  based on the latest exter-test-drive. Readability and provider-icon work follows
+  separately so that this completed feature remains reviewable.
