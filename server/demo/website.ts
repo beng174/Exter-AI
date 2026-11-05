@@ -15,6 +15,8 @@ export interface DemoWebsiteOptions {
   fetch?: typeof fetch;
   resolve?: (hostname: string) => Promise<{ address: string; family: number }[]>;
   now?: () => Date;
+  beforeResourceRequest?:(url:URL)=>Promise<void>;
+  onResourceResponse?:(url:URL,response:Response)=>Promise<void>;
 }
 export function publicWebsiteAddress(address: string): boolean {
   if (isIP(address) === 4) {
@@ -67,7 +69,7 @@ async function nativePage(url: URL, addresses: { address: string; family: number
       response.on("error", () => reject(new WebsiteEvidenceError("The website response could not be read.", 502)));
       response.on("end", () => {
         const headers = new Headers();
-        for (const key of ["content-type", "content-length", "location", "content-encoding"]) {
+        for (const key of ["content-type", "content-length", "location", "content-encoding", "retry-after", "x-app-usage", "x-business-use-case-usage"]) {
           const value = response.headers[key]; if (typeof value === "string") headers.set(key, value);
         }
         resolve(new Response(Buffer.concat(chunks), { status: response.statusCode || 502, headers }));
@@ -152,7 +154,9 @@ async function fetchBoundedResource(domain: string, raw: string, maxBytes: numbe
   let destination = await checkedUrl(raw, domain, options, allowedHost);
   const timeout = AbortSignal.timeout(15000);
   for (let redirects = 0; redirects <= 3; redirects++) {
+    await options.beforeResourceRequest?.(destination.url);
     const response = options.fetch ? await options.fetch(destination.url, {redirect:"manual", signal:timeout, headers:{Accept:"text/html,image/png,image/jpeg,image/webp,image/x-icon,image/vnd.microsoft.icon", "Accept-Encoding":"identity"}}) : await nativePage(destination.url,destination.addresses,maxBytes,"text/html,image/png,image/jpeg,image/webp,image/x-icon,image/vnd.microsoft.icon");
+    await options.onResourceResponse?.(destination.url,response);
     if (response.status >= 300 && response.status < 400) {
       const location=response.headers.get("location");await response.body?.cancel();
       if (!location || redirects===3) throw new WebsiteEvidenceError("Website redirect limit exceeded.");

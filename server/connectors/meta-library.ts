@@ -72,7 +72,11 @@ export class MetaLibraryConnector {
     const pagingUrls=[body.paging?.next,body.paging?.previous].filter((v):v is string=>typeof v==="string"&&v.length>0);
     const clean=(value:any):any=>typeof value==="string"?pagingUrls.reduce((s,url)=>s.split(url).join("[redacted]"),value).split(token).join("[redacted]"):Array.isArray(value)?value.map(clean):value&&typeof value==="object"?Object.fromEntries(Object.entries(value).filter(([key])=>!["paging","next","previous","access_token","error"].includes(key)).map(([key,v])=>[key,clean(v)])):value;
     const rows = body.data.map((row:any)=>({...clean(Object.fromEntries(META_FIELDS.split(",").filter(key=>key in row).map(key=>[key,row[key]]))),ad_snapshot_url:`https://www.facebook.com/ads/library/?id=${row.id}`}));
-    let usage = 0;
+    return {rows,after:after as string|null,backoffMs:metaResponseDelay(response)};
+  }
+}
+export function metaResponseDelay(response:Response){
+  let usage = 0;
     for (const header of ["x-app-usage", "x-business-use-case-usage"]) {
       try {
         const data = JSON.parse(response.headers.get(header) || "{}");
@@ -80,8 +84,7 @@ export class MetaLibraryConnector {
         walk(data);
       } catch { /* Malformed usage headers do not erase a successfully collected page. */ }
     }
-    return { rows, after: after as string | null, backoffMs: Math.max(usage >= 80 ? 60000 : 0,retryDelay(response.headers.get("retry-after"))) };
-  }
+  return Math.max(response.status===429?60000:0,usage >= 80 ? 60000 : 0,retryDelay(response.headers.get("retry-after")));
 }
 export async function collectMetaPage(pool: pg.Pool, runId: string, connector = new MetaLibraryConnector(), leaseOwner?: string) {
   const result = await pool.query("SELECT r.*,w.workspace_id,w.page_ids,w.search_terms,w.countries FROM collection_runs r JOIN watchlists w ON w.id=r.watchlist_id WHERE r.id=$1", [runId]);
