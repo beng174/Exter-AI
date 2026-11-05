@@ -1,0 +1,20 @@
+.meta-run-table { display:grid;gap:16px;margin-top:8px; }
+.reference-ui .meta-run-table h3 { margin:0; }
+.meta-run-details { display:grid;gap:8px;min-width:0; }
+.meta-run-details>.ui-status-chip { justify-self:start; }
+.meta-run-details p { margin:0;font-size:13px;line-height:1.5; }
+.meta-run-details small { color:var(--muted);font-size:12px;line-height:1.5; }
+.meta-run-counts { display:flex;flex-wrap:wrap;gap:16px;margin:0; }
+.meta-run-counts>div { display:grid;gap:4px; }
+.meta-run-counts dt { font-size:12px;color:var(--muted); }
+.meta-run-counts dd { margin:0;font-variant-numeric:tabular-nums;font-weight:600; }
+.meta-run-details summary { cursor:pointer;min-height:44px;display:flex;align-items:center;font-size:13px; }
+.meta-run-details ol { display:grid;gap:12px;padding-left:16px;margin:0; }
+.meta-run-details li>small { display:block; }
+.meta-retry-control { display:grid;gap:8px; }
+.meta-retry-control small { max-width:240px;font-size:12px;color:var(--muted); }
+.meta-watchlist-target>.meta-run-details { margin:12px 0; }
+.meta-run-table .ui-table-number { width:88px; }
+.meta-run-table th.ui-table-number { white-space:nowrap; }
+.meta-run-table .ui-table-chip { width:112px; }
+@media(min-width:720px) { .meta-run-table th:first-child { width:16%; }.meta-run-table th:last-child { width:148px; } }

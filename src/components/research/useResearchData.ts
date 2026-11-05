@@ -5,10 +5,11 @@ import type { CreativeBrowserResponse } from "../../../shared/creative-browser";
 import { researchWindow, type ResearchWindow } from "../../../shared/creative-research";
 import { api } from "../../lib/api";
 import type {DatabaseStorageHealth} from "../../../shared/storage-health";
+import type {MetaSourceHealth} from "../../../shared/meta-public";
 export type Watchlist=import("../../../shared/meta-public").MetaWatchlist;
 export interface BudgetState {cost_type:string;monthly_budget_gbp:number;used_gbp:number;paused:boolean;pause_reason:string|null}
 export interface InfrastructureState {meta?:{status:string};tiktok?:{status:string};database?:string;storage?:DatabaseStorageHealth;budgets?:BudgetState[]}
-export interface ResearchData {library:CreativeBrowserResponse;window:ResearchWindow;brand:Brand|undefined;research:BrandResearch|null;researchFailed:boolean;watchlists:Watchlist[]|null;infrastructure:InfrastructureState|null;connections:{status:string;platform?:string;name?:string}[]|null;budgets:BudgetState[]|null}
+export interface ResearchData {library:CreativeBrowserResponse;window:ResearchWindow;brand:Brand|undefined;research:BrandResearch|null;researchFailed:boolean;watchlists:Watchlist[]|null;watchlistPollFailed?:boolean;infrastructure:InfrastructureState|null;connections:{status:string;platform?:string;name?:string}[]|null;budgets:BudgetState[]|null}
 export function useResearchData(brandId:string,brands:Brand[],from:string|undefined,to:string|undefined,refresh:number) {
   const [data,setData]=useState<ResearchData|null>(null),[error,setError]=useState(false),[loading,setLoading]=useState(true);
   useEffect(()=>{
@@ -32,5 +33,12 @@ export function useResearchData(brandId:string,brands:Brand[],from:string|undefi
     void load().catch(()=>{if(active){setError(true);setData(null);}}).finally(()=>{if(active)setLoading(false);});
     return()=>{active=false;};
   },[brandId,from,to,refresh]);
+  const activeWorkspace=data?.watchlists?.some(w=>["queued","running"].includes(w.latestRun?.status||""))?data.library.brand.id:null;
+  useEffect(()=>{
+    if(!activeWorkspace)return;let active=true,pending=false;
+    const timer=window.setInterval(()=>{if(pending)return;pending=true;
+      void Promise.allSettled([api<Watchlist[]>(`/api/public/meta/watchlists?${new URLSearchParams({workspaceId:activeWorkspace})}`),api<MetaSourceHealth>(`/api/public/meta/source-status?${new URLSearchParams({workspaceId:activeWorkspace})}`)]).then(([lists,source])=>{if(active)setData(current=>current?.library.brand.id===activeWorkspace?{...current,...(lists.status==="fulfilled"?{watchlists:lists.value}:{}),watchlistPollFailed:lists.status==="rejected"||source.status==="rejected",library:source.status==="fulfilled"?{...current.library,metaSource:source.value}:current.library}:current);}).finally(()=>{pending=false;});
+    },5000);return()=>{active=false;window.clearInterval(timer);};
+  },[activeWorkspace]);
   return {data:data?{...data,brand:brands.find(item=>item.id===data.library.brand.id)||data.brand}:null,error,loading};
 }

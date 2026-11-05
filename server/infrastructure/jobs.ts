@@ -4,7 +4,9 @@ import { randomUUID } from "node:crypto";
 import type pg from "pg";
 import { collectMetaPage, MetaCollectionError, MetaLibraryConnector, metaStatus, metaLibraryEnabled } from "../connectors/meta-library.js";
 import {claimMetaRequest,delayMetaRequests} from "./meta-rate.js";
+import {META_CONTROLLED_ERRORS,smallerMetaPage,type MetaFailureKind,type MetaPageSize} from "../../shared/meta-collection.js";
 const MAX_PAGE_ATTEMPTS = 5;
+export class CollectionBusyError extends Error {constructor(){super("Collection still has an active request. Retry after it finishes.");}}
 export async function enqueueCollection(pool: pg.Pool, watchlistId: string, day?: string, now=new Date()) {
   const client = await pool.connect();
   const id = randomUUID();
@@ -25,8 +27,11 @@ export async function enqueueCollection(pool: pg.Pool, watchlistId: string, day?
       if (!day && ["paused","not_connected","failed"].includes(run.status)) {
         const resumed = await client.query(`UPDATE collection_jobs SET status='queued',attempts=0,available_at=now(),lease_owner=NULL,lease_until=NULL
           WHERE id=$1 AND (lease_until IS NULL OR lease_until<=now()) RETURNING id`, [run.id]);
-        if (resumed.rowCount)
-          await client.query("UPDATE collection_runs SET status='queued',errors='[]',finished_at=NULL WHERE id=$1", [run.id]);
+        if(!resumed.rowCount)throw new CollectionBusyError();
+        await client.query(`INSERT INTO meta_collection_failures(run_id,attempted_at,kind)
+          SELECT id,COALESCE(stopped_at,finished_at),'legacy' FROM collection_runs WHERE id=$1 AND COALESCE(stopped_at,finished_at) IS NOT NULL
+            AND NOT EXISTS(SELECT 1 FROM meta_collection_failures f WHERE f.run_id=$1)`,[run.id]);
+        await client.query("UPDATE collection_runs SET status='queued',errors='[]',finished_at=NULL,stopped_at=NULL WHERE id=$1", [run.id]);
       }
       if (day) await client.query("INSERT INTO schedule_slots VALUES($1,$2,$3) ON CONFLICT DO NOTHING", [watchlistId,day,run.id]);
       await client.query("COMMIT"); return run.id as string;
@@ -34,7 +39,7 @@ export async function enqueueCollection(pool: pg.Pool, watchlistId: string, day?
     const config=watchlist.rows[0];
     const prior=await client.query("SELECT 1 FROM collection_runs WHERE watchlist_id=$1 AND status='complete' AND config->>'revision'=$2 LIMIT 1",[watchlistId,String(config.revision)]);
     const to=day||now.toISOString().slice(0,10),from=rollingYearStart(to);
-    await client.query("INSERT INTO collection_runs(id,watchlist_id,config) VALUES($1,$2,$3)", [id,watchlistId,JSON.stringify({...config,from,to,phase:prior.rowCount?"daily":"backfill"})]);
+    await client.query("INSERT INTO collection_runs(id,watchlist_id,config,pages_fetched) VALUES($1,$2,$3,0)", [id,watchlistId,JSON.stringify({...config,from,to,phase:prior.rowCount?"daily":"backfill"})]);
     await client.query("INSERT INTO collection_jobs(id) VALUES($1)", [id]);
     if (day) await client.query("INSERT INTO schedule_slots VALUES($1,$2,$3)", [watchlistId,day,id]);
     await client.query("COMMIT"); return id;
@@ -55,6 +60,7 @@ export async function workOnce(pool: pg.Pool, connector?: MetaLibraryConnector, 
   const job = await claimJob(pool,owner);
   if (!job) return false;
   let state = "queued", backoffMs = 0, resetAttempts = false, errorMessage: string | null = null;
+  let errorKind:MetaFailureKind|null=null,numericError:MetaCollectionError|null=null,nextSize:MetaPageSize|null=null;
   try {
     const run = (await pool.query("SELECT r.status,w.enabled,w.brand_key,w.purpose FROM collection_runs r JOIN watchlists w ON w.id=r.watchlist_id WHERE r.id=$1", [job.id])).rows[0];
     if (run?.status === "complete" || run?.status === "superseded") { state = "complete"; resetAttempts = true; }
@@ -63,40 +69,47 @@ export async function workOnce(pool: pg.Pool, connector?: MetaLibraryConnector, 
       // treating an upgrade/restart as permission to resume blocked work.
       state = run.status;
     }
-    else if(!run?.enabled){state="superseded";errorMessage="The watchlist is disabled. Saved evidence is retained.";}
-    else if(run.purpose==="brand"&&!run.brand_key){state="paused";errorMessage="Assign a Page ID to each brand in Edit watchlist before resuming collection.";}
+    else if(!run?.enabled){state="superseded";errorKind="disabled";errorMessage=META_CONTROLLED_ERRORS.disabled;}
+    else if(run.purpose==="brand"&&!run.brand_key){state="paused";errorKind="page_id";errorMessage=META_CONTROLLED_ERRORS.page_id;}
     else if (job.attempts > MAX_PAGE_ATTEMPTS) {
       // A crash on the final attempt must not create an unbounded sixth request.
       state = "failed";
-      errorMessage = "Meta collection reached its retry limit. Saved pages are retained; start a new collection explicitly.";
+      errorKind="retry_limit";errorMessage=META_CONTROLLED_ERRORS.retry_limit;
     } else {
       if (!connector && metaStatus().status === "not_connected") throw new MetaCollectionError("permission", "Meta not connected");
+      await pool.query(`UPDATE collection_runs r SET status='running',stopped_at=NULL WHERE r.id=$1 AND r.status IN ('queued','running')
+        AND EXISTS(SELECT 1 FROM collection_jobs j WHERE j.id=r.id AND j.lease_owner=$2 AND j.lease_until>now())`,[job.id,owner]);
       const result = await collectMetaPage(pool,job.id,connector,owner);
       state = result.complete ? "complete" : "queued"; backoffMs = result.backoffMs;
       // Attempts apply to the current page, not the total number of healthy pages.
       resetAttempts = true;
     }
   } catch (error) {
+    numericError=error instanceof MetaCollectionError?error:null;
     const providerDelay=error instanceof MetaCollectionError?Math.max(error.reason==="rate_limited"?60000:0,error.retryAfterMs):0;
     await delayMetaRequests(pool,providerDelay);
     // Only controlled messages enter persistent status; driver/provider errors can contain secrets.
     if (error instanceof Error && error.message.startsWith("Jobs paused:")) {
       state = "paused";
-      errorMessage = "Jobs paused: data_providers monthly budget is unset or its 90% threshold would be reached.";
+      errorKind="budget";errorMessage=META_CONTROLLED_ERRORS.budget;
     } else if (error instanceof MetaCollectionError && error.reason === "permission") {
       state = error.message === "Meta not connected" ? "not_connected" : "paused";
-      errorMessage = state === "not_connected" ? "Meta not connected" : "Meta collection paused. Correct approved credentials and permissions, then resume explicitly; saved pages are retained.";
+      errorKind=state==="not_connected"?"not_connected":"permission";errorMessage=META_CONTROLLED_ERRORS[errorKind];
     } else if (error instanceof MetaCollectionError && error.reason === "schema") {
       state = "failed";
-      errorMessage = "Meta collection returned an unsupported configuration or response. Saved pages are retained; review the source configuration before starting a new collection.";
+      errorKind="schema";errorMessage=META_CONTROLLED_ERRORS.schema;
+    } else if(numericError?.reducePage&&(nextSize=smallerMetaPage(numericError.pageSize))){
+      // One paced request per claim keeps every 90-second request within the lease.
+      // Persist the smaller size and cancel this claim's failed-attempt increment.
+      state="queued";errorKind="page_size";errorMessage=META_CONTROLLED_ERRORS.page_size;
+      backoffMs=numericError.retryAfterMs;
     } else if (job.attempts >= MAX_PAGE_ATTEMPTS) {
       state = "failed";
-      errorMessage = "Meta collection reached its retry limit. Saved pages are retained; start a new collection explicitly.";
+      errorKind="retry_limit";errorMessage=META_CONTROLLED_ERRORS.retry_limit;
     } else {
       state = "queued";
-      errorMessage = error instanceof MetaCollectionError && error.reason === "rate_limited"
-        ? "Meta collection was rate-limited. A bounded retry will resume from the saved cursor."
-        : "Meta collection is temporarily unavailable. A bounded retry will resume from the saved cursor.";
+      errorKind=numericError?.reason==="rate_limited"?"rate_limited":numericError?.timedOut?"timeout":"unavailable";
+      errorMessage=META_CONTROLLED_ERRORS[errorKind];
       backoffMs = Math.max(error instanceof MetaCollectionError?error.retryAfterMs:0,Math.min(3600000,60000 * 2 ** Math.min(job.attempts - 1,6)));
     }
   }
@@ -109,9 +122,13 @@ export async function workOnce(pool: pg.Pool, connector?: MetaLibraryConnector, 
     await client.query("SELECT id FROM collection_runs WHERE id=$1 FOR UPDATE", [job.id]);
     const lease = await client.query("SELECT id FROM collection_jobs WHERE id=$1 AND lease_owner=$2 AND lease_until>now() FOR UPDATE", [job.id,owner]);
     if (!lease.rowCount) { await client.query("ROLLBACK"); return true; }
-    if (errorMessage) await client.query("UPDATE collection_runs SET status=$2,errors=$3,finished_at=CASE WHEN $2='failed' THEN now() ELSE NULL END WHERE id=$1", [job.id,state,JSON.stringify([{ message: errorMessage }])]);
+    if(errorKind)await client.query(`INSERT INTO meta_collection_failures(run_id,kind,graph_code,graph_subcode,http_status,page_size,timed_out) VALUES($1,$2,$3,$4,$5,$6,$7)`,
+      [job.id,errorKind,numericError?.graphCode??null,numericError?.graphSubcode??null,numericError?.httpStatus??null,numericError?.pageSize??null,numericError?.timedOut??false]);
+    if (errorMessage) await client.query(`UPDATE collection_runs SET status=$2,errors=$3,finished_at=CASE WHEN $2='failed' THEN clock_timestamp() ELSE NULL END,
+      stopped_at=CASE WHEN $2 IN ('failed','paused','not_connected','superseded') THEN clock_timestamp() ELSE NULL END WHERE id=$1`, [job.id,state,JSON.stringify([{ message: errorMessage }])]);
     await client.query(`UPDATE collection_jobs SET status=$3,available_at=now()+($4 * interval '1 millisecond'),lease_until=NULL,lease_owner=NULL,
-      attempts=CASE WHEN $5 THEN 0 ELSE attempts END WHERE id=$1 AND lease_owner=$2`, [job.id,owner,state,backoffMs,resetAttempts]);
+      attempts=CASE WHEN $5 THEN 0 WHEN $6::integer IS NOT NULL THEN GREATEST(attempts-1,0) ELSE attempts END,page_size=COALESCE($6,page_size)
+      WHERE id=$1 AND lease_owner=$2`, [job.id,owner,state,backoffMs,resetAttempts,nextSize]);
     await client.query("COMMIT");
   } catch (error) { await client.query("ROLLBACK"); throw error; }
   finally { client.release(); }

@@ -656,3 +656,37 @@ and blockers below remain unchanged.
   for the migration and healthy compatible reader, then repeat for exter-worker
   and exter-scheduler. Storage history begins with the first health measurement;
   daily growth remains Unavailable until the 24-hour baseline exists.
+
+
+## Meta collection diagnostics and recovery, 5 Nov 2026
+
+- Extends the open storage review with per-brand latest run status, ads saved,
+  committed pages, stopping time and safe failure details in Data sources and
+  Edit watchlist. The reported 7,752-ad live failure has no retrospective Graph
+  code in the earlier generic message; its exact cause is not established here.
+- Every new failure records only controlled kind, timestamp, request size,
+  numeric Graph code/subcode/HTTP status and timeout flag. No provider message,
+  request/paging URL, trace or token is persisted or logged. Legacy stopping
+  times are retained on explicit resume without inventing error codes.
+- Code 1, HTTP 500 and timeout recovery retries the same cursor through sizes
+  100, 50, 25 and 10 in separate paced worker claims. Reductions do not consume
+  failed-page attempts until size 10 fails. A successful size is retained per
+  brand; other brands retain their own size. Whole requests use 90-second
+  deadlines and remain within the existing lease. Permission/rate-limit guards
+  retain priority, and all dispatches retain the budget and request gate.
+- Retry collection explicitly resumes saved progress. It enforces real workspace
+  ownership, the live switch, token, provider budget, cooldown and live lease.
+  Unsaved Page changes cannot redirect a retry. Active status refresh uses thin
+  requests every five seconds, stops when inactive, and retains details on failure.
+- Change-only observations, direct raw payload references, existing history,
+  hourly database size/growth and monthly estimates remain intact. No collected
+  fields, rolling 12-month window, 03:00 UK schedule or live settings changed.
+- Validation: all four checks pass, with 458 unit tests and 16 disposable
+  Postgres integration cases. Four entry-point/width browser cases and six
+  explicit scoped retries pass, including active polling and refresh failure
+  retention. Screenshots and reproduction: output/playwright/meta-recovery/.
+  Fixtures are not live verification; no production collection or paid provider
+  run was started.
+- Following authorised work remains separate: full public Performance signals,
+  then default-off Apify media retention with cost/disk guards. See the next
+  task plan; these are not claimed implemented by the recovery changes.

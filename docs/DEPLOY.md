@@ -422,6 +422,56 @@ projected into legacy SQLite analytics. Snapshot URLs are not media files. The
 existing bounded browser collector and media store remain a separate workflow;
 automatic snapshot media capture is still outstanding.
 
+### Meta collection diagnosis and retry
+
+Data sources shows **Meta collection by brand** within Source health. Edit
+watchlist shows the same progress beside each saved Page ID: latest run status,
+ads saved, pages fetched, stopping/finish time, controlled error and numeric Graph
+code, subcode and HTTP status when recorded. Ads saved counts newly written or
+changed snapshots; unchanged checks confirm earlier snapshots without adding
+rows. Pages fetched counts successfully committed pages at the saved cursor.
+For older runs it is reconstructed from collection_cursors plus query_index.
+Active progress refreshes every five seconds using small saved-status requests,
+without downloading the ad dataset again. A failed refresh retains the last
+details and shows one refresh notice. Unknown codes/times stay unknown.
+The earlier 7,752-ad failure has no recoverable
+Graph code if the old worker never recorded it; the generic message alone does
+not establish that a page was too large.
+
+Failed attempts retain only a controlled error kind, timestamp, page size,
+numeric Graph code/subcode, numeric HTTP status and timeout flag. No request URL,
+paging URL, provider message, trace text or token is stored or logged. The UI
+shows the latest failure and the latest 20 failure details; all events stay in
+the database. Resuming an older failed run preserves its known stopping time as
+a legacy event with no invented numeric code. A measurement/configuration or
+budget failure also gets a controlled event without claiming an HTTP response.
+
+Each request has a 90-second deadline including body transfer. For Graph code 1,
+HTTP 500 or a timeout, the queue retries the **same cursor** at page sizes
+100, 50, 25 and 10, starting at the brand's remembered size. Each size reduction
+is a new paced worker turn and does not consume a failed-page attempt. This
+avoids four long requests exceeding the existing two-minute lease. After the
+smallest size fails, the normal bounded attempts/backoff apply; terminal failure
+retains the checkpoint. Other transient errors retain normal retry behaviour;
+permission and rate-limit errors take priority over reducing page size.
+
+A successful page commits its cursor, counters, observations and working size
+atomically. The working size stays on that brand's watchlist for later pages and
+runs; another brand keeps its own size. Pending smaller sizes survive a restart.
+The request fields, Page/country filters, rolling 12-month window and daily
+03:00 Europe/London schedule are unchanged.
+
+Use **Retry collection** for a failed or paused brand. It resumes the existing
+run from its saved cursor; it does not clear ads or start the backfill again.
+The UI requires saved Page IDs, the live switch, configured token and available
+data-provider budget. The authenticated same-origin POST checks workspace,
+switch, token and budget again; worker dispatch also enforces the shared rate
+slot, cooldown, budget and live lease. An unexpired lease cannot be stolen and
+an unsaved Page ID cannot silently redirect a retry. Queued/running controls
+stay disabled. **Collect ads** starts a brand with no run, and **Collect again**
+starts the next run after completion. Deploying this change does not automatically
+resume previously failed jobs.
+
 ### Meta collection storage and database health
 
 The storage migration runs automatically at startup under the existing migration
@@ -442,7 +492,8 @@ source observation. The page's state writes, confirmations and cursor commit
 atomically. Replay and concurrent scans cannot duplicate one state. Conflicting
 states for one ad inside the same run fail the page rather than overwriting an
 already committed observation. Tokens, paging URLs and provider error text remain
-excluded. No source request, rate-limit or collection schedule is changed.
+excluded. Storage changes do not alter collected fields or the schedule;
+the recovery policy above adjusts only request page limits and deadlines.
 
 In **Data sources > Source health > Collection database**, size is the physical
 Postgres database allocation from pg_database_size(current_database()), covering

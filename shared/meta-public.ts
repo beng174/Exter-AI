@@ -38,5 +38,5 @@ export function displayedReach(reach:PublicReach|undefined):{label:string;value:
 }
 export const REACH_SHARE_NOTE="Estimated share of published UK reach in this watchlist, not share of impressions or sales. Reach is summed across ads and is not deduplicated between ads. Ads without published UK reach are excluded. These are lifetime totals at the saved check, not reach earned during the selected week.";
 
-export interface MetaWatchlist {id:string;workspace_id:string;brand_key:string|null;purpose:"brand"|"discovery";page_ids:string[];search_terms:string[];countries:string[];enabled:boolean}
+export interface MetaWatchlist {id:string;workspace_id:string;brand_key:string|null;purpose:"brand"|"discovery";page_ids:string[];search_terms:string[];countries:string[];enabled:boolean;meta_page_size?:import("./meta-collection.js").MetaPageSize;latestRun?:import("./meta-collection.js").MetaRunSummary|null}
 export interface MetaSourceHealth {status:"off"|"not_connected"|"ready"|"queued"|"running"|"paused"|"failed"|"connected"|"unavailable";enabled:boolean;lastSuccessfulCheck:string|null;message:string}

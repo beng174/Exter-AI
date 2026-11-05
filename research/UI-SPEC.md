@@ -319,6 +319,11 @@ budgets part of Budgets and tests.
   successful checks and record links in a smaller line inside Detail; omit
   unknown metadata instead of repeating empty columns. Data: `/api/connections`, `/api/infrastructure/status`,
   `/api/public/meta/watchlists`.
+- Meta collection by brand: latest run status, new/changed ads saved, committed
+  pages fetched, stopping time and controlled errors with numeric Graph code,
+  subcode and HTTP status. Show the same details beside Page IDs in Edit watchlist.
+  Retry collection resumes saved progress through access, budget, pacing and
+  lease guards; it never saves an edited Page ID.
 - Collection database: show measured physical Postgres size and average growth
   per day inside Source health, from the existing infrastructure health check.
   Show its measurement interval; daily growth is Unavailable until checks are

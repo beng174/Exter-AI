@@ -8,7 +8,9 @@ import {configuredCreativeCompetitors} from "../demo/creative-competitors.js";
 import {randomUUID} from "node:crypto";
 import { metaStatus } from "../connectors/meta-library.js";
 import { tiktokCommercialStatus } from "../connectors/tiktok-commercial.js";
-import { enqueueCollection } from "./jobs.js";
+import { enqueueCollection,CollectionBusyError } from "./jobs.js";
+import {readMetaWatchlists} from "./meta-runs.js";
+import {metaSourceHealth} from "./meta-evidence.js";
 import {attachMetaPageCandidates,type PageLookupApiOptions} from "./meta-page-api.js";
 import {databaseStorageHealth} from "./storage-health.js";
 import {missingStorage} from "../../shared/storage-health.js";
@@ -52,8 +54,13 @@ export function attachInfrastructure(app: Express, db: DatabaseSync, getPool:()=
   app.get("/api/public/meta/watchlists", async (req,res) => {
     const brand=typeof req.query.workspaceId==="string"?readBrand(db,req.query.workspaceId):null;
     if(!brand||brand.mode==="demo"){res.status(400).json({error:"Choose an existing real workspace."});return;}
-    try { res.json((await getPool().query("SELECT id,workspace_id,brand_key,purpose,page_ids,search_terms,countries,enabled FROM watchlists WHERE workspace_id=$1 ORDER BY id", [brand.id])).rows); }
+    try { res.json(await readMetaWatchlists(getPool(),brand.id)); }
     catch { res.status(503).json({ error: "Collection database unavailable." }); }
+  });
+  app.get("/api/public/meta/source-status",async(req,res)=>{
+    const brand=typeof req.query.workspaceId==="string"?readBrand(db,req.query.workspaceId):null;
+    if(!brand||brand.mode==="demo"){res.status(400).json({error:"Choose an existing real workspace."});return;}
+    try{res.json(await metaSourceHealth(getPool(),brand.id));}catch{res.status(503).json({error:"Saved collection health could not be read."});}
   });
   app.put("/api/public/meta/watchlists/:id", async (req,res) => {
     const {workspaceId,brandKey,purpose="brand",pageIds=[],searchTerms=[],countries=["GB"]}=req.body||{};
@@ -88,8 +95,17 @@ export function attachInfrastructure(app: Express, db: DatabaseSync, getPool:()=
     if(!metaLibraryEnabled()){res.status(409).json({error:"Live collection is off. Enable it in Render before collecting."});return;}
     if (metaStatus().status === "not_connected") { res.status(409).json(metaStatus()); return; }
     if (typeof req.body?.watchlistId !== "string" || !req.body.watchlistId || req.body.watchlistId.length > 120) { res.status(400).json({ error: "Provide watchlistId." }); return; }
-    try { res.status(202).json({ runId: await enqueueCollection(getPool(),req.body.watchlistId) }); }
-    catch { res.status(503).json({ error: "Cannot enqueue collection. Check database and watchlist configuration." }); }
+    try {
+      const pool=getPool();
+      if(req.body.workspaceId!==undefined){
+        const brand=typeof req.body.workspaceId==="string"?readBrand(db,req.body.workspaceId):null;
+        if(!brand||brand.mode==="demo"){res.status(404).json({error:"Choose an existing real workspace."});return;}
+        const saved=await pool.query("SELECT id FROM watchlists WHERE id=$1 AND workspace_id=$2 AND purpose='brand'",[req.body.watchlistId,brand.id]);
+        if(!saved.rowCount){res.status(404).json({error:"The brand watchlist is not available in this workspace."});return;}
+      }
+      if((await budgetStatus(pool)).find(b=>b.cost_type==="data_providers")?.paused!==false){res.status(409).json({error:"Collection is paused by the data provider budget. Review Budgets and schedule before retrying."});return;}
+      res.status(202).json({runId:await enqueueCollection(pool,req.body.watchlistId)});
+    } catch(error) { res.status(error instanceof CollectionBusyError?409:503).json({ error:error instanceof CollectionBusyError?error.message:"Cannot enqueue collection. Check database and watchlist configuration." }); }
   });
   app.get("/api/public/meta/observations", async (req,res) => {
     if (typeof req.query.workspaceId !== "string" || !req.query.workspaceId) { res.status(400).json({ error: "Provide workspaceId." }); return; }

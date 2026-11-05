@@ -3,6 +3,7 @@ import type {ResearchData} from "./useResearchData";
 import {MetaPageSuggestions,useMetaPageSuggestions} from "./MetaPageSuggestions";
 import type {PageCandidate} from "../../../shared/meta-page-candidates";
 import {BrandName} from "../ui/BrandIdentity";
+import {MetaRunDetails,MetaRetryButton} from "./MetaRunStatus";
 import "./MetaWatchlistEditor.css";
 export function MetaWatchlistDialog({data,onSaved,onClose}:{data:ResearchData;onSaved:()=>void;onClose:()=>void}){
   const dialog=useRef<HTMLDialogElement>(null);
@@ -36,8 +37,10 @@ export function MetaWatchlistEditor({data,onSaved}:{data:ResearchData;onSaved:()
     setMessage("Page IDs saved. Collection follows the live switch and schedule.");onSaved();
   }catch{setMessage("Some settings could not be saved. Check numeric Page IDs and the collection database, then retry.");}finally{setBusy(false);}}
   return <form className="meta-watchlist-editor" onSubmit={save}>
+    {data.watchlistPollFailed&&<p className="reference-muted" role="status">Progress could not be refreshed. Saved details are still shown.</p>}
     <p className="reference-muted">{lookup.configured?"Suggested Pages are ranked by link captions matching the saved website, then name match and ads found. A Page ID is saved to your watchlist only after you confirm. Searches and pictures may wait for the shared Meta request limit.":"Add the Meta token in Render to find Pages automatically. Manual entry is available."}</p>
     {targets.map(target=><div className="meta-watchlist-target" key={target.key}><label><BrandName name={target.name}/><span>Meta Page ID</span><input aria-label={`${target.name} Meta Page ID`} inputMode="numeric" pattern="[0-9]{1,30}" maxLength={30} value={pages[target.key]} onChange={e=>setPages(p=>({...p,[target.key]:e.target.value}))} placeholder="Not configured"/></label>
+      <MetaRunDetails run={saved(target.key)?.latestRun}/><MetaRetryButton data={data} watchlist={saved(target.key)} onSaved={onSaved} disabledReason={pages[target.key].trim()!==(saved(target.key)?.page_ids[0]||"")?"Save Page IDs before collecting a different Page.":null}/>
       {!saved(target.key)?.page_ids.length&&lookup.configured&&<MetaPageSuggestions workspaceId={data.library.brand.id} name={target.name} suggestion={lookup.suggestions[target.key]} disabled={busy} onConfirm={page=>void confirm(target.key,page)} onMore={()=>lookup.again(target.key,lookup.suggestions[target.key]?.result?.limited)}/>}
     </div>)}
     <details><summary>Find a Page ID manually</summary><p className="reference-muted">Search for the brand in the Meta Ad Library, open its advertiser page and copy the number after view_all_page_id in the page link. Use the Page ID, not an ad ID.</p></details>

@@ -84,3 +84,16 @@ CREATE TABLE IF NOT EXISTS database_size_samples (
  sample_hour timestamptz PRIMARY KEY, measured_at timestamptz NOT NULL,
  size_bytes bigint NOT NULL CHECK(size_bytes>=0)
 );
+ALTER TABLE watchlists ADD COLUMN IF NOT EXISTS meta_page_size integer NOT NULL DEFAULT 100 CHECK(meta_page_size IN (100,50,25,10));
+ALTER TABLE collection_jobs ADD COLUMN IF NOT EXISTS page_size integer CHECK(page_size IN (100,50,25,10));
+ALTER TABLE collection_runs ADD COLUMN IF NOT EXISTS pages_fetched integer CHECK(pages_fetched>=0);
+ALTER TABLE collection_runs ADD COLUMN IF NOT EXISTS stopped_at timestamptz;
+CREATE TABLE IF NOT EXISTS meta_collection_failures (
+ id bigint GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+ run_id text NOT NULL REFERENCES collection_runs,attempted_at timestamptz NOT NULL DEFAULT clock_timestamp(),
+ kind text NOT NULL CHECK(kind IN ('legacy','budget','not_connected','permission','schema','retry_limit','rate_limited','timeout','unavailable','page_size','disabled','page_id')),
+ graph_code integer CHECK(graph_code>=0),graph_subcode integer CHECK(graph_subcode>=0),
+ http_status integer CHECK(http_status BETWEEN 100 AND 599),page_size integer CHECK(page_size IN (100,50,25,10)),
+ timed_out boolean NOT NULL DEFAULT false
+);
+CREATE INDEX IF NOT EXISTS meta_collection_failures_run ON meta_collection_failures(run_id,id DESC);
