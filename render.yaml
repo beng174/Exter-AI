@@ -42,7 +42,7 @@ services:
         value: /usr/bin/chromium
       # META_ACCESS_TOKEN: secure environment setting on web and worker only.
       - key: EXTER_META_LIBRARY_ENABLED
-        value: "false"
+        value: "true"
       - key: META_API_VERSION
         value: v26.0
       - key: MEDIA_STORAGE_TYPE
@@ -73,7 +73,7 @@ services:
       # Worker: EXTER_ARTIFACT_BROKER_ORIGIN and EXTER_KERNEL_CACHE_PATH.
       # META_ACCESS_TOKEN: secure environment setting, never committed.
       - key: EXTER_META_LIBRARY_ENABLED
-        value: "false"
+        value: "true"
       - key: META_API_VERSION
         value: v26.0
       - key: DATABASE_URL
@@ -89,7 +89,7 @@ services:
     dockerCommand: npm run scheduler
     envVars:
       - key: EXTER_META_LIBRARY_ENABLED
-        value: "false"
+        value: "true"
       - key: DATABASE_URL
         fromDatabase:
           name: exter-postgres
