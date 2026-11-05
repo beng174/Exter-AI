@@ -42,7 +42,7 @@ services:
         value: /usr/bin/chromium
       # META_ACCESS_TOKEN: secure environment setting on web and worker only.
       - key: EXTER_AD_MEDIA_ENABLED
-        value: "false"
+        value: "true"
       - key: EXTER_META_LIBRARY_ENABLED
         value: "true"
       - key: META_API_VERSION
