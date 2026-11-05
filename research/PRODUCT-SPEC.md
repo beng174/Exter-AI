@@ -164,6 +164,7 @@ Public data never shows sales, so Exter infers performance from what advertisers
 | --- | --- | --- | --- |
 | Days active | Stop date (or last seen) minus start date | Observed | Any collection |
 | Relative longevity | Days active divided by the brand's median days active | Estimated | 10+ ads, 3+ stopped, for that brand |
+| Reach per day | Published UK reach, or EU reach when UK is absent, divided by positive days running; an average over the saved period | Estimated | Published reach and running dates |
 | Duplicates | Number of ad IDs using the same video or image file | Observed | Media saved |
 | Iteration count | New versions of the same concept launched within 45 days | Estimated | AI analysis |
 | Estimated impressions | Reach multiplied by a frequency range you set | Estimated, shown as a range | Meta or TikTok reach |

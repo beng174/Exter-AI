@@ -665,3 +665,136 @@ one untimed frame. The result is visual-ready with a small summary. Full timed
 OCR and generic presence evidence remains in the worker cache. No Gemini call or
 provider budget reservation occurs. Real OCR synthetic-text smoke passed; actual
 face/product models, labelled-set accuracy and Render capacity remain unverified.
+
+## Optional Meta ad media
+
+This is media/format enrichment only. Official Meta API reach, delivery dates,
+copy, status and audience evidence remain authoritative. Fixtures are not live
+verification. No paid actor was run during implementation.
+
+The selected actor is [automation_craft/facebook-ads-library-scraper](https://apify.com/automation_craft/facebook-ads-library-scraper),
+pinned to build **1.3.12** (published 3 Nov 2026). Its public build definition and
+Store metadata were checked on 5 Nov: maintained that week, about 12,900 successful
+runs in the preceding month, direct Page and archive-ID inputs, explicit GB/date
+filters and an exact result cap. Those capabilities allow subsequent batches to
+request missing IDs rather than buying the full watchlist repeatedly. Current
+base event prices are **$0.0005 per returned ad** ($0.50/1,000), plus
+**$0.00005 per start** at its default 256 MiB. All optional detail, landing-page,
+Page-details and Page-match charges are explicitly disabled. The better-known
+curious_coder actor was considered, but its public input contract did not promise
+retrieval of exact missing ad IDs. Recheck the chosen actor's maintenance, contract
+and prices before deliberately updating the pinned build.
+
+The first batch searches the confirmed watchlist Page ID, UK, all commercial ads,
+all activity statuses, over the rolling 12-month delivery window. Batches have a
+hard cap of 500 results. Successful batches immediately enqueue exact missing-ID
+batches until the retained official window has been attempted. Later daily runs
+request only IDs missing a complete image/poster set or a now-eligible full video.
+Direct IDs come exclusively from that confirmed Page's official UK observations;
+every output must match both the archive ID and Page ID before any media is saved.
+The actor's archive ID is the official API's ad ID. Unknown, wrong-Page, duplicate
+and unusable returned items still count against the reservation. Ads already
+retained through the existing gallery are excluded from later paid requests.
+Missing/unsupported/expired assets are attempted at most once per 24 hours.
+
+### Budget accounting
+
+Every paid start first acquires the existing data_providers budget guard's maximum
+hold. The existing 90% threshold and monthly budget are unchanged. Configure
+**EXTER_AD_MEDIA_GBP_PER_USD** on the web service to an explicitly verified,
+conservative upper GBP-per-USD rate including exchange/payment fees. There is no
+invented/default exchange rate. The hold is the actor's maximum USD charge times
+this ceiling, rounded up to six decimal places. The same USD maximum is sent as
+Apify's maxTotalChargeUsd; maxAds is the separate actor result cap and automatic
+provider restart is disabled. The final GBP ledger figure remains Estimated.
+
+Data sources > Budgets and schedule shows results, ads retained, cost per run and
+whether that cost is a maximum hold or a settled estimate. Settlement requires
+recognised final numeric event counts/prices and retains at least the charge for
+every consumed result plus the start. Unknown billing, optional charges, repricing
+or unsupported over-cap output keeps the full hold. Ambiguous starts remain
+Uncertain and cannot automatically start twice, including after a service restart.
+Never clear a hold just because a file failed to download. No token, returned media
+URL, provider error message or console URL enters run metadata or logs.
+
+### Files and disk ownership
+
+The existing web service owns /var/data/media; workers cannot read that disk. The
+worker claims durable Postgres checkpoints and calls one narrowly authenticated
+web media step at its fixed HTTPS origin. A dedicated service token grants this
+operation only, not general app access. The web step validates the live lease,
+real workspace, watchlist Page/revision and enable switch. A Postgres advisory
+lock serialises media writes/transcodes across service processes.
+
+Returned links are consumed immediately, never hotlinked or stored in Postgres.
+Existing bounded raster/video downloaders enforce public HTTPS/CDN hosts, DNS and
+redirect checks, MIME, magic bytes, decoded dimensions/duration and byte limits.
+Images/posters: PNG, JPEG or WebP, at most 8 MiB and 40 million pixels each. Video
+inputs: MP4, WebM or MOV, at most 128 MiB and ten minutes, downloaded to temporary
+space only. Full video is retained only when official evidence shows 30+ running
+days, top-20 published reach within its brand, or launch within the last seven days.
+UK reach is used for ranking, falling back to EU reach; unknown reach never becomes
+zero. Portrait and landscape output fit 720 x 1280 or 1280 x 720 respectively,
+without upscaling, H.264/yuv420p with AAC when audio exists. Local ffmpeg uses two
+threads, a 90-second encode deadline, stripped metadata and verified output duration.
+A missing/expired poster can be generated from a retained priority video.
+An unsupported/slow file remains missing without erasing previous media.
+
+Files are immutable content-addressed objects under the existing media root's
+public-ad-files directory, shared by identical files across ads in a workspace.
+Only complete verified files are referenced. Temporary inputs are cleaned up;
+existing media, paid analyses, observations and prior file references are never
+deleted. A partial later result cannot hide an earlier retained image/poster.
+Cards and Creative detail use authenticated local file routes; a poster can be
+shown without a full video, and missing media keeps an ad-copy preview tile.
+
+Data sources measures the actual media volume's used and available bytes. This
+includes other files on that volume. Videos stop before 80% usage, with an extra
+128 MiB preflight allowance and another check immediately before retention.
+Missing disk measurements stop video downloads. Raster retention keeps an 8 MiB
+headroom check. Other features retain their existing storage rules. Capacity is
+unique image/poster bytes + unique eligible 720p video bytes + metadata, alongside
+existing files; never assume every public ad needs a full original video.
+
+### Render setup and rollout
+
+1. Merge the prerequisite recovery and public-signal PRs, then this media PR into
+   exter-test-drive. Render > exter-ai > Manual Deploy > Deploy latest commit.
+   Wait for automatic Postgres migrations and a healthy authenticated app. Then
+   deploy exter-worker and exter-scheduler. Keep all three
+   **EXTER_AD_MEDIA_ENABLED="false"**, as committed in render.yaml.
+2. In exter-ai > Environment, set APIFY_TOKEN as a Render secret and configure
+   EXTER_AD_MEDIA_GBP_PER_USD. The token follows the existing creator provider
+   pattern; never paste it into a database, shell log or Git file. Media actor
+   access is unverified until a deliberately enabled run returns real results.
+3. Generate a dedicated secret with at least 32 non-whitespace characters and put
+   the same EXTER_AD_MEDIA_BROKER_TOKEN in exter-ai and exter-worker Environment.
+   It must differ from admin, provider and kernel broker secrets. On exter-worker
+   only, set EXTER_AD_MEDIA_BROKER_ORIGIN to exter-ai's public HTTPS origin with no
+   path, query or credentials. The worker does not need APIFY_TOKEN; the scheduler
+   needs neither token. Existing creator discovery still uses the web token.
+4. Keep the current data provider budget; inspect available headroom in Data
+   sources. When the owner chooses to start paid media collection, set
+   EXTER_AD_MEDIA_ENABLED=true in **web, worker and scheduler**, save/redeploy,
+   then use Data sources > Budgets and schedule > Collect missing media. Otherwise
+   the next existing 03:00 UK schedule enqueues it. Official collection's switch,
+   fields, pacing and schedule are unchanged. Owned sync and kernel flags stay off.
+5. Check run costs, saved-file playback and disk headroom. Collect missing media
+   explicitly resumes safe paused checkpoints after configuration/budget fixes.
+   An Uncertain start needs operator reconciliation against Apify's run list:
+   verify the exact actor/input/time and associate its confirmed run/dataset IDs
+   with the existing held Postgres run before changing it back to running. Never
+   issue a fresh paid start or release its reserve without evidence that no run
+   was charged. This manual recovery is intentionally not an automatic retry.
+
+Turning the flag off stops new local steps and starts; an already started remote
+actor can finish within its reserved USD cap. Saved media and its read routes
+remain available with the flag off. Schema additions are additive. A rollback can
+leave the new tables/files in place; never remove retained files to roll back.
+
+Fixtures: npm test covers strict source/format projection, bounded fetch failures,
+priority rules, real local 720p encoding/deduplication, disk limits, token isolation
+and sample/default-off guards. Against a dedicated disposable Postgres database:
+`npx tsx --test --test-concurrency=1 tests/ad-media.integration.ts` with
+TEST_DATABASE_URL set securely. It owns isolated schemas. No real provider calls
+are permitted in tests.

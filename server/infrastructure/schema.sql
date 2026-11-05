@@ -97,3 +97,25 @@ CREATE TABLE IF NOT EXISTS meta_collection_failures (
  timed_out boolean NOT NULL DEFAULT false
 );
 CREATE INDEX IF NOT EXISTS meta_collection_failures_run ON meta_collection_failures(run_id,id DESC);
+
+-- Media-only enrichment; official observations and retained media are never replaced.
+CREATE TABLE IF NOT EXISTS ad_media_runs (
+ id text PRIMARY KEY,watchlist_id text NOT NULL REFERENCES watchlists,workspace_id text NOT NULL,brand_key text NOT NULL,
+ revision integer NOT NULL,page_id text NOT NULL,window_from date NOT NULL,window_to date NOT NULL,
+ phase text NOT NULL CHECK(phase IN ('page','missing')),target_ids jsonb NOT NULL DEFAULT '[]',priority_ids jsonb NOT NULL DEFAULT '[]',
+ cap integer NOT NULL CHECK(cap BETWEEN 1 AND 500),status text NOT NULL DEFAULT 'queued',
+ actor_run_id text,dataset_id text,reservation_id text REFERENCES cost_ledger,gbp_per_usd numeric CHECK(gbp_per_usd>0),
+ result_offset integer NOT NULL DEFAULT 0,results integer NOT NULL DEFAULT 0,ads_with_media integer NOT NULL DEFAULT 0,
+ error_kind text,started_at timestamptz NOT NULL DEFAULT now(),finished_at timestamptz,
+ available_at timestamptz NOT NULL DEFAULT now(),lease_owner text,lease_until timestamptz
+);
+CREATE UNIQUE INDEX IF NOT EXISTS ad_media_one_active ON ad_media_runs(watchlist_id) WHERE status IN ('queued','running','starting','uncertain','paused');
+CREATE INDEX IF NOT EXISTS ad_media_available ON ad_media_runs(available_at) WHERE status IN ('queued','running','starting');
+CREATE INDEX IF NOT EXISTS ad_media_workspace_runs ON ad_media_runs(workspace_id,started_at DESC);
+CREATE TABLE IF NOT EXISTS ad_media_creatives (
+ id text PRIMARY KEY,run_id text NOT NULL REFERENCES ad_media_runs,workspace_id text NOT NULL,brand_key text NOT NULL,native_id text NOT NULL,
+ page_id text NOT NULL,format text CHECK(format IN ('image','video','carousel','catalogue')),assets jsonb NOT NULL DEFAULT '[]',
+ video_eligible boolean NOT NULL DEFAULT false,complete boolean NOT NULL DEFAULT false,expected_videos integer NOT NULL DEFAULT 0,error_kind text,created_at timestamptz NOT NULL DEFAULT clock_timestamp(),
+ UNIQUE(run_id,native_id)
+);
+CREATE INDEX IF NOT EXISTS ad_media_creatives_latest ON ad_media_creatives(workspace_id,brand_key,native_id,created_at DESC);

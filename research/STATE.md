@@ -696,3 +696,59 @@ and blockers below remain unchanged.
   After merge, deploy exter-ai first, then exter-worker and exter-scheduler.
   Use Retry collection per stopped brand after deployment; this implementation
   has not resumed the live run or established its original Graph failure code.
+
+
+## Public Creative detail Performance, 5 Nov 2026
+
+- Uses available official public fields for UK/EU/country reach, selected
+  targeting ages/gender/locations, platforms, languages and reached demographics.
+  Reach is Observed; reach/day is an Estimated saved-period average with actual
+  numerator/divisor/result in its tooltip. Missing fields create no tiles.
+- Versions count unique same-brand public ad identities matching exact retained
+  full-creative hashes or complete captured copy. Similar wording and truncated
+  prefixes do not count. These are collected-sample counts, not full-market claims.
+- The shared reference tile/bar components are reused in real and sample views.
+  Public ads for the workspace's own brand stay in Public signals only until
+  actual owned reporting exists. No public spend, impressions, clicks, conversions
+  or private retention section is rendered. Stored ads/media/analyses are unchanged.
+- Type check, all 464 unit tests, production build and the secret scan pass.
+  Browser fixtures cover 1440px and 390px, missing signals, zero values, sample
+  mode and public ads for the workspace brand. Fixtures are not live verification.
+  Media ingestion is separate following work; no actor run has been started.
+
+
+## Optional public-ad media, 5 Nov 2026
+
+- Public Performance and media follow collection recovery PR #17 in PR #18, against
+  exter-test-drive. The public tile/chart projection is fixture-validated for UK,
+  EU and country reach, reach/day arithmetic, demographics, targeting, exact
+  sampled versions, platforms and languages. Missing public tiles are hidden;
+  private account outcomes stay out of public ads.
+- Media uses the maintained automation_craft/facebook-ads-library-scraper actor,
+  pinned build 1.3.12, $0.50 per 1,000 ad results plus its $0.00005 start event.
+  First UK Page/window batches and later exact missing-ID batches have a 500-ad
+  cap and a provider-side USD ceiling, held first by the existing data provider
+  budget guard. A configured conservative GBP-per-USD ceiling is required; no
+  rate is invented. Unknown/repriced billing and ambiguous starts keep their hold.
+- Only media and format are accepted. Archive and Page IDs must match official
+  workspace/watchlist evidence. No actor text, dates, reach or private metrics
+  replace official observations or paid analyses. No token, returned URL or
+  provider message enters run metadata or logs.
+- The diskless worker claims Postgres checkpoints and authenticates a bounded
+  step on the disk-owning web service. Existing bounded downloads and immutable
+  content storage retain images/posters and only priority videos, re-encoded to
+  720p H.264. Missing posters can be derived from retained priority videos. Files
+  deduplicate across ads in a workspace, and old snapshots/files are preserved.
+- Data sources shows measured disk used/remaining and per-run estimated/held
+  costs in Budgets and schedule. Video downloads stop before 80% disk usage,
+  including worst-case headroom. Cards/detail use local media or ad-copy preview.
+- EXTER_AD_MEDIA_ENABLED is false on web, worker and scheduler in render.yaml.
+  APIFY_TOKEN belongs in web Render secrets; a dedicated broker secret is shared
+  by web/worker, with a fixed HTTPS worker origin. DEPLOY documents the actor,
+  prices, limits, recovery and exact rollout. No service, dependency, Render plan,
+  existing public-collection flag, 03:00 schedule, budget or model was changed.
+- Type check, 478 unit tests, build and browser fixtures at 1440/390 pass; the
+  affected Postgres suites pass 24 cases, including eight media cases. The staged
+  secret scan passes. Media UI also fits the 1280px and 1920px desktop columns. No live or paid actor run was made. Fixtures
+  are not live verification; actual actor access and hosted encoding capacity
+  remain unverified. Phase 0/Phase 1 owned-account live gates stay open.

@@ -14,6 +14,8 @@ import { closeCreativeRoute, NAVIGATION_EVENT } from "../../navigation";
 import { BrandName } from "../ui/BrandIdentity";
 import { PageHeader, SectionCard, MetricTile, DataLabel, MetaLine, Unavailable, CreativeCard, DataTable, RetentionChart, ExpandableCopy, hasValue, type UnavailableProps } from "../ui";
 import { cardMetrics, creativeMeta, metricReason, metricText, timestamp } from "./presentation";
+import {publicSignalTiles,publicAudienceBars} from "../../../shared/public-signals";
+import {PublicPerformance} from "./PublicPerformance";
 import "./CreativeDetailPage.css";
 
 type EvidenceField=VideoField<string|boolean>|ImageField<string|boolean>;
@@ -85,7 +87,7 @@ function Detail({row,data,filtered,onOpen,onRefresh}:DetailProps&{row:BrowserCre
     </>}/>
     <div className="creative-detail-columns">
       <div className="creative-detail-media-column">
-        {!mediaError&&(row.videoUrl||row.imageUrls[slide])?<div className="creative-media" id="creative-media">{row.videoUrl?<video ref={video} controls playsInline preload="metadata" poster={row.thumbnailUrl||undefined} src={row.videoUrl} onError={()=>setMediaError(true)} aria-label={`Saved video: ${title}`}/>:<img src={row.imageUrls[slide]} alt={`Saved creative${row.imageUrls.length>1?`, slide ${slide+1}`:""}`} onError={()=>setMediaError(true)}/>}</div>:<div id="creative-media" className="creative-media" role="region" aria-label="Creative media"><Unavailable label="" reason={mediaError?"The retained file could not be displayed.":"No retained media file is available."} {...original}/></div>}
+        {!mediaError&&(row.videoUrl||row.imageUrls[slide]||row.thumbnailUrl)?<div className="creative-media" id="creative-media">{row.videoUrl?<video ref={video} controls playsInline preload="metadata" poster={row.thumbnailUrl||undefined} src={row.videoUrl} onError={()=>setMediaError(true)} aria-label={`Saved video: ${title}`}/>:<img src={row.imageUrls[slide]||row.thumbnailUrl||undefined} alt={`Saved creative${row.imageUrls.length>1?`, slide ${slide+1}`:""}`} onError={()=>setMediaError(true)}/>}</div>:<div id="creative-media" className="creative-media" role="region" aria-label="Creative media">{!mediaError&&!own?<div className="creative-text-preview"><small>Ad copy preview</small><p>{row.copy||title}</p>{row.sourceUrl&&<a href={row.sourceUrl} target="_blank" rel="noreferrer">Open original ad</a>}</div>:<Unavailable label="" reason={mediaError?"The retained file could not be displayed.":"No retained media file is available."} {...original}/>}</div>}
         {row.imageUrls.length>1&&<div className="creative-slide-controls" role="group" aria-label="Creative slides">{row.imageUrls.map((_,index)=><button key={index} aria-pressed={slide===index} onClick={()=>{setSlide(index);setMediaError(false);}}>Slide {index+1} · Observed</button>)}</div>}
         <SectionCard title="Scenes · jump to a moment" meta={analysisMeta} empty={!row.scenes.length&&{reason:"No scene boundaries are stored in this analysis.",...original}}>
           <div className="creative-scenes">{row.scenes.map((scene,index)=><button key={index} disabled={!row.videoUrl||mediaError} onClick={()=>seek(scene.startSeconds)}><strong>{timestamp(scene.startSeconds)}</strong><span>{scene.label}</span><DataLabel basis="Modelled"/></button>)}</div>
@@ -102,7 +104,8 @@ function Detail({row,data,filtered,onOpen,onRefresh}:DetailProps&{row:BrowserCre
         </SectionCard></div>
       </div>
       <div className="creative-detail-evidence-column">
-        <SectionCard title="Performance" help={row.workspaceBrand?"Your saved account outcomes":"Public signals only"} meta={row.workspaceBrand?ownedMeta:meta} empty={!reach&&row.workspaceBrand&&!cohort&&row.performance.length===0?performanceGap:!reach&&!row.workspaceBrand&&!hasValue(row.daysRunning)?{reason:"The source did not supply running history.",...original}:false}>
+        <SectionCard title="Performance" keepEmptyHelp={!own} help={own?"Your saved account outcomes":"Public signals only"} meta={own?ownedMeta:meta} empty={own?!reach&&!cohort&&row.performance.length===0?performanceGap:false:!publicSignalTiles(row,data.creatives).length&&!publicAudienceBars(row).length?{reason:"No public signals were published for this ad.",...original}:false}>
+          {!own?<PublicPerformance row={row} creatives={data.creatives} onEvidence={evidence}/>:<>
           {own&&row.performance.length>0&&<label className="creative-scope">Reporting scope<select aria-label="Reporting scope" value={scope} onChange={event=>setScope(event.target.value)}><option value="">Choose one account and reporting scope</option>{row.performance.map(item=><option key={item.id} value={item.id}>{plainEnum(item.platform)} · {item.accountId} · {item.currency} · {plainEnum(item.attribution)} · {plainEnum(item.conversionEvent)} · {ukDate(item.from)} to {ukDate(item.to)}</option>)}</select></label>}
           <div className="creative-performance">
             {reach&&<MetricTile label={reach.label} value={new Intl.NumberFormat("en-GB").format(reach.value)} basis="Observed" onEvidence={evidence}/>}
@@ -110,6 +113,8 @@ function Detail({row,data,filtered,onOpen,onRefresh}:DetailProps&{row:BrowserCre
           </div>
           {reach&&<Caveat>Published lifetime reach at {ukDate(row.reachObservedAt)}. This is not impressions, conversions or sales.</Caveat>}
           {cohort?<Caveat>{cohort.currency} · {plainEnum(cohort.attribution)} · {plainEnum(cohort.conversionEvent)}. Benchmark: all ads in the same account and dates. Missing values lack required data or the minimum sample.</Caveat>:row.workspaceBrand&&<Unavailable reason="Choose one account scope to see its metrics." label=""/>}
+          </>}
+          {!own&&row.publicReach&&<Caveat>Published lifetime reach as of {ukDate(row.reachObservedAt)}. Reach per day is an average over the saved running period. Versions describe this brand's collected sample, not the whole market.</Caveat>}
 
         </SectionCard>
 
@@ -117,7 +122,7 @@ function Detail({row,data,filtered,onOpen,onRefresh}:DetailProps&{row:BrowserCre
           {row.score&&<CreativeScoreBreakdown score={row.score} workspaceId={data.brand.id} evidenceTarget={(row.videoUrl||row.imageUrls.length)&&!mediaError?"creative":"original"} onSeek={row.videoUrl&&!mediaError?seek:undefined} onSlide={row.mediaKind!=="video"?n=>{setSlide(n);document.getElementById("creative-media")?.scrollIntoView({behavior:"smooth"});}:undefined}/>}
 
         </SectionCard>
-        {row.workspaceBrand&&<SectionCard title="Viewer retention"  meta={retentionMeta} empty={!hasRetention&&{reason:!cohort?"No owned retention data is selected.":"No retention counts were reported in this date range.",...(!cohort&&data.ownedStatus==="not_configured"?connect:dates)}}>
+        {own&&<SectionCard title="Viewer retention"  meta={retentionMeta} empty={!hasRetention&&{reason:!cohort?"No owned retention data is selected.":"No retention counts were reported in this date range.",...(!cohort&&data.ownedStatus==="not_configured"?connect:dates)}}>
           {cohort&&hasRetention&&<><RetentionChart points={retentionNames.map(name=>({label:name,creative:cohort.metrics[name].value,benchmark:cohort.benchmark[name].value}))} onCreative={evidence} onBenchmark={openBenchmark}/>
             <DataTable caption="Retention checkpoints" basis="Observed" meta={retentionMeta} rows={retentionNames.map(name=>({name,creative:metricText(cohort.metrics[name],name),benchmark:metricText(cohort.benchmark[name],name)}))} rowKey={item=>item.name} columns={[{key:"name",label:"Checkpoint",value:item=>item.name},{key:"creative",label:"This creative",value:item=>item.creative},{key:"benchmark",label:"Account benchmark",value:item=>item.benchmark}]} onRow={openBenchmark}/>
           </>}

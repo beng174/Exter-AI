@@ -1,3 +1,4 @@
+import {attachAdMedia,attachMediaStep} from "./ad-media/api.js";
 import { attachBrandLogos } from "./brand-logos.js";
 import { attachSampleWorkspace } from "./sample.js";
 import { attachCreativeBrowser } from "./demo/creative-browser.js";
@@ -247,6 +248,7 @@ export function createApp(db: DatabaseSync = openDatabase()) {
   const authenticate = basicAuth();
   const broker = new KernelMediaBroker(db, { video: () => app.locals.videoAnalysis, images: () => app.locals.geminiSmoke.images });
   attachKernelArtifactDownload(app, broker);
+  attachMediaStep(app,db);
   app.use(authenticate);
   app.disable("x-powered-by");
   app.use(express.json({ limit: "20mb" }));
@@ -262,6 +264,7 @@ export function createApp(db: DatabaseSync = openDatabase()) {
     res.json({ name: "Exter Media", logoMark: existsSync(resolve("public/brand/exter-logo-mark.svg")) ? "/brand/exter-logo-mark.svg" : null, appIcon: existsSync(resolve("public/brand/exter-app-icon.svg")) ? "/brand/exter-app-icon.svg" : null });
   });
   attachSampleWorkspace(app);
+  attachAdMedia(app,db);
   app.use(["/api/public/meta", "/api/budgets", "/api/gemini-smoke", "/api/labelling", "/api/creator-research", "/api/brands", "/api/brand-research", "/api/brand-logos"], protectSettingsMutation);
   attachBrandLogos(app,db);
   attachInfrastructure(app, db);

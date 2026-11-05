@@ -14,6 +14,7 @@ import {metaSourceHealth} from "./meta-evidence.js";
 import {attachMetaPageCandidates,type PageLookupApiOptions} from "./meta-page-api.js";
 import {databaseStorageHealth} from "./storage-health.js";
 import {missingStorage} from "../../shared/storage-health.js";
+import {mediaDiskHealth} from "../ad-media/storage.js";
 type BudgetPool = ReturnType<typeof infrastructureDatabase>;
 
 export function attachBudgetRoutes(app: Express, getPool: () => BudgetPool = infrastructureDatabase) {
@@ -44,12 +45,13 @@ export function attachInfrastructure(app: Express, db: DatabaseSync, getPool:()=
   app.get("/api/infrastructure/status", async (_req,res) => {
     const meta = metaStatus();
     const tiktok=tiktokCommercialStatus();
-    if (!process.env.DATABASE_URL) { res.json({ meta, tiktok, database: "not_configured", storage:missingStorage("not_configured"), budgets: [], message: "Durable collection and paid inference paused: DATABASE_URL is not configured." }); return; }
+    const mediaDisk=await mediaDiskHealth();
+    if (!process.env.DATABASE_URL) { res.json({ meta, tiktok,mediaDisk, database: "not_configured", storage:missingStorage("not_configured"), budgets: [], message: "Durable collection and paid inference paused: DATABASE_URL is not configured." }); return; }
     try {
       const pool = getPool();
       const [budgets,runs,storage] = await Promise.all([budgetStatus(pool),pool.query("SELECT id,watchlist_id,status,records_new,records_updated,started_at,finished_at,last_successful_check,errors FROM collection_runs ORDER BY started_at DESC LIMIT 20"),databaseStorageHealth(pool)]);
-      res.json({ meta, tiktok, database: "connected", budgets, runs: runs.rows,storage });
-    } catch { res.json({ meta, tiktok, database: "unavailable", storage:missingStorage(), message: "Collection database unavailable. Check DATABASE_URL and run migrations." }); }
+      res.json({ meta, tiktok,mediaDisk, database: "connected", budgets, runs: runs.rows,storage });
+    } catch { res.json({ meta, tiktok,mediaDisk, database: "unavailable", storage:missingStorage(), message: "Collection database unavailable. Check DATABASE_URL and run migrations." }); }
   });
   app.get("/api/public/meta/watchlists", async (req,res) => {
     const brand=typeof req.query.workspaceId==="string"?readBrand(db,req.query.workspaceId):null;

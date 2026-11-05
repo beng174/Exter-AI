@@ -1,0 +1,96 @@
+import {createHash,randomUUID,timingSafeEqual} from "node:crypto";
+import {isIP} from "node:net";
+import type {Express} from "express";
+import type {DatabaseSync} from "node:sqlite";
+import type pg from "pg";
+import {readBrand} from "../db.js";
+import {infrastructureDatabase} from "../infrastructure/database.js";
+import {MEDIA_ERRORS,mediaEnabled,mediaGbpRate,type AdMediaRunSummary} from "../../shared/ad-media.js";
+import {AdMediaStorage,mediaDiskHealth} from "./storage.js";
+import {claimAdMedia,enqueueAdMedia,stepAdMedia} from "./jobs.js";
+import {protectSettingsMutation} from "../request-guard.js";
+import {assertProxySupport} from "../connectors/http.js";
+import type {CreativeGalleryService} from "../demo/gallery.js";
+import {configuredCreativeCompetitors} from "../demo/creative-competitors.js";
+const digest=(value:string)=>createHash("sha256").update(value).digest();
+export function mediaBrokerConfig(env:Record<string,string|undefined>){
+  const token=env.EXTER_AD_MEDIA_BROKER_TOKEN||"",raw=env.EXTER_AD_MEDIA_BROKER_ORIGIN||"";
+  if(token.length<32||token.length>4096||/\s|[\u0000-\u001f]/.test(token))return null;
+  try{const url=new URL(raw);if(url.protocol!=="https:"||url.username||url.password||url.port||url.pathname!=="/"||url.search||url.hash||isIP(url.hostname)||!url.hostname.includes(".")||/(?:^|\.)(?:localhost|internal|local|invalid)$/.test(url.hostname))return null;return {origin:url.origin,token};}catch{return null;}
+}
+export async function adMediaRuns(pool:pg.Pool,workspaceId:string):Promise<AdMediaRunSummary[]>{
+  const result=await pool.query(`SELECT r.*,l.cost_gbp::float8,l.initial_reserved_gbp::float8,l.status AS cost_status FROM ad_media_runs r LEFT JOIN cost_ledger l ON l.id=r.reservation_id WHERE r.workspace_id=$1 ORDER BY r.started_at DESC LIMIT 20`,[workspaceId]);
+  return result.rows.map(r=>({id:r.id,brandKey:r.brand_key,status:r.status,startedAt:new Date(r.started_at).toISOString(),finishedAt:r.finished_at?new Date(r.finished_at).toISOString():null,results:r.results,adsWithMedia:r.ads_with_media,costGbp:r.cost_gbp??0,reservedGbp:r.initial_reserved_gbp??null,costStatus:r.cost_status||"not_started",gbpPerUsd:r.gbp_per_usd===null?null:Number(r.gbp_per_usd),error:r.error_kind?MEDIA_ERRORS[r.error_kind]||MEDIA_ERRORS.provider:null}));
+}
+/** Dedicated machine auth grants one leased media step, with no general app access. */
+export function attachMediaStep(app:Express,db:DatabaseSync,getPool= infrastructureDatabase,env:Record<string,string|undefined>=process.env){
+  app.post("/api/ad-media/step/:runId/:owner",async(req,res)=>{
+    res.setHeader("Cache-Control","private, no-store");
+    const token=env.EXTER_AD_MEDIA_BROKER_TOKEN||"",supplied=req.get("X-Exter-Ad-Media-Token")||"";
+    if(token.length<32||token.length>4096||/\s/.test(token)||!timingSafeEqual(digest(token),digest(supplied))){res.status(401).json({error:"Media service authentication required."});return;}
+    if(!mediaEnabled(env)){res.status(409).json({error:"Media collection is off."});return;}
+    if(!/^[a-f0-9-]{36}$/.test(String(req.params.runId))||!/^[a-f0-9-]{36}$/.test(String(req.params.owner))){res.status(400).json({error:"A leased media step is required."});return;}
+    try{
+      const pool=getPool(),r=(await pool.query("SELECT workspace_id,brand_key FROM ad_media_runs WHERE id=$1 AND lease_owner=$2 AND lease_until>now()",[req.params.runId,req.params.owner])).rows[0],brand=r?readBrand(db,r.workspace_id):null;
+      if(!brand||brand.mode==="demo"){res.status(404).json({error:"Real workspace not found."});return;}
+      const existingIds=new Set<string>(),gallery=app.locals.creativeGallery as CreativeGalleryService|undefined;
+      const target=r.brand_key===brand.id?brand.id:configuredCreativeCompetitors(db,brand,app.locals.demoCollection).find(c=>(c.brandId||c.key)===r.brand_key)?.brandId;
+      if(gallery&&target){
+        // A failed legacy media read must not become permission to buy those files again.
+        const saved=await gallery.list(target);
+        for(const row of saved.creatives)if(row.mediaAvailable&&["Meta","Facebook","Instagram"].includes(row.platform||""))existingIds.add(row.nativeId);
+      }
+      res.json({worked:await stepAdMedia(pool,String(req.params.runId),String(req.params.owner),{env,existingIds})});
+    }catch{res.status(503).json({error:"The saved media step could not complete."});}
+  });
+}
+export async function workAdMediaOnce(pool:pg.Pool,options:{env?:Record<string,string|undefined>;fetch?:typeof fetch}={}){
+  const env=options.env||process.env;if(!mediaEnabled(env))return false;
+  const configuration=mediaBrokerConfig(env);if(!configuration)return false;
+  const owner=randomUUID(),run=await claimAdMedia(pool,owner);if(!run)return false;
+  let worked=false;
+  try{
+    assertProxySupport(Boolean(options.fetch),env);
+    const response=await(options.fetch||fetch)(`${configuration.origin}/api/ad-media/step/${run.id}/${owner}`,{method:"POST",redirect:"error",signal:AbortSignal.timeout(240000),headers:{"X-Exter-Ad-Media-Token":configuration.token}});
+    if(response.ok&&response.body){
+      const reader=response.body.getReader(),chunks:Uint8Array[]=[];let bytes=0;
+      try{while(true){const item=await reader.read();if(item.done)break;bytes+=item.value.byteLength;if(bytes>1024)throw new Error("Unsupported acknowledgement.");chunks.push(item.value);}worked=JSON.parse(Buffer.concat(chunks).toString("utf8")).worked===true;}finally{await reader.cancel().catch(()=>{});reader.releaseLock();}
+    }
+    await response.body?.cancel().catch(()=>{});
+  }catch{/* Reclaim the same checkpoint; never automatically start another paid run. */}
+  await pool.query("UPDATE ad_media_runs SET lease_owner=NULL,lease_until=NULL,available_at=CASE WHEN $3 THEN available_at ELSE now()+interval '60 seconds' END WHERE id=$1 AND lease_owner=$2",[run.id,owner,worked]);
+  const current=(await pool.query("SELECT status FROM ad_media_runs WHERE id=$1",[run.id])).rows[0];
+  if(current?.status==="complete")await enqueueAdMedia(pool,run.watchlist_id);
+  return true;
+}
+export function attachAdMedia(app:Express,db:DatabaseSync,getPool=infrastructureDatabase){
+  app.get("/api/ad-media/status",async(req,res)=>{
+    const brand=typeof req.query.workspaceId==="string"?readBrand(db,req.query.workspaceId):null;
+    if(!brand||brand.mode==="demo"){res.status(404).json({error:"Real workspace not found."});return;}
+    try{res.json({enabled:mediaEnabled(),configured:Boolean(process.env.APIFY_TOKEN?.trim()&&mediaGbpRate(process.env)!==null),disk:await mediaDiskHealth(),runs:process.env.DATABASE_URL?await adMediaRuns(getPool(),brand.id):[]});}catch{res.status(503).json({error:"Saved media health could not be read."});}
+  });
+  app.post("/api/ad-media/collect",protectSettingsMutation,async(req,res)=>{
+    const brand=typeof req.body?.workspaceId==="string"?readBrand(db,req.body.workspaceId):null;
+    if(!brand||brand.mode==="demo"){res.status(404).json({error:"Real workspace not found."});return;}
+    if(!mediaEnabled()||!process.env.APIFY_TOKEN?.trim()||mediaGbpRate(process.env)===null){res.status(409).json({error:"Enable configured media collection in Render first."});return;}
+    try{
+      const pool=getPool(),rows=await pool.query("SELECT id FROM watchlists WHERE workspace_id=$1 AND enabled AND purpose='brand' ORDER BY id",[brand.id]);
+      // Explicit retries resume safe existing checkpoints. Uncertain paid starts stay blocked.
+      await pool.query("UPDATE ad_media_runs SET status=CASE WHEN actor_run_id IS NULL THEN 'queued' ELSE 'running' END,error_kind=NULL,available_at=now() WHERE workspace_id=$1 AND status='paused' AND (reservation_id IS NULL OR actor_run_id IS NOT NULL) AND (lease_until IS NULL OR lease_until<now())",[brand.id]);
+      for(const row of rows.rows)await enqueueAdMedia(pool,row.id);
+      res.status(202).json({queued:true});
+    }catch{res.status(503).json({error:"Missing media could not be queued. Saved files are retained."});}
+  });
+  app.get("/api/ad-media/files/:workspaceId/:brandKey/:nativeId/:artifactId",async(req,res)=>{
+    res.setHeader("Cache-Control","private, no-store");res.setHeader("X-Content-Type-Options","nosniff");
+    const workspaceId=String(req.params.workspaceId),brand=readBrand(db,workspaceId);
+    if(!brand||brand.mode==="demo"||!/^\d{1,40}$/.test(String(req.params.nativeId))||!/^[a-f0-9]{64}$/.test(String(req.params.artifactId))){res.status(404).end();return;}
+    try{
+      const result=await getPool().query("SELECT assets FROM ad_media_creatives WHERE workspace_id=$1 AND brand_key=$2 AND native_id=$3 ORDER BY created_at DESC",[workspaceId,req.params.brandKey,req.params.nativeId]);
+      const asset=result.rows.flatMap(r=>r.assets).find(a=>a.ref?.artifactId===req.params.artifactId);
+      if(!asset||asset.ref.workspaceId!==workspaceId){res.status(404).end();return;}
+      const file=await new AdMediaStorage().store.load(asset.ref);if(!file){res.status(404).end();return;}
+      res.setHeader("Content-Type",file.ref.mimeType);res.sendFile(file.absolutePath,{acceptRanges:true,cacheControl:false,dotfiles:"deny"},error=>{if(error&&!res.headersSent)res.status(404).end();});
+    }catch{if(!res.headersSent)res.status(503).json({error:"Retained media could not be verified."});}
+  });
+}

@@ -32,12 +32,13 @@ function render(row: BrowserCreative) {
 }
 test("UI-03 missing evidence renders reasons/unlocks, never invented outcomes, scenes or scores", () => {
     const html = render(browserCreative({ daysRunning: null, durationSeconds: null, angle: null, creativeFormat: null }));
-    assert.match(html, /No retained media file/);
+    assert.match(html, /Ad copy preview/);
     assert.match(html, /No scene boundaries are stored/);
-    assert.match(html, /Owned metrics are not synced/);
+    assert.match(html, /Public signals only/);
+    assert.ok(!html.includes("Owned metrics are not synced"));
     assert.match(html, /No saved analysis supports/);
     assert.ok(!html.includes('aria-label="Working Score"'),"unbuilt Working Score does not add a duplicate section");
-    assert.equal((html.match(/class="ui-meta-line"/g)||[]).length,1,"only the complete source-history metadata remains");
+    assert.equal((html.match(/class="ui-meta-line"/g)||[]).length,2,"source history and public Performance retain their complete metadata");
     assert.ok(!html.includes('role="dialog"'));
     assert.ok(!html.includes('>0<'));
     assert.ok(!html.includes("Proven winner"));
@@ -79,5 +80,5 @@ test("UI-03 source facts are formatted, active ads remain Still running, and gap
   assert.match(html,/Facebook, Instagram, Audience Network/);assert.match(html,/Still running/);assert.match(html,/>Active</);assert.match(html,/30 Oct 2026/);
   assert.ok(!html.includes("n = Unavailable")&&!html.includes("Unavailable to Unavailable"));
   assert.match(html,/view=settings&amp;brandId=workspace-a&amp;analysisAdId=12345678#gemini-smoke-test/);
-  assert.match(html,/Open original ad/);assert.match(html,/Connect account/);
+  assert.match(html,/Open original ad/);assert.match(html,/Public signals only/);assert.ok(!html.includes("Connect account"));
 });

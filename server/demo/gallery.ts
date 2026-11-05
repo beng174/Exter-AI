@@ -174,6 +174,7 @@ export class CreativeGalleryService {
       durationSeconds: media?.kind === "video" ? media.video.durationSeconds : result?.kind === "video" ? (result.value as VideoAnalysisResult).coverage?.durationSeconds ?? null : null,
       thumbnailUrl: videoUrl ? `${base}/poster` : imageUrls[0] || null,
       videoUrl, imageUrls, imageCount: imageUrls.length, mediaAvailable: Boolean(media), mediaStatus: media ? "stored" : result ? "unavailable" : "not-stored",
+      mediaSha256:media?.kind==="video"?media.video.sha256:media?.images.sha256||null,
       analysis: safeAnalysis(result), creativeFormat: format,
       hookType: canonical(fields?.hook_type?.value, HOOK_TYPE_VALUES), angle: canonical(fields?.angle.value, ANGLE_VALUES), offerType: canonical(fields?.offer_type?.value, OFFER_TYPE_VALUES),
       ugc: format === "UGC" ? creatorEvidence.length > 0 ? true : null : format ? false : null,

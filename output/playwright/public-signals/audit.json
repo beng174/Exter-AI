@@ -1,0 +1,14 @@
+[
+  {
+    "mode": "public-competitor",
+    "width": 1440,
+    "missingTilesHidden": true,
+    "privateOutcomes": false
+  },
+  {
+    "mode": "public-competitor",
+    "width": 390,
+    "missingTilesHidden": true,
+    "privateOutcomes": false
+  }
+]

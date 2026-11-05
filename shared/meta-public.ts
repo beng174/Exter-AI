@@ -3,6 +3,19 @@ export type Published<T> = {type:"observed";value:T}|{type:"unavailable";value:n
 export interface CountryReach {country:string;reach:number}
 export interface DemographicReach {country:string;age:string;gender:string;reach:number}
 export interface PublicReach {eu:Published<number>;locations:Published<CountryReach[]>;demographics:Published<DemographicReach[]>}
+export interface PublicAdDetails {targetAges:string[];targetGenders:string[];targetLocations:string[];platforms:string[];languages:string[]}
+const publicText=(value:unknown):string|null=>typeof value==="string"&&value.trim()&&!/^(?:unknown|none|null|unavailable)$/i.test(value.trim())&&!/https?:|[<>\u0000-\u001f]/i.test(value)&&value.length<=160?value.trim():null;
+const list=(value:unknown):unknown[]=>Array.isArray(value)?value:value==null?[]:[value];
+const unique=(values:(string|null)[])=>[...new Set(values.filter((value):value is string=>Boolean(value)))];
+export function countryName(code:string):string {try{return new Intl.DisplayNames("en-GB",{type:"region"}).of(code)||code;}catch{return code;}}
+export function publishedAdDetails(row:Record<string,unknown>):PublicAdDetails {
+  const platforms:Record<string,string>={facebook:"Facebook",instagram:"Instagram",messenger:"Messenger",audience_network:"Audience Network",threads:"Threads",whatsapp:"WhatsApp"};
+  const genders:Record<string,string>={female:"Women",women:"Women",male:"Men",men:"Men",all:"All genders"};
+  const location=(value:unknown)=>{const item=value&&typeof value==="object"&&!Array.isArray(value)?value as Record<string,unknown>:null;const text=publicText(item?.name??item?.country??value);return text&&/^[A-Z]{2}$/.test(text)?countryName(text):text;};
+  return {targetAges:unique(list(row.target_ages).map(value=>{const text=publicText(value);return text&&/^\d{1,3}(?:(?:\s*-\s*|\s+to\s+)\d{1,3}|\+)?$/.test(text)?text:null;})),targetGenders:unique(list(row.target_gender).map(value=>typeof value==="string"?genders[value.trim().toLowerCase()]||null:null)),targetLocations:unique(list(row.target_locations).map(location)),platforms:unique(list(row.publisher_platforms).map(value=>typeof value==="string"?platforms[value.toLowerCase()]||null:null)),languages:unique(list(row.languages).map(value=>{
+    const text=publicText(value);if(!text||!/[a-z]/i.test(text))return null;const named=/^[A-Z][a-z]+(?:[ -][A-Za-z]+)*$/.test(text)?text:null;try{const code=text.replaceAll("_","-"),name=new Intl.DisplayNames("en-GB",{type:"language",fallback:"none"}).of(code);return name||named;}catch{return named;}
+  }))};
+}
 const observed=<T>(value:T):Published<T>=>({type:"observed",value});
 const missing=<T>():Published<T>=>({type:"unavailable",value:null});
 const count=(value:unknown):number|null=>{
