@@ -522,3 +522,29 @@ and blockers below remain unchanged.
   exter-test-drive, with all three width screenshots and the 90-case audit.
   After merge: Render > exter-ai > Manual Deploy > Deploy latest commit.
   No migration or worker deployment is needed; keep existing secrets and disk.
+
+## Meta Ad Library activation, 5 Nov 2026
+
+- Meta Ad Library API access confirmed **4 Nov 2026** by the owner: Graph API
+  Explorer v26.0, GB, ad_type=ALL, ad_active_status=ALL returned UK commercial
+  ads with total_reach_by_location. Live collection remains pending the switch.
+- Default-off EXTER_META_LIBRARY_ENABLED is required on worker and scheduler;
+  web also gates manual collection. META_ACCESS_TOKEN belongs in Render secrets
+  on exter-ai and exter-worker, not the scheduler. See docs/DEPLOY.md.
+- Public reach stays Observed; reach-based share of voice is an Estimated
+  watchlist proxy. No commercial spend or impressions are created. Page ID
+  watchlists, resumable 12-month runs and 03:00 Europe/London slots use Postgres.
+- Fixture tests are not live verification. Phase 0 and Phase 1 own-account live
+  gates remain open until confirmed on Exter Media's own account. Owned sync
+  stays default off, and low-cost kernel work remains paused.
+
+- Validation: all four required checks pass (430 unit tests), plus five disposable
+  Postgres integration cases. All 90 existing real/sample screen/width alignment
+  cases pass, and 24 affected-view/width checks pass with both Page ID editing
+  entry points and metadata-only saves. No live provider calls were made.
+  Reproducible fixtures and app/reference comparisons are in
+  output/playwright/meta-library/. Fixtures are not live verification.
+
+- Review: https://github.com/beng174/Exter-AI/pull/14 against exter-test-drive.
+  Live collection has not been enabled. Render activation and rollback steps are
+  in docs/DEPLOY.md; the existing web disk and Postgres must be retained.

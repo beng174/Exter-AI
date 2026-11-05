@@ -40,7 +40,11 @@ services:
       # or add exact served-model rates in GEMINI_MODEL_PRICING_GBP_JSON.
       - key: CHROMIUM_PATH
         value: /usr/bin/chromium
-      # Optional META_ACCESS_TOKEN: add securely after approval; not required to deploy.
+      # META_ACCESS_TOKEN: secure environment setting on web and worker only.
+      - key: EXTER_META_LIBRARY_ENABLED
+        value: "false"
+      - key: META_API_VERSION
+        value: v26.0
       - key: MEDIA_STORAGE_TYPE
         value: disk
       - key: MEDIA_STORAGE_PATH
@@ -67,9 +71,11 @@ services:
       # Optional artifact staging is configured separately. The web disk is not shared.
       # Web+worker: EXTER_ARTIFACT_BROKER_TOKEN (secure); web: EXTER_ARTIFACT_BROKER_WORKSPACES.
       # Worker: EXTER_ARTIFACT_BROKER_ORIGIN and EXTER_KERNEL_CACHE_PATH.
-      # Optional META_ACCESS_TOKEN: add securely after approval; not required to deploy.
+      # META_ACCESS_TOKEN: secure environment setting, never committed.
+      - key: EXTER_META_LIBRARY_ENABLED
+        value: "false"
       - key: META_API_VERSION
-        value: v25.0
+        value: v26.0
       - key: DATABASE_URL
         fromDatabase:
           name: exter-postgres
@@ -78,9 +84,12 @@ services:
     name: exter-scheduler
     runtime: docker
     branch: exter-test-drive
-    schedule: "0 3 * * *"
+    # Probe both UTC times; application enqueues once at 03:00 Europe/London.
+    schedule: "0 2,3 * * *"
     dockerCommand: npm run scheduler
     envVars:
+      - key: EXTER_META_LIBRARY_ENABLED
+        value: "false"
       - key: DATABASE_URL
         fromDatabase:
           name: exter-postgres

@@ -1,3 +1,4 @@
+import {displayedReach} from "../../../shared/meta-public";
 import { privateMetric, type BrowserCreative, type CreativePerformance } from "../../../shared/creative-browser";
 import type { MetricName, OwnedMetric } from "../../../shared/owned-metrics";
 import { hasValue } from "../ui/value";
@@ -21,10 +22,11 @@ export function onlyCohort(row: BrowserCreative, cohortId?: string): CreativePer
 }
 export function cardMetrics(row: BrowserCreative, cohortId?: string) {
     if(row.presentation)return row.presentation.metrics;
+    const reach=displayedReach(row.publicReach),reachMetrics=reach?[{...reach,value:new Intl.NumberFormat("en-GB").format(reach.value),basis:"Observed" as const,reason:"Published lifetime reach at the saved check, not impressions or sales."}]:[];
     if (!row.workspaceBrand)
-        return [{ label: "Days running", value: row.daysRunning, basis: "Observed" as const, reason: "A source delivery start and observed endpoint are missing." }];
+        return [...reachMetrics,{ label: "Days running", value: row.daysRunning, basis: "Observed" as const, reason: "A source delivery start and observed endpoint are missing." }];
     const cohort = onlyCohort(row,cohortId);
-    return (["Spend", "ROAS", "Hook rate"] as const).map(label => ({ label, value: metricText(cohort?privateMetric(row,cohort.id,label):null, label, cohort?.currency), basis: "Observed" as const, missingLabel:row.performance.length===0?"Not synced" as const:"Unavailable" as const, reason: row.performance.length > 1 ? "Select one account, currency and attribution scope in Creative detail." : metricReason(cohort?.metrics[label]) }));
+    return [...reachMetrics,...(["Spend", "ROAS", "Hook rate"] as const).map(label => ({ label, value: metricText(cohort?privateMetric(row,cohort.id,label):null, label, cohort?.currency), basis: "Observed" as const, missingLabel:row.performance.length===0?"Not synced" as const:"Unavailable" as const, reason: row.performance.length > 1 ? "Select one account, currency and attribution scope in Creative detail." : metricReason(cohort?.metrics[label]) }))];
 }
 export function creativeMeta(row: BrowserCreative) { return { sampleSize: 1, from: row.firstObservedAt, to: row.observedAt, lastChecked: row.observedAt }; }
 export function timestamp(seconds: number) { return `${Math.floor(seconds / 60)}:${String(Math.floor(seconds % 60)).padStart(2, "0")}`; }

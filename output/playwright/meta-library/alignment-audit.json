@@ -1,0 +1,812 @@
+[
+  {
+    "sample": false,
+    "width": 1280,
+    "screen": "Main",
+    "overflow": false,
+    "problems": [],
+    "contentWidth": 940,
+    "centred": true
+  },
+  {
+    "sample": false,
+    "width": 1280,
+    "screen": "Brands",
+    "overflow": false,
+    "problems": [],
+    "contentWidth": 940,
+    "centred": true
+  },
+  {
+    "sample": false,
+    "width": 1280,
+    "screen": "Competitors",
+    "overflow": false,
+    "problems": [],
+    "contentWidth": 940,
+    "centred": true
+  },
+  {
+    "sample": false,
+    "width": 1280,
+    "screen": "Creatives",
+    "overflow": false,
+    "problems": [],
+    "contentWidth": 940,
+    "centred": true
+  },
+  {
+    "sample": false,
+    "width": 1280,
+    "screen": "CreativeDetail",
+    "overflow": false,
+    "problems": [],
+    "contentWidth": 940,
+    "centred": true
+  },
+  {
+    "sample": false,
+    "width": 1280,
+    "screen": "Formats",
+    "overflow": false,
+    "problems": [],
+    "contentWidth": 940,
+    "centred": true
+  },
+  {
+    "sample": false,
+    "width": 1280,
+    "screen": "Patterns",
+    "overflow": false,
+    "problems": [],
+    "contentWidth": 940,
+    "centred": true
+  },
+  {
+    "sample": false,
+    "width": 1280,
+    "screen": "Audience",
+    "overflow": false,
+    "problems": [],
+    "contentWidth": 940,
+    "centred": true
+  },
+  {
+    "sample": false,
+    "width": 1280,
+    "screen": "Winners",
+    "overflow": false,
+    "problems": [],
+    "contentWidth": 940,
+    "centred": true
+  },
+  {
+    "sample": false,
+    "width": 1280,
+    "screen": "Briefs",
+    "overflow": false,
+    "problems": [],
+    "contentWidth": 940,
+    "centred": true
+  },
+  {
+    "sample": false,
+    "width": 1280,
+    "screen": "Creators",
+    "overflow": false,
+    "problems": [],
+    "contentWidth": 940,
+    "centred": true
+  },
+  {
+    "sample": false,
+    "width": 1280,
+    "screen": "Scores",
+    "overflow": false,
+    "problems": [],
+    "contentWidth": 940,
+    "centred": true
+  },
+  {
+    "sample": false,
+    "width": 1280,
+    "screen": "Ask",
+    "overflow": false,
+    "problems": [],
+    "contentWidth": 940,
+    "centred": true
+  },
+  {
+    "sample": false,
+    "width": 1280,
+    "screen": "Reports",
+    "overflow": false,
+    "problems": [],
+    "contentWidth": 940,
+    "centred": true
+  },
+  {
+    "sample": false,
+    "width": 1280,
+    "screen": "DataSources",
+    "overflow": false,
+    "problems": [],
+    "contentWidth": 940,
+    "centred": true
+  },
+  {
+    "sample": false,
+    "width": 1440,
+    "screen": "Main",
+    "overflow": false,
+    "problems": [],
+    "contentWidth": 1100,
+    "centred": true
+  },
+  {
+    "sample": false,
+    "width": 1440,
+    "screen": "Brands",
+    "overflow": false,
+    "problems": [],
+    "contentWidth": 1100,
+    "centred": true
+  },
+  {
+    "sample": false,
+    "width": 1440,
+    "screen": "Competitors",
+    "overflow": false,
+    "problems": [],
+    "contentWidth": 1100,
+    "centred": true
+  },
+  {
+    "sample": false,
+    "width": 1440,
+    "screen": "Creatives",
+    "overflow": false,
+    "problems": [],
+    "contentWidth": 1100,
+    "centred": true
+  },
+  {
+    "sample": false,
+    "width": 1440,
+    "screen": "CreativeDetail",
+    "overflow": false,
+    "problems": [],
+    "contentWidth": 1100,
+    "centred": true
+  },
+  {
+    "sample": false,
+    "width": 1440,
+    "screen": "Formats",
+    "overflow": false,
+    "problems": [],
+    "contentWidth": 1100,
+    "centred": true
+  },
+  {
+    "sample": false,
+    "width": 1440,
+    "screen": "Patterns",
+    "overflow": false,
+    "problems": [],
+    "contentWidth": 1100,
+    "centred": true
+  },
+  {
+    "sample": false,
+    "width": 1440,
+    "screen": "Audience",
+    "overflow": false,
+    "problems": [],
+    "contentWidth": 1100,
+    "centred": true
+  },
+  {
+    "sample": false,
+    "width": 1440,
+    "screen": "Winners",
+    "overflow": false,
+    "problems": [],
+    "contentWidth": 1100,
+    "centred": true
+  },
+  {
+    "sample": false,
+    "width": 1440,
+    "screen": "Briefs",
+    "overflow": false,
+    "problems": [],
+    "contentWidth": 1100,
+    "centred": true
+  },
+  {
+    "sample": false,
+    "width": 1440,
+    "screen": "Creators",
+    "overflow": false,
+    "problems": [],
+    "contentWidth": 1100,
+    "centred": true
+  },
+  {
+    "sample": false,
+    "width": 1440,
+    "screen": "Scores",
+    "overflow": false,
+    "problems": [],
+    "contentWidth": 1100,
+    "centred": true
+  },
+  {
+    "sample": false,
+    "width": 1440,
+    "screen": "Ask",
+    "overflow": false,
+    "problems": [],
+    "contentWidth": 1100,
+    "centred": true
+  },
+  {
+    "sample": false,
+    "width": 1440,
+    "screen": "Reports",
+    "overflow": false,
+    "problems": [],
+    "contentWidth": 1100,
+    "centred": true
+  },
+  {
+    "sample": false,
+    "width": 1440,
+    "screen": "DataSources",
+    "overflow": false,
+    "problems": [],
+    "contentWidth": 1100,
+    "centred": true
+  },
+  {
+    "sample": false,
+    "width": 1920,
+    "screen": "Main",
+    "overflow": false,
+    "problems": [],
+    "contentWidth": 1280,
+    "centred": true
+  },
+  {
+    "sample": false,
+    "width": 1920,
+    "screen": "Brands",
+    "overflow": false,
+    "problems": [],
+    "contentWidth": 1280,
+    "centred": true
+  },
+  {
+    "sample": false,
+    "width": 1920,
+    "screen": "Competitors",
+    "overflow": false,
+    "problems": [],
+    "contentWidth": 1280,
+    "centred": true
+  },
+  {
+    "sample": false,
+    "width": 1920,
+    "screen": "Creatives",
+    "overflow": false,
+    "problems": [],
+    "contentWidth": 1280,
+    "centred": true
+  },
+  {
+    "sample": false,
+    "width": 1920,
+    "screen": "CreativeDetail",
+    "overflow": false,
+    "problems": [],
+    "contentWidth": 1280,
+    "centred": true
+  },
+  {
+    "sample": false,
+    "width": 1920,
+    "screen": "Formats",
+    "overflow": false,
+    "problems": [],
+    "contentWidth": 1280,
+    "centred": true
+  },
+  {
+    "sample": false,
+    "width": 1920,
+    "screen": "Patterns",
+    "overflow": false,
+    "problems": [],
+    "contentWidth": 1280,
+    "centred": true
+  },
+  {
+    "sample": false,
+    "width": 1920,
+    "screen": "Audience",
+    "overflow": false,
+    "problems": [],
+    "contentWidth": 1280,
+    "centred": true
+  },
+  {
+    "sample": false,
+    "width": 1920,
+    "screen": "Winners",
+    "overflow": false,
+    "problems": [],
+    "contentWidth": 1280,
+    "centred": true
+  },
+  {
+    "sample": false,
+    "width": 1920,
+    "screen": "Briefs",
+    "overflow": false,
+    "problems": [],
+    "contentWidth": 1280,
+    "centred": true
+  },
+  {
+    "sample": false,
+    "width": 1920,
+    "screen": "Creators",
+    "overflow": false,
+    "problems": [],
+    "contentWidth": 1280,
+    "centred": true
+  },
+  {
+    "sample": false,
+    "width": 1920,
+    "screen": "Scores",
+    "overflow": false,
+    "problems": [],
+    "contentWidth": 1280,
+    "centred": true
+  },
+  {
+    "sample": false,
+    "width": 1920,
+    "screen": "Ask",
+    "overflow": false,
+    "problems": [],
+    "contentWidth": 1280,
+    "centred": true
+  },
+  {
+    "sample": false,
+    "width": 1920,
+    "screen": "Reports",
+    "overflow": false,
+    "problems": [],
+    "contentWidth": 1280,
+    "centred": true
+  },
+  {
+    "sample": false,
+    "width": 1920,
+    "screen": "DataSources",
+    "overflow": false,
+    "problems": [],
+    "contentWidth": 1280,
+    "centred": true
+  },
+  {
+    "sample": true,
+    "width": 1280,
+    "screen": "Main",
+    "overflow": false,
+    "problems": [],
+    "contentWidth": 940,
+    "centred": true
+  },
+  {
+    "sample": true,
+    "width": 1280,
+    "screen": "Brands",
+    "overflow": false,
+    "problems": [],
+    "contentWidth": 940,
+    "centred": true
+  },
+  {
+    "sample": true,
+    "width": 1280,
+    "screen": "Competitors",
+    "overflow": false,
+    "problems": [],
+    "contentWidth": 940,
+    "centred": true
+  },
+  {
+    "sample": true,
+    "width": 1280,
+    "screen": "Creatives",
+    "overflow": false,
+    "problems": [],
+    "contentWidth": 940,
+    "centred": true
+  },
+  {
+    "sample": true,
+    "width": 1280,
+    "screen": "CreativeDetail",
+    "overflow": false,
+    "problems": [],
+    "contentWidth": 940,
+    "centred": true
+  },
+  {
+    "sample": true,
+    "width": 1280,
+    "screen": "Formats",
+    "overflow": false,
+    "problems": [],
+    "contentWidth": 940,
+    "centred": true
+  },
+  {
+    "sample": true,
+    "width": 1280,
+    "screen": "Patterns",
+    "overflow": false,
+    "problems": [],
+    "contentWidth": 940,
+    "centred": true
+  },
+  {
+    "sample": true,
+    "width": 1280,
+    "screen": "Audience",
+    "overflow": false,
+    "problems": [],
+    "contentWidth": 940,
+    "centred": true
+  },
+  {
+    "sample": true,
+    "width": 1280,
+    "screen": "Winners",
+    "overflow": false,
+    "problems": [],
+    "contentWidth": 940,
+    "centred": true
+  },
+  {
+    "sample": true,
+    "width": 1280,
+    "screen": "Briefs",
+    "overflow": false,
+    "problems": [],
+    "contentWidth": 940,
+    "centred": true
+  },
+  {
+    "sample": true,
+    "width": 1280,
+    "screen": "Creators",
+    "overflow": false,
+    "problems": [],
+    "contentWidth": 940,
+    "centred": true
+  },
+  {
+    "sample": true,
+    "width": 1280,
+    "screen": "Scores",
+    "overflow": false,
+    "problems": [],
+    "contentWidth": 940,
+    "centred": true
+  },
+  {
+    "sample": true,
+    "width": 1280,
+    "screen": "Ask",
+    "overflow": false,
+    "problems": [],
+    "contentWidth": 940,
+    "centred": true
+  },
+  {
+    "sample": true,
+    "width": 1280,
+    "screen": "Reports",
+    "overflow": false,
+    "problems": [],
+    "contentWidth": 940,
+    "centred": true
+  },
+  {
+    "sample": true,
+    "width": 1280,
+    "screen": "DataSources",
+    "overflow": false,
+    "problems": [],
+    "contentWidth": 940,
+    "centred": true
+  },
+  {
+    "sample": true,
+    "width": 1440,
+    "screen": "Main",
+    "overflow": false,
+    "problems": [],
+    "contentWidth": 1100,
+    "centred": true
+  },
+  {
+    "sample": true,
+    "width": 1440,
+    "screen": "Brands",
+    "overflow": false,
+    "problems": [],
+    "contentWidth": 1100,
+    "centred": true
+  },
+  {
+    "sample": true,
+    "width": 1440,
+    "screen": "Competitors",
+    "overflow": false,
+    "problems": [],
+    "contentWidth": 1100,
+    "centred": true
+  },
+  {
+    "sample": true,
+    "width": 1440,
+    "screen": "Creatives",
+    "overflow": false,
+    "problems": [],
+    "contentWidth": 1100,
+    "centred": true
+  },
+  {
+    "sample": true,
+    "width": 1440,
+    "screen": "CreativeDetail",
+    "overflow": false,
+    "problems": [],
+    "contentWidth": 1100,
+    "centred": true
+  },
+  {
+    "sample": true,
+    "width": 1440,
+    "screen": "Formats",
+    "overflow": false,
+    "problems": [],
+    "contentWidth": 1100,
+    "centred": true
+  },
+  {
+    "sample": true,
+    "width": 1440,
+    "screen": "Patterns",
+    "overflow": false,
+    "problems": [],
+    "contentWidth": 1100,
+    "centred": true
+  },
+  {
+    "sample": true,
+    "width": 1440,
+    "screen": "Audience",
+    "overflow": false,
+    "problems": [],
+    "contentWidth": 1100,
+    "centred": true
+  },
+  {
+    "sample": true,
+    "width": 1440,
+    "screen": "Winners",
+    "overflow": false,
+    "problems": [],
+    "contentWidth": 1100,
+    "centred": true
+  },
+  {
+    "sample": true,
+    "width": 1440,
+    "screen": "Briefs",
+    "overflow": false,
+    "problems": [],
+    "contentWidth": 1100,
+    "centred": true
+  },
+  {
+    "sample": true,
+    "width": 1440,
+    "screen": "Creators",
+    "overflow": false,
+    "problems": [],
+    "contentWidth": 1100,
+    "centred": true
+  },
+  {
+    "sample": true,
+    "width": 1440,
+    "screen": "Scores",
+    "overflow": false,
+    "problems": [],
+    "contentWidth": 1100,
+    "centred": true
+  },
+  {
+    "sample": true,
+    "width": 1440,
+    "screen": "Ask",
+    "overflow": false,
+    "problems": [],
+    "contentWidth": 1100,
+    "centred": true
+  },
+  {
+    "sample": true,
+    "width": 1440,
+    "screen": "Reports",
+    "overflow": false,
+    "problems": [],
+    "contentWidth": 1100,
+    "centred": true
+  },
+  {
+    "sample": true,
+    "width": 1440,
+    "screen": "DataSources",
+    "overflow": false,
+    "problems": [],
+    "contentWidth": 1100,
+    "centred": true
+  },
+  {
+    "sample": true,
+    "width": 1920,
+    "screen": "Main",
+    "overflow": false,
+    "problems": [],
+    "contentWidth": 1280,
+    "centred": true
+  },
+  {
+    "sample": true,
+    "width": 1920,
+    "screen": "Brands",
+    "overflow": false,
+    "problems": [],
+    "contentWidth": 1280,
+    "centred": true
+  },
+  {
+    "sample": true,
+    "width": 1920,
+    "screen": "Competitors",
+    "overflow": false,
+    "problems": [],
+    "contentWidth": 1280,
+    "centred": true
+  },
+  {
+    "sample": true,
+    "width": 1920,
+    "screen": "Creatives",
+    "overflow": false,
+    "problems": [],
+    "contentWidth": 1280,
+    "centred": true
+  },
+  {
+    "sample": true,
+    "width": 1920,
+    "screen": "CreativeDetail",
+    "overflow": false,
+    "problems": [],
+    "contentWidth": 1280,
+    "centred": true
+  },
+  {
+    "sample": true,
+    "width": 1920,
+    "screen": "Formats",
+    "overflow": false,
+    "problems": [],
+    "contentWidth": 1280,
+    "centred": true
+  },
+  {
+    "sample": true,
+    "width": 1920,
+    "screen": "Patterns",
+    "overflow": false,
+    "problems": [],
+    "contentWidth": 1280,
+    "centred": true
+  },
+  {
+    "sample": true,
+    "width": 1920,
+    "screen": "Audience",
+    "overflow": false,
+    "problems": [],
+    "contentWidth": 1280,
+    "centred": true
+  },
+  {
+    "sample": true,
+    "width": 1920,
+    "screen": "Winners",
+    "overflow": false,
+    "problems": [],
+    "contentWidth": 1280,
+    "centred": true
+  },
+  {
+    "sample": true,
+    "width": 1920,
+    "screen": "Briefs",
+    "overflow": false,
+    "problems": [],
+    "contentWidth": 1280,
+    "centred": true
+  },
+  {
+    "sample": true,
+    "width": 1920,
+    "screen": "Creators",
+    "overflow": false,
+    "problems": [],
+    "contentWidth": 1280,
+    "centred": true
+  },
+  {
+    "sample": true,
+    "width": 1920,
+    "screen": "Scores",
+    "overflow": false,
+    "problems": [],
+    "contentWidth": 1280,
+    "centred": true
+  },
+  {
+    "sample": true,
+    "width": 1920,
+    "screen": "Ask",
+    "overflow": false,
+    "problems": [],
+    "contentWidth": 1280,
+    "centred": true
+  },
+  {
+    "sample": true,
+    "width": 1920,
+    "screen": "Reports",
+    "overflow": false,
+    "problems": [],
+    "contentWidth": 1280,
+    "centred": true
+  },
+  {
+    "sample": true,
+    "width": 1920,
+    "screen": "DataSources",
+    "overflow": false,
+    "problems": [],
+    "contentWidth": 1280,
+    "centred": true
+  }
+]

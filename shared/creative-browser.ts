@@ -2,6 +2,7 @@ import type { DemoGalleryCreative } from "./creative-gallery.js";
 import type { DemoAdScore } from "./brand-demo.js";
 import { measurementEligible, selectResearchAds, type EvidenceSelection } from "./creative-research.js";
 import { creativeTitle } from "./creative-presentation.js";
+import {countryReach,type PublicReach,type MetaSourceHealth} from "./meta-public.js";
 import type { OwnedMetric, MetricName } from "./owned-metrics.js";
 export interface CreativePerformance {
     id: string;
@@ -19,6 +20,8 @@ export interface CreativePerformance {
 }
 import type { WorkspacePresentation, CreativePresentation } from "./workspace-presentation.js";
 export interface BrowserCreative extends DemoGalleryCreative {
+    publicReach?:PublicReach;
+    reachObservedAt?:string;
     platform: string;
     publicEvidence?:boolean;
     presentation?:CreativePresentation;
@@ -36,6 +39,7 @@ export interface BrowserCreative extends DemoGalleryCreative {
 }
 export interface CreativeCompetitor { key:string;brandId:string|null;name:string;status:string }
 export interface CreativeBrowserResponse {
+    metaSource?:MetaSourceHealth;
     presentation?:WorkspacePresentation;
     conversation?:{question:string;answer:string;sources:string[]}[];
     competitors:CreativeCompetitor[];
@@ -79,15 +83,15 @@ export interface BrowserFilters extends EvidenceSelection {
     sort?: string;
     layout?: string;
 }
-export const BROWSER_FILTERS = ["measure","take","dimension","value","kind","activityFrom","activityTo","asOf","ad","cohort", "show", "brand", "platform", "format", "hook", "angle", "offer", "ugc", "status", "from", "to", "search", "sort", "layout"] as const;
+export const BROWSER_FILTERS = ["demographicCountry","reachAge","reachGender","reachCountry","measure","take","dimension","value","kind","activityFrom","activityTo","asOf","ad","cohort", "show", "brand", "platform", "format", "hook", "angle", "offer", "ugc", "status", "from", "to", "search", "sort", "layout"] as const;
 export function browserFilters(params: URLSearchParams): BrowserFilters {
     return Object.fromEntries(BROWSER_FILTERS.flatMap(key => params.get(key) ? [[key, params.get(key)!]] : []));
 }
 export function filterBrowserCreatives(rows: BrowserCreative[], filters: BrowserFilters) {
     const match = (selected: string | undefined, value: string | null | undefined) => !selected || selected === "all" || value === selected;
     const needle = filters.search?.trim().toLocaleLowerCase();
-    const researchSelection=filters.kind||filters.dimension||filters.asOf||filters.ad?new Set(selectResearchAds(rows,{...filters,take:undefined,measure:undefined}).map(row=>row.adId)):null;
-    const result = rows.filter(row => (!researchSelection||researchSelection.has(row.adId))&& (!filters.show || filters.show === "all" || filters.show === "yours" && row.workspaceBrand || filters.show === "competitors" && !row.workspaceBrand) &&
+    const researchSelection=filters.kind||filters.dimension||filters.asOf||filters.ad||filters.demographicCountry?new Set(selectResearchAds(rows,{...filters,take:undefined,measure:undefined}).map(row=>row.adId)):null;
+    const result = rows.filter(row => (!filters.reachCountry||countryReach(row.publicReach,filters.reachCountry)!==null)&& (!researchSelection||researchSelection.has(row.adId))&& (!filters.show || filters.show === "all" || filters.show === "yours" && row.workspaceBrand || filters.show === "competitors" && !row.workspaceBrand) &&
         (!filters.cohort || row.workspaceBrand && row.owned && row.performance.some(item => item.id === filters.cohort)) &&
         match(filters.brand, row.brandId) && match(filters.platform, row.platform) &&
         (!filters.format || filters.format === "all" || [row.creativeFormat, row.mediaKind].includes(filters.format)) &&

@@ -1,6 +1,7 @@
+import {MetaWatchlistEditor} from "./MetaWatchlistEditor";
 import { BrandLogoSettings } from "../ui/BrandIdentity";
 import { BrandReadModel } from "./ResearchReadModels";
-import { useState, type FormEvent } from "react";
+import { useState } from "react";
 import { brandSnapshots, evidenceUrl } from "../../../shared/creative-research";
 import { plainEnum, ukDate } from "../../../shared/creative-presentation";
 import { api } from "../../lib/api";
@@ -8,15 +9,10 @@ import { SectionCard, DataTable, DataLabel, Unavailable, StatusChip } from "../u
 import { Measure, SafeLink, metadata, type ScreenProps } from "./common";
 export function BrandScreen({data,selection,refresh}:ScreenProps) {
   const [editing,setEditing]=useState(false),[busy,setBusy]=useState(false),[error,setError]=useState(""),[allFacts,setAllFacts]=useState(false);
-  const [pages,setPages]=useState(data.watchlists?.[0]?.page_ids.join(", ")||""),[terms,setTerms]=useState(data.watchlists?.[0]?.search_terms.join("\n")||""),[countries,setCountries]=useState(data.watchlists?.[0]?.countries.join(", ")||"");
   if(data.library.presentation)return <BrandReadModel library={data.library} model={data.library.presentation}/>;
   const profile=data.research,brand=data.brand,competitors=brandSnapshots(data.library,data.window,selection.platform).slice(1);
   const dataSources=`/?view=data&brandId=${encodeURIComponent(data.library.brand.id)}`;
   const refreshResearch=async()=>{setBusy(true);setError("");try{await api("/api/brand-research",{brandId:data.library.brand.id});refresh();}catch{setError("Research did not finish. Earlier evidence is preserved.");}finally{setBusy(false);}};
-  async function saveWatchlist(event:FormEvent){event.preventDefault();setBusy(true);setError("");try{
-    const response=await fetch(`/api/public/meta/watchlists/${encodeURIComponent(data.watchlists?.[0]?.id||data.library.brand.id)}`,{method:"PUT",headers:{"Content-Type":"application/json"},body:JSON.stringify({workspaceId:data.library.brand.id,pageIds:pages.split(/[\s,]+/).filter(Boolean),searchTerms:terms.split("\n").map(value=>value.trim()).filter(Boolean),countries:countries.toUpperCase().split(/[\s,]+/).filter(Boolean)})});
-    if(!response.ok)throw new Error();setEditing(false);refresh();
-  }catch{setError("The watchlist could not be saved. Check the page IDs, search terms, countries and source connection.");}finally{setBusy(false);}}
   const field=(label:string,value:string|undefined)=><div key={label}><dt>{label}</dt><dd>{value||<Unavailable compact reason={`${label} has not been saved for this brand.`}/>}</dd></div>;
   const positioning=profile?.analysis?[['Key message',profile.analysis.keyMessage],['Topic',profile.analysis.topic],['Observed relevance',profile.analysis.observedRelevance],['Observed tension',profile.analysis.observedTension]].filter(([,value])=>Boolean(value)):[];
   return <>
@@ -29,7 +25,7 @@ export function BrandScreen({data,selection,refresh}:ScreenProps) {
         <h3>Category keywords</h3><div className="research-tags">{data.watchlists?.flatMap(item=>item.search_terms).map(term=><span key={term}>{term}</span>)}{!data.watchlists?.some(item=>item.search_terms.length)&&<Unavailable compact reason="No category keywords have been saved."/>}</div>
         <button className="button secondary" onClick={()=>setEditing(value=>!value)} disabled={data.watchlists===null}>{editing?"Cancel":"Edit watchlist and keywords"}</button>
         <a className="research-inline-action" href={`/?view=settings&brandId=${encodeURIComponent(data.library.brand.id)}#demo-collection`}>Add or collect configured competitors</a>
-        {editing&&<form className="research-watchlist-form" onSubmit={saveWatchlist}><label>Advertiser page IDs<input value={pages} onChange={event=>setPages(event.target.value)} placeholder="Numeric page IDs, comma separated"/></label><label>Category keywords<textarea value={terms} onChange={event=>setTerms(event.target.value)} placeholder="One search term per line"/></label><label>Watchlist countries<input value={countries} onChange={event=>setCountries(event.target.value)} placeholder="Two-letter country codes" required/></label><button className="button primary" disabled={busy}>Save watchlist</button><p className="research-note">Saves the existing watchlist only. Collection is a separate explicit action.</p></form>}
+        {editing&&<MetaWatchlistEditor data={data} onSaved={refresh}/>}
       </SectionCard>
       <div className="research-column">
         <SectionCard title="What the public sources say" help={profile?`Saved website research${ukDate(profile.observedAt)?`, checked ${ukDate(profile.observedAt)}`:""}.`:undefined} actions={profile?<button className="button secondary" disabled={busy} onClick={()=>void refreshResearch()}>Refresh research</button>:undefined} empty={!profile&&{reason:data.researchFailed?"Saved brand research could not be read.":"No public website research is saved.",action:{label:data.researchFailed?"Retry":"Research website",onClick:data.researchFailed?refresh:()=>void refreshResearch()}}}>

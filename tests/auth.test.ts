@@ -57,11 +57,11 @@ test("the real app protects API handlers and subsequently mounted production sta
       const response = await fetch(base+path,{ headers });
       assert.equal(response.status,200);
       if (path === "/static.txt") assert.equal(await response.text(),"protected static content");
-      if (path === "/api/infrastructure/status") assert.equal((await response.json()).meta.message,"Meta not connected");
+      if (path === "/api/infrastructure/status") assert.equal((await response.json()).meta.enabled,false);
     }
     const absent = await fetch(base+"/api/public/meta/collect",{ method: "POST", headers: { ...headers,"Content-Type":"application/json" }, body: JSON.stringify({ watchlistId: "test" }) });
     assert.equal(absent.status,409);
-    assert.equal((await absent.json()).message,"Meta not connected");
+    assert.match((await absent.json()).error,/Live collection is off/);
   } finally {
     if (server) await new Promise<void>(resolve => server!.close(() => resolve()));
     db.close(); await rm(root,{ recursive: true, force: true });

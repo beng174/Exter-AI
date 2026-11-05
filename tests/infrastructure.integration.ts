@@ -11,8 +11,13 @@ import { basicAuth } from "../server/auth.js";
 import { migrate } from "../server/infrastructure/database.js";
 import { attachBudgetRoutes } from "../server/infrastructure/api.js";
 import { budgetStatus, reserveCost, settleGeminiCost, releaseGeminiCost } from "../server/infrastructure/budget.js";
-import { enqueueCollection, claimJob, workOnce, schedule } from "../server/infrastructure/jobs.js";
+import { enqueueCollection, claimJob, workOnce as dispatchedWorkOnce, schedule as gatedSchedule } from "../server/infrastructure/jobs.js";
 import { collectMetaPage, MetaLibraryConnector } from "../server/connectors/meta-library.js";
+
+// Fixture-only dispatch; no credentials or live provider access.
+const fixtureEnv={EXTER_META_LIBRARY_ENABLED:"true"};
+const schedule=(pool:pg.Pool,now:Date)=>gatedSchedule(pool,now,fixtureEnv);
+const workOnce=(pool:pg.Pool,connector:MetaLibraryConnector)=>dispatchedWorkOnce(pool,connector,{env:fixtureEnv,paceMs:0});
 
 test("Postgres budgets, idempotent scheduling, append-only observations and crash recovery", async () => {
   const connectionString = process.env.TEST_DATABASE_URL;
@@ -21,6 +26,7 @@ test("Postgres budgets, idempotent scheduling, append-only observations and cras
   try {
     await migrate(pool); await migrate(pool);
     assert.equal((await pool.query("SELECT extname FROM pg_extension WHERE extname='vector'")).rowCount,1);
+    await pool.query("UPDATE meta_request_gate SET next_request_at=now()");
     await pool.query("TRUNCATE schedule_slots,ad_observations,public_ads,collection_jobs,collection_runs,watchlists,cost_ledger CASCADE");
     await pool.query(`INSERT INTO cost_ledger(id,cost_type,provider,cost_gbp,cost_basis,status) VALUES
       ('legacy-reserved','inference','gemini',1,'estimated','reserved'),
@@ -67,7 +73,7 @@ test("Postgres budgets, idempotent scheduling, append-only observations and cras
     assert.ok(disposition.status === "settled" && disposition.cost_gbp === 0.03 || disposition.status === "released" && disposition.cost_gbp === 0);
     await pool.query("UPDATE budget_settings SET monthly_budget_gbp=0 WHERE cost_type='inference'");
     await assert.rejects(reserveCost(pool,"inference","fixture",0),/Jobs paused/);
-    await pool.query("INSERT INTO watchlists(id,workspace_id,page_ids) VALUES('watch-test','workspace-test','[\"12\"]')");
+    await pool.query("INSERT INTO watchlists(id,workspace_id,brand_key,page_ids) VALUES('watch-test','workspace-test','workspace-test','[\"12\"]')");
     await schedule(pool,new Date("2026-10-30T12:00:00Z"));
     await schedule(pool,new Date("2026-10-30T13:00:00Z"));
     assert.equal((await pool.query("SELECT * FROM collection_runs")).rowCount,1);
@@ -107,6 +113,7 @@ test("Postgres budgets, idempotent scheduling, append-only observations and cras
     await workOnce(pool,failing);
     assert.equal((await pool.query("SELECT status FROM collection_runs WHERE id=$1",[thirdRun])).rows[0].status,"queued","transient errors receive a bounded retry");
     for (let attempt = 2; attempt <= 5; attempt++) {
+      await pool.query("UPDATE meta_request_gate SET next_request_at=now()");
       await pool.query("UPDATE collection_jobs SET available_at=now()-interval '1 second' WHERE id=$1",[thirdRun]);
       await workOnce(pool,failing);
     }
@@ -148,9 +155,10 @@ test("collection permission and budget pauses require manual resume while schedu
   const pool = new pg.Pool({ connectionString });
   try {
     await migrate(pool);
+    await pool.query("UPDATE meta_request_gate SET next_request_at=now()");
     await pool.query("TRUNCATE schedule_slots,ad_observations,public_ads,collection_jobs,collection_runs,watchlists,cost_ledger CASCADE");
     await pool.query("UPDATE budget_settings SET monthly_budget_gbp=10 WHERE cost_type='data_providers'");
-    await pool.query("INSERT INTO watchlists(id,workspace_id,page_ids) VALUES('watch-pauses','workspace-pauses','[\"12\"]')");
+    await pool.query("INSERT INTO watchlists(id,workspace_id,brand_key,page_ids) VALUES('watch-pauses','workspace-pauses','workspace-pauses','[\"12\"]')");
     const runId = await enqueueCollection(pool,"watch-pauses","2026-10-28");
     let providerCalls = 0;
     const disconnected = new MetaLibraryConnector({ token: "", fetch: async () => { providerCalls++; throw new Error("must not call"); } });
@@ -217,11 +225,13 @@ test("collection permission and budget pauses require manual resume while schedu
     const delayOne = (await pool.query("SELECT status,attempts,extract(epoch FROM (available_at-now()))::float8 AS delay FROM collection_jobs WHERE id=$1",[limitedRun])).rows[0];
     assert.equal(delayOne.status,"queued"); assert.equal(delayOne.attempts,1);
     assert.ok(delayOne.delay > 50 && delayOne.delay <= 60,"first transient retry waits roughly one minute");
-    await pool.query("UPDATE collection_jobs SET available_at=now()-interval '1 second' WHERE id=$1",[limitedRun]);
+    await pool.query("UPDATE meta_request_gate SET next_request_at=now()");
+      await pool.query("UPDATE collection_jobs SET available_at=now()-interval '1 second' WHERE id=$1",[limitedRun]);
     await workOnce(pool,rateLimited);
     const delayTwo = (await pool.query("SELECT attempts,extract(epoch FROM (available_at-now()))::float8 AS delay FROM collection_jobs WHERE id=$1",[limitedRun])).rows[0];
     assert.equal(delayTwo.attempts,2); assert.ok(delayTwo.delay > 110 && delayTwo.delay <= 120,"retry backoff increases exponentially");
-    await pool.query("UPDATE collection_jobs SET available_at=now()-interval '1 second' WHERE id=$1",[limitedRun]);
+    await pool.query("UPDATE meta_request_gate SET next_request_at=now()");
+      await pool.query("UPDATE collection_jobs SET available_at=now()-interval '1 second' WHERE id=$1",[limitedRun]);
     await workOnce(pool,invalid);
   } finally { await pool.end(); }
 });

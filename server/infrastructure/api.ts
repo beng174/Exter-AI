@@ -3,6 +3,9 @@ import { readBrand } from "../db.js";
 import type { Express } from "express";
 import { infrastructureDatabase } from "./database.js";
 import { budgetStatus } from "./budget.js";
+import {metaLibraryEnabled} from "../connectors/meta-library.js";
+import {configuredCreativeCompetitors} from "../demo/creative-competitors.js";
+import {randomUUID} from "node:crypto";
 import { metaStatus } from "../connectors/meta-library.js";
 import { tiktokCommercialStatus } from "../connectors/tiktok-commercial.js";
 import { enqueueCollection } from "./jobs.js";
@@ -30,7 +33,7 @@ export function attachBudgetRoutes(app: Express, getPool: () => BudgetPool = inf
   });
 }
 
-export function attachInfrastructure(app: Express, db: DatabaseSync) {
+export function attachInfrastructure(app: Express, db: DatabaseSync, getPool:()=>BudgetPool=infrastructureDatabase) {
   attachBudgetRoutes(app);
   app.get("/api/infrastructure/status", async (_req,res) => {
     const meta = metaStatus();
@@ -43,26 +46,45 @@ export function attachInfrastructure(app: Express, db: DatabaseSync) {
     } catch { res.json({ meta, tiktok, database: "unavailable", message: "Collection database unavailable. Check DATABASE_URL and run migrations." }); }
   });
   app.get("/api/public/meta/watchlists", async (req,res) => {
-    if (typeof req.query.workspaceId !== "string" || !readBrand(db,req.query.workspaceId)) { res.status(400).json({ error: "Choose an existing workspace." }); return; }
-    try { res.json((await infrastructureDatabase().query("SELECT * FROM watchlists WHERE workspace_id=$1 ORDER BY id", [req.query.workspaceId])).rows); }
+    const brand=typeof req.query.workspaceId==="string"?readBrand(db,req.query.workspaceId):null;
+    if(!brand||brand.mode==="demo"){res.status(400).json({error:"Choose an existing real workspace."});return;}
+    try { res.json((await getPool().query("SELECT id,workspace_id,brand_key,purpose,page_ids,search_terms,countries,enabled FROM watchlists WHERE workspace_id=$1 ORDER BY id", [brand.id])).rows); }
     catch { res.status(503).json({ error: "Collection database unavailable." }); }
   });
   app.put("/api/public/meta/watchlists/:id", async (req,res) => {
-    const { workspaceId, pageIds = [], searchTerms = [], countries = ["GB"] } = req.body || {};
-    if (typeof workspaceId !== "string" || !workspaceId || workspaceId.length > 120 || String(req.params.id).length > 120 || !Array.isArray(pageIds) || pageIds.length > 100 || pageIds.some((v: unknown) => typeof v !== "string" || !/^\d{1,40}$/.test(v)) || !Array.isArray(searchTerms) || searchTerms.length > 20 || searchTerms.some((v: unknown) => typeof v !== "string" || !v.trim() || v.length > 200) || !Array.isArray(countries) || !countries.length || countries.length > 30 || countries.some((v: unknown) => typeof v !== "string" || !/^[A-Z]{2}$/.test(v)) || (!pageIds.length && !searchTerms.length)) {
-      res.status(400).json({ error: "Provide a workspace, Meta page IDs or search terms, and two-letter countries." }); return;
+    const {workspaceId,brandKey,purpose="brand",pageIds=[],searchTerms=[],countries=["GB"]}=req.body||{};
+    const brand=typeof workspaceId==="string"?readBrand(db,workspaceId):null;
+    if(!brand||brand.mode==="demo"){res.status(404).json({error:"Real workspace not found."});return;}
+    const targets=[brand.id,...configuredCreativeCompetitors(db,brand,app.locals.demoCollection).map(b=>b.brandId||b.key)];
+    if(!["brand","discovery"].includes(purpose)||String(req.params.id).length>120||!String(req.params.id)||!Array.isArray(pageIds)||pageIds.length>1||pageIds.some((v:unknown)=>typeof v!=="string"||!/^\d{1,30}$/.test(v))||!Array.isArray(searchTerms)||searchTerms.length>20||searchTerms.some((v:unknown)=>typeof v!=="string"||!v.trim()||v.length>200)||!Array.isArray(countries)||!countries.length||countries.length>30||countries.some((v:unknown)=>typeof v!=="string"||!/^[A-Z]{2}$/.test(v))||purpose==="brand"&&(!targets.includes(brandKey)||searchTerms.length)||purpose==="discovery"&&(pageIds.length||brandKey)){
+      res.status(400).json({error:"Save one numeric Page ID per brand. Keywords are for category discovery only. Use two-letter countries."});return;
     }
-    if (!readBrand(db,workspaceId)) { res.status(404).json({ error: "Workspace not found." }); return; }
-    try {
-      await infrastructureDatabase().query(`INSERT INTO watchlists(id,workspace_id,page_ids,search_terms,countries) VALUES($1,$2,$3,$4,$5)
-        ON CONFLICT(id) DO UPDATE SET workspace_id=excluded.workspace_id,page_ids=excluded.page_ids,search_terms=excluded.search_terms,countries=excluded.countries`, [req.params.id,workspaceId,JSON.stringify(pageIds),JSON.stringify(searchTerms),JSON.stringify(countries)]);
-      res.json({ saved: true });
-    } catch { res.status(503).json({ error: "Collection database unavailable." }); }
+    const client=await Promise.resolve().then(()=>getPool().connect()).catch(()=>null);
+    if(!client){res.status(503).json({error:"Collection database unavailable."});return;}
+    try{
+      await client.query("BEGIN");
+      await client.query("SELECT pg_advisory_xact_lock(hashtext($1))",[brand.id]);
+      const key=purpose==="brand"?brandKey:null;
+      const existing=await client.query("SELECT * FROM watchlists WHERE id=$1 OR (workspace_id=$2 AND brand_key=$3) FOR UPDATE",[req.params.id,brand.id,key]);
+      if(existing.rows.some(w=>w.workspace_id!==brand.id)){await client.query("ROLLBACK");res.status(409).json({error:"This watchlist belongs to another workspace."});return;}
+      if(existing.rows.length>1||existing.rows.some(w=>w.brand_key&&w.brand_key!==key||w.purpose!==purpose)){await client.query("ROLLBACK");res.status(409).json({error:"Choose the saved watchlist for this brand or category."});return;}
+      const old=existing.rows[0],id=old?.id||String(req.params.id)||randomUUID(),enabled=purpose==="discovery"?searchTerms.length>0:pageIds.length>0;
+      const changed=old&&(JSON.stringify(old.page_ids)!==JSON.stringify(pageIds)||JSON.stringify(old.search_terms)!==JSON.stringify(searchTerms)||JSON.stringify(old.countries)!==JSON.stringify(countries)||old.brand_key!==key||old.purpose!==purpose);
+      if(changed){
+        // Retain old immutable runs and cursors, but never resume a different Page from an old cursor.
+        await client.query("UPDATE collection_runs SET status='superseded',finished_at=now() WHERE watchlist_id=$1 AND status IN ('queued','running','paused','not_connected','failed')",[id]);
+        await client.query("UPDATE collection_jobs j SET status='superseded',lease_until=NULL,lease_owner=NULL FROM collection_runs r WHERE r.id=j.id AND r.watchlist_id=$1 AND r.status='superseded'",[id]);
+      }
+      await client.query(`INSERT INTO watchlists(id,workspace_id,brand_key,purpose,page_ids,search_terms,countries,enabled) VALUES($1,$2,$3,$4,$5,$6,$7,$8)
+        ON CONFLICT(id) DO UPDATE SET brand_key=excluded.brand_key,purpose=excluded.purpose,page_ids=excluded.page_ids,search_terms=excluded.search_terms,countries=excluded.countries,enabled=excluded.enabled,revision=watchlists.revision+$9`,[id,brand.id,key,purpose,JSON.stringify(pageIds),JSON.stringify(searchTerms),JSON.stringify(countries),enabled,changed?1:0]);
+      await client.query("COMMIT");res.json({saved:true,id});
+    }catch(error){await client.query("ROLLBACK");if((error as {code?:string}).code==="23505")res.status(409).json({error:"This Page ID is already assigned to a watchlist brand in this workspace."});else res.status(503).json({error:"The watchlist could not be saved. Earlier collection history is retained."});}finally{client.release();}
   });
   app.post("/api/public/meta/collect", async (req,res) => {
+    if(!metaLibraryEnabled()){res.status(409).json({error:"Live collection is off. Enable it in Render before collecting."});return;}
     if (metaStatus().status === "not_connected") { res.status(409).json(metaStatus()); return; }
     if (typeof req.body?.watchlistId !== "string" || !req.body.watchlistId || req.body.watchlistId.length > 120) { res.status(400).json({ error: "Provide watchlistId." }); return; }
-    try { res.status(202).json({ runId: await enqueueCollection(infrastructureDatabase(),req.body.watchlistId) }); }
+    try { res.status(202).json({ runId: await enqueueCollection(getPool(),req.body.watchlistId) }); }
     catch { res.status(503).json({ error: "Cannot enqueue collection. Check database and watchlist configuration." }); }
   });
   app.get("/api/public/meta/observations", async (req,res) => {

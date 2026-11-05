@@ -4,7 +4,7 @@ import type { BrandResearch } from "../../../shared/brand-research";
 import type { CreativeBrowserResponse } from "../../../shared/creative-browser";
 import { researchWindow, type ResearchWindow } from "../../../shared/creative-research";
 import { api } from "../../lib/api";
-export interface Watchlist {id:string;workspace_id:string;page_ids:string[];search_terms:string[];countries:string[]}
+export type Watchlist=import("../../../shared/meta-public").MetaWatchlist;
 export interface BudgetState {cost_type:string;monthly_budget_gbp:number;used_gbp:number;paused:boolean;pause_reason:string|null}
 export interface InfrastructureState {meta?:{status:string};tiktok?:{status:string};database?:string;budgets?:BudgetState[]}
 export interface ResearchData {library:CreativeBrowserResponse;window:ResearchWindow;brand:Brand|undefined;research:BrandResearch|null;researchFailed:boolean;watchlists:Watchlist[]|null;infrastructure:InfrastructureState|null;connections:{status:string;platform?:string;name?:string}[]|null;budgets:BudgetState[]|null}

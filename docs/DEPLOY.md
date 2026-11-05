@@ -1,5 +1,55 @@
 # Deploying Exter on Render
 
+## Meta Ad Library activation
+
+API access was confirmed by the owner on 4 Nov 2026 using Graph v26.0,
+UK commercial ads and `ad_type=ALL`. Implementation fixtures are not live
+verification. Live collection stays off until the switch is explicitly enabled.
+
+1. Deploy the latest exter-test-drive commit to **exter-ai** and **exter-worker**.
+   Keep the existing web disk and shared Postgres. Web and worker startup apply
+   the additive migration; `npm run db:migrate` is also safe to repeat.
+2. Put the approved `META_ACCESS_TOKEN` in **Render secrets on exter-ai and
+   exter-worker**. The scheduler only enqueues and does **not** need this token.
+   Do not put it in the browser, database, command arguments or logs. This public
+   token is separate from the owned-account `EXTER_META_ACCESS_TOKEN`.
+3. Leave `EXTER_META_LIBRARY_ENABLED` absent or `false` on **all three services**
+   while checking setup. `META_API_VERSION` defaults to v26.0 on web and worker;
+   remove an old v25.0 override or set the intended version explicitly.
+4. In **Competitors > Edit watchlist**, or **Data sources > Meta Ad Library API > Edit watchlist**, save
+   the numeric Meta Page ID for your brand and each competitor. Each brand gets
+   its own durable watchlist. Keywords are separate category discovery and never
+   assign ads to a brand. Legacy unassigned watchlists retain their history but
+   must be assigned to brands before automatic collection.
+5. Keep a non-zero **Data sources > Budgets and schedule** provider budget. The
+   existing guard also applies to these zero-cost public requests.
+6. When ready, set `EXTER_META_LIBRARY_ENABLED=true` on **exter-ai, exter-worker
+   and exter-scheduler**, then redeploy/restart those services. Configure the
+   existing scheduler cron as `0 2,3 * * *` UTC. The application admits one daily
+   slot from 03:00 Europe/London, so BST and GMT both run at 3am UK time. These
+   two invocations preserve the existing owned scheduler's daily idempotence.
+7. At the next UK slot, each brand backfills the last 12 months. The date window,
+   Page ID, countries and revision are saved with the run. Restarts resume the
+   saved opaque cursor. Subsequent daily scans cover the rolling 12-month window
+   to pick up both older ads and restated lifetime reach. Dispatch is serialised
+   across workers, paced at least 20 seconds apart, and delayed further by Graph
+   usage headers, Retry-After and bounded exponential retries. No media is
+   downloaded through this API; existing browser-captured media stays attached.
+8. Review the Meta Ad Library row's status and last successful check. Public
+   reach is Observed; reach-based share of voice is an Estimated watchlist proxy,
+   not weekly reach or impressions. No commercial spend or impressions are
+   created. A revoked token or budget pause needs an explicit same-origin JSON
+   `POST /api/public/meta/collect` with `watchlistId` to resume after correction.
+   Saved pages and cursors are retained. Editing a Page ID supersedes active runs
+   and starts a new backfill without deleting earlier observations.
+
+Turn the switch off on all three services to stop new dispatch and scheduling.
+Queued work and saved cursors remain. Before rolling back to an older worker
+that does not understand the switch, stop that worker and scheduler and remove
+META_ACCESS_TOKEN from the old worker. The flag alone cannot stop an old binary.
+No owned-account live gates, model settings,
+budgets or low-cost kernel switches are activated by this release.
+
 ## Low-cost kernel release
 
 This release adds durable kernel jobs, a scoped authenticated artifact broker,
@@ -129,7 +179,7 @@ in the provider console and enter its replacement directly in host secret settin
 | `GEMINI_MAX_RETRIES` | Extra attempts after HTTP 500/503/429 or transport timeouts, default `2` (three attempts total), integer `0`–`5`; exponential backoff honours bounded Retry-After |
 | `CHROMIUM_PATH` | `/usr/bin/chromium` in the Docker image; needed only to resolve missing public Valentte media |
 | `META_ACCESS_TOKEN` | Approved Meta Ad Library access; never required merely to start the app |
-| `META_API_VERSION` | Defaults to `v25.0`; verify supported fields/version with your approved app |
+| `META_API_VERSION` | Defaults to `v26.0`; optional override for public-library requests |
 | `APIFY_TOKEN`, `YOUTUBE_API_KEY` | Reserved for later connectors; no implemented paid calls yet |
 | `MEDIA_STORAGE_TYPE`, `MEDIA_STORAGE_PATH` | `disk`, `/var/data/media`; unsupported types are rejected |
 | `EXTER_DB_PATH` | Legacy application SQLite path, `/var/data/exter.db` |

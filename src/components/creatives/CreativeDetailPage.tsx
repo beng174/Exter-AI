@@ -1,3 +1,4 @@
+import {displayedReach} from "../../../shared/meta-public";
 import { CreativeScoreBreakdown } from "../ui/CreativeScoreBreakdown";
 import { CreativeDetailReadModel } from "./CreativeDetailReadModel";
 import { Caveat } from "../ui/Caveat";
@@ -27,6 +28,7 @@ function Detail({row,data,filtered,onOpen,onRefresh}:DetailProps&{row:BrowserCre
   const video=useRef<HTMLVideoElement>(null);
   const [mediaError,setMediaError]=useState(false),[slide,setSlide]=useState(0),[scope,setScope]=useState(row.performance.length===1?row.performance[0].id:"");
   useEffect(()=>{window.scrollTo(0,0);},[row.adId]);
+  const reach=displayedReach(row.publicReach);
   const own=row.workspaceBrand&&row.owned,cohort=own?row.performance.find(item=>item.id===scope):undefined;
   const index=filtered.findIndex(item=>item.adId===row.adId),title=creativeTitle(row);
   const meta=creativeMeta(row),fields=row.analysis?.fields,videoFields=row.analysis?.mediaKind==="video"?row.analysis.fields:null;
@@ -100,8 +102,9 @@ function Detail({row,data,filtered,onOpen,onRefresh}:DetailProps&{row:BrowserCre
         </SectionCard></div>
       </div>
       <div className="creative-detail-evidence-column">
-        <SectionCard title="Performance" help={row.workspaceBrand?"Your saved account outcomes":"Public signals only"} meta={row.workspaceBrand?ownedMeta:meta} empty={row.workspaceBrand&&!cohort&&row.performance.length===0?performanceGap:!row.workspaceBrand&&!hasValue(row.daysRunning)?{reason:"The source did not supply running history.",...original}:false}>
+        <SectionCard title="Performance" help={row.workspaceBrand?"Your saved account outcomes":"Public signals only"} meta={row.workspaceBrand?ownedMeta:meta} empty={!reach&&row.workspaceBrand&&!cohort&&row.performance.length===0?performanceGap:!reach&&!row.workspaceBrand&&!hasValue(row.daysRunning)?{reason:"The source did not supply running history.",...original}:false}>
           {own&&row.performance.length>0&&<label className="creative-scope">Reporting scope<select aria-label="Reporting scope" value={scope} onChange={event=>setScope(event.target.value)}><option value="">Choose one account and reporting scope</option>{row.performance.map(item=><option key={item.id} value={item.id}>{plainEnum(item.platform)} · {item.accountId} · {item.currency} · {plainEnum(item.attribution)} · {plainEnum(item.conversionEvent)} · {ukDate(item.from)} to {ukDate(item.to)}</option>)}</select></label>}
+          {reach&&<><MetricTile label={reach.label} value={new Intl.NumberFormat("en-GB").format(reach.value)} basis="Observed" onEvidence={evidence}/><Caveat>Published lifetime reach at {ukDate(row.reachObservedAt)}. This is not impressions, conversions or sales.</Caveat></>}
           {!row.workspaceBrand?<MetricTile label="Days running" value={row.daysRunning} basis="Observed" onEvidence={evidence}/>:cohort?<><div className="creative-performance">{(["Spend","ROAS","CPA","Hook rate","Hold rate","Frequency"] as const).map(name=><MetricTile key={name} label={name} value={metricText(cohort.metrics[name],name,cohort.currency)} basis="Observed" onEvidence={evidence} reason={metricReason(cohort.metrics[name])}/>)}</div>
             <Caveat>{cohort.currency} · {plainEnum(cohort.attribution)} · {plainEnum(cohort.conversionEvent)}. Benchmark: all ads in the same account and dates. Missing values lack required data or the minimum sample.</Caveat></>:<Unavailable reason="Choose one account scope to see its metrics." label=""/>}
         </SectionCard>

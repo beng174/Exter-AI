@@ -36,7 +36,7 @@ Before finishing run npm run check, npm test, npm run build, npm run secrets:che
 ## Boundaries
 
 Read keys only from environment variables: EXTER_ADMIN_USER, EXTER_ADMIN_PASSWORD,
-GEMINI_API_KEY, META_ACCESS_TOKEN, EXTER_META_GRAPH_VERSION, TIKTOK_CLIENT_KEY,
+GEMINI_API_KEY, META_ACCESS_TOKEN, META_API_VERSION, EXTER_META_LIBRARY_ENABLED, EXTER_META_GRAPH_VERSION, TIKTOK_CLIENT_KEY,
 TIKTOK_CLIENT_SECRET, EXTER_META_ACCESS_TOKEN, EXTER_META_AD_ACCOUNT_ID,
 EXTER_TIKTOK_ACCESS_TOKEN, EXTER_OWNED_SYNC_ENABLED. Never log, print, commit
 or put keys in fixtures.
@@ -88,3 +88,7 @@ archived skill.
 
 UI work follows research/UI-SPEC.md and design/screens/.
 Read design/reference/README.md before UI work; compare each screen with its PNG and static HTML.
+
+Public Meta collection stays off unless EXTER_META_LIBRARY_ENABLED=true in both
+scheduler and worker. Collect watchlist brands by Page ID; keywords are category
+discovery only. Public commercial reach is Observed, never private spend or impressions.

@@ -1,15 +1,18 @@
 import type pg from "pg";
 import { reserveCost } from "../infrastructure/budget.js";
 import { boundedPublicBody } from "./public-json.js";
+import { publishedReach } from "../../shared/meta-public.js";
 export const META_COVERAGE = "Commercial ads delivered in the UK or EU; searchable for one year. Public reach is not conversions or sales. Media requires a separate browser capture.";
 export const META_FIELDS = "id,page_id,page_name,ad_creation_time,ad_delivery_start_time,ad_delivery_stop_time,ad_creative_bodies,ad_creative_link_titles,ad_creative_link_descriptions,ad_creative_link_captions,ad_snapshot_url,publisher_platforms,languages,target_ages,target_gender,target_locations,eu_total_reach,total_reach_by_location,age_country_gender_reach_breakdown,beneficiary_payers";
 export function metaStatus(env:Record<string,string|undefined>=process.env) {
   const configured=Boolean(env.META_ACCESS_TOKEN?.trim()&&!/[\r\n]/.test(env.META_ACCESS_TOKEN));
-  return { status: configured ? "configured" : "not_connected", message: configured ? "Meta configured; collection permission is verified on the next run." : "Meta not connected", coverage: META_COVERAGE };
+  return { status: configured ? "configured" : "not_connected", enabled:metaLibraryEnabled(env), message: !metaLibraryEnabled(env)?"Live collection is off.":configured ? "Meta configured; collection permission is verified on the next run." : "Meta not connected", coverage: META_COVERAGE };
 }
+export function metaLibraryEnabled(env:Record<string,string|undefined>=process.env){return env.EXTER_META_LIBRARY_ENABLED==="true";}
 export class MetaCollectionError extends Error {
-  constructor(public reason: "rate_limited" | "permission" | "unavailable" | "schema", message: string) { super(message); }
+  constructor(public reason: "rate_limited" | "permission" | "unavailable" | "schema", message: string,public retryAfterMs=0) { super(message); }
 }
+function retryDelay(value:string|null){if(!value)return 0;const seconds=Number(value);const delay=Number.isFinite(seconds)?seconds*1000:Date.parse(value)-Date.now();return Number.isFinite(delay)&&delay>0?Math.min(delay,86400000):0;}
 function httpFailure(status: number) {
   return new MetaCollectionError(status === 429 ? "rate_limited" : [401,403].includes(status) ? "permission" : status === 400 ? "schema" : "unavailable", `Meta collection failed (HTTP ${status}). Check app approval, request configuration and provider availability.`);
 }
@@ -26,42 +29,49 @@ function graphFailure(error: unknown, status: number) {
     return new MetaCollectionError("unavailable", `Meta collection is temporarily unavailable (HTTP ${status}).`);
   return status >= 400 ? httpFailure(status) : new MetaCollectionError("schema", "Meta returned an unsupported application error.");
 }
-export interface MetaQuery { pageIds?: string[]; searchTerm?: string; countries: string[]; after?: string | null }
+export interface MetaQuery { pageIds?: string[]; searchTerm?: string; countries: string[]; after?: string | null; from?:string;to?:string }
 export class MetaLibraryConnector {
   constructor(private readonly options: { token?: string; version?: string; fetch?: typeof fetch } = {}) {}
   async page(query: MetaQuery) {
     const token = this.options.token ?? process.env.META_ACCESS_TOKEN;
     if (!token?.trim() || /[\r\n]/.test(token)) throw new MetaCollectionError("permission", "Meta not connected");
-    const version = this.options.version ?? process.env.META_API_VERSION ?? "v25.0";
+    const version = this.options.version ?? process.env.META_API_VERSION ?? "v26.0";
     if (!/^v\d+\.0$/.test(version)) throw new MetaCollectionError("schema", "Invalid META_API_VERSION.");
     if (!query.countries.length || query.countries.some(c => !/^[A-Z]{2}$/.test(c))) throw new MetaCollectionError("schema", "Use two-letter reached-country codes.");
     if ((!query.pageIds?.length && !query.searchTerm) || query.pageIds?.some(id => !/^\d+$/.test(id))) throw new MetaCollectionError("schema", "Provide Meta page IDs or a category search term.");
+    if(query.pageIds?.length&&query.searchTerm)throw new MetaCollectionError("schema","Brand collection uses Page IDs; category discovery uses keywords separately.");
+    if([query.from,query.to].some(value=>value!==undefined&&(!/^\d{4}-\d{2}-\d{2}$/.test(value)||!Number.isFinite(Date.parse(value))||new Date(value).toISOString().slice(0,10)!==value))||query.from&&query.to&&query.from>query.to)throw new MetaCollectionError("schema","Choose a valid collection date range.");
     const url = new URL(`https://graph.facebook.com/${version}/ads_archive`);
     url.searchParams.set("fields", META_FIELDS);
     url.searchParams.set("ad_reached_countries", JSON.stringify(query.countries));
     url.searchParams.set("ad_active_status", "ALL");
+    url.searchParams.set("ad_type", "ALL");
     url.searchParams.set("limit", "100");
     if (query.pageIds?.length) url.searchParams.set("search_page_ids", JSON.stringify(query.pageIds));
     if (query.searchTerm) url.searchParams.set("search_terms", query.searchTerm);
     if (query.after) url.searchParams.set("after", query.after);
+    if(query.from)url.searchParams.set("ad_delivery_date_min",query.from);
+    if(query.to)url.searchParams.set("ad_delivery_date_max",query.to);
     let response: Response;
     try { response = await (this.options.fetch ?? fetch)(url, { headers: { Authorization: `Bearer ${token}` }, redirect: "error", signal: AbortSignal.timeout(30000) }); }
     catch { throw new MetaCollectionError("unavailable", "Meta request unavailable; collection will resume from its saved cursor."); }
+    const responseFailure=()=>{const error=httpFailure(response.status);error.retryAfterMs=retryDelay(response.headers.get("retry-after"));return error;};
     // Never store paging URLs or provider error messages: they may contain credentials.
-    if (Number(response.headers.get("content-length")) > 10000000) throw response.ok ? new MetaCollectionError("schema", "Meta page exceeds size limit.") : httpFailure(response.status);
+    if (Number(response.headers.get("content-length")) > 10000000) throw response.ok ? new MetaCollectionError("schema", "Meta page exceeds size limit.") : responseFailure();
     let raw:string;
     try { raw = await boundedPublicBody(response,10000000); }
-    catch { throw response.ok ? new MetaCollectionError("schema", "Meta page could not be read within the size and request limits.") : httpFailure(response.status); }
+    catch { throw response.ok ? new MetaCollectionError("schema", "Meta page could not be read within the size and request limits.") : responseFailure(); }
     let body: any;
-    try { body = JSON.parse(raw); } catch { throw response.ok ? new MetaCollectionError("schema", "Meta returned invalid JSON.") : httpFailure(response.status); }
-    if (!body || typeof body !== "object" || Array.isArray(body)) throw response.ok ? new MetaCollectionError("schema", "Meta returned an unsupported ad schema.") : httpFailure(response.status);
-    if (body.error) throw graphFailure(body.error,response.status);
-    if (!response.ok) throw httpFailure(response.status);
+    try { body = JSON.parse(raw); } catch { throw response.ok ? new MetaCollectionError("schema", "Meta returned invalid JSON.") : responseFailure(); }
+    if (!body || typeof body !== "object" || Array.isArray(body)) throw response.ok ? new MetaCollectionError("schema", "Meta returned an unsupported ad schema.") : responseFailure();
+    if (body.error||!response.ok){const error=body.error?graphFailure(body.error,response.status):responseFailure();error.retryAfterMs=retryDelay(response.headers.get("retry-after"));throw error;}
     if (!Array.isArray(body.data) || body.data.length > 100 || body.data.some((r: any) => !r || typeof r.id !== "string" || !/^\d+$/.test(r.id))) throw new MetaCollectionError("schema", "Meta returned an unsupported ad schema.");
     const after = body.paging?.next ? body.paging?.cursors?.after : null;
-    if (body.paging?.next && (typeof after !== "string" || !after || after === query.after || after.length > 2000 || after.includes(token))) throw new MetaCollectionError("schema", "Meta pagination cursor is invalid.");
-    // Explicit allowlist; recursively remove the token even from an unexpected source field.
-    const rows = body.data.map((row: any) => JSON.parse(JSON.stringify(Object.fromEntries(META_FIELDS.split(",").filter(key => key in row).map(key => [key,row[key]]))).split(token).join("[redacted]")));
+    if (body.paging?.next && (typeof after !== "string" || !after || after === query.after || after.length > 2000 || after.includes(token)||/https?:|access_token|[\r\n]/i.test(after))) throw new MetaCollectionError("schema", "Meta pagination cursor is invalid.");
+    // Source copy is untrusted too. Remove credentials and paging URLs recursively.
+    const pagingUrls=[body.paging?.next,body.paging?.previous].filter((v):v is string=>typeof v==="string"&&v.length>0);
+    const clean=(value:any):any=>typeof value==="string"?pagingUrls.reduce((s,url)=>s.split(url).join("[redacted]"),value).split(token).join("[redacted]"):Array.isArray(value)?value.map(clean):value&&typeof value==="object"?Object.fromEntries(Object.entries(value).filter(([key])=>!["paging","next","previous","access_token","error"].includes(key)).map(([key,v])=>[key,clean(v)])):value;
+    const rows = body.data.map((row:any)=>({...clean(Object.fromEntries(META_FIELDS.split(",").filter(key=>key in row).map(key=>[key,row[key]]))),ad_snapshot_url:`https://www.facebook.com/ads/library/?id=${row.id}`}));
     let usage = 0;
     for (const header of ["x-app-usage", "x-business-use-case-usage"]) {
       try {
@@ -70,30 +80,21 @@ export class MetaLibraryConnector {
         walk(data);
       } catch { /* Malformed usage headers do not erase a successfully collected page. */ }
     }
-    const retryAfter = Number(response.headers.get("retry-after"));
-    return { rows, after: after as string | null, backoffMs: usage >= 80 ? 60000 : Number.isFinite(retryAfter) && retryAfter > 0 ? Math.min(retryAfter * 1000,3600000) : 0 };
+    return { rows, after: after as string | null, backoffMs: Math.max(usage >= 80 ? 60000 : 0,retryDelay(response.headers.get("retry-after"))) };
   }
-}
-function observedReach(row: any) {
-  const raw=row.eu_total_reach;
-  const eu=typeof raw==="number"?raw:typeof raw==="string"&&/^\d+$/.test(raw)?Number(raw):null;
-  return {
-    eu: typeof eu!=="number"||!Number.isSafeInteger(eu)||eu<0 ? { type: "unavailable", value: null } : { type: "observed", value: eu },
-    locations: row.total_reach_by_location === undefined || row.total_reach_by_location === null ? { type: "unavailable", value: null } : { type: "observed", value: row.total_reach_by_location },
-  };
 }
 export async function collectMetaPage(pool: pg.Pool, runId: string, connector = new MetaLibraryConnector(), leaseOwner?: string) {
   const result = await pool.query("SELECT r.*,w.workspace_id,w.page_ids,w.search_terms,w.countries FROM collection_runs r JOIN watchlists w ON w.id=r.watchlist_id WHERE r.id=$1", [runId]);
   const run = result.rows[0];
-  if (!run || run.status === "complete") return { complete: true, backoffMs: 0 };
+  if (!run || ["complete","superseded"].includes(run.status)) return { complete: true, backoffMs: 0 };
   const config = run.config || run;
   const queries: MetaQuery[] = [
-    ...(config.page_ids.length ? [{ pageIds: config.page_ids, countries: config.countries }] : []),
-    ...config.search_terms.map((searchTerm: string) => ({ searchTerm, countries: config.countries })),
+    ...(config.purpose!=="discovery"&&config.page_ids.length ? [{ pageIds: config.page_ids, countries: config.countries }] : []),
+    ...(config.purpose==="discovery"||!config.page_ids.length?config.search_terms.map((searchTerm: string) => ({ searchTerm, countries: config.countries })):[]),
   ];
   if (!queries.length) throw new MetaCollectionError("schema", "Watchlist has no advertisers or search terms.");
   await reserveCost(pool,"data_providers","meta",0);
-  const page = await connector.page({ ...queries[run.query_index], after: run.cursor });
+  const page = await connector.page({ ...queries[run.query_index],from:config.from,to:config.to, after: run.cursor });
   const client = await pool.connect();
   try {
     await client.query("BEGIN");
@@ -102,7 +103,7 @@ export async function collectMetaPage(pool: pg.Pool, runId: string, connector = 
       const lease = await client.query("SELECT id FROM collection_jobs WHERE id=$1 AND lease_owner=$2 AND lease_until>now() FOR UPDATE", [runId,leaseOwner]);
       if (!lease.rowCount) throw new Error("Collection lease expired.");
     }
-    if (locked.rows[0].cursor !== run.cursor || locked.rows[0].query_index !== run.query_index || locked.rows[0].status === "complete") {
+    if (locked.rows[0].cursor !== run.cursor || locked.rows[0].query_index !== run.query_index || ["complete","superseded"].includes(locked.rows[0].status)) {
       await client.query("ROLLBACK"); return { complete: false, backoffMs: 0 };
     }
     if (page.after) {
@@ -118,7 +119,7 @@ export async function collectMetaPage(pool: pg.Pool, runId: string, connector = 
 
       await client.query("UPDATE public_ads SET advertiser_id=COALESCE($2,advertiser_id),start_time=COALESCE($3,start_time),stop_time=COALESCE($4,stop_time) WHERE platform='Meta' AND native_id=$1", [String(row.id),row.page_id ?? null,row.ad_delivery_start_time ?? null,row.ad_delivery_stop_time ?? null]);
       const observation = await client.query(`INSERT INTO ad_observations(platform,native_id,run_id,workspace_id,active_status,reach,raw_payload)
-        VALUES('Meta',$1,$2,$3,$4,$5,$6) ON CONFLICT DO NOTHING RETURNING native_id`, [String(row.id),runId,run.workspace_id,active,observedReach(row),row]);
+        VALUES('Meta',$1,$2,$3,$4,$5,$6) ON CONFLICT DO NOTHING RETURNING native_id`, [String(row.id),runId,run.workspace_id,active,publishedReach(row),row]);
       if (observation.rowCount) { if (inserted.rowCount) added++; else updated++; }
     }
     const nextIndex = page.after ? run.query_index : run.query_index + 1;
