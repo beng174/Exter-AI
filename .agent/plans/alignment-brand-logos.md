@@ -11,7 +11,7 @@ Apply the requested alignment rules to every real and explicit sample screen, an
 - [x] 2026-11-04 UTC: Added shared brand identity, configured competitor registry, alt/limit/isolation fixtures; initial four checks passed with 416 tests.
 - [x] 2026-11-05 UTC: Added the shared five-check score table, coverage, Provisional, totals, plain reasons and source moments; omitted wholly missing table data and collapsed missing sections.
 - [x] 2026-11-05 00:10 UTC: All 90 layout cases, sample/real/filter regressions and score interactions pass; all four required checks pass with 419 tests. Requested screenshot pairs and score captures are complete.
-- [ ] Publish the reviewed changes against exter-test-drive.
+- [x] 2026-11-05 UTC: Published https://github.com/beng174/Exter-AI/pull/12 against exter-test-drive. Final evidence-link next-creative reset and all score screenshots pass.
 
 ## Surprises and discoveries
 - The retained real preview has no completed creative scores. Kept its compact honest gap; labelled ordinary-route test screenshots as fixtures.

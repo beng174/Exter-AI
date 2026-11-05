@@ -482,3 +482,8 @@ and blockers below remain unchanged.
   kernel work remains paused. No dependencies, schema, budgets, provider settings
   or worker changes. After merge: Render > exter-ai > Manual Deploy > Deploy latest
   commit. Keep existing secrets, budgets and disk; no migration is needed.
+
+- Review: https://github.com/beng174/Exter-AI/pull/12 on feat/alignment-brand-logos,
+  against exter-test-drive. The description includes five before/after pairs,
+  sample and explicitly synthetic score screenshots, the 90-case audit,
+  retained differences and deployment steps. All checks pass with 419 tests.
