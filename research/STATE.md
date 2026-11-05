@@ -548,3 +548,36 @@ and blockers below remain unchanged.
 - Review: https://github.com/beng174/Exter-AI/pull/14 against exter-test-drive.
   Live collection has not been enabled. Render activation and rollback steps are
   in docs/DEPLOY.md; the existing web disk and Postgres must be retained.
+
+## Confirmed Page discovery follow-up, 5 Nov 2026
+
+- The Page-discovery follow-up suggests IDs for missing watchlist brands and competitors.
+  Searches use the saved name, GB, ALL ad type and ALL activity statuses.
+  Candidate order uses website-caption matches, name match and distinct ads.
+- Suggestions never write a Page ID or collected-ad observation. Explicit
+  Confirm or manual save is required. Competitors and Data sources share the
+  same editor, showing Page pictures, ad counts and an example Ad Library link.
+- Lookup requires META_ACCESS_TOKEN on web and shares the collection gate and
+  budget guard. The collection switch remains default off. Search suggestions
+  are cached for 30 minutes; initial coverage is ten pages, with explicit extra
+  batches up to 10,000 ads. Partial coverage is labelled. Preview pictures use
+  bounded local raster storage with hashed cache identities and monthly refresh.
+- No live provider calls were made. Fixture validation does not close either
+  own-account live gate. Owned sync stays off and low-cost kernel work is paused.
+
+- Follow-up validation: check, 441 unit tests and build pass, with six disposable
+  Postgres cases and 28 browser screen/width checks. Candidate screenshots from
+  both entry points at 1440px and 390px are in output/playwright/meta-library/.
+  Fixtures are not live verification. The prior 90-case alignment audit belongs
+  to the earlier PR #14 validation; the new UI is confined to the shared editor.
+
+- Page-discovery follow-up: all four required checks pass, including the staged
+  secrets scan. PR #14 merged during implementation, so this is a separate
+  follow-up from exter-test-drive at 84131ee; the readability/source-icon
+  request is a separate implementation step. The owner enabled public collection
+  in render.yaml on the latest base; that setting is preserved. No live provider
+  calls or deployment-setting changes were made by this follow-up.
+
+- Completed Page discovery review: https://github.com/beng174/Exter-AI/pull/15,
+  based on the latest exter-test-drive. Readability and provider-icon work follows
+  separately so that this completed feature remains reviewable.

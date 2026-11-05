@@ -9,6 +9,7 @@ import {randomUUID} from "node:crypto";
 import { metaStatus } from "../connectors/meta-library.js";
 import { tiktokCommercialStatus } from "../connectors/tiktok-commercial.js";
 import { enqueueCollection } from "./jobs.js";
+import {attachMetaPageCandidates,type PageLookupApiOptions} from "./meta-page-api.js";
 type BudgetPool = ReturnType<typeof infrastructureDatabase>;
 
 export function attachBudgetRoutes(app: Express, getPool: () => BudgetPool = infrastructureDatabase) {
@@ -33,8 +34,9 @@ export function attachBudgetRoutes(app: Express, getPool: () => BudgetPool = inf
   });
 }
 
-export function attachInfrastructure(app: Express, db: DatabaseSync, getPool:()=>BudgetPool=infrastructureDatabase) {
+export function attachInfrastructure(app: Express, db: DatabaseSync, getPool:()=>BudgetPool=infrastructureDatabase,pageOptions:PageLookupApiOptions={}) {
   attachBudgetRoutes(app);
+  attachMetaPageCandidates(app,db,getPool,pageOptions);
   app.get("/api/infrastructure/status", async (_req,res) => {
     const meta = metaStatus();
     const tiktok=tiktokCommercialStatus();
