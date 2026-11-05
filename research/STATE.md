@@ -517,3 +517,8 @@ and blockers below remain unchanged.
   with no page overflow. Updated Competitors screenshots at 1280px, 1440px
   and 1920px plus the audit are in output/playwright/brand-columns/.
   Fixtures are not live verification; no provider calls were made.
+
+- Follow-up review: https://github.com/beng174/Exter-AI/pull/13 against
+  exter-test-drive, with all three width screenshots and the 90-case audit.
+  After merge: Render > exter-ai > Manual Deploy > Deploy latest commit.
+  No migration or worker deployment is needed; keep existing secrets and disk.

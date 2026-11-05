@@ -5,7 +5,7 @@ Apply the requested alignment rules to every real and explicit sample screen, an
 
 ## Progress
 - [x] 2026-11-05: Built the focused follow-up from exter-test-drive at bffe27a after PR #12 merged. Uniform column alignment and Meta Page logo precedence pass all 424 unit tests, type check, build, secret scan and 90 browser layout cases. Screenshots at all three widths are in output/playwright/brand-columns/.
-- [ ] Publish the focused follow-up PR.
+- [x] 2026-11-05: Published the focused follow-up at https://github.com/beng174/Exter-AI/pull/13 against exter-test-drive.
 - [x] 2026-11-04 UTC: Read project/spec/reference rules and start from latest exter-test-drive (9029e4e, merged sample PR).
 - [x] 2026-11-04 UTC: Captured the five before screens; inspected all 90 screen/mode/width combinations.
 - [x] 2026-11-04 UTC: Added rule 7 and shared subgrid/table/metric/action alignment; 90-case audit passed.
