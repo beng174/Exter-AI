@@ -1,0 +1,26 @@
+[
+  {
+    "view": "data",
+    "width": 1440,
+    "retry": true,
+    "writes": "one scoped collection POST, no Page save"
+  },
+  {
+    "view": "competitors",
+    "width": 1440,
+    "retry": true,
+    "writes": "one scoped collection POST, no Page save"
+  },
+  {
+    "view": "data",
+    "width": 390,
+    "retry": true,
+    "writes": "one scoped collection POST, no Page save"
+  },
+  {
+    "view": "competitors",
+    "width": 390,
+    "retry": true,
+    "writes": "one scoped collection POST, no Page save"
+  }
+]

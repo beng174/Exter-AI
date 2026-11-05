@@ -8,6 +8,6 @@
 .ui-source-detail>small { display:flex;align-items:center;flex-wrap:wrap;gap:4px 12px;color:var(--muted);font-size:12px;line-height:1.5; }
 .ui-source-detail>small>span { min-width:0; }
 .ui-source-detail .ui-data-label { margin-left:4px; }
-.reference-ui [aria-label="Source health"] .ui-data-table th:first-child { width:28%; }
-.reference-ui [aria-label="Source health"] .ui-data-table th:nth-child(2) { width:15%; }
-.reference-ui [aria-label="Source health"] .ui-data-table th:last-child { width:132px; }
+.reference-ui [aria-label="Source health"]>.ui-data-table th:first-child { width:28%; }
+.reference-ui [aria-label="Source health"]>.ui-data-table th:nth-child(2) { width:15%; }
+.reference-ui [aria-label="Source health"]>.ui-data-table th:last-child { width:132px; }

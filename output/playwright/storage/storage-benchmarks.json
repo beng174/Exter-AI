@@ -1,0 +1,39 @@
+{
+  "fixtureRawJsonBytes": 2365,
+  "postgresMajorVersion": 17,
+  "scenarios": [
+    {
+      "ads": 1000,
+      "checks": 30,
+      "changedFractionPerCheck": 0,
+      "observations": 1000,
+      "payloads": 1000,
+      "live_row_bytes": "1306000",
+      "stored_payload_bytes": "652000",
+      "allocated_observation_bytes": "17842176",
+      "index_bytes": "360448"
+    },
+    {
+      "ads": 1000,
+      "checks": 30,
+      "changedFractionPerCheck": 0.1,
+      "observations": 3900,
+      "payloads": 3900,
+      "live_row_bytes": "5093400",
+      "stored_payload_bytes": "2542700",
+      "allocated_observation_bytes": "26165248",
+      "index_bytes": "901120"
+    },
+    {
+      "ads": 1000,
+      "checks": 30,
+      "changedFractionPerCheck": 1,
+      "observations": 30000,
+      "payloads": 30000,
+      "live_row_bytes": "39180000",
+      "stored_payload_bytes": "19559000",
+      "allocated_observation_bytes": "46751744",
+      "index_bytes": "5742592"
+    }
+  ]
+}

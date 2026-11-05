@@ -407,8 +407,13 @@ followed or stored; only the cursor is used on the fixed official host. Usage at
 80% postpones the next page; failures use persisted exponential retry delays.
 Errors remain visible rather than appearing as a successful empty source.
 
-Ads are unique by platform/native ID. History is unique by ad/run; subsequent runs
-append observations. UK/location and EU reach are stored as observed source data;
+Ads are unique by platform/native ID. History retains changed states within each
+workspace, watchlist and revision. An unchanged scan advances last_confirmed_at
+on its latest observation; changed states append a new ad/run observation.
+Original rows, observation times and source payloads are never removed. Raw JSON
+is stored on the first observation and when its semantic content changes. A new
+normalised state with identical raw JSON references that earlier payload directly;
+readers resolve the complete payload. UK/location and EU reach are observed data;
 missing reach remains unavailable. An absent stop date does not prove current
 activity, so status remains unknown unless the source supplies a stop. Public
 collection does not infer spend, conversions, performance winners or model scores.
@@ -416,6 +421,144 @@ Collection data is shown in its own panel and evidence endpoint; it is not yet
 projected into legacy SQLite analytics. Snapshot URLs are not media files. The
 existing bounded browser collector and media store remain a separate workflow;
 automatic snapshot media capture is still outstanding.
+
+### Meta collection diagnosis and retry
+
+Data sources shows **Meta collection by brand** within Source health. Edit
+watchlist shows the same progress beside each saved Page ID: latest run status,
+ads saved, pages fetched, stopping/finish time, controlled error and numeric Graph
+code, subcode and HTTP status when recorded. Ads saved counts newly written or
+changed snapshots; unchanged checks confirm earlier snapshots without adding
+rows. Pages fetched counts successfully committed pages at the saved cursor.
+For older runs it is reconstructed from collection_cursors plus query_index.
+Active progress refreshes every five seconds using small saved-status requests,
+without downloading the ad dataset again. A failed refresh retains the last
+details and shows one refresh notice. Unknown codes/times stay unknown.
+The earlier 7,752-ad failure has no recoverable
+Graph code if the old worker never recorded it; the generic message alone does
+not establish that a page was too large.
+
+Failed attempts retain only a controlled error kind, timestamp, page size,
+numeric Graph code/subcode, numeric HTTP status and timeout flag. No request URL,
+paging URL, provider message, trace text or token is stored or logged. The UI
+shows the latest failure and the latest 20 failure details; all events stay in
+the database. Resuming an older failed run preserves its known stopping time as
+a legacy event with no invented numeric code. A measurement/configuration or
+budget failure also gets a controlled event without claiming an HTTP response.
+
+Each request has a 90-second deadline including body transfer. For Graph code 1,
+HTTP 500 or a timeout, the queue retries the **same cursor** at page sizes
+100, 50, 25 and 10, starting at the brand's remembered size. Each size reduction
+is a new paced worker turn and does not consume a failed-page attempt. This
+avoids four long requests exceeding the existing two-minute lease. After the
+smallest size fails, the normal bounded attempts/backoff apply; terminal failure
+retains the checkpoint. Other transient errors retain normal retry behaviour;
+permission and rate-limit errors take priority over reducing page size.
+
+A successful page commits its cursor, counters, observations and working size
+atomically. The working size stays on that brand's watchlist for later pages and
+runs; another brand keeps its own size. Pending smaller sizes survive a restart.
+The request fields, Page/country filters, rolling 12-month window and daily
+03:00 Europe/London schedule are unchanged.
+
+Use **Retry collection** for a failed or paused brand. It resumes the existing
+run from its saved cursor; it does not clear ads or start the backfill again.
+The UI requires saved Page IDs, the live switch, configured token and available
+data-provider budget. The authenticated same-origin POST checks workspace,
+switch, token and budget again; worker dispatch also enforces the shared rate
+slot, cooldown, budget and live lease. An unexpired lease cannot be stolen and
+an unsaved Page ID cannot silently redirect a retry. Queued/running controls
+stay disabled. **Collect ads** starts a brand with no run, and **Collect again**
+starts the next run after completion. Deploying this change does not automatically
+resume previously failed jobs.
+
+### Meta collection storage and database health
+
+The storage migration runs automatically at startup under the existing migration
+lock. It adds nullable confirmation times, SHA-256 fingerprints, payload-source
+references and a latest-observation index; it relaxes raw_payload to allow a
+retained reference. It does not rewrite old payloads, remove rows or consolidate
+historical duplicates. Existing full-payload rows remain readable and acquire
+fingerprints only if confirmed again. The new foreign key/check applies to new
+writes without a historical validation scan. The index build can briefly block
+writers on a large history table; allow startup to finish before resuming deploys.
+
+Comparison covers every sanitised stored field, including reach, delivery dates,
+copy, placements and audience data, plus normalised reach/status. JSON object key
+order is ignored; array order and absent versus explicit null are retained. A
+reverted state still adds a change. Separate workspace/watchlist revisions keep
+their own baseline, so a newly confirmed Page scope does not inherit an unrelated
+source observation. The page's state writes, confirmations and cursor commit
+atomically. Replay and concurrent scans cannot duplicate one state. Conflicting
+states for one ad inside the same run fail the page rather than overwriting an
+already committed observation. Tokens, paging URLs and provider error text remain
+excluded. Storage changes do not alter collected fields or the schedule;
+the recovery policy above adjusts only request page limits and deadlines.
+
+In **Data sources > Source health > Collection database**, size is the physical
+Postgres database allocation from pg_database_size(current_database()), covering
+all workspaces and tables, indexes and TOAST. It excludes PostgreSQL WAL, backups,
+web SQLite and stored media. The existing infrastructure health requests retain
+at most one size sample per UTC hour. No background provider call or new polling
+service is added. The displayed measurement time is in UK time.
+
+Daily growth is `(latest bytes - baseline bytes) / elapsed days`, using the
+nearest retained sample at least 24 hours older than the latest sample. The
+actual interval appears beside it, so a gap between checks is an average over
+that gap. It is Unavailable until there is a full-day baseline, and remains
+Unavailable on measurement/permission failure, never an invented zero. Zero and
+negative measured growth remain valid. Size measurement failure does not turn
+working collection/budget health into a database connection failure. Samples are
+retained; 720 hourly rows per 30-day month add only a small metadata overhead.
+
+For **1,000 ads checked daily for a 30-day month**, a fresh watchlist retains
+`1,000 + 29,000 × c` observations, where `c` is the fraction whose stored state
+changes each day after the first check. An established watchlist adds about
+`30,000 × c` new observations per month, plus newly discovered ads and scope
+changes. Unchanged ads add no history rows, while their confirmation time advances.
+
+Storage fixture measurements below use Postgres 17, the actual connector and
+migration, and fictional ads with roughly 2.3 KiB of uncompressed source JSON,
+including copy, reach and audience fields. JSON compression makes these fixtures
+smaller than equally long, less repetitive real copy. This is a capacity example,
+not a guaranteed upper bound. One scope, no new ads, 30 simulated daily checks:
+
+| Changed per daily check | Retained observations / raw payloads | Live row bytes | Allocated observation relation, including indexes |
+| --- | --- | --- | --- |
+| None | 1,000 / 1,000 | 1.25 MiB | 17.0 MiB |
+| 10% | 3,900 / 3,900 | 4.86 MiB | 25.0 MiB |
+| All | 30,000 / 30,000 | 37.4 MiB | 44.6 MiB |
+
+The old pattern retained 30,000 snapshots regardless of changes. If all active
+ads change daily, little storage is saved and fingerprint metadata adds some
+row overhead. Real payload lengths and reach breakdowns can be much larger.
+These figures exclude collection-run/cursor/job, cost-ledger and health-sample
+metadata. Size displayed in the app includes those and the rest of the database.
+
+Confirmation updates still create Postgres MVCC tuple versions, including inline
+fields. Normal autovacuum reclaims those dead versions for reuse; it does not
+remove historical observations. Therefore allocated bytes can exceed live row
+bytes and do not shrink immediately, even when no new history rows are added.
+Keep normal autovacuum enabled and use the measured database growth for capacity
+planning. Do not delete observations or run a compaction/data purge for rollout.
+No claim of zero physical write cost or fixed compression ratio is made.
+
+Reproduce each table row only in a **dedicated disposable** local Postgres/pgvector
+database: set TEST_DATABASE_URL securely, then run
+`node --import tsx tests/fixtures/meta-storage-benchmark.ts 0`, `0.1`, or `1`.
+The benchmark truncates its fixture tables and must never target a real database.
+It performs no live provider calls. It runs ordinary VACUUM on its disposable
+relation before reporting physical allocation; it preserves every fixture history
+row. Reproduction outputs are recorded with the PR's fixture evidence.
+
+After merge, in Render deploy latest exter-test-drive to **exter-ai first**
+(Manual Deploy > Deploy latest commit), wait for its startup migration and healthy
+reader, then deploy **exter-worker**, followed by **exter-scheduler**. Keep existing
+disks, secrets, flags, plans and budgets; no new environment variables or resources
+are required. Old writers can still insert full payloads during rollout. Once
+sparse payloads have been written, keep a hydration-compatible web reader when
+rolling back; do not restore an older reader that assumes every raw_payload is
+non-null. No live-account gate is closed by these fixture checks.
 
 ## Backups and restore
 

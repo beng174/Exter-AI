@@ -1,0 +1,6 @@
+.ui-storage-detail { display:grid;gap:8px; }
+.ui-storage-detail dl { display:flex;flex-wrap:wrap;gap:12px 24px;margin:0; }
+.ui-storage-detail dl>div { display:grid;gap:4px; }
+.ui-storage-detail dt { color:var(--muted);font-size:12px; }
+.ui-storage-detail dd { margin:0;display:flex;align-items:center;gap:4px;font-variant-numeric:tabular-nums; }
+.ui-storage-detail>small { display:block;color:var(--muted);font-size:12px;line-height:1.5; }

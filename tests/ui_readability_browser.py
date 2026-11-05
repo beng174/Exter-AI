@@ -55,7 +55,7 @@ with sync_playwright() as pw:
       value=tile.locator('.ui-metric-value');assert value.evaluate("el=>getComputedStyle(el).textAlign")=='left'
      page.get_by_role('button',name='Show more',exact=True).click();expect(page.get_by_role('region',name='Source and running history',exact=True)).to_contain_text('The complete original copy stays available for a careful read.')
     if name=='DataSources':
-     expect(page.locator('.ui-source-label')).to_have_count(9)
+     expect(page.locator('.ui-source-label')).to_have_count(10)
      expect(page.get_by_role('region',name='Source health',exact=True).locator('th')).to_have_text(['Source','Status','Detail','Action'])
      expect(page.locator('.ui-source-mark img')).to_have_count(8)
      assert page.locator('.ui-source-mark img').evaluate_all("imgs=>imgs.every(i=>i.alt===''&&i.complete&&i.naturalWidth>0)")
@@ -67,7 +67,7 @@ with sync_playwright() as pw:
   fail_brands=False;page.get_by_role('button',name='Retry brand list',exact=True).click();expect(page.get_by_role('alert')).to_have_count(0)
   for width in (1440,390):
    page.set_viewport_size({'width':width,'height':1100});page.goto(BASE+'/?brandId=sample-northwick&demo=1&view=data',wait_until='networkidle')
-   expect(page.locator('.ui-source-label')).to_have_count(9);assert not page.evaluate('document.documentElement.scrollWidth>innerWidth')
+   expect(page.locator('.ui-source-label')).to_have_count(10);assert not page.evaluate('document.documentElement.scrollWidth>innerWidth')
    page.screenshot(path=str(OUT/f'after-DataSources-sample-{width}.png'),full_page=True)
  assert not errors,errors
  assert not external,external

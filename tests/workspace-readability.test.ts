@@ -13,9 +13,9 @@ import {browserCreative} from "./fixtures/creative-browser.js";
 
 await mkdir(resolve("work"),{recursive:true});
 const dir=await mkdtemp(resolve("work/readability-render-"));
-const bundle=await build({stdin:{contents:'export {SourceLabel,SourceDetail,sourceProviders} from "./src/components/ui/SourceLabel"; export {PageHeader} from "./src/components/ui/PageHeader";',resolveDir:resolve(".")},bundle:true,format:"esm",platform:"node",write:false,external:["react","react-dom","lucide-react"],loader:{".css":"empty"}});
+const bundle=await build({stdin:{contents:'export {SourceLabel,SourceDetail,sourceProviders} from "./src/components/ui/SourceLabel"; export {PageHeader} from "./src/components/ui/PageHeader"; export {DatabaseStorageDetail} from "./src/components/ui/DatabaseStorageDetail";',resolveDir:resolve(".")},bundle:true,format:"esm",platform:"node",write:false,external:["react","react-dom","lucide-react"],loader:{".css":"empty"}});
 const file=join(dir,"components.mjs");await writeFile(file,bundle.outputFiles[0].contents);
-const {SourceLabel,SourceDetail,sourceProviders,PageHeader}=await import(pathToFileURL(file).href);
+const {SourceLabel,SourceDetail,sourceProviders,PageHeader,DatabaseStorageDetail}=await import(pathToFileURL(file).href);
 after(()=>rm(dir,{recursive:true,force:true}));
 
 test("legacy optional brand metadata cannot break workspace selection or mix sample brands",()=>{
@@ -36,4 +36,11 @@ test("source labels use local decorative company marks and preserve both organic
 });
 test("prose headings can avoid automatic logo insertion while remaining accessible text",()=>{
  const html=renderToStaticMarkup(createElement(PageHeader,{title:"Fictional Candle House makes evenings warmer.",decorateTitle:false}));assert.match(html,/<h1>Fictional Candle House makes evenings warmer\.<\/h1>/);assert.ok(!html.includes("brand-mark"));
+});
+
+test("database storage renders known zero and a missing daily baseline honestly",()=>{
+ const ready={status:"available",sizeBytes:1024**2,measuredAt:"2026-11-05T12:00:00Z",growthBytesPerDay:0,baselineAt:"2026-11-03T12:00:00Z",intervalHours:48,message:"Measured daily average"};
+ const html=renderToStaticMarkup(createElement(DatabaseStorageDetail,{storage:ready}));assert.match(html,/1 MiB/);assert.match(html,/Growth per day/);assert.match(html,/>0 B/);assert.match(html,/Average since/);
+ const waiting=renderToStaticMarkup(createElement(DatabaseStorageDetail,{storage:{...ready,growthBytesPerDay:null,baselineAt:null,message:"Daily growth needs 24 hours of measurements."}}));assert.match(waiting,/Unavailable/);assert.match(waiting,/24 hours/);assert.equal((waiting.match(/>Observed</g)||[]).length,1);
+ const missing=renderToStaticMarkup(createElement(DatabaseStorageDetail,{}));assert.match(missing,/has not been measured/);assert.ok(!missing.includes("0 B"));
 });

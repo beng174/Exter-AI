@@ -616,3 +616,83 @@ and blockers below remain unchanged.
 - Completed Page discovery review: https://github.com/beng174/Exter-AI/pull/15,
   based on the latest exter-test-drive. Readability and provider-icon work follows
   separately so that this completed feature remains reviewable.
+
+## Meta observation storage and size health, 5 Nov 2026
+
+- Authorised change from per-check snapshots to change history. Stored-field
+  fingerprints include all sanitised source fields plus normalised status/reach.
+  Identical scans only advance the latest scoped row's last_confirmed_at. New
+  states append; no old observations or payloads are deleted or consolidated.
+- Raw JSON is retained first and when changed. Normalised-only changes reference
+  the earlier payload directly, with both readers resolving it. Original change
+  timestamps stay intact; latest confirmation drives current check/endpoint time.
+  Workspace, watchlist/revision, lease, cursor and page transaction boundaries
+  remain. Opposite-order concurrent scans lock ads in a stable order.
+- Existing infrastructure status checks retain one physical Postgres size sample
+  per UTC hour. Data sources adds a Collection database row with measured size
+  and daily growth over the disclosed measured interval. The first 24-hour
+  baseline, failed measurements and missing configuration stay Unavailable.
+  A storage-only permission failure does not mark working collection disconnected.
+  Sample mode shows only its fixture explanation, never real database bytes.
+- Storage estimates for 1,000 ads and 30 checks are documented in docs/DEPLOY.md.
+  A 10%-changing fixture retained 3,900 observations instead of 30,000; measured
+  live rows were 4.86 MiB, while allocated observation storage including indexes
+  was 25.0 MiB. MVCC update space and compression are disclosed; if every ad
+  changes daily, all 30,000 observations are still kept. Figures are illustrative.
+- Type check, 450 unit tests and production build pass. Eleven disposable
+  Postgres integration cases pass; five real/sample browser width cases plus
+  Refresh, zero, first-day and failure states pass. The tracked-file secret scan
+  passes. All four required checks pass. Artifacts: output/playwright/storage/.
+- Fixtures are not live verification. Public collection flags, provider pacing,
+  budgets and secrets are unchanged. Owned-sync live gates stay open and its
+  default remains off; kernel work remains paused. No new dependencies or services.
+- Rollout: deploy exter-ai first to migrate and hydrate sparse payloads, then
+  exter-worker and exter-scheduler from exter-test-drive. Preserve disks, settings
+  and historical data. Once sparse rows exist, rollback must keep a compatible
+  reader. No new environment values or manual data rewrite is needed.
+
+- Review: https://github.com/beng174/Exter-AI/pull/17 against exter-test-drive.
+  After merge: Render > exter-ai > Manual Deploy > Deploy latest commit; wait
+  for the migration and healthy compatible reader, then repeat for exter-worker
+  and exter-scheduler. Storage history begins with the first health measurement;
+  daily growth remains Unavailable until the 24-hour baseline exists.
+
+
+## Meta collection diagnostics and recovery, 5 Nov 2026
+
+- Extends the open storage review with per-brand latest run status, ads saved,
+  committed pages, stopping time and safe failure details in Data sources and
+  Edit watchlist. The reported 7,752-ad live failure has no retrospective Graph
+  code in the earlier generic message; its exact cause is not established here.
+- Every new failure records only controlled kind, timestamp, request size,
+  numeric Graph code/subcode/HTTP status and timeout flag. No provider message,
+  request/paging URL, trace or token is persisted or logged. Legacy stopping
+  times are retained on explicit resume without inventing error codes.
+- Code 1, HTTP 500 and timeout recovery retries the same cursor through sizes
+  100, 50, 25 and 10 in separate paced worker claims. Reductions do not consume
+  failed-page attempts until size 10 fails. A successful size is retained per
+  brand; other brands retain their own size. Whole requests use 90-second
+  deadlines and remain within the existing lease. Permission/rate-limit guards
+  retain priority, and all dispatches retain the budget and request gate.
+- Retry collection explicitly resumes saved progress. It enforces real workspace
+  ownership, the live switch, token, provider budget, cooldown and live lease.
+  Unsaved Page changes cannot redirect a retry. Active status refresh uses thin
+  requests every five seconds, stops when inactive, and retains details on failure.
+- Change-only observations, direct raw payload references, existing history,
+  hourly database size/growth and monthly estimates remain intact. No collected
+  fields, rolling 12-month window, 03:00 UK schedule or live settings changed.
+- Validation: all four checks pass, with 458 unit tests and 16 disposable
+  Postgres integration cases. Four entry-point/width browser cases and six
+  explicit scoped retries pass, including active polling and refresh failure
+  retention. Screenshots and reproduction: output/playwright/meta-recovery/.
+  Fixtures are not live verification; no production collection or paid provider
+  run was started.
+- Following authorised work remains separate: full public Performance signals,
+  then default-off Apify media retention with cost/disk guards. See the next
+  task plan; these are not claimed implemented by the recovery changes.
+
+- Recovery review: https://github.com/beng174/Exter-AI/pull/17, updated with
+  commit 8d43b57, shared diagnostics/retry screenshots and all required checks.
+  After merge, deploy exter-ai first, then exter-worker and exter-scheduler.
+  Use Retry collection per stopped brand after deployment; this implementation
+  has not resumed the live run or established its original Graph failure code.

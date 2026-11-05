@@ -61,3 +61,39 @@ CREATE UNIQUE INDEX IF NOT EXISTS watchlists_workspace_brand ON watchlists(works
 CREATE UNIQUE INDEX IF NOT EXISTS watchlists_workspace_page ON watchlists(workspace_id,(page_ids->>0)) WHERE purpose='brand' AND enabled AND brand_key IS NOT NULL AND jsonb_array_length(page_ids)=1;
 CREATE TABLE IF NOT EXISTS meta_request_gate(id integer PRIMARY KEY CHECK(id=1),next_request_at timestamptz NOT NULL DEFAULT now());
 INSERT INTO meta_request_gate(id) VALUES(1) ON CONFLICT DO NOTHING;
+
+-- Keep all historical rows and payloads. New unchanged checks only advance confirmation.
+ALTER TABLE ad_observations ADD COLUMN IF NOT EXISTS last_confirmed_at timestamptz;
+ALTER TABLE ad_observations ADD COLUMN IF NOT EXISTS payload_hash text;
+ALTER TABLE ad_observations ADD COLUMN IF NOT EXISTS observation_hash text;
+ALTER TABLE ad_observations ADD COLUMN IF NOT EXISTS raw_payload_run_id text;
+ALTER TABLE ad_observations ALTER COLUMN raw_payload DROP NOT NULL;
+CREATE INDEX IF NOT EXISTS ad_observations_latest ON ad_observations(workspace_id,platform,native_id,observed_at DESC,run_id DESC);
+DO $$ BEGIN
+ IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname='ad_observations_payload_source') THEN
+  ALTER TABLE ad_observations ADD CONSTRAINT ad_observations_payload_source
+   FOREIGN KEY(platform,native_id,raw_payload_run_id) REFERENCES ad_observations(platform,native_id,run_id) NOT VALID;
+ END IF;
+ IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname='ad_observations_payload_present') THEN
+  ALTER TABLE ad_observations ADD CONSTRAINT ad_observations_payload_present
+   CHECK(raw_payload IS NOT NULL OR raw_payload_run_id IS NOT NULL) NOT VALID;
+ END IF;
+END $$;
+
+CREATE TABLE IF NOT EXISTS database_size_samples (
+ sample_hour timestamptz PRIMARY KEY, measured_at timestamptz NOT NULL,
+ size_bytes bigint NOT NULL CHECK(size_bytes>=0)
+);
+ALTER TABLE watchlists ADD COLUMN IF NOT EXISTS meta_page_size integer NOT NULL DEFAULT 100 CHECK(meta_page_size IN (100,50,25,10));
+ALTER TABLE collection_jobs ADD COLUMN IF NOT EXISTS page_size integer CHECK(page_size IN (100,50,25,10));
+ALTER TABLE collection_runs ADD COLUMN IF NOT EXISTS pages_fetched integer CHECK(pages_fetched>=0);
+ALTER TABLE collection_runs ADD COLUMN IF NOT EXISTS stopped_at timestamptz;
+CREATE TABLE IF NOT EXISTS meta_collection_failures (
+ id bigint GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+ run_id text NOT NULL REFERENCES collection_runs,attempted_at timestamptz NOT NULL DEFAULT clock_timestamp(),
+ kind text NOT NULL CHECK(kind IN ('legacy','budget','not_connected','permission','schema','retry_limit','rate_limited','timeout','unavailable','page_size','disabled','page_id')),
+ graph_code integer CHECK(graph_code>=0),graph_subcode integer CHECK(graph_subcode>=0),
+ http_status integer CHECK(http_status BETWEEN 100 AND 599),page_size integer CHECK(page_size IN (100,50,25,10)),
+ timed_out boolean NOT NULL DEFAULT false
+);
+CREATE INDEX IF NOT EXISTS meta_collection_failures_run ON meta_collection_failures(run_id,id DESC);
