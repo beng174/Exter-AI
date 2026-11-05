@@ -75,7 +75,7 @@ services:
       # Worker: EXTER_ARTIFACT_BROKER_ORIGIN and EXTER_KERNEL_CACHE_PATH.
       # META_ACCESS_TOKEN: secure environment setting, never committed.
       - key: EXTER_AD_MEDIA_ENABLED
-        value: "false"
+        value: "true"
       - key: EXTER_META_LIBRARY_ENABLED
         value: "true"
       - key: META_API_VERSION
@@ -93,7 +93,7 @@ services:
     dockerCommand: npm run scheduler
     envVars:
       - key: EXTER_AD_MEDIA_ENABLED
-        value: "false"
+        value: "true"
       - key: EXTER_META_LIBRARY_ENABLED
         value: "true"
       - key: DATABASE_URL
