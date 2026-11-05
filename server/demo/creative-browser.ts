@@ -1,3 +1,4 @@
+import {readRetainedMedia,mergeRetainedMedia} from "../ad-media/read.js";
 import type { Express } from "express";
 import type { DatabaseSync } from "node:sqlite";
 import type pg from "pg";
@@ -74,7 +75,9 @@ export function attachCreativeBrowser(app: Express, db: DatabaseSync, options: B
                 const pool=options.getPool?options.getPool():process.env.DATABASE_URL?infrastructureDatabase():null;
                 if(pool){
                     const [observations,health]=await Promise.all([readPublicObservations(pool,brand.id),metaSourceHealth(pool,brand.id)]);
-                    const merged=mergePublicEvidence(creatives,observations,brand,competitors);
+                    const official=mergePublicEvidence(creatives,observations,brand,competitors);
+                    let merged=official;
+                    try{merged=mergeRetainedMedia(official,await readRetainedMedia(pool,brand.id),brand.id);}catch{/* An upgrade or media failure cannot hide official evidence. */}
                     creatives.splice(0,creatives.length,...merged);metaSource=health;
                     for(const source of sources){const target=source.brandId||competitors.find(b=>b.name===source.name)?.key;if(source.status!=="error"&&creatives.some(row=>!row.owned&&row.brandId===target))source.status="collected";}
                 }

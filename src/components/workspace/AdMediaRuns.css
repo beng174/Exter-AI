@@ -1,0 +1,13 @@
+.ad-media-runs { display:grid;gap:16px;min-width:0; }
+.ad-media-heading { display:flex;align-items:baseline;justify-content:space-between;flex-wrap:wrap;gap:16px; }
+.ad-media-heading h3 { margin:0;font-size:15px; }
+.ad-media-heading button { min-height:44px; }
+.ad-media-runs .ui-data-table { min-width:0; }
+.ad-media-runs td details p { white-space:normal;max-width:280px; }
+
+.ad-media-runs td small { display:block;font-size:12px;color:var(--muted);margin-top:4px; }
+.ad-media-runs .ad-media-brand { min-width:100px;display:grid;gap:4px; }
+.ad-media-runs .ad-media-brand>small { white-space:normal;max-width:160px; }
+.ad-media-runs .ui-table-number { white-space:nowrap; }
+.reference-shell .reference-ui .ad-media-runs .ui-data-table table { min-width:400px; }
+.reference-shell .reference-ui .ad-media-runs .ui-data-table :is(th,td).ui-table-chip { width:84px;min-width:84px; }

@@ -1,3 +1,4 @@
+import type {MediaDiskHealth} from "../../../shared/ad-media";
 import { useEffect, useState } from "react";
 import type { Brand } from "../../../shared/types";
 import type { BrandResearch } from "../../../shared/brand-research";
@@ -8,7 +9,7 @@ import type {DatabaseStorageHealth} from "../../../shared/storage-health";
 import type {MetaSourceHealth} from "../../../shared/meta-public";
 export type Watchlist=import("../../../shared/meta-public").MetaWatchlist;
 export interface BudgetState {cost_type:string;monthly_budget_gbp:number;used_gbp:number;paused:boolean;pause_reason:string|null}
-export interface InfrastructureState {meta?:{status:string};tiktok?:{status:string};database?:string;storage?:DatabaseStorageHealth;budgets?:BudgetState[]}
+export interface InfrastructureState {mediaDisk?:MediaDiskHealth;meta?:{status:string};tiktok?:{status:string};database?:string;storage?:DatabaseStorageHealth;budgets?:BudgetState[]}
 export interface ResearchData {library:CreativeBrowserResponse;window:ResearchWindow;brand:Brand|undefined;research:BrandResearch|null;researchFailed:boolean;watchlists:Watchlist[]|null;watchlistPollFailed?:boolean;infrastructure:InfrastructureState|null;connections:{status:string;platform?:string;name?:string}[]|null;budgets:BudgetState[]|null}
 export function useResearchData(brandId:string,brands:Brand[],from:string|undefined,to:string|undefined,refresh:number) {
   const [data,setData]=useState<ResearchData|null>(null),[error,setError]=useState(false),[loading,setLoading]=useState(true);

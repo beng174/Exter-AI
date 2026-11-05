@@ -38,7 +38,9 @@ Before finishing run npm run check, npm test, npm run build, npm run secrets:che
 Read keys only from environment variables: EXTER_ADMIN_USER, EXTER_ADMIN_PASSWORD,
 GEMINI_API_KEY, META_ACCESS_TOKEN, META_API_VERSION, EXTER_META_LIBRARY_ENABLED, EXTER_META_GRAPH_VERSION, TIKTOK_CLIENT_KEY,
 TIKTOK_CLIENT_SECRET, EXTER_META_ACCESS_TOKEN, EXTER_META_AD_ACCOUNT_ID,
-EXTER_TIKTOK_ACCESS_TOKEN, EXTER_OWNED_SYNC_ENABLED. Never log, print, commit
+EXTER_TIKTOK_ACCESS_TOKEN, EXTER_OWNED_SYNC_ENABLED, APIFY_TOKEN,
+EXTER_AD_MEDIA_ENABLED, EXTER_AD_MEDIA_BROKER_TOKEN, EXTER_AD_MEDIA_BROKER_ORIGIN,
+EXTER_AD_MEDIA_GBP_PER_USD. Never log, print, commit
 or put keys in fixtures.
 Test with recorded fixtures; never call live or paid APIs in tests.
 Route every paid call through the existing budget guard and write a cost record.

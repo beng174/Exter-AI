@@ -1,3 +1,4 @@
+import {AdMediaRuns} from "./workspace/AdMediaRuns";
 import { useEffect, useState, type FormEvent } from "react";
 import { CircleHelp, RefreshCw, Wallet } from "lucide-react";
 import { api } from "../lib/api";
@@ -37,7 +38,7 @@ function money(amount: number, precise = false) {
   return new Intl.NumberFormat("en-GB", { style: "currency", currency: "GBP", minimumFractionDigits: 2, maximumFractionDigits: precise ? 6 : 2 }).format(amount);
 }
 
-export function BudgetSettings() {
+export function BudgetSettings({workspaceId}:{workspaceId?:string}={}) {
   const [data,setData] = useState<BudgetResponse | null>(null);
   const [drafts,setDrafts] = useState<Partial<Record<CostType,string>>>({});
   const [loading,setLoading] = useState(true);
@@ -87,6 +88,7 @@ export function BudgetSettings() {
     <header><div><h2>Budgets and schedule</h2><p>Paid calls stop when a budget is reached; nothing is silently retried</p></div><button className="button secondary" onClick={()=>void refresh()} disabled={loading||saving!==null}>Refresh usage</button></header>
     {error&&<p role="alert" className="reference-muted">Saved budget usage could not be read.</p>}{message&&<p role="status">{message}</p>}
     {loading&&!data?<p role="status" className="reference-muted">Reading saved budgets…</p>:!data?error?null:<p className="reference-muted">Budget settings are unavailable.</p>:<div className="reference-stack">{types.map(type=>{const budget=data.budgets.find(row=>row.cost_type===type);if(!budget)return <p className="reference-muted" key={type}>{labels[type]} budget is unavailable.</p>;return <article key={type} className="budget-reference-row"><div><strong>{type==="inference"?"AI reading budget":"Data provider budget"}</strong><span>{money(budget.used_gbp)} of {money(budget.monthly_budget_gbp)} this month</span></div><progress aria-label={`${labels[type]} usage against monthly cap`} max={budget.monthly_budget_gbp||1} value={budget.used_gbp}/><small>{budget.paused?"Paid requests are paused.":"Budget available"}</small><details><summary>Edit budget</summary><form onSubmit={event=>void save(event,type)}><label htmlFor={`budget-${type}`}>Monthly cap (GBP)<input id={`budget-${type}`} type="number" min="0" step="0.01" required value={drafts[type]??""} onChange={event=>setDrafts(current=>({...current,[type]:event.target.value}))}/></label><button className="button secondary" disabled={saving!==null}>Save budget</button></form></details></article>;})}</div>}
+    {workspaceId&&<AdMediaRuns workspaceId={workspaceId}/>}
     <dl className="reference-schedule"><dt>Collection</dt><dd>Daily, when configured</dd><dt>Your account sync</dt><dd>Daily, when enabled · last 7 days re-pulled</dd><dt>Weekly data pack</dt><dd>Not available yet</dd></dl>
     <details className="reference-muted"><summary>About this data</summary><p>Usage includes estimated charges and uncertain reservations. Existing safety thresholds and request reserves are unchanged. Collection and account sync depend on existing worker configuration. Live account sync remains off unless separately enabled.</p></details>
   </section>;

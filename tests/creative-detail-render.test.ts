@@ -32,7 +32,7 @@ function render(row: BrowserCreative) {
 }
 test("UI-03 missing evidence renders reasons/unlocks, never invented outcomes, scenes or scores", () => {
     const html = render(browserCreative({ daysRunning: null, durationSeconds: null, angle: null, creativeFormat: null }));
-    assert.match(html, /No retained media file/);
+    assert.match(html, /Ad copy preview/);
     assert.match(html, /No scene boundaries are stored/);
     assert.match(html, /Public signals only/);
     assert.ok(!html.includes("Owned metrics are not synced"));

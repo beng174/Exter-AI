@@ -1,3 +1,4 @@
+import {scheduleAdMedia} from "../ad-media/jobs.js";
 import { scheduleOwnedSync } from "../owned/jobs.js";
 export { enqueueOwnedSync, workOwnedOnce } from "../owned/jobs.js";
 import { randomUUID } from "node:crypto";
@@ -143,6 +144,7 @@ export function metaScheduleDay(now:Date):string|null {
 export async function schedule(pool: pg.Pool, now = new Date(), env:Record<string,string|undefined>=process.env) {
   await scheduleOwnedSync(pool,now);
   const day=metaScheduleDay(now);
+  if(day)await scheduleAdMedia(pool,env,now);
   if(!metaLibraryEnabled(env)||!day)return;
   const watchlists = await pool.query("SELECT id FROM watchlists WHERE enabled AND ((brand_key IS NOT NULL AND jsonb_array_length(page_ids)>0) OR purpose='discovery') ORDER BY id");
   for (const row of watchlists.rows) await enqueueCollection(pool,row.id,day,now);

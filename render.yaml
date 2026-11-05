@@ -41,6 +41,8 @@ services:
       - key: CHROMIUM_PATH
         value: /usr/bin/chromium
       # META_ACCESS_TOKEN: secure environment setting on web and worker only.
+      - key: EXTER_AD_MEDIA_ENABLED
+        value: "false"
       - key: EXTER_META_LIBRARY_ENABLED
         value: "true"
       - key: META_API_VERSION
@@ -72,6 +74,8 @@ services:
       # Web+worker: EXTER_ARTIFACT_BROKER_TOKEN (secure); web: EXTER_ARTIFACT_BROKER_WORKSPACES.
       # Worker: EXTER_ARTIFACT_BROKER_ORIGIN and EXTER_KERNEL_CACHE_PATH.
       # META_ACCESS_TOKEN: secure environment setting, never committed.
+      - key: EXTER_AD_MEDIA_ENABLED
+        value: "false"
       - key: EXTER_META_LIBRARY_ENABLED
         value: "true"
       - key: META_API_VERSION
@@ -88,6 +92,8 @@ services:
     schedule: "0 2,3 * * *"
     dockerCommand: npm run scheduler
     envVars:
+      - key: EXTER_AD_MEDIA_ENABLED
+        value: "false"
       - key: EXTER_META_LIBRARY_ENABLED
         value: "true"
       - key: DATABASE_URL

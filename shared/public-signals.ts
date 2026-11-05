@@ -22,7 +22,7 @@ export function publicSignalTiles(row:BrowserCreative,creatives:readonly Browser
   const numerator=uk??eu,basis=uk!==null?"UK reach":"EU reach";
   if(numerator!==null&&days!==null&&days>0)result.push({id:"daily",label:"Reach per day",value:format(numerator/days),basis:"Estimated",note:basis,tooltip:`${format(numerator)} ${basis} ÷ ${format(days)} days running = ${format(numerator/days)} reach per day. Average over the saved running period.`});
   const versions=publicVersions(row,creatives);if(versions!==null)result.push({id:"versions",label:"Versions",value:versions,basis:"Observed",tooltip:`${versions} saved public ${versions===1?"ad uses":"ads use"} this exact creative or full copy for this brand. Only matching content hashes or full wording are counted, not similar copy.`});
-  const details=row.publicDetails||publishedAdDetails({publisher_platforms:row.placements});
+  const saved=row.publicDetails||publishedAdDetails({}),details={...saved,platforms:saved.platforms.length?saved.platforms:publishedAdDetails({publisher_platforms:row.placements}).platforms};
   for(const [id,label,values] of [["target-ages","Target ages",details.targetAges],["target-gender","Target gender",details.targetGenders],["target-locations","Target locations",details.targetLocations],["platforms","Platforms",details.platforms],["languages","Languages",details.languages]] as const){if(values.length)result.push({id,label,value:values.join(", "),basis:"Observed",text:true,...(id.startsWith("target-")?{tooltip:"Targeting settings published by the advertiser. These are separate from the people the ad reached."}:{})});}
   return result;
 }

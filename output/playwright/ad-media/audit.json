@@ -1,0 +1,53 @@
+{
+  "checks": [
+    {
+      "width": 1280,
+      "storedPoster": true,
+      "textFallback": true,
+      "scopedCollectAction": true,
+      "offButtonDisabled": true,
+      "noPageOverflow": true
+    },
+    {
+      "width": 1440,
+      "storedPoster": true,
+      "textFallback": true,
+      "scopedCollectAction": true,
+      "offButtonDisabled": true,
+      "noPageOverflow": true
+    },
+    {
+      "width": 1920,
+      "storedPoster": true,
+      "textFallback": true,
+      "scopedCollectAction": true,
+      "offButtonDisabled": true,
+      "noPageOverflow": true
+    },
+    {
+      "width": 390,
+      "storedPoster": true,
+      "textFallback": true,
+      "scopedCollectAction": true,
+      "offButtonDisabled": true,
+      "noPageOverflow": true
+    }
+  ],
+  "externalRequests": [],
+  "pageErrors": [],
+  "fixtureWrites": [
+    {
+      "workspaceId": "fixture-meta"
+    },
+    {
+      "workspaceId": "fixture-meta"
+    },
+    {
+      "workspaceId": "fixture-meta"
+    },
+    {
+      "workspaceId": "fixture-meta"
+    }
+  ],
+  "providerCalls": 0
+}
