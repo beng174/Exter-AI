@@ -151,6 +151,18 @@ Design: `CreativeDetail.dc.html`. View `creative`. Replaces the ad modal.
   source copy in the expandable copy section. Card titles retain their existing
   first-line rule. Do not insert brand logos into the copy heading; show the
   brand identity once in the header context.
+- Public Performance: keep "Public signals only". Show only available public
+  tiles: UK/EU and individual country reach (Observed), days running (Observed),
+  reach per day (Estimated) with actual arithmetic in its tooltip, exact saved
+  creative/full-copy versions (Observed), chosen targeting ages/gender/locations,
+  platforms and languages (Observed). Separate reached age/gender counts into a
+  compact Observed bar chart. Reach per day uses UK reach, or EU reach when UK
+  is absent, divided by positive days running; do not add overlapping geographies.
+  Hide missing tiles. Public ads for the workspace brand also stay public until
+  real owned reporting exists. Never show private spend, impressions, clicks or
+  conversions for public ads. Version counts use exact retained content hashes
+  or full wording within that brand's saved public sample, not similar copy or
+  truncated prefixes.
 - Player with scene strip. Clicking a scene jumps the video. Data: stored media
   and video analysis scenes.
 - Source and running history: first seen, last seen, days running, platforms,

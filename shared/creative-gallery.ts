@@ -25,6 +25,8 @@ export interface DemoGalleryCreative {
   imageCount: number;
   mediaAvailable: boolean;
   mediaStatus: "stored" | "not-stored" | "unavailable";
+  /** Verified full creative content hash, never a poster-only fingerprint. */
+  mediaSha256?:string|null;
   analysis: DemoGalleryAnalysis | null;
   creativeFormat: string | null;
   hookType: string | null;

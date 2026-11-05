@@ -56,7 +56,7 @@ with sync_playwright() as pw:
      page.get_by_role('button',name='Show more',exact=True).click();expect(page.get_by_role('region',name='Source and running history',exact=True)).to_contain_text('The complete original copy stays available for a careful read.')
     if name=='DataSources':
      expect(page.locator('.ui-source-label')).to_have_count(10)
-     expect(page.get_by_role('region',name='Source health',exact=True).locator('th')).to_have_text(['Source','Status','Detail','Action'])
+     expect(page.get_by_role('region',name='Source health',exact=True).locator('table').first.locator('th')).to_have_text(['Source','Status','Detail','Action'])
      expect(page.locator('.ui-source-mark img')).to_have_count(8)
      assert page.locator('.ui-source-mark img').evaluate_all("imgs=>imgs.every(i=>i.alt===''&&i.complete&&i.naturalWidth>0)")
    page.screenshot(path=str(OUT/f'{phase}-{name}-{width}.png'),full_page=True)

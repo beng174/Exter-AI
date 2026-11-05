@@ -68,7 +68,7 @@ with sync_playwright() as pw:
     page.locator('.ui-creative-open').first.click()
     page.get_by_role('button',name='Next creative',exact=True).click()
     expect(page.get_by_role('heading',level=1)).to_have_text(expected)
-    expect(page.get_by_role('region',name='Performance',exact=True)).to_contain_text('not synced')
+    expect(page.get_by_role('region',name='Performance',exact=True)).to_contain_text('Public signals only')
     detail=page.url
     # Pick a retained record with a resolved title for the visual review.
     saved=page.request.get(base+'/api/brands/valentte/creatives').json()['creatives']

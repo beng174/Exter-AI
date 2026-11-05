@@ -1,7 +1,7 @@
 import type pg from "pg";
 import type {BrowserCreative,CreativeBrowserResponse} from "../../shared/creative-browser.js";
 import type {MetaSourceHealth} from "../../shared/meta-public.js";
-import {publishedReach} from "../../shared/meta-public.js";
+import {publishedReach,publishedAdDetails} from "../../shared/meta-public.js";
 import {metaLibraryEnabled,metaStatus} from "../connectors/meta-library.js";
 
 const iso=(value:unknown)=>{const date=value instanceof Date?value:typeof value==="string"?new Date(value):null;return date&&Number.isFinite(date.getTime())?date.toISOString():null;};
@@ -29,7 +29,7 @@ export function mergePublicEvidence(creatives:BrowserCreative[],observations:Pub
       row={adId:`public:Meta:${item.native_id}`,nativeId:item.native_id,brandId:target.id,brandName:target.name,title:"",copy:"",sourceUrl:`https://www.facebook.com/ads/library/?id=${item.native_id}`,mediaKind:"unknown",durationSeconds:null,thumbnailUrl:null,videoUrl:null,imageUrls:[],imageCount:0,mediaAvailable:false,mediaStatus:"not-stored",analysis:null,creativeFormat:null,hookType:null,angle:null,offerType:null,ugc:null,creatorEvidence:[],partnershipAttribution:null,deliveryStatus:"unknown",deliveryStartAt:null,deliveryStopAt:null,observedAt:null,firstObservedAt:null,daysRunning:null,daysRunningAsOf:null,daysRunningBasis:null,searchText:"",platform:"Meta",publicEvidence:true,owned:false,workspaceBrand:target.id===brand.id,sourceKind:"public",placements:[],score:null,performance:[],scenes:[]};
       result.push(row);
     }
-    row.publicEvidence=true;row.publicReach=publishedReach(item.raw_payload);row.reachObservedAt=observed;
+    row.publicEvidence=true;row.publicReach=publishedReach(item.raw_payload);row.publicDetails=publishedAdDetails(item.raw_payload);row.reachObservedAt=observed;
     const bodies=item.raw_payload.ad_creative_bodies;
     if(!row.copy&&Array.isArray(bodies))row.copy=bodies.filter((v):v is string=>typeof v==="string").join("\n\n");
     row.searchText=[row.searchText,row.copy].join(" ");

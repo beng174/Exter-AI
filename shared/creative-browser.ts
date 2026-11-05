@@ -2,7 +2,7 @@ import type { DemoGalleryCreative } from "./creative-gallery.js";
 import type { DemoAdScore } from "./brand-demo.js";
 import { measurementEligible, selectResearchAds, type EvidenceSelection } from "./creative-research.js";
 import { creativeTitle } from "./creative-presentation.js";
-import {countryReach,type PublicReach,type MetaSourceHealth} from "./meta-public.js";
+import {countryReach,type PublicReach,type PublicAdDetails,type MetaSourceHealth} from "./meta-public.js";
 import type { OwnedMetric, MetricName } from "./owned-metrics.js";
 export interface CreativePerformance {
     id: string;
@@ -21,6 +21,7 @@ export interface CreativePerformance {
 import type { WorkspacePresentation, CreativePresentation } from "./workspace-presentation.js";
 export interface BrowserCreative extends DemoGalleryCreative {
     publicReach?:PublicReach;
+    publicDetails?:PublicAdDetails;
     reachObservedAt?:string;
     platform: string;
     publicEvidence?:boolean;

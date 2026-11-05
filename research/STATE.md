@@ -696,3 +696,22 @@ and blockers below remain unchanged.
   After merge, deploy exter-ai first, then exter-worker and exter-scheduler.
   Use Retry collection per stopped brand after deployment; this implementation
   has not resumed the live run or established its original Graph failure code.
+
+
+## Public Creative detail Performance, 5 Nov 2026
+
+- Uses available official public fields for UK/EU/country reach, selected
+  targeting ages/gender/locations, platforms, languages and reached demographics.
+  Reach is Observed; reach/day is an Estimated saved-period average with actual
+  numerator/divisor/result in its tooltip. Missing fields create no tiles.
+- Versions count unique same-brand public ad identities matching exact retained
+  full-creative hashes or complete captured copy. Similar wording and truncated
+  prefixes do not count. These are collected-sample counts, not full-market claims.
+- The shared reference tile/bar components are reused in real and sample views.
+  Public ads for the workspace's own brand stay in Public signals only until
+  actual owned reporting exists. No public spend, impressions, clicks, conversions
+  or private retention section is rendered. Stored ads/media/analyses are unchanged.
+- Type check, all 464 unit tests, production build and the secret scan pass.
+  Browser fixtures cover 1440px and 390px, missing signals, zero values, sample
+  mode and public ads for the workspace brand. Fixtures are not live verification.
+  Media ingestion is separate following work; no actor run has been started.

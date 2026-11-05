@@ -1,0 +1,7 @@
+.public-signals { display:grid;gap:24px; }
+.reference-shell .reference-ui .public-signals .creative-performance { grid-template-columns:repeat(auto-fit,minmax(min(100%,140px),1fr));gap:16px; }
+.reference-shell .reference-ui .public-signals .ui-metric-text .ui-metric-value { font-size:14px;font-weight:600;line-height:1.5;overflow-wrap:normal; }
+.reference-shell .reference-ui .public-signals .ui-metric-tile>p { font-size:12px;line-height:1.5; }
+.public-signals .ui-bar-list { min-width:0; }
+.public-signals .ui-bar-list ul { margin-bottom:0;max-height:280px;overflow-y:auto;padding-right:8px; }
+.public-signals .ui-bar-list strong { text-align:right;font-variant-numeric:tabular-nums; }
