@@ -579,3 +579,9 @@ and blockers below remain unchanged.
 - Before/after comparisons, fictional fixture screenshots and audit JSON are in
   output/playwright/readability/. Fixtures are not live verification. No schema,
   dependencies, scoring rules, budgets, owned-sync defaults or kernel work changed.
+
+- Review: https://github.com/beng174/Exter-AI/pull/16 against exter-test-drive.
+  After merge: Render > exter-ai > Manual Deploy > Deploy latest commit.
+  This UI follow-up needs no migration, worker deployment or new settings.
+  Keep the existing disk, secrets and collection flags. PR #15 separately needs
+  its shared rate-gate code deployed to exter-worker.
