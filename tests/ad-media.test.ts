@@ -20,7 +20,19 @@ const imageOptions={resolve:async()=>[{address:"8.8.8.8",family:4}],fetch:async(
 test("media is opt-in on all services; missing credentials and disabled scheduling/worker make no calls",async()=>{
   for(const value of [undefined,"false","1","TRUE"]){const env={EXTER_AD_MEDIA_ENABLED:value};assert.equal(mediaEnabled(env),false);const pool:any={query(){assert.fail("No database/provider work while off");}};await scheduleAdMedia(pool,env);assert.equal(await workAdMediaOnce(pool,{env,fetch:async()=>{assert.fail();}}),false);assert.equal(await stepAdMedia(pool,"x","y",{env}),false);}
   const actor=new AdMediaActor({env:{},fetch:async()=>{assert.fail();}});await assert.rejects(()=>actor.start(scope),/configuration/);
-  const render=await readFile(new URL("../render.yaml",import.meta.url),"utf8");assert.equal((render.match(/key: EXTER_AD_MEDIA_ENABLED\n\s+value: "false"/g)||[]).length,3);
+  const render=await readFile(new URL("../render.yaml",import.meta.url),"utf8");
+  const services=new Map(render.split(/^  - type:/m).slice(1).map(block=>[block.match(/^    name: (\S+)$/m)?.[1],block]));
+  for(const key of ["EXTER_AD_MEDIA_ENABLED","EXTER_META_LIBRARY_ENABLED"]){
+    const values=["exter-ai","exter-worker","exter-scheduler"].map(name=>{
+      const block=services.get(name);assert.ok(block,`Render service ${name} must exist.`);
+      const entries=[...block.matchAll(new RegExp(`^      - key: ${key}\\r?\\n        value: (.+)$`,"gm"))];
+      assert.equal(entries.length,1,`${name} must define ${key} once.`);
+      const value=entries[0][1].trim().replace(/^("|')(.*)\1$/,"$2");
+      assert.ok(["true","false"].includes(value),`${name} ${key} must be true or false.`);
+      return value;
+    });
+    assert.equal(new Set(values).size,1,`${key} must agree across web, worker and scheduler.`);
+  }
 });
 test("actor uses confirmed Page, GB, year window, exact later IDs, pinned build and charge ceiling without URL credentials",async()=>{
   const input:any=mediaActorInput(scope);assert.deepEqual(input.pageIds,["12001"]);assert.deepEqual(input.countries,["GB"]);assert.equal(input.deliveredAfter,"2025-11-05");assert.equal(input.activeStatus,"all");for(const key of ["fetchAdDetails","fetchPageDetails","resolveLandingPages","includePageMatches"]as const)assert.equal(input[key],false);
