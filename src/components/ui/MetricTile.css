@@ -1,5 +1,5 @@
 .ui-metric-tile { padding:20px;border:1px solid var(--line-soft);border-radius:12px;background:var(--surface);min-width:0; }
 .ui-metric-tile h3 { font-size:14px;color:var(--muted);margin:0 0 8px; }
 .ui-metric-value { display:block;font-size:28px;font-weight:700;color:var(--exter-blue);margin-top:8px; }
-button.ui-metric-value { border:0;background:transparent;cursor:pointer;min-height:44px;text-decoration:underline; }
+button.ui-metric-value { border:0;padding:0;background:transparent;cursor:pointer;min-height:44px;text-align:left;text-decoration:underline; }
 .ui-metric-tile p { font-size:14px;color:var(--muted); }

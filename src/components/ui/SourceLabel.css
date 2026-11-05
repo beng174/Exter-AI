@@ -1,0 +1,13 @@
+.ui-source-label { display:grid;grid-template-columns:20px minmax(0,1fr);align-items:start;gap:12px;min-width:0; }
+.ui-source-label strong { display:block;line-height:20px; }
+.ui-source-label .source-gives { margin-top:4px;line-height:1.4; }
+.ui-source-marks { display:grid;gap:4px; }
+.ui-source-mark { display:inline-flex;align-items:center;justify-content:center;width:20px;height:20px;border:1px solid var(--line);border-radius:4px;background:white;color:var(--muted); }
+.ui-source-mark img { width:16px;height:16px;object-fit:contain; }
+.ui-source-detail { display:grid;gap:8px; }
+.ui-source-detail>small { display:flex;align-items:center;flex-wrap:wrap;gap:4px 12px;color:var(--muted);font-size:12px;line-height:1.5; }
+.ui-source-detail>small>span { min-width:0; }
+.ui-source-detail .ui-data-label { margin-left:4px; }
+.reference-ui [aria-label="Source health"] .ui-data-table th:first-child { width:28%; }
+.reference-ui [aria-label="Source health"] .ui-data-table th:nth-child(2) { width:15%; }
+.reference-ui [aria-label="Source health"] .ui-data-table th:last-child { width:132px; }

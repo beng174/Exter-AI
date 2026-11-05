@@ -146,8 +146,11 @@ Design: `Creatives.dc.html`. View `creatives`. Replaces the Creative library pag
 
 Design: `CreativeDetail.dc.html`. View `creative`. Replaces the ad modal.
 
-- Header: ad title, brand, previous and next within the current filtered list,
-  open in the ad library.
+- Header: a concise first-sentence heading from the ad title, brand, previous
+  and next within the current filtered list, and the ad library link. Keep full
+  source copy in the expandable copy section. Card titles retain their existing
+  first-line rule. Do not insert brand logos into the copy heading; show the
+  brand identity once in the header context.
 - Player with scene strip. Clicking a scene jumps the video. Data: stored media
   and video analysis scenes.
 - Source and running history: first seen, last seen, days running, platforms,
@@ -311,8 +314,10 @@ Design: `Reports.dc.html`. View `reports`. Replaces the Reports page.
 Design: `DataSources.dc.html`. View `data`. Replaces Data sources; absorbs the
 budgets part of Budgets and tests.
 
-- Source health table: source, what it gives, status, last success, records,
-  note, action. Data: `/api/connections`, `/api/infrastructure/status`,
+- Source health table: Source, Status, Detail, Action. Show a local provider
+  mark beside the source name and what it gives below it. Keep known last
+  successful checks and record links in a smaller line inside Detail; omit
+  unknown metadata instead of repeating empty columns. Data: `/api/connections`, `/api/infrastructure/status`,
   `/api/public/meta/watchlists`.
 - Your ad accounts: owned accounts with status, latest data date and last error
   (`/api/owned/accounts`). Sync stays switched off unless

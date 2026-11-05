@@ -1,3 +1,4 @@
+import {BrandName} from "../ui/BrandIdentity";
 import { useEffect, useState, type ReactNode } from "react";
 import type { Brand, Report } from "../../../shared/types";
 import type { BrandDemoReport } from "../../../shared/brand-demo";
@@ -6,7 +7,7 @@ import type { OwnedAccount } from "../../../server/owned/types";
 import { PageHeader, SectionCard } from "../ui";
 import { useResearchData, type ResearchData } from "../research/useResearchData";
 import { api } from "../../lib/api";
-import type { ViewId, resolveNavigation } from "../../navigation";
+import {navigation,type ViewId,type resolveNavigation} from "../../navigation";
 import { BriefsPage, ScoresPage, ReportsPage } from "./EvidencePages";
 import { CreatorsPage } from "./CreatorsPage";
 import { AskPage } from "./AskPage";
@@ -27,7 +28,7 @@ export function ActionWorkspace({brandId,brand,route}:{brandId:string;brand?:Bra
     void Promise.allSettled(paths.map(path=>api(path))).then(results=>{if(!active)return;const saved=<T,>(index:number):Saved<T>=>({value:results[index].status==="fulfilled"?(results[index] as PromiseFulfilledResult<T>).value:null,failed:results[index].status==="rejected"});setExtras({drafts:saved<BrandDemoReport>(0),creators:saved<CreatorResearchSnapshot>(1),reports:saved<Report[]>(2),owned:saved<{accounts:OwnedAccount[];liveDispatchEnabled:boolean}>(3)});});return()=>{active=false;};
   },[base?.library.brand.id,revision]);
   useEffect(()=>{if(!extras||!base)return;const hash=window.location.hash.slice(1);if(!["owned-accounts","monthly-budgets"].includes(hash))return;const frame=requestAnimationFrame(()=>document.getElementById(hash)?.scrollIntoView({block:"start"}));return()=>cancelAnimationFrame(frame);},[extras,base,view]);
-  const header=(actions?:ReactNode)=><PageHeader title={titles[view]} subtitle={subtitles[view]} actions={actions}/>;
+  const header=(actions?:ReactNode)=><PageHeader title={titles[view]} eyebrow={view!=="data"&&base?<><BrandName name={base.library.brand.name} size={32}/> · {navigation.find(item=>item.id===view)!.group}</>:undefined} subtitle={subtitles[view]} actions={actions}/>;
   if(error)return <div className="reference-page action-workspace">{header()}<SectionCard title="Saved evidence" empty={{reason:"Saved evidence could not be read.",action:{label:"Retry",onClick:refresh}}}/></div>;
   if(loading||!base||!extras)return <div className="reference-page action-workspace">{header()}<p role="status">Reading saved evidence…</p></div>;
   const props={data:{base,...extras},refresh,header};

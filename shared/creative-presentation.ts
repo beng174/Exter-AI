@@ -14,6 +14,11 @@ export function creativeIdentity(row:CreativeIdentityInput):{title:string;second
   return {title:`${row.brandName||"Brand"} ad`,secondary:`Ad ${row.nativeId||row.adId}`};
 }
 export function creativeTitle(row:CreativeIdentityInput):string {return creativeIdentity(row).title;}
+/** A readable detail heading; the original title and complete source copy stay intact. */
+export function creativeHeading(row:CreativeIdentityInput):string {
+  const title=creativeTitle(row),sentence=[...new Intl.Segmenter("en-GB",{granularity:"sentence"}).segment(title)][0]?.segment.trim()||title;
+  const excerpt=copyExcerpt(sentence,140);return excerpt.preview+(excerpt.hasMore?"…":"");
+}
 export function creativeSecondary(row:CreativeIdentityInput):string|null {return creativeIdentity(row).secondary;}
 export function videoLength(seconds:number|null|undefined):string|null {
   if(typeof seconds!=="number"||!Number.isFinite(seconds)||seconds<0)return null;
