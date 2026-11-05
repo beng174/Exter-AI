@@ -3,6 +3,25 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { MetaLibraryConnector, MetaCollectionError, META_FIELDS, metaStatus } from "../server/connectors/meta-library.js";
 const fakeToken = "test-fixture-token";
+test("Meta API version override and ALL type apply to Page and category requests on every cursor",async()=>{
+  const old=process.env.META_API_VERSION;process.env.META_API_VERSION="v27.0";
+  try{for(const query of [{pageIds:["12"]},{searchTerm:"home fragrance"}]){
+    const connector=new MetaLibraryConnector({token:fakeToken,fetch:async target=>{
+      const url=new URL(String(target));assert.equal(url.pathname,"/v27.0/ads_archive");assert.equal(url.searchParams.get("ad_type"),"ALL");
+      assert.equal(url.searchParams.get("ad_delivery_date_min"),"2025-11-05");assert.equal(url.searchParams.get("ad_delivery_date_max"),"2026-11-05");
+      return Response.json({data:[]});
+    }});await connector.page({...query,countries:["GB"],after:"fixture-cursor",from:"2025-11-05",to:"2026-11-05"});
+  }}finally{if(old===undefined)delete process.env.META_API_VERSION;else process.env.META_API_VERSION=old;}
+});
+test("brand queries never combine keyword discovery, commercial fields or secret paging URLs",async()=>{
+  let calls=0;const paging=`https://graph.facebook.com/private?access_token=${fakeToken}`;
+  const connector=new MetaLibraryConnector({token:fakeToken,fetch:async()=>{calls++;return Response.json({data:[{id:"123",spend:99,impressions:1000,ad_snapshot_url:paging,ad_creative_bodies:[paging],total_reach_by_location:[{key:"UK",value:20,paging:{next:paging}}]}],paging:{next:paging,cursors:{after:"safe"}}});}});
+  await assert.rejects(connector.page({pageIds:["12"],searchTerm:"category",countries:["GB"]}));assert.equal(calls,0);
+  const result=await connector.page({pageIds:["12"],countries:["GB"]});
+  assert.ok(!JSON.stringify(result).includes("access_token"));assert.ok(!JSON.stringify(result).includes(fakeToken));assert.ok(!JSON.stringify(result).includes("private?"));
+  assert.equal(result.rows[0].spend,undefined);assert.equal(result.rows[0].impressions,undefined);
+  assert.ok(!META_FIELDS.includes("spend"));assert.ok(!META_FIELDS.includes("impressions"));
+});
 test("Meta fixture pages preserve exact IDs, observed zero and missing reach without claiming live verification",async()=>{
   const fixture=readFileSync(new URL("./fixtures/connectors/meta-page.json",import.meta.url),"utf8");
   const connector=new MetaLibraryConnector({token:fakeToken,fetch:async()=>new Response(fixture,{headers:{"Content-Type":"application/json"}})});
@@ -18,10 +37,11 @@ test("Meta requests required public fields and paginates via cursor without pers
   const connector = new MetaLibraryConnector({ token: fakeToken, fetch: async (target,init) => {
     const url = new URL(String(target));
     assert.equal(url.origin,"https://graph.facebook.com");
-    assert.equal(url.pathname,"/v25.0/ads_archive");
+    assert.equal(url.pathname,"/v26.0/ads_archive");
     assert.equal(url.searchParams.get("fields"),META_FIELDS);
     assert.equal(url.searchParams.get("after"),"first");
     assert.equal(url.searchParams.get("ad_active_status"),"ALL");
+    assert.equal(url.searchParams.get("ad_type"),"ALL");
     assert.deepEqual(JSON.parse(url.searchParams.get("ad_reached_countries")!),["GB","FR"]);
     assert.equal(url.searchParams.has("access_token"),false);
     assert.equal((init?.headers as Record<string,string>).Authorization,`Bearer ${fakeToken}`);

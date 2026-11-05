@@ -13,6 +13,8 @@ import {canonicalWorkspaceBrands,workspaceBrandIds} from "./demo/reconcile.js";
 import {configuredCreativeCompetitors} from "./demo/creative-competitors.js";
 import type {DemoCollectionService} from "./demo/collection.js";
 import {readBrandResearch} from "./brand-research.js";
+import {infrastructureDatabase} from "./infrastructure/database.js";
+import type pg from "pg";
 import {brandColour,brandInitials,type BrandIdentity} from "../shared/brand-identity.js";
 
 export const LOGO_MAX_BYTES=200_000;
@@ -101,9 +103,24 @@ export function brandIdentities(db:DatabaseSync,workspaceId?:string,collection?:
   }
   return result;
 }
+/** Saved watchlist identities take precedence over inferred pages, without a provider call. */
+export async function resolvedBrandIdentities(db:DatabaseSync,workspaceId?:string,collection?:Pick<DemoCollectionService,"snapshot">,pool?:pg.Pool):Promise<BrandIdentity[]>{
+  const identities=brandIdentities(db,workspaceId,collection);
+  if(!pool)return identities;
+  try{
+    const rows=await pool.query("SELECT workspace_id,brand_key,page_ids FROM watchlists WHERE purpose='brand' AND brand_key IS NOT NULL AND enabled"+(workspaceId?" AND workspace_id=$1":""),workspaceId?[workspaceId]:[]);
+    const assignments=new Map<string,Set<string>>();
+    for(const w of rows.rows){const owner=canonicalWorkspaceBrands(db).find(b=>b.id===w.workspace_id&&b.mode!=="demo");if(!owner||w.page_ids.length!==1||!/^\d{1,30}$/.test(w.page_ids[0]))continue;
+      const name=w.brand_key===owner.id?owner.name:configuredCreativeCompetitors(db,owner,collection).find(c=>(c.brandId||c.key)===w.brand_key)?.name;
+      const identity=identities.find(b=>b.name===name);if(!identity)continue;const pages=assignments.get(identity.id)||new Set<string>();pages.add(w.page_ids[0]);assignments.set(identity.id,pages);
+    }
+    return identities.map(b=>({...b,metaPageId:assignments.get(b.id)?.size===1?[...assignments.get(b.id)!][0]:b.metaPageId}));
+  }catch{return identities;}
+}
 export function attachBrandLogos(app:Express,db:DatabaseSync){
   const store=new BrandLogoStore();app.locals.brandLogos=store;
-  app.get("/api/brand-identities",(req,res)=>res.json(brandIdentities(db,String(req.query.brandId||""),app.locals.demoCollection)));
-  app.get("/api/brand-logos/:id",async(req,res)=>{res.setHeader("Cache-Control","private, no-store");const brand=brandIdentities(db,undefined,app.locals.demoCollection).find(b=>b.id===req.params.id);if(!brand){res.sendStatus(404);return;}try{const image=await (app.locals.brandLogos as BrandLogoStore).image(brand);if(!image){res.status(204).end();return;}res.type("png").send(image);}catch{res.status(204).end();}});
-  app.post("/api/brand-logos/:id",async(req,res)=>{const brand=brandIdentities(db,undefined,app.locals.demoCollection).find(b=>b.id===req.params.id);if(!brand){res.sendStatus(404);return;}try{if(req.body?.reset===true)await (app.locals.brandLogos as BrandLogoStore).reset(brand);else{if(typeof req.body?.data!=="string"||req.body.data.length>Math.ceil(LOGO_MAX_BYTES*4/3)||!/^[A-Za-z0-9+/]*={0,2}$/.test(req.body.data))throw new Error("Choose a logo smaller than 200 KB.");await (app.locals.brandLogos as BrandLogoStore).upload(brand,Buffer.from(req.body.data,"base64"),String(req.body.type||""));}res.json({ok:true});}catch(error){res.status(400).json({error:error instanceof Error&&/^(Choose|Sample)/.test(error.message)?error.message:"The logo could not be saved. Earlier media is preserved."});}});
+  const identities=(workspaceId?:string)=>resolvedBrandIdentities(db,workspaceId,app.locals.demoCollection,process.env.DATABASE_URL?infrastructureDatabase():undefined);
+  app.get("/api/brand-identities",async(req,res)=>res.json(await identities(String(req.query.brandId||"")||undefined)));
+  app.get("/api/brand-logos/:id",async(req,res)=>{res.setHeader("Cache-Control","private, no-store");const brand=(await identities(typeof req.query.workspaceId==="string"?req.query.workspaceId:undefined)).find(b=>b.id===req.params.id);if(!brand){res.sendStatus(404);return;}try{const image=await (app.locals.brandLogos as BrandLogoStore).image(brand);if(!image){res.status(204).end();return;}res.type("png").send(image);}catch{res.status(204).end();}});
+  app.post("/api/brand-logos/:id",async(req,res)=>{const brand=(await identities(typeof req.query.workspaceId==="string"?req.query.workspaceId:undefined)).find(b=>b.id===req.params.id);if(!brand){res.sendStatus(404);return;}try{if(req.body?.reset===true)await (app.locals.brandLogos as BrandLogoStore).reset(brand);else{if(typeof req.body?.data!=="string"||req.body.data.length>Math.ceil(LOGO_MAX_BYTES*4/3)||!/^[A-Za-z0-9+/]*={0,2}$/.test(req.body.data))throw new Error("Choose a logo smaller than 200 KB.");await (app.locals.brandLogos as BrandLogoStore).upload(brand,Buffer.from(req.body.data,"base64"),String(req.body.type||""));}res.json({ok:true});}catch(error){res.status(400).json({error:error instanceof Error&&/^(Choose|Sample)/.test(error.message)?error.message:"The logo could not be saved. Earlier media is preserved."});}});
 }

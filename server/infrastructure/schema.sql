@@ -53,4 +53,11 @@ CREATE TABLE IF NOT EXISTS collection_cursors (
 );
 CREATE TABLE IF NOT EXISTS backup_runs(id bigint GENERATED ALWAYS AS IDENTITY PRIMARY KEY,created_at timestamptz NOT NULL,status text NOT NULL);
 
-CREATE UNIQUE INDEX IF NOT EXISTS watchlists_workspace ON watchlists(workspace_id);
+ALTER TABLE watchlists ADD COLUMN IF NOT EXISTS brand_key text;
+ALTER TABLE watchlists ADD COLUMN IF NOT EXISTS purpose text NOT NULL DEFAULT 'brand' CHECK(purpose IN ('brand','discovery'));
+ALTER TABLE watchlists ADD COLUMN IF NOT EXISTS revision integer NOT NULL DEFAULT 1;
+DROP INDEX IF EXISTS watchlists_workspace;
+CREATE UNIQUE INDEX IF NOT EXISTS watchlists_workspace_brand ON watchlists(workspace_id,brand_key) WHERE brand_key IS NOT NULL;
+CREATE UNIQUE INDEX IF NOT EXISTS watchlists_workspace_page ON watchlists(workspace_id,(page_ids->>0)) WHERE purpose='brand' AND enabled AND brand_key IS NOT NULL AND jsonb_array_length(page_ids)=1;
+CREATE TABLE IF NOT EXISTS meta_request_gate(id integer PRIMARY KEY CHECK(id=1),next_request_at timestamptz NOT NULL DEFAULT now());
+INSERT INTO meta_request_gate(id) VALUES(1) ON CONFLICT DO NOTHING;

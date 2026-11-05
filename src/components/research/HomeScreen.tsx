@@ -1,3 +1,5 @@
+import {reachScorecard} from "../../../shared/meta-research";
+import {REACH_SHARE_NOTE} from "../../../shared/meta-public";
 import { HomeReadModel } from "./ResearchReadModels";
 import { Caveat } from "../ui/Caveat";
 import { useState } from "react";
@@ -11,18 +13,19 @@ import type { CreativePerformance } from "../../../shared/creative-browser";
 
 export function HomeScreen({data,selection,refresh}:ScreenProps) {
   if(data.library.presentation)return <HomeReadModel library={data.library} model={data.library.presentation}/>;
-  const brands=brandSnapshots(data.library,data.window,selection.platform),you=brands[0],top=longestRunning(data.library.creatives,selection,5);
+  const {brands,hasReach}=reachScorecard(data.library,data.window,selection.platform),you=brands[0],top=longestRunning(data.library.creatives,selection,5);
   const collection={href:`/?view=settings&brandId=${encodeURIComponent(data.library.brand.id)}#demo-collection`,linkLabel:"Collect competitor ads"};
   const source={href:`/?view=data&brandId=${encodeURIComponent(data.library.brand.id)}`,linkLabel:"Data sources"};
   const rows=([['Active ads','active'],['New ads this week','launched'],['Stopped this week','stopped'],['Median days running','medianDays'],['Share of voice','shareActive']] as const).map(([label,key])=>{
     const average=competitorAverage(brands,key);average.selection={...average.selection,asOf:data.window.asOf||undefined,platform:selection.platform,...(key==="launched"||key==="stopped"?{activityFrom:data.window.from||undefined,activityTo:data.window.to||undefined}:{})};
-    return {label,key,yours:you[key],average,previous:key==="launched"?you.previousLaunches:null};
+    if(key==="shareActive"&&hasReach)average.selection={...selection,show:"competitors",kind:"all",reachCountry:"GB"};
+    return {label:key==="shareActive"?hasReach?"Share of voice by reach":"Share of active ads":label,key,yours:you[key],average,previous:key==="launched"?you.previousLaunches:null};
   });
   return <>
     <SectionCard title="What to work on" actions={<a href={`/?view=briefs&brandId=${encodeURIComponent(data.library.brand.id)}`}>All opportunities</a>} empty={{reason:"Recommendations appear once creative results and customer needs can be compared."}}/>
     <div className="research-grid-two">
       <SectionCard title="You against the market" help="Weekly scorecard" empty={!rows.some(row=>[row.yours.value,row.average.value,row.previous?.value].some(hasValue))&&{reason:"No comparable activity is saved.",...collection}} actions={<a href={`/?view=competitors&brandId=${encodeURIComponent(data.library.brand.id)}`}>Full scorecard</a>} meta={metadata(data,selection)}>
-        <Caveat>Measures without comparable saved evidence, including impression-based share of voice, are omitted.</Caveat><DataTable caption="Saved activity scorecard" basis="Observed" rowBasis={row=>[row.yours.value,row.average.value,row.previous?.value].some(hasValue)?"Observed":"Unavailable"} rows={rows.filter(row=>[row.yours.value,row.average.value,row.previous?.value].some(hasValue))} rowKey={row=>row.key} onRow={row=>window.location.assign(evidenceUrl(data.library.brand.id,row.yours.selection))} columns={[
+        <Caveat>{hasReach?REACH_SHARE_NOTE:"Measures without comparable saved evidence are omitted. Share of active ads counts captures, not impressions or reach."}</Caveat><DataTable caption="Saved activity scorecard" basis="Observed" rowBasis={row=>[row.yours.value,row.average.value,row.previous?.value].some(hasValue)?row.key==="shareActive"&&hasReach?"Estimated":"Observed":"Unavailable"} rows={rows.filter(row=>[row.yours.value,row.average.value,row.previous?.value].some(hasValue))} rowKey={row=>row.key} onRow={row=>window.location.assign(evidenceUrl(data.library.brand.id,row.yours.selection))} columns={[
           {key:"measure",label:"Measure",value:row=>row.label},
           {key:"you",label:"You",value:row=>row.yours.value,render:row=><Measure data={data} metric={row.yours} suffix={row.key==="shareActive"?"%":""}/>},
           {key:"average",label:"Competitor average",value:row=>row.average.value,render:row=><Measure data={data} metric={row.average} suffix={row.key==="shareActive"?"%":""}/>},
@@ -44,11 +47,11 @@ export function HomeScreen({data,selection,refresh}:ScreenProps) {
     </div>
     <SectionCard title="Needs attention">
       <div className="research-attention-list">
-        {!data.infrastructure?<Unavailable reason="Source health could not be read." action={{label:"Retry",onClick:refresh}}/>:data.infrastructure.meta?.status!=="connected"?<p>Public collection is waiting for connection. <a href={source.href}>Review source health</a></p>:null}
+        {!data.infrastructure?<Unavailable reason="Source health could not be read." action={{label:"Retry",onClick:refresh}}/>:data.library.metaSource?.status!=="connected"?<p>Public collection is waiting for connection. <a href={source.href}>Review source health</a></p>:null}
         {staleCapture(data.library.lastChecked)&&<p>Saved captures need a fresh check. Last saved evidence: {ukDate(data.library.lastChecked)}. <a href={`/?view=settings&brandId=${encodeURIComponent(data.library.brand.id)}#demo-collection`}>Review collection</a></p>}
         {data.budgets===null?<Unavailable reason="Budget status could not be read." href={`/?view=settings&brandId=${encodeURIComponent(data.library.brand.id)}#monthly-budgets`} linkLabel="Review budgets"/>:data.budgets.filter(item=>item.paused).map(item=><p key={item.cost_type}>{plainEnum(item.cost_type)} is paused by the existing budget guard. <a href={`/?view=settings&brandId=${encodeURIComponent(data.library.brand.id)}#monthly-budgets`}>Review budget</a></p>)}
         {data.connections?.some(item=>!["connected","not_connected"].includes(item.status))&&<p>A source is waiting or needs attention. <a href={source.href}>Review connections</a></p>}
-        {data.infrastructure?.meta?.status==="connected"&&staleCapture(data.library.lastChecked)===false&&data.budgets&&!data.budgets.some(item=>item.paused)&&data.connections?.every(item=>item.status==="connected")&&<p>No saved source or budget alert is active.</p>}
+        {data.library.metaSource?.status==="connected"&&staleCapture(data.library.lastChecked)===false&&data.budgets&&!data.budgets.some(item=>item.paused)&&data.connections?.every(item=>item.status==="connected")&&<p>No saved source or budget alert is active.</p>}
       </div>
     </SectionCard>
   </>;

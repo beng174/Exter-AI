@@ -1,3 +1,5 @@
+import {reachScorecard,audienceReachTable} from "../../../shared/meta-research";
+import {REACH_SHARE_NOTE} from "../../../shared/meta-public";
 import { BrandText } from "../ui/BrandIdentity";
 import { CompetitorsReadModel, FormatsReadModel, PatternsReadModel, AudienceReadModel, WinnersReadModel } from "./ResearchReadModels";
 import type { CSSProperties } from "react";
@@ -14,8 +16,8 @@ const validDimension=(value:ResearchDimension)=>RESEARCH_DIMENSIONS.includes(val
 export function CompetitorsScreen({data,selection,dimension,onDimension}:ScreenProps&DimensionProps) {
   if(data.library.presentation)return <CompetitorsReadModel library={data.library} model={data.library.presentation}/>;
   dimension=validDimension(dimension);
-  const brands=brandSnapshots(data.library,data.window,selection.platform);
-  const metrics=[{id:"active",label:"Active ads"},{id:"launched",label:"New this week"},{id:"stopped",label:"Stopped this week"},{id:"medianDays",label:"Median days running"},{id:"shareActive",label:"Share of voice"}] as const;
+  const {brands,hasReach}=reachScorecard(data.library,data.window,selection.platform);
+  const metrics=[{id:"active",label:"Active ads"},{id:"launched",label:"New this week"},{id:"stopped",label:"Stopped this week"},{id:"medianDays",label:"Median days running"},{id:"shareActive",label:hasReach?"Share of voice by reach":"Share of active ads"}] as const;
   const selectionFor=(brand:BrandSnapshot,id:string)=>id in brand?(brand[id as keyof BrandSnapshot] as {selection:EvidenceSelection}).selection:{...selection,brand:brand.id};
   const values=brands.map(brand=>mixGroups(data.library.creatives,dimension,{...selection,brand:brand.id,kind:"active"}));
   const labels=[...new Set(values.flatMap(value=>value.groups.map(group=>group.value)))];
@@ -23,8 +25,8 @@ export function CompetitorsScreen({data,selection,dimension,onDimension}:ScreenP
   const collect={href:`/?view=settings&brandId=${encodeURIComponent(data.library.brand.id)}#demo-collection`,linkLabel:"Collect competitor ads"};
   return <>
     <SectionCard title="Scorecard" help="Select a number to see its ads" empty={!metrics.some(row=>brands.some(brand=>hasValue(brand[row.id].value)))&&{reason:"No comparable activity is saved.",...collect}} actions={<button className="button secondary" disabled title="Scorecard export is not available yet.">Export</button>} meta={metadata(data,selection)}>
-      <Caveat>Winner share, estimated spend and measures without saved evidence are omitted.</Caveat>{brands.some(brand=>!brand.available)&&<p className="reference-muted">{brands.filter(brand=>!brand.available).length} configured competitors have no collected ads. <a href={collect.href}>Collect competitor ads</a></p>}
-      <DataTable caption="You and configured competitors" basis="Observed" rowBasis={row=>brands.some(brand=>hasValue(brand[row.id].value))?"Observed":"Unavailable"} rows={metrics.filter(row=>brands.some(brand=>hasValue(brand[row.id].value)))} rowKey={row=>row.id} onRow={row=>window.location.assign(evidenceUrl(data.library.brand.id,{...selection,kind:row.id==="launched"?"launches":row.id==="stopped"?"stopped":row.id==="medianDays"?"running":"active",activityFrom:data.window.from||undefined,activityTo:data.window.to||undefined}))} columns={[
+      <Caveat>{hasReach?REACH_SHARE_NOTE:"Winner share, estimated spend and measures without saved evidence are omitted."}</Caveat>{brands.some(brand=>!brand.available)&&<p className="reference-muted">{brands.filter(brand=>!brand.available).length} configured competitors have no collected ads. <a href={collect.href}>Collect competitor ads</a></p>}
+      <DataTable caption="You and configured competitors" basis="Observed" rowBasis={row=>brands.some(brand=>hasValue(brand[row.id].value))?row.id==="shareActive"&&hasReach?"Estimated":"Observed":"Unavailable"} rows={metrics.filter(row=>brands.some(brand=>hasValue(brand[row.id].value)))} rowKey={row=>row.id} onRow={row=>window.location.assign(evidenceUrl(data.library.brand.id,{...selection,...(row.id==="shareActive"&&hasReach?{reachCountry:"GB"}:{}),kind:row.id==="shareActive"&&hasReach?"all":row.id==="launched"?"launches":row.id==="stopped"?"stopped":row.id==="medianDays"?"running":"active",activityFrom:data.window.from||undefined,activityTo:data.window.to||undefined}))} columns={[
         {key:"measure",label:"Measure",value:row=>row.label},...brands.map(brand=>({key:brand.id,label:brand.workspaceBrand?"You":brand.name,align:"mixed" as const,header:<><span>{brand.workspaceBrand?"You":brand.name}</span>{!brand.available&&<small className="not-collected-header">Not collected</small>}</>,missing:()=>brand.available?<Unavailable compact reason="No comparable saved measure is available."/>:<span aria-hidden="true"/>,value:(row:typeof metrics[number])=>brand[row.id].value,render:(row:typeof metrics[number])=><Measure data={data} metric={brand[row.id]} suffix={row.id==="shareActive"?"%":""}/>}))
       ]}/>
 
@@ -95,6 +97,7 @@ export function PatternsScreen({data,selection,dimension,onDimension}:ScreenProp
 }
 export function AudienceScreen({data,selection}:ScreenProps) {
   if(data.library.presentation)return <AudienceReadModel library={data.library} model={data.library.presentation}/>;
+  const audience=audienceReachTable(data.library,selection);
   const quotes=data.research?.facts.filter(fact=>fact.label==="Customer review displayed by the brand")||[];
   const brands=brandSnapshots(data.library,data.window,selection.platform);
   const voices=brands.map(brand=>({...brand,...brandVoice(data.library.creatives,{...selection,brand:brand.id,kind:"active"})}));
@@ -105,7 +108,15 @@ export function AudienceScreen({data,selection}:ScreenProps) {
 
     </SectionCard>
     <SectionCard title="Words customers use" empty={{reason:"Exact phrase counts will appear when review grouping is available.",href:researchHref,linkLabel:"View saved quotes"}}/>
-    <SectionCard title="Who the ads reach" empty={{reason:"No published demographic reach breakdown is available. Audience demographics are never inferred.",href:`/?view=data&brandId=${encodeURIComponent(data.library.brand.id)}`,linkLabel:"Review public sources"}}/>
+    <SectionCard title="Who the ads reach" help="Published ad-library reach · Observed, not inferred" meta={metadata(data,selection)} empty={!audience.rows.length&&{reason:"No published demographic reach breakdown is available. Audience demographics are never inferred.",href:`/?view=data&brandId=${encodeURIComponent(data.library.brand.id)}`,linkLabel:"Review public sources"}}>
+      <Caveat>Published lifetime reach counts at the saved check, summed across ads without deduplicating people. Age columns sum only published gender cells; missing cells are excluded, never counted as zero. Women shows published female reach. These are reached audiences, not targeting choices.</Caveat>
+      <DataTable caption="Published age and gender reach" basis="Observed" rows={audience.rows} rowKey={r=>r.key} onRow={r=>window.location.assign(evidenceUrl(data.library.brand.id,{...selection,brand:r.brandId,kind:"all",demographicCountry:r.country}))} columns={[
+        {key:"brand",label:"Brand",value:r=>r.brand,render:r=><><BrandText size={16}>{r.brand}</BrandText><small className="source-gives">{r.country==="GB"?"United Kingdom":r.country}</small></>},
+        ...audience.ages.map(age=>({key:age,label:age,align:"number" as const,value:(r:typeof audience.rows[number])=>r.ages[age],render:(r:typeof audience.rows[number])=><a className="read-model-heat" href={evidenceUrl(data.library.brand.id,{...selection,brand:r.brandId,kind:"all",demographicCountry:r.country,reachAge:age})}>{number(r.ages[age],0)}</a>})),
+        {key:"women",label:"Women",align:"number",value:r=>r.women,render:r=><a href={evidenceUrl(data.library.brand.id,{...selection,brand:r.brandId,kind:"all",demographicCountry:r.country,reachGender:"female"})}>{number(r.women,0)}</a>}
+      ]}/>
+
+    </SectionCard>
     <SectionCard title="How each brand talks" help="Tone, typical claim and call to action across each brand's active ads" empty={!voices.some(row=>row.claim||row.cta||row.offer)&&{reason:"No supported creative language analysis is saved.",href:analysisUrl(data.library.brand.id),linkLabel:"Run analysis"}}>
       <DataTable caption="Saved brand language" basis="Modelled" rowBasis={row=>[row.claim,row.offer,row.cta].some(hasValue)?"Modelled":"Unavailable"} meta={metadata(data,{...selection,kind:"active"})} rows={voices.filter(row=>[row.claim,row.offer,row.cta].some(hasValue))} rowKey={row=>row.id} onRow={row=>window.location.assign(evidenceUrl(data.library.brand.id,{...selection,brand:row.id,kind:"active"}))} columns={[{key:"brand",label:"Brand",value:row=>row.name},{key:"tone",label:"Tone",value:()=>null,unavailable:()=>({reason:"No explicit tone field is saved. Audience traits are not inferred from creative style."})},{key:"claim",label:"Typical recorded claim",value:row=>row.claim},{key:"offer",label:"Recorded offer",value:row=>row.offer?dimensionLabel("offer",row.offer):null},{key:"cta",label:"Call to action",value:row=>row.cta}]}/>
     </SectionCard>

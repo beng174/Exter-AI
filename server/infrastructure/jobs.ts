@@ -2,26 +2,26 @@ import { scheduleOwnedSync } from "../owned/jobs.js";
 export { enqueueOwnedSync, workOwnedOnce } from "../owned/jobs.js";
 import { randomUUID } from "node:crypto";
 import type pg from "pg";
-import { collectMetaPage, MetaCollectionError, MetaLibraryConnector, metaStatus } from "../connectors/meta-library.js";
+import { collectMetaPage, MetaCollectionError, MetaLibraryConnector, metaStatus, metaLibraryEnabled } from "../connectors/meta-library.js";
 const MAX_PAGE_ATTEMPTS = 5;
-export async function enqueueCollection(pool: pg.Pool, watchlistId: string, day?: string) {
+export async function enqueueCollection(pool: pg.Pool, watchlistId: string, day?: string, now=new Date()) {
   const client = await pool.connect();
   const id = randomUUID();
   try {
     await client.query("BEGIN");
     // Serialize scheduler/manual work for this watchlist, preserving the daily slot on restart.
-    const watchlist = await client.query("SELECT id,page_ids,search_terms,countries FROM watchlists WHERE id=$1 AND enabled FOR UPDATE", [watchlistId]);
+    const watchlist = await client.query("SELECT id,page_ids,search_terms,countries,purpose,brand_key,revision FROM watchlists WHERE id=$1 AND enabled FOR UPDATE", [watchlistId]);
     if (!watchlist.rowCount) throw new Error("Watchlist is missing or disabled.");
     if (day) {
       const slot = await client.query("SELECT run_id FROM schedule_slots WHERE watchlist_id=$1 AND day=$2", [watchlistId,day]);
       if (slot.rowCount) { await client.query("COMMIT"); return slot.rows[0].run_id as string; }
     }
-    const active = await client.query("SELECT id,status FROM collection_runs WHERE watchlist_id=$1 AND status IN ('queued','running','paused','not_connected') ORDER BY started_at LIMIT 1 FOR UPDATE", [watchlistId]);
+    const active = await client.query("SELECT id,status FROM collection_runs WHERE watchlist_id=$1 AND status IN ('queued','running','paused','not_connected','failed') ORDER BY started_at LIMIT 1 FOR UPDATE", [watchlistId]);
     if (active.rowCount) {
       const run = active.rows[0];
       // Only an explicit operator request resumes blocked work. Scheduling does
       // not establish that credentials, permissions or budgets were corrected.
-      if (!day && ["paused","not_connected"].includes(run.status)) {
+      if (!day && ["paused","not_connected","failed"].includes(run.status)) {
         const resumed = await client.query(`UPDATE collection_jobs SET status='queued',attempts=0,available_at=now(),lease_owner=NULL,lease_until=NULL
           WHERE id=$1 AND (lease_until IS NULL OR lease_until<=now()) RETURNING id`, [run.id]);
         if (resumed.rowCount)
@@ -30,7 +30,10 @@ export async function enqueueCollection(pool: pg.Pool, watchlistId: string, day?
       if (day) await client.query("INSERT INTO schedule_slots VALUES($1,$2,$3) ON CONFLICT DO NOTHING", [watchlistId,day,run.id]);
       await client.query("COMMIT"); return run.id as string;
     }
-    await client.query("INSERT INTO collection_runs(id,watchlist_id,config) VALUES($1,$2,$3)", [id,watchlistId,JSON.stringify(watchlist.rows[0])]);
+    const config=watchlist.rows[0];
+    const prior=await client.query("SELECT 1 FROM collection_runs WHERE watchlist_id=$1 AND status='complete' AND config->>'revision'=$2 LIMIT 1",[watchlistId,String(config.revision)]);
+    const to=day||now.toISOString().slice(0,10),from=rollingYearStart(to);
+    await client.query("INSERT INTO collection_runs(id,watchlist_id,config) VALUES($1,$2,$3)", [id,watchlistId,JSON.stringify({...config,from,to,phase:prior.rowCount?"daily":"backfill"})]);
     await client.query("INSERT INTO collection_jobs(id) VALUES($1)", [id]);
     if (day) await client.query("INSERT INTO schedule_slots VALUES($1,$2,$3)", [watchlistId,day,id]);
     await client.query("COMMIT"); return id;
@@ -43,19 +46,25 @@ export async function claimJob(pool: pg.Pool, owner: string) {
       AND (lease_until IS NULL OR lease_until<now()) ORDER BY available_at FOR UPDATE SKIP LOCKED LIMIT 1) RETURNING *`, [owner]);
   return result.rows[0] ?? null;
 }
-export async function workOnce(pool: pg.Pool, connector?: MetaLibraryConnector) {
+export async function workOnce(pool: pg.Pool, connector?: MetaLibraryConnector, options:{env?:Record<string,string|undefined>;paceMs?:number}={}) {
+  if(!metaLibraryEnabled(options.env))return false;
+  // A shared row reserves dispatch time across worker processes and watchlist brands.
+  const gate=await pool.query("UPDATE meta_request_gate SET next_request_at=now()+($1 * interval '1 millisecond') WHERE id=1 AND next_request_at<=now() RETURNING id",[options.paceMs??20000]);
+  if(!gate.rowCount)return false;
   const owner = randomUUID();
   const job = await claimJob(pool,owner);
   if (!job) return false;
   let state = "queued", backoffMs = 0, resetAttempts = false, errorMessage: string | null = null;
   try {
-    const run = (await pool.query("SELECT status FROM collection_runs WHERE id=$1", [job.id])).rows[0];
-    if (run?.status === "complete") { state = "complete"; resetAttempts = true; }
+    const run = (await pool.query("SELECT r.status,w.enabled,w.brand_key,w.purpose FROM collection_runs r JOIN watchlists w ON w.id=r.watchlist_id WHERE r.id=$1", [job.id])).rows[0];
+    if (run?.status === "complete" || run?.status === "superseded") { state = "complete"; resetAttempts = true; }
     else if (run && ["paused","not_connected","failed"].includes(run.status)) {
       // Reconcile jobs left queued by the earlier implementation without
       // treating an upgrade/restart as permission to resume blocked work.
       state = run.status;
     }
+    else if(!run?.enabled){state="superseded";errorMessage="The watchlist is disabled. Saved evidence is retained.";}
+    else if(run.purpose==="brand"&&!run.brand_key){state="paused";errorMessage="Assign a Page ID to each brand in Edit watchlist before resuming collection.";}
     else if (job.attempts > MAX_PAGE_ATTEMPTS) {
       // A crash on the final attempt must not create an unbounded sixth request.
       state = "failed";
@@ -68,6 +77,8 @@ export async function workOnce(pool: pg.Pool, connector?: MetaLibraryConnector) 
       resetAttempts = true;
     }
   } catch (error) {
+    const providerDelay=error instanceof MetaCollectionError?Math.max(error.reason==="rate_limited"?60000:0,error.retryAfterMs):0;
+    if(providerDelay>0)await pool.query("UPDATE meta_request_gate SET next_request_at=GREATEST(next_request_at,now()+($1 * interval '1 millisecond')) WHERE id=1",[providerDelay]);
     // Only controlled messages enter persistent status; driver/provider errors can contain secrets.
     if (error instanceof Error && error.message.startsWith("Jobs paused:")) {
       state = "paused";
@@ -86,9 +97,10 @@ export async function workOnce(pool: pg.Pool, connector?: MetaLibraryConnector) 
       errorMessage = error instanceof MetaCollectionError && error.reason === "rate_limited"
         ? "Meta collection was rate-limited. A bounded retry will resume from the saved cursor."
         : "Meta collection is temporarily unavailable. A bounded retry will resume from the saved cursor.";
-      backoffMs = Math.min(3600000,60000 * 2 ** Math.min(job.attempts - 1,6));
+      backoffMs = Math.max(error instanceof MetaCollectionError?error.retryAfterMs:0,Math.min(3600000,60000 * 2 ** Math.min(job.attempts - 1,6)));
     }
   }
+  if(backoffMs>0)await pool.query("UPDATE meta_request_gate SET next_request_at=GREATEST(next_request_at,now()+($1 * interval '1 millisecond')) WHERE id=1",[backoffMs]);
   // Commit the run and job disposition together, fenced by the live claim.
   // Keep lock order consistent with collectMetaPage: run before job.
   const client = await pool.connect();
@@ -105,8 +117,16 @@ export async function workOnce(pool: pg.Pool, connector?: MetaLibraryConnector) 
   finally { client.release(); }
   return true;
 }
-export async function schedule(pool: pg.Pool, now = new Date()) {
+export function rollingYearStart(day:string){const date=new Date(day+"T00:00:00Z"),month=date.getUTCMonth();date.setUTCFullYear(date.getUTCFullYear()-1);if(date.getUTCMonth()!==month)date.setUTCDate(0);return date.toISOString().slice(0,10);}
+export function metaScheduleDay(now:Date):string|null {
+  const parts=new Intl.DateTimeFormat("en-GB",{timeZone:"Europe/London",year:"numeric",month:"2-digit",day:"2-digit",hour:"2-digit",hourCycle:"h23"}).formatToParts(now);
+  const get=(type:string)=>parts.find(part=>part.type===type)!.value;
+  return Number(get("hour"))>=3?`${get("year")}-${get("month")}-${get("day")}`:null;
+}
+export async function schedule(pool: pg.Pool, now = new Date(), env:Record<string,string|undefined>=process.env) {
   await scheduleOwnedSync(pool,now);
-  const watchlists = await pool.query("SELECT id FROM watchlists WHERE enabled ORDER BY id");
-  for (const row of watchlists.rows) await enqueueCollection(pool,row.id,now.toISOString().slice(0,10));
+  const day=metaScheduleDay(now);
+  if(!metaLibraryEnabled(env)||!day)return;
+  const watchlists = await pool.query("SELECT id FROM watchlists WHERE enabled AND ((brand_key IS NOT NULL AND jsonb_array_length(page_ids)>0) OR purpose='discovery') ORDER BY id");
+  for (const row of watchlists.rows) await enqueueCollection(pool,row.id,day,now);
 }

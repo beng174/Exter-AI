@@ -9,6 +9,9 @@ import { resolveDemoBrandId } from "./reconcile.js";
 import type { CreativeGalleryService } from "./gallery.js";
 import type { BrandDemoService } from "./service.js";
 import { infrastructureDatabase } from "../infrastructure/database.js";
+import {metaLibraryEnabled} from "../connectors/meta-library.js";
+import {metaSourceHealth,readPublicObservations,mergePublicEvidence} from "../infrastructure/meta-evidence.js";
+import type {MetaSourceHealth} from "../../shared/meta-public.js";
 export interface BrowserOptions {
     getPool?: () => pg.Pool | null;
     now?: () => Date;
@@ -66,6 +69,16 @@ export function attachCreativeBrowser(app: Express, db: DatabaseSync, options: B
                     sources.push({ brandId: id, name: competitors.find(item => item.brandId === id)?.name || "Configured brand", status: "error", message: "Stored creative data could not be read. Earlier records are preserved." });
                 }
             }
+            let metaSource:MetaSourceHealth={status:metaLibraryEnabled()?"unavailable":"off",enabled:metaLibraryEnabled(),lastSuccessfulCheck:null,message:metaLibraryEnabled()?"Collection database is not configured.":"Live collection is off. Saved evidence is retained."};
+            try {
+                const pool=options.getPool?options.getPool():process.env.DATABASE_URL?infrastructureDatabase():null;
+                if(pool){
+                    const [observations,health]=await Promise.all([readPublicObservations(pool,brand.id),metaSourceHealth(pool,brand.id)]);
+                    const merged=mergePublicEvidence(creatives,observations,brand,competitors);
+                    creatives.splice(0,creatives.length,...merged);metaSource=health;
+                    for(const source of sources){const target=source.brandId||competitors.find(b=>b.name===source.name)?.key;if(source.status!=="error"&&creatives.some(row=>!row.owned&&row.brandId===target))source.status="collected";}
+                }
+            }catch{metaSource={status:"unavailable",enabled:metaLibraryEnabled(),lastSuccessfulCheck:null,message:"Saved public collection could not be read. Earlier media and analysis are retained."};}
             let ownedStatus: CreativeBrowserResponse["ownedStatus"] = "not_configured";
             try {
                 const pool = options.getPool ? options.getPool() : process.env.DATABASE_URL ? infrastructureDatabase() : null;
@@ -113,7 +126,7 @@ export function attachCreativeBrowser(app: Express, db: DatabaseSync, options: B
                 ownedStatus = "error";
             }
             const dates = creatives.flatMap(item => [item.firstObservedAt, item.observedAt].filter((value): value is string => Boolean(value))).sort();
-            res.json({ brand: { id: brand.id, name: brand.name, domain: brand.domain }, creatives, competitors, sources, ownedStatus, dateRange: { from: dates[0] || null, to: dates.at(-1) || null }, lastChecked: dates.at(-1) || null, reportingRange: { from, to } } satisfies CreativeBrowserResponse);
+            res.json({ metaSource, brand: { id: brand.id, name: brand.name, domain: brand.domain }, creatives, competitors, sources, ownedStatus, dateRange: { from: dates[0] || null, to: dates.at(-1) || null }, lastChecked: dates.at(-1) || null, reportingRange: { from, to } } satisfies CreativeBrowserResponse);
         }
         catch {
             res.status(503).json({ error: "Stored creative evidence is unavailable. No source collection or analysis was started." });

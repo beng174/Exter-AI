@@ -5,14 +5,15 @@ import "./BrandIdentity.css";
 const Context=createContext<{brands:Identity[];current?:Identity;version:number;changed:()=>void}>({brands:[],version:0,changed:()=>{}});
 export function BrandIdentityProvider({brands,brandId,children}:{brands:Identity[];brandId:string;children:ReactNode}) {
   const [loaded,setLoaded]=useState<Identity[]>([]),[version,setVersion]=useState(0);
-  useEffect(()=>{let active=true;setLoaded([]);api<Identity[]>(`/api/brand-identities?${new URLSearchParams({brandId})}`).then(items=>{if(active)setLoaded(items);}).catch(()=>{});return()=>{active=false;};},[brandId]);
+  useEffect(()=>{let active=true;setLoaded([]);api<Identity[]>(`/api/brand-identities?${new URLSearchParams({brandId})}`).then(items=>{if(active)setLoaded(items);}).catch(()=>{});return()=>{active=false;};},[brandId,version]);
+  useEffect(()=>{const changed=()=>setVersion(v=>v+1);window.addEventListener("exter:brand-identities",changed);return()=>window.removeEventListener("exter:brand-identities",changed);},[]);
   const all=[...loaded,...brands.filter(b=>!loaded.some(item=>item.id===b.id))];
   return <Context.Provider value={{brands:all,current:all.find(b=>b.id===brandId),version,changed:()=>setVersion(v=>v+1)}}>{children}</Context.Provider>;
 }
 export function useBrandIdentity(name:string){const context=useContext(Context);const alias=/^(?:You|Yours|Your brand)$/i.test(name.trim());const known=alias?context.current:context.brands.find(b=>b.id===name||b.name.toLowerCase()===name.toLowerCase());return {brand:known||{id:"",name,domain:"",color:brandColour(name),initials:brandInitials(name),mode:"imported" as const},...context};}
 export function BrandMark({name,size=20,nameBeside=false}:{name:string;size?:16|20|32;nameBeside?:boolean}){
- const {brand,version}=useBrandIdentity(name),[loaded,setLoaded]=useState(false);
- const src=brand.id&&brand.mode!=="demo"?`/api/brand-logos/${encodeURIComponent(brand.id)}?v=${version}`:null;
+ const {brand,version,current}=useBrandIdentity(name),[loaded,setLoaded]=useState(false);
+ const src=brand.id&&brand.mode!=="demo"?`/api/brand-logos/${encodeURIComponent(brand.id)}?v=${version}&workspaceId=${encodeURIComponent(current?.id||"")}`:null;
  useEffect(()=>setLoaded(false),[src]);
  return <span className="brand-mark" data-size={size} style={{"--brand-size":`${size}px`,"--brand-colour":brand.color,"--brand-ink":brandInk(brand.color)} as CSSProperties} role={!nameBeside&&!loaded?"img":undefined} aria-label={!nameBeside&&!loaded?brand.name:undefined} aria-hidden={nameBeside?true:undefined}><span className="brand-monogram" aria-hidden="true">{brandInitials(brand.name)}</span>{src&&<img key={src} src={src} alt={logoAlt(brand.name,nameBeside)} style={{opacity:loaded?1:0}} onLoad={()=>setLoaded(true)} onError={()=>setLoaded(false)}/>}</span>;
 }
