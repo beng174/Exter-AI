@@ -32,6 +32,14 @@ AUDIT_JS=r"""() => {
  const header=main.querySelector('.ui-page-header');if(header&&Math.abs(header.getBoundingClientRect().x-(m.x+padding))>1)problems.push('Header left edge');
  for(const cell of main.querySelectorAll('.ui-table-number'))if(getComputedStyle(cell).textAlign!=='right')problems.push('Numeric alignment: '+cell.textContent);
  for(const cell of main.querySelectorAll('.ui-table-text'))if(getComputedStyle(cell).textAlign!=='left')problems.push('Text alignment: '+cell.textContent);
+ for(const table of main.querySelectorAll('.ui-data-table table')){
+  const headers=[...table.querySelectorAll('thead th')];
+  headers.forEach((header,index)=>{
+   if(!header.classList.contains('ui-table-number')&&!header.classList.contains('ui-table-text'))return;
+   const expected=getComputedStyle(header).textAlign;
+   for(const row of table.querySelectorAll('tbody tr'))if(row.cells[index]&&getComputedStyle(row.cells[index]).textAlign!==expected)problems.push('Column alignment: '+header.textContent+' / '+row.cells[index].textContent);
+  });
+ }
  for(const cell of main.querySelectorAll('td:is(.ui-table-basis,.ui-table-chip)')){
   const chip=cell.querySelector('.ui-data-label,.ui-status-chip');if(!chip)continue;
   const c=cell.getBoundingClientRect(),b=chip.getBoundingClientRect(),cs=getComputedStyle(cell);

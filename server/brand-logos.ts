@@ -5,10 +5,11 @@ import {resolve} from "node:path";
 import {execFile} from "node:child_process";
 import {promisify} from "node:util";
 import {load} from "cheerio";
+import type {Ad,Brand} from "../shared/types.js";
 import type {Express} from "express";
 import type {DatabaseSync} from "node:sqlite";
-import {fetchWebsiteResource,type DemoWebsiteOptions} from "./demo/website.js";
-import {canonicalWorkspaceBrands} from "./demo/reconcile.js";
+import {fetchWebsiteResource,fetchMetaPagePicture,type DemoWebsiteOptions} from "./demo/website.js";
+import {canonicalWorkspaceBrands,workspaceBrandIds} from "./demo/reconcile.js";
 import {configuredCreativeCompetitors} from "./demo/creative-competitors.js";
 import type {DemoCollectionService} from "./demo/collection.js";
 import {readBrandResearch} from "./brand-research.js";
@@ -36,7 +37,7 @@ export function iconCandidates(html:string,pageUrl:string) {
   });
   return [...new Set([...rows.sort((a,b)=>Number(b.apple)-Number(a.apple)||b.size-a.size).map(row=>row.url),new URL("/favicon.ico",pageUrl).href])].slice(0,8);
 }
-interface Manifest {uploaded?:string;automatic?:string;checkedAt?:string;domain?:string}
+interface Manifest {uploaded?:string;automatic?:string;checkedAt?:string;domain?:string;metaPageId?:string}
 export interface LogoOptions extends DemoWebsiteOptions {root?:string;convert?:(bytes:Buffer)=>Promise<Buffer>}
 async function squareLogo(bytes:Buffer) {
   const dir=await mkdtemp(resolve(tmpdir(),"exter-logo-"));
@@ -64,17 +65,33 @@ export class BrandLogoStore {
   async image(brand:BrandIdentity):Promise<Buffer|null>{if(brand.mode==="demo")return null;let job=this.pending.get(brand.id);if(!job){job=this.choose(brand);this.pending.set(brand.id,job);}let id:string|null;try{id=await job;}finally{if(this.pending.get(brand.id)===job)this.pending.delete(brand.id);}if(!id||!/^[a-f0-9]{64}$/.test(id))return null;const bytes=await readFile(resolve(this.root,id+".png")).catch(()=>null);return bytes&&hash(bytes)===id&&logoMime(bytes)==="image/png"?bytes:null;}
   private async choose(brand:BrandIdentity){const old=await this.manifest(brand.id);if(old.uploaded)return old.uploaded;
     const now=this.options.now?.()||new Date(),checked=new Date(old.checkedAt||0),expires=new Date(checked);expires.setUTCMonth(expires.getUTCMonth()+1);
-    if(old.domain===brand.domain&&now<expires)return old.automatic||null;
+    const metaPageId=typeof brand.metaPageId==="string"&&/^\d{1,30}$/.test(brand.metaPageId)?brand.metaPageId:undefined;
+    const sameIdentity=old.domain===brand.domain&&old.metaPageId===metaPageId;
+    if(sameIdentity&&now<expires)return old.automatic||null;
     let automatic:string|undefined;
-    if(brand.domain)try{const page=await fetchWebsiteResource(brand.domain,`https://${brand.domain}/`,1024*1024,this.options);if(!["text/html","application/xhtml+xml"].includes(page.type))throw new Error();
+    if(metaPageId)try{const asset=await fetchMetaPagePicture(metaPageId,LOGO_MAX_BYTES,this.options);validateLogo(asset.bytes,asset.type);automatic=await this.retain(asset.bytes);}catch{}
+    if(!automatic&&brand.domain)try{const page=await fetchWebsiteResource(brand.domain,`https://${brand.domain}/`,1024*1024,this.options);if(!["text/html","application/xhtml+xml"].includes(page.type))throw new Error();
       for(const candidate of iconCandidates(page.bytes.toString("utf8"),page.url))try{const asset=await fetchWebsiteResource(brand.domain,candidate,LOGO_MAX_BYTES,this.options);validateLogo(asset.bytes,asset.type);automatic=await this.retain(asset.bytes);break;}catch{}
     }catch{}
     // Re-read after retrieval so a concurrent uploaded logo always wins.
-    const latest=await this.update(brand.id,value=>({...value,automatic:automatic||(old.domain===brand.domain?old.automatic:undefined),domain:brand.domain,checkedAt:now.toISOString()}));return latest.uploaded||automatic||(old.domain===brand.domain?old.automatic:undefined)||null;
+    const latest=await this.update(brand.id,value=>({...value,automatic:automatic||(sameIdentity?old.automatic:undefined),domain:brand.domain,metaPageId,checkedAt:now.toISOString()}));return latest.uploaded||automatic||(sameIdentity?old.automatic:undefined)||null;
   }
 }
+/** Prefer an explicit identity, then one unambiguous saved advertiser Page, never a creator Page. */
+export function savedMetaPageId(db:DatabaseSync,brand:Brand):string|undefined {
+  if(brand.mode==="demo")return undefined;
+  const valid=(value:unknown):value is string=>typeof value==="string"&&/^\d{1,30}$/.test(value);
+  if(valid(brand.metaPageId))return brand.metaPageId;
+  const ids=workspaceBrandIds(db,brand.id),pages=new Set<string>();
+  if(db.prepare("SELECT name FROM sqlite_master WHERE type='table' AND name='ads'").get()){
+    const rows=db.prepare(`SELECT data FROM ads WHERE brand_id IN (${ids.map(()=>"?").join(",")}) AND source<>'sample' AND platform IN ('Meta','Facebook','Instagram')`).all(...ids) as {data:string}[];
+    for(const row of rows)try{const ad=JSON.parse(row.data) as Ad;if(ad.source!=="sample"&&valid(ad.advertiserPageId))pages.add(ad.advertiserPageId);}catch{}
+  }
+  for(const id of ids){const page=readBrandResearch(db,id)?.adLibraryEvidence?.advertiserPageId;if(valid(page))pages.add(page);}
+  return pages.size===1?[...pages][0]:undefined;
+}
 export function brandIdentities(db:DatabaseSync,workspaceId?:string,collection?:Pick<DemoCollectionService,"snapshot">):BrandIdentity[]{
-  const brands=canonicalWorkspaceBrands(db).filter(b=>b.mode!=="demo"),workspace=brands.find(b=>b.id===workspaceId),result:BrandIdentity[]=[...brands];
+  const brands=canonicalWorkspaceBrands(db).filter(b=>b.mode!=="demo"),workspace=brands.find(b=>b.id===workspaceId),result:BrandIdentity[]=brands.map(brand=>({...brand,metaPageId:savedMetaPageId(db,brand)}));
   const owners=workspace?[workspace]:brands;
   for(const owner of owners){
     const domains=new Map<string,string>();

@@ -35,6 +35,7 @@ export type Page =
   | "ask";
 export interface Brand {
   id: string;
+  metaPageId?: string;
   name: string;
   domain: string;
   category: Category;

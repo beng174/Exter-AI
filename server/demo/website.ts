@@ -32,11 +32,11 @@ function brandUrl(brand: Brand): URL {
     throw new WebsiteEvidenceError("Save a public website domain, without a path, port or credentials, before refreshing evidence.");
   return new URL(`https://${domain}/`);
 }
-async function checkedUrl(raw: string, initialHost: string, options: DemoWebsiteOptions) {
+async function checkedUrl(raw: string, initialHost: string, options: DemoWebsiteOptions, allowedHost?: (host:string)=>boolean) {
   let url: URL;
   try { url = new URL(raw); } catch { throw new WebsiteEvidenceError("The website URL is invalid."); }
   const base = initialHost.replace(/^www\./, ""), host = url.hostname.toLowerCase();
-  if (url.protocol !== "https:" || url.username || url.password || url.port || isIP(host) || ![base, `www.${base}`].includes(host) ||
+  if (url.protocol !== "https:" || url.username || url.password || url.port || isIP(host) || !(allowedHost ? allowedHost(host) : [base, `www.${base}`].includes(host)) ||
       /(?:^|\.)(?:localhost|local|internal|lan|home|invalid|test)$/.test(host))
     throw new WebsiteEvidenceError("Website evidence accepts only the saved public HTTPS website; unrelated, private and credential-bearing destinations are blocked.");
   const addresses = await (options.resolve || (hostname => lookup(hostname, { all: true, verbatim: true })))(host).catch(() => {
@@ -146,17 +146,17 @@ export async function refreshWebsiteEvidence(db: DatabaseSync, brand: Brand, opt
 }
 
 /** Same public-host/DNS-pinned transport for small retained website assets. */
-export async function fetchWebsiteResource(domain: string, raw: string, maxBytes: number, options: DemoWebsiteOptions = {}) {
+async function fetchBoundedResource(domain: string, raw: string, maxBytes: number, options: DemoWebsiteOptions, allowedHost?: (host:string)=>boolean) {
   if (!options.fetch && (process.env.HTTPS_PROXY || process.env.HTTP_PROXY || process.env.https_proxy || process.env.http_proxy))
     throw new WebsiteEvidenceError("Website icons are unavailable with this outbound proxy configuration.", 409);
-  let destination = await checkedUrl(raw, domain, options);
+  let destination = await checkedUrl(raw, domain, options, allowedHost);
   const timeout = AbortSignal.timeout(15000);
   for (let redirects = 0; redirects <= 3; redirects++) {
     const response = options.fetch ? await options.fetch(destination.url, {redirect:"manual", signal:timeout, headers:{Accept:"text/html,image/png,image/jpeg,image/webp,image/x-icon,image/vnd.microsoft.icon", "Accept-Encoding":"identity"}}) : await nativePage(destination.url,destination.addresses,maxBytes,"text/html,image/png,image/jpeg,image/webp,image/x-icon,image/vnd.microsoft.icon");
     if (response.status >= 300 && response.status < 400) {
       const location=response.headers.get("location");await response.body?.cancel();
       if (!location || redirects===3) throw new WebsiteEvidenceError("Website redirect limit exceeded.");
-      destination=await checkedUrl(new URL(location,destination.url).href,domain,options);continue;
+      destination=await checkedUrl(new URL(location,destination.url).href,domain,options,allowedHost);continue;
     }
     if (!response.ok || !response.body) {await response.body?.cancel();throw new WebsiteEvidenceError("Website asset is unavailable.",502);}
     if (Number(response.headers.get("content-length"))>=maxBytes || ![null,"identity"].includes(response.headers.get("content-encoding"))) {await response.body.cancel();throw new WebsiteEvidenceError("Website asset exceeds its size or encoding limit.",413);}
@@ -166,4 +166,15 @@ export async function fetchWebsiteResource(domain: string, raw: string, maxBytes
     return {bytes:Buffer.concat(chunks),type:(response.headers.get("content-type")||"").split(";")[0].toLowerCase(),url:destination.url.href};
   }
   throw new WebsiteEvidenceError("Website asset is unavailable.",502);
+}
+
+export function fetchWebsiteResource(domain:string,raw:string,maxBytes:number,options:DemoWebsiteOptions={}) {
+  return fetchBoundedResource(domain,raw,maxBytes,options);
+}
+/** Anonymous public Page picture only; no reporting token or credentials follow redirects. */
+export function fetchMetaPagePicture(pageId:string,maxBytes:number,options:DemoWebsiteOptions={}) {
+  const version=process.env.EXTER_META_GRAPH_VERSION||"v25.0";
+  if(!/^\d{1,30}$/.test(pageId)||!/^v\d+\.0$/.test(version))throw new WebsiteEvidenceError("A saved numeric Meta Page ID and supported Graph version are required.");
+  const allowed=(host:string)=>host==="graph.facebook.com"||host==="lookaside.facebook.com"||["fbcdn.net","fbsbx.com"].some(domain=>host===domain||host.endsWith("."+domain));
+  return fetchBoundedResource("graph.facebook.com",`https://graph.facebook.com/${version}/${pageId}/picture?type=large`,maxBytes,options,allowed);
 }

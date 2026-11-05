@@ -487,3 +487,38 @@ and blockers below remain unchanged.
   against exter-test-drive. The description includes five before/after pairs,
   sample and explicitly synthetic score screenshots, the 90-case audit,
   retained differences and deployment steps. All checks pass with 419 tests.
+
+
+## Comparison columns and Meta Page logos (UI-05, UI-06)
+
+- PR #12 was merged before the follow-up arrived. Started the focused follow-up
+  from exter-test-drive at bffe27a on feat/brand-columns-meta-logos.
+- Shared tables now use one alignment for a column's header and every value.
+  Text such as a format or offer stays right-aligned in numeric comparison
+  columns. Data values and metric calculations are unchanged.
+- Automatic logos now prefer a saved Meta Page's public Facebook profile picture
+  before the website icon. Uploaded logos still win. Page pictures use the same
+  bounded, public-DNS-pinned HTTPS transport, raster limits, 64px local copy,
+  monthly cache and fallback. Requests are anonymous; no reporting token is sent,
+  forwarded, stored or logged. Changing a Page ID invalidates the old automatic
+  lookup. Sample brands remain monograms and make no source requests.
+- Page identity comes from an explicit saved brand ID or one unambiguous saved
+  advertiser ID in its ads/ad-library evidence, including verified workspace
+  aliases. Creator Page IDs and ambiguous advertiser sets are not substituted.
+- Reference rule 7 records uniform column alignment and rule 8 records the new
+  logo precedence. Fixture tests cover Page priority, upload override, cache and
+  identity refresh, fallback, blocked redirects/private DNS and raster limits.
+- Type check, all 424 unit tests and production build pass. Live gates stay open,
+  owned sync stays absent/false and kernel work remains paused. No schema,
+  dependencies, provider permissions, budgets or scoring rules changed.
+
+- Final follow-up validation: all four required checks pass with 424 tests.
+  All 90 screen/mode/width cases confirm uniform header and cell alignment,
+  with no page overflow. Updated Competitors screenshots at 1280px, 1440px
+  and 1920px plus the audit are in output/playwright/brand-columns/.
+  Fixtures are not live verification; no provider calls were made.
+
+- Follow-up review: https://github.com/beng174/Exter-AI/pull/13 against
+  exter-test-drive, with all three width screenshots and the 90-case audit.
+  After merge: Render > exter-ai > Manual Deploy > Deploy latest commit.
+  No migration or worker deployment is needed; keep existing secrets and disk.

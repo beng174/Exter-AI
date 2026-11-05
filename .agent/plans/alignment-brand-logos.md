@@ -4,6 +4,8 @@
 Apply the requested alignment rules to every real and explicit sample screen, and make brands recognisable with local logos or monograms. Preserve data honesty, sample isolation and provider gates. Target exter-test-drive.
 
 ## Progress
+- [x] 2026-11-05: Built the focused follow-up from exter-test-drive at bffe27a after PR #12 merged. Uniform column alignment and Meta Page logo precedence pass all 424 unit tests, type check, build, secret scan and 90 browser layout cases. Screenshots at all three widths are in output/playwright/brand-columns/.
+- [x] 2026-11-05: Published the focused follow-up at https://github.com/beng174/Exter-AI/pull/13 against exter-test-drive.
 - [x] 2026-11-04 UTC: Read project/spec/reference rules and start from latest exter-test-drive (9029e4e, merged sample PR).
 - [x] 2026-11-04 UTC: Captured the five before screens; inspected all 90 screen/mode/width combinations.
 - [x] 2026-11-04 UTC: Added rule 7 and shared subgrid/table/metric/action alignment; 90-case audit passed.
@@ -20,6 +22,7 @@ Apply the requested alignment rules to every real and explicit sample screen, an
 The website evidence fetcher already pins public DNS and bounds redirects and response size. Image tooling already uses ffmpeg/ffprobe and local media storage. Reuse these instead of adding an external logo service or dependency.
 
 ## Decision log
+2026-11-05: PR #12 was already merged when the follow-up arrived, so use a fresh branch. Page-picture requests are anonymous, restricted to Graph/Meta image hosts and reuse the existing bounded public transport and raster store. Use explicit or unambiguous saved advertiser Page IDs, never creator IDs; do not activate feeds or live sync.
 2026-11-04: User added score transparency and missing-data cleanup during implementation. Keep all prior alignment/logo work. Use server/demo/scores.ts without changing rules or weights. Replace the older six-check illustrative score values with five-check fixtures validated against the existing scorer; preserve Working Score fixtures and predictive gate.
 2026-11-04: User scope authorises logo retrieval and uploads alongside presentation work. Sample brands always use monograms and never retrieve icons. Store logo manifests and immutable square PNGs under the existing media root, leaving schemas and paid/provider settings alone.
 

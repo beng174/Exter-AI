@@ -1,5 +1,5 @@
 import type { Brand } from "./types";
-export type BrandIdentity = Pick<Brand,"id"|"name"|"domain"|"color"|"initials"|"mode">;
+export type BrandIdentity = Pick<Brand,"id"|"name"|"domain"|"color"|"initials"|"mode"|"metaPageId">;
 export function brandInitials(name:string) {
   return name.trim().split(/\s+/).filter(word=>/[\p{L}\p{N}]/u.test(word)).slice(0,2).map(word=>Array.from(word)[0]).join("").toLocaleUpperCase() || "?";
 }

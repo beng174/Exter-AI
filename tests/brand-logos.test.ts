@@ -5,8 +5,8 @@ import assert from "node:assert/strict";
 import {mkdtemp,rm,readdir,readFile} from "node:fs/promises";
 import {tmpdir} from "node:os";
 import {join} from "node:path";
-import {BrandLogoStore,brandIdentities,iconCandidates,validateLogo,LOGO_MAX_BYTES,logoMime} from "../server/brand-logos.js";
-import {fetchWebsiteResource} from "../server/demo/website.js";
+import {BrandLogoStore,brandIdentities,savedMetaPageId,iconCandidates,validateLogo,LOGO_MAX_BYTES,logoMime} from "../server/brand-logos.js";
+import {fetchWebsiteResource,fetchMetaPagePicture} from "../server/demo/website.js";
 import {brandInitials,logoAlt,type BrandIdentity} from "../shared/brand-identity.js";
 const png=Buffer.from("iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+jRZkAAAAASUVORK5CYII=","base64");
 const brand:BrandIdentity={id:"fixture-brand",name:"Fixture Candle Co.",domain:"fixture-candle.example",color:"#233b80",initials:"FC",mode:"imported"};
@@ -63,4 +63,57 @@ test("UI-05 logo identities use the same configured competitor set before collec
  db.prepare("INSERT INTO brands VALUES (?,?)").run(workspace.id,JSON.stringify(workspace));
  const collection={snapshot:()=>({competitors:[{name:"Fictional Rival",domain:"fictional-rival.example",brandId:null,status:"not-started"}]})} as unknown as Pick<DemoCollectionService,"snapshot">;
  try{const identities=brandIdentities(db,workspace.id,collection);assert.equal(identities.length,2);assert.equal(identities[1].name,"Fictional Rival");assert.equal(identities[1].domain,"fictional-rival.example");assert.match(identities[1].id,/^competitor-/);assert.ok(!identities.some(b=>b.mode==="demo"));}finally{db.close();}
+});
+
+test("UI-05 Meta Page picture precedes the website, shares the monthly cache and yields to uploads",async()=>{
+ const root=await mkdtemp(join(tmpdir(),"exter-page-logo-")),calls:string[]=[];
+ let now=new Date("2026-11-05T12:00:00Z");const page={...brand,metaPageId:"123456789"};
+ const store=new BrandLogoStore({root,resolve:dns,convert:async bytes=>bytes,now:()=>now,fetch:async(input,init)=>{
+  const url=String(input);calls.push(url);assert.equal(new Headers(init?.headers).get("authorization"),null);assert.ok(!new URL(url).searchParams.has("access_token"));
+  return url.startsWith("https://graph.facebook.com/")?new Response(null,{status:302,headers:{location:"https://scontent.fixture.fbcdn.net/picture.png"}}):new Response(png,{headers:{"content-type":"image/png"}});
+ }});
+ try{
+  assert.ok(await store.image(page));assert.equal(calls.length,2);assert.match(calls[0],/\/123456789\/picture\?type=large$/);assert.ok(!calls.some(url=>url.includes(brand.domain)));
+  await store.image(page);assert.equal(calls.length,2);
+  now=new Date("2026-12-05T12:00:00Z");await store.image(page);assert.equal(calls.length,4);
+  await store.upload(page,png,"image/png");now=new Date("2027-02-05T12:00:00Z");await store.image(page);assert.equal(calls.length,4);
+  await store.reset(page);await store.image(page);assert.equal(calls.length,6);
+  await store.image({...page,metaPageId:"987654321"});assert.equal(calls.length,8,"a changed Page identity refreshes immediately");
+  const manifest=(await readdir(store.root)).find(file=>file.endsWith(".json"))!;assert.doesNotMatch(await readFile(join(store.root,manifest),"utf8"),/https?:|access_token|authorization/i);
+  await store.image({...page,mode:"demo"});assert.equal(calls.length,8,"sample mode makes no Page or website request");
+ }finally{await rm(root,{recursive:true,force:true});}
+});
+
+test("UI-05 failed or unsupported Page pictures fall back to a valid own-site raster",async()=>{
+ for(const failure of ["denied","svg","oversized"]){
+  const root=await mkdtemp(join(tmpdir(),"exter-page-fallback-")),calls:string[]=[];
+  const store=new BrandLogoStore({root,resolve:dns,convert:async bytes=>bytes,fetch:async input=>{
+   const url=String(input);calls.push(url);
+   if(url.startsWith("https://graph.facebook.com/"))return failure==="denied"?new Response("denied",{status:403}):failure==="svg"?new Response("<svg/>",{headers:{"content-type":"image/svg+xml"}}):new Response(Buffer.alloc(LOGO_MAX_BYTES),{headers:{"content-type":"image/png"}});
+   return url.endsWith("/")?new Response('<link rel="apple-touch-icon" href="/apple.png">',{headers:{"content-type":"text/html"}}):new Response(png,{headers:{"content-type":"image/png"}});
+  }});
+  try{assert.ok(await store.image({...brand,metaPageId:"123456789"}));assert.equal(calls.length,3);assert.match(calls[0],/graph\.facebook\.com/);assert.equal(calls[1],`https://${brand.domain}/`);await store.image({...brand,metaPageId:"123456789"});assert.equal(calls.length,3);}finally{await rm(root,{recursive:true,force:true});}
+ }
+});
+
+test("UI-05 Page picture transport rejects unrelated redirects, private CDN DNS and invalid IDs",async()=>{
+ for(const location of ["https://other.example/logo.png","https://scontent.fbcdn.net.other.example/logo.png","http://scontent.fixture.fbcdn.net/logo.png","https://user:password@scontent.fixture.fbcdn.net/logo.png"]){
+  let calls=0;
+  await assert.rejects(fetchMetaPagePicture("123456789",LOGO_MAX_BYTES,{resolve:dns,fetch:async()=>{calls++;return new Response(null,{status:302,headers:{location}});}}));assert.equal(calls,1);
+ }
+ let calls=0;await assert.rejects(fetchMetaPagePicture("123456789",LOGO_MAX_BYTES,{resolve:async host=>[{address:host.endsWith("fbcdn.net")?"127.0.0.1":"93.184.215.14",family:4}],fetch:async()=>{calls++;return new Response(null,{status:302,headers:{location:"https://scontent.fixture.fbcdn.net/logo.png"}});}}));assert.equal(calls,1);
+ for(const pageId of ["../me","123?access_token=fixture","https://other.example","", "1".repeat(31)])await assert.rejects(async()=>fetchMetaPagePicture(pageId,LOGO_MAX_BYTES,{resolve:dns,fetch:async()=>{throw new Error("Must not fetch invalid IDs");}}));
+});
+
+test("UI-05 brand logo identity uses advertiser evidence and never substitutes a creator Page",()=>{
+ const db=new DatabaseSync(":memory:");db.exec("CREATE TABLE brands(id TEXT PRIMARY KEY,data TEXT NOT NULL);CREATE TABLE ads(id TEXT PRIMARY KEY,brand_id TEXT,source TEXT,platform TEXT,data TEXT)");
+ const workspace={...brand,competitors:[],voice:[],category:"Home fragrance & gifting" as const,createdAt:"2026-11-05"};db.prepare("INSERT INTO brands VALUES (?,?)").run(workspace.id,JSON.stringify(workspace));
+ const add=(id:string,page:string|undefined,source="public")=>db.prepare("INSERT INTO ads VALUES (?,?,?,?,?)").run(id,brand.id,source,"Meta",JSON.stringify({id,brandId:brand.id,source,advertiserPageId:page,brandedContentPartner:{pageId:"999999"}}));
+ try{
+  add("creator-only",undefined);assert.equal(savedMetaPageId(db,workspace),undefined);
+  add("saved","123456789");add("sample","111111111","sample");assert.equal(brandIdentities(db,brand.id)[0].metaPageId,"123456789");
+  add("another-page","222222222");assert.equal(savedMetaPageId(db,workspace),undefined,"ambiguous advertiser pages are not guessed");
+  assert.equal(savedMetaPageId(db,{...workspace,metaPageId:"333333333"}),"333333333");
+  assert.equal(savedMetaPageId(db,{...workspace,mode:"demo",metaPageId:"333333333"}),undefined);
+ }finally{db.close();}
 });
