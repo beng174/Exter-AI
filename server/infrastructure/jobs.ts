@@ -3,6 +3,7 @@ export { enqueueOwnedSync, workOwnedOnce } from "../owned/jobs.js";
 import { randomUUID } from "node:crypto";
 import type pg from "pg";
 import { collectMetaPage, MetaCollectionError, MetaLibraryConnector, metaStatus, metaLibraryEnabled } from "../connectors/meta-library.js";
+import {claimMetaRequest,delayMetaRequests} from "./meta-rate.js";
 const MAX_PAGE_ATTEMPTS = 5;
 export async function enqueueCollection(pool: pg.Pool, watchlistId: string, day?: string, now=new Date()) {
   const client = await pool.connect();
@@ -49,8 +50,7 @@ export async function claimJob(pool: pg.Pool, owner: string) {
 export async function workOnce(pool: pg.Pool, connector?: MetaLibraryConnector, options:{env?:Record<string,string|undefined>;paceMs?:number}={}) {
   if(!metaLibraryEnabled(options.env))return false;
   // A shared row reserves dispatch time across worker processes and watchlist brands.
-  const gate=await pool.query("UPDATE meta_request_gate SET next_request_at=now()+($1 * interval '1 millisecond') WHERE id=1 AND next_request_at<=now() RETURNING id",[options.paceMs??20000]);
-  if(!gate.rowCount)return false;
+  if(await claimMetaRequest(pool,options.paceMs??20000))return false;
   const owner = randomUUID();
   const job = await claimJob(pool,owner);
   if (!job) return false;
@@ -78,7 +78,7 @@ export async function workOnce(pool: pg.Pool, connector?: MetaLibraryConnector, 
     }
   } catch (error) {
     const providerDelay=error instanceof MetaCollectionError?Math.max(error.reason==="rate_limited"?60000:0,error.retryAfterMs):0;
-    if(providerDelay>0)await pool.query("UPDATE meta_request_gate SET next_request_at=GREATEST(next_request_at,now()+($1 * interval '1 millisecond')) WHERE id=1",[providerDelay]);
+    await delayMetaRequests(pool,providerDelay);
     // Only controlled messages enter persistent status; driver/provider errors can contain secrets.
     if (error instanceof Error && error.message.startsWith("Jobs paused:")) {
       state = "paused";
@@ -100,7 +100,7 @@ export async function workOnce(pool: pg.Pool, connector?: MetaLibraryConnector, 
       backoffMs = Math.max(error instanceof MetaCollectionError?error.retryAfterMs:0,Math.min(3600000,60000 * 2 ** Math.min(job.attempts - 1,6)));
     }
   }
-  if(backoffMs>0)await pool.query("UPDATE meta_request_gate SET next_request_at=GREATEST(next_request_at,now()+($1 * interval '1 millisecond')) WHERE id=1",[backoffMs]);
+  await delayMetaRequests(pool,backoffMs);
   // Commit the run and job disposition together, fenced by the live claim.
   // Keep lock order consistent with collectMetaPage: run before job.
   const client = await pool.connect();

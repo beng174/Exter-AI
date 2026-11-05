@@ -50,6 +50,48 @@ META_ACCESS_TOKEN from the old worker. The flag alone cannot stop an old binary.
 No owned-account live gates, model settings,
 budgets or low-cost kernel switches are activated by this release.
 
+### Find Page IDs before enabling collection
+
+Once META_ACCESS_TOKEN is configured on **exter-ai**, open **Competitors > Edit
+watchlist** or **Data sources > Meta Ad Library API > Edit watchlist**. Brands
+without a confirmed watchlist Page ID are searched automatically by their saved
+name, in GB with ad_type=ALL and ad_active_status=ALL. The web process performs
+these lookups; no worker job or additional environment variable is required.
+This explicit discovery action is allowed while the collection switch is false.
+The source row's Off status continues to describe collection.
+
+Suggestions are grouped by Page ID and ordered by distinct ads whose link
+captions match the saved website host (including its subdomains), then name
+match, then distinct ad count. Lookalike domains and domains appearing only in
+paths or text do not count. The editor shows the top three Pages, the searched
+ad count, each Page's count, a profile picture and an example ad link. A missing
+website stays Unavailable for the website comparison. Confirm writes only the
+selected brand's Page ID through the existing watchlist transaction. Manual
+entry and Save Page IDs remain available. Neither search nor confirmation starts
+collection or enables its switch.
+
+Searches and profile-picture requests share the collector's Postgres request
+gate, usage cooldowns, Retry-After and provider budget guard. Allow at least 20
+seconds between collection, Page-search and candidate-picture Graph requests
+across web and worker; queued collection and
+other searches can extend the wait. Up to ten pages (1,000 ads) are searched
+initially. Search more ads explicitly adds another batch, up to 10,000 ads.
+Counts describe ads actually searched, not a Page's entire historical library.
+
+Suggestions and opaque cursors stay in a bounded 30-minute web-process cache;
+they never enter watchlists, public_ads or ad_observations. Opening the editor
+again reuses that cache. A web redeploy discards suggestions only, and the next
+search safely starts again. Provider failures stay visible. Public Page pictures
+use the existing bounded raster/DNS checks and local square media cache, with
+monthly refresh and monogram fallback. Preview cache manifests use hashed Page
+identities and never assign a logo or Page ID to a brand before confirmation.
+Tokens, paging URLs and source error text are never stored or returned.
+
+Sample mode never starts searches or picture retrieval. All implementation tests
+use injected responses; fixture results are not live verification. No new Render
+service, dependency, table, secret or deployment step is needed beyond PR #14's
+web/worker deployment and the existing META_ACCESS_TOKEN on web.
+
 ## Low-cost kernel release
 
 This release adds durable kernel jobs, a scoped authenticated artifact broker,
