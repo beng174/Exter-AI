@@ -9,7 +9,7 @@ Make the existing public Meta connector ready for confirmed UK commercial-ad acc
 - [x] 2026-11-05 UTC: Per-brand watchlists, cursor recovery, gates, UK clock changes and shared rate delays pass disposable Postgres fixtures.
 - [x] 2026-11-05 UTC: Stored observations feed the creative read model, requested reach sections, watchlist editor and Page-logo lookup. Type check passes; browser verification remains.
 - [x] 2026-11-05 UTC: Operator documentation updated. check, all 430 unit tests, build and staged-file secrets scan pass; five Postgres cases and 114 browser screen/width cases pass.
-- [ ] Review, commit, push and open a PR against exter-test-drive.
+- [x] 2026-11-05T01:26Z: Reviewed, committed and pushed feat/meta-library-activation; PR #14 targets the latest exter-test-drive (03e3d1f).
 
 ## Surprises and discoveries
 The public collector already retains observations and cursor history in Postgres, but the UI reads the SQLite creative gallery. Watchlists currently have a unique workspace index, so they cannot represent separately editable brands. The existing scheduler has neither a public-collection switch nor UK wall-clock scheduling. Logo storage already supports Meta Page pictures, but does not read Page IDs from Postgres watchlists.

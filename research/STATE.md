@@ -544,3 +544,7 @@ and blockers below remain unchanged.
   entry points and metadata-only saves. No live provider calls were made.
   Reproducible fixtures and app/reference comparisons are in
   output/playwright/meta-library/. Fixtures are not live verification.
+
+- Review: https://github.com/beng174/Exter-AI/pull/14 against exter-test-drive.
+  Live collection has not been enabled. Render activation and rollback steps are
+  in docs/DEPLOY.md; the existing web disk and Postgres must be retained.
