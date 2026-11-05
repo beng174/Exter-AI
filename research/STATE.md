@@ -551,7 +551,7 @@ and blockers below remain unchanged.
 
 ## Confirmed Page discovery follow-up, 5 Nov 2026
 
-- PR #14 now suggests Page IDs for missing watchlist brands and competitors.
+- The Page-discovery follow-up suggests IDs for missing watchlist brands and competitors.
   Searches use the saved name, GB, ALL ad type and ALL activity statuses.
   Candidate order uses website-caption matches, name match and distinct ads.
 - Suggestions never write a Page ID or collected-ad observation. Explicit
@@ -572,5 +572,8 @@ and blockers below remain unchanged.
   to the earlier PR #14 validation; the new UI is confined to the shared editor.
 
 - Page-discovery follow-up: all four required checks pass, including the staged
-  secrets scan. It is complete for PR #14; the subsequent readability/source-icon
-  request is a separate implementation step. No live collection was enabled.
+  secrets scan. PR #14 merged during implementation, so this is a separate
+  follow-up from exter-test-drive at 84131ee; the readability/source-icon
+  request is a separate implementation step. The owner enabled public collection
+  in render.yaml on the latest base; that setting is preserved. No live provider
+  calls or deployment-setting changes were made by this follow-up.

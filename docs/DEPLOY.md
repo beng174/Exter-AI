@@ -50,7 +50,7 @@ META_ACCESS_TOKEN from the old worker. The flag alone cannot stop an old binary.
 No owned-account live gates, model settings,
 budgets or low-cost kernel switches are activated by this release.
 
-### Find Page IDs before enabling collection
+### Find and confirm Page IDs
 
 Once META_ACCESS_TOKEN is configured on **exter-ai**, open **Competitors > Edit
 watchlist** or **Data sources > Meta Ad Library API > Edit watchlist**. Brands
@@ -58,7 +58,8 @@ without a confirmed watchlist Page ID are searched automatically by their saved
 name, in GB with ad_type=ALL and ad_active_status=ALL. The web process performs
 these lookups; no worker job or additional environment variable is required.
 This explicit discovery action is allowed while the collection switch is false.
-The source row's Off status continues to describe collection.
+The source row's Off status, when shown, describes collection. The owner enabled
+public collection in render.yaml at 84131ee; this follow-up preserves that setting.
 
 Suggestions are grouped by Page ID and ordered by distinct ads whose link
 captions match the saved website host (including its subdomains), then name

@@ -1,7 +1,7 @@
 # Confirmed Meta Page discovery
 
 ## Purpose and big picture
-Extend PR #14 with automatic suggestions for watchlist brands without a Page ID. Search UK commercial ads by saved brand name, rank Pages by website links, name and ad count, and require an explicit Confirm or manual save. Keep live collection off. No live provider calls are made while implementing or testing.
+Follow up merged PR #14 with automatic suggestions for watchlist brands without a Page ID. Search UK commercial ads by saved brand name, rank Pages by website links, name and ad count, and require an explicit Confirm or manual save. Keep live collection off. No live provider calls are made while implementing or testing.
 
 ## Progress
 - [x] 2026-11-05 UTC: Read current instructions, activation plan, product and reference rules; PR #14 is open against exter-test-drive.
@@ -10,6 +10,8 @@ Extend PR #14 with automatic suggestions for watchlist brands without a Page ID.
 - [x] 2026-11-05 UTC: All four required checks pass, with 441 unit tests, six Postgres cases and 28 browser cases. Documentation and screenshots are complete for the PR #14 follow-up.
 
 ## Surprises and discoveries
+PR #14 merged during implementation. The latest base, 84131ee, changes the public-collection flags to true in render.yaml. Preserve that owner change; this task does not change deployed settings or make live calls.
+
 Collection already has an app-wide Postgres request gate. The editor is shared by Competitors, Data sources and Brand research. Existing logo storage validates bounded raster images and caches monthly. Candidate identities must stay separate from confirmed brands and collected-ad observations.
 
 ## Decision log
@@ -32,7 +34,7 @@ server/connectors/meta-library.ts supplies sanitised public pages. server/infras
 From /workspace/Exter-AI run npm run check, npm test, npm run build and npm run secrets:check. Use disposable TEST_DATABASE_URL for the Postgres gate/confirmation fixtures. Start node --import tsx tests/fixtures/m1-server.ts and run python3 tests/ui_meta_library_browser.py with all external requests blocked.
 
 ## Validation and acceptance
-Actual results: npm run check and npm run build pass; npm test passes 441 cases. The two Postgres integration files pass six cases. python3 tests/ui_meta_library_browser.py passes all 28 screen/width cases and explicit-save assertions. Screenshots are in output/playwright/meta-library/page-suggestions-*.png. The staged-file secrets scan passes. The completed follow-up is being pushed to PR #14 before starting the newly requested readability work.
+Actual results: npm run check and npm run build pass; npm test passes 441 cases. The two Postgres integration files pass six cases. python3 tests/ui_meta_library_browser.py passes all 28 screen/width cases and explicit-save assertions. Screenshots are in output/playwright/meta-library/page-suggestions-*.png. The staged-file secrets scan passes. PR #14 merged while this follow-up was being implemented. The completed changes are on feat/meta-page-candidates, based on exter-test-drive at 84131ee, for a separate pull request before readability work.
 
 Fixtures cover UK/ALL requests, pagination, duplicate ads, domain versus name/count ordering, deceptive domains, missing websites, revoked tokens, cached results, bounded coverage, shared worker/lookup cooldowns, workspace scoping and no writes before confirmation. Test both editor entry points and manual fallback at 1440px and 390px. Token values, paging URLs and raw errors must never reach the browser, storage or logs.
 
