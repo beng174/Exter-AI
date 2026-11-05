@@ -10,6 +10,8 @@ import { metaStatus } from "../connectors/meta-library.js";
 import { tiktokCommercialStatus } from "../connectors/tiktok-commercial.js";
 import { enqueueCollection } from "./jobs.js";
 import {attachMetaPageCandidates,type PageLookupApiOptions} from "./meta-page-api.js";
+import {databaseStorageHealth} from "./storage-health.js";
+import {missingStorage} from "../../shared/storage-health.js";
 type BudgetPool = ReturnType<typeof infrastructureDatabase>;
 
 export function attachBudgetRoutes(app: Express, getPool: () => BudgetPool = infrastructureDatabase) {
@@ -40,12 +42,12 @@ export function attachInfrastructure(app: Express, db: DatabaseSync, getPool:()=
   app.get("/api/infrastructure/status", async (_req,res) => {
     const meta = metaStatus();
     const tiktok=tiktokCommercialStatus();
-    if (!process.env.DATABASE_URL) { res.json({ meta, tiktok, database: "not_configured", budgets: [], message: "Durable collection and paid inference paused: DATABASE_URL is not configured." }); return; }
+    if (!process.env.DATABASE_URL) { res.json({ meta, tiktok, database: "not_configured", storage:missingStorage("not_configured"), budgets: [], message: "Durable collection and paid inference paused: DATABASE_URL is not configured." }); return; }
     try {
-      const pool = infrastructureDatabase();
-      const [budgets,runs] = await Promise.all([budgetStatus(pool),pool.query("SELECT id,watchlist_id,status,records_new,records_updated,started_at,finished_at,last_successful_check,errors FROM collection_runs ORDER BY started_at DESC LIMIT 20")]);
-      res.json({ meta, tiktok, database: "connected", budgets, runs: runs.rows });
-    } catch { res.json({ meta, tiktok, database: "unavailable", message: "Collection database unavailable. Check DATABASE_URL and run migrations." }); }
+      const pool = getPool();
+      const [budgets,runs,storage] = await Promise.all([budgetStatus(pool),pool.query("SELECT id,watchlist_id,status,records_new,records_updated,started_at,finished_at,last_successful_check,errors FROM collection_runs ORDER BY started_at DESC LIMIT 20"),databaseStorageHealth(pool)]);
+      res.json({ meta, tiktok, database: "connected", budgets, runs: runs.rows,storage });
+    } catch { res.json({ meta, tiktok, database: "unavailable", storage:missingStorage(), message: "Collection database unavailable. Check DATABASE_URL and run migrations." }); }
   });
   app.get("/api/public/meta/watchlists", async (req,res) => {
     const brand=typeof req.query.workspaceId==="string"?readBrand(db,req.query.workspaceId):null;
@@ -92,7 +94,10 @@ export function attachInfrastructure(app: Express, db: DatabaseSync, getPool:()=
   app.get("/api/public/meta/observations", async (req,res) => {
     if (typeof req.query.workspaceId !== "string" || !req.query.workspaceId) { res.status(400).json({ error: "Provide workspaceId." }); return; }
     try {
-      const result = await infrastructureDatabase().query("SELECT o.*,a.advertiser_id,a.start_time,a.stop_time FROM ad_observations o JOIN public_ads a USING(platform,native_id) WHERE o.workspace_id=$1 ORDER BY observed_at DESC LIMIT 100", [req.query.workspaceId]);
+      const result = await getPool().query(`SELECT o.*,a.advertiser_id,a.start_time,a.stop_time,COALESCE(o.raw_payload,p.raw_payload) AS raw_payload
+        FROM ad_observations o JOIN public_ads a USING(platform,native_id)
+        LEFT JOIN ad_observations p ON p.platform=o.platform AND p.native_id=o.native_id AND p.run_id=o.raw_payload_run_id AND p.workspace_id=o.workspace_id
+        WHERE o.workspace_id=$1 ORDER BY o.observed_at DESC,o.run_id DESC LIMIT 100`, [req.query.workspaceId]);
       res.json({ coverage: metaStatus().coverage, observations: result.rows });
     } catch { res.status(503).json({ error: "Collection database unavailable." }); }
   });

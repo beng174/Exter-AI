@@ -19,7 +19,7 @@ const fixtureEnv={EXTER_META_LIBRARY_ENABLED:"true"};
 const schedule=(pool:pg.Pool,now:Date)=>gatedSchedule(pool,now,fixtureEnv);
 const workOnce=(pool:pg.Pool,connector:MetaLibraryConnector)=>dispatchedWorkOnce(pool,connector,{env:fixtureEnv,paceMs:0});
 
-test("Postgres budgets, idempotent scheduling, append-only observations and crash recovery", async () => {
+test("Postgres budgets, idempotent scheduling, change history and crash recovery", async () => {
   const connectionString = process.env.TEST_DATABASE_URL;
   assert.ok(connectionString,"TEST_DATABASE_URL must point to a dedicated disposable test database.");
   const pool = new pg.Pool({ connectionString });
@@ -100,13 +100,13 @@ test("Postgres budgets, idempotent scheduling, append-only observations and cras
     assert.notEqual(secondRun,firstRun);
     await workOnce(pool,connector); await workOnce(pool,connector);
     assert.equal((await pool.query("SELECT * FROM public_ads")).rowCount,2);
-    assert.equal((await pool.query("SELECT * FROM ad_observations")).rowCount,4);
+    assert.equal((await pool.query("SELECT * FROM ad_observations")).rowCount,2,"unchanged daily scans confirm the two saved snapshots");
     const unknown = (await pool.query("SELECT reach FROM ad_observations WHERE native_id='102' LIMIT 1")).rows[0].reach;
     assert.deepEqual(unknown.eu,{ type: "unavailable", value: null });
     const observed = (await pool.query("SELECT reach FROM ad_observations WHERE native_id='101' LIMIT 1")).rows[0].reach;
     assert.deepEqual(observed.eu,{ type: "observed", value: 1200 });
     await collectMetaPage(pool,secondRun,connector);
-    assert.equal((await pool.query("SELECT * FROM ad_observations")).rowCount,4,"replaying completed run cannot duplicate history");
+    assert.equal((await pool.query("SELECT * FROM ad_observations")).rowCount,2,"replaying completed run cannot duplicate history");
     const thirdRun = await enqueueCollection(pool,"watch-test");
     let failedCalls = 0;
     const failing = new MetaLibraryConnector({ token: "test-only-token", fetch: async () => { failedCalls++; throw new Error("private remote details"); } });
@@ -144,7 +144,8 @@ test("Postgres budgets, idempotent scheduling, append-only observations and cras
       await pool.query("UPDATE collection_jobs SET lease_until=now()-interval '1 second' WHERE id=$1",[killRun]);
       await workOnce(pool,connector);
       assert.equal((await pool.query("SELECT status FROM collection_runs WHERE id=$1",[killRun])).rows[0].status,"complete");
-      assert.equal((await pool.query("SELECT count(*)::int AS n FROM ad_observations WHERE run_id=$1",[killRun])).rows[0].n,2);
+      assert.equal((await pool.query("SELECT count(*)::int AS n FROM ad_observations WHERE run_id=$1",[killRun])).rows[0].n,1,"the changed first page is retained while the unchanged second page confirms its earlier row");
+      assert.equal((await pool.query("SELECT * FROM ad_observations")).rowCount,3);
     } finally { if (child.exitCode === null && child.signalCode === null) child.kill("SIGKILL"); }
   } finally { await pool.end(); }
 });

@@ -76,7 +76,11 @@ Search works by keyword (up to 50 characters) with filters for publish date (fro
 **Rules for every source**
 
 - Save the video or image file at the moment of collection. Links expire within days.
-- Never overwrite: every check adds a dated observation, so history builds up.
+- Preserve history. Meta API collection adds a dated observation when a stored
+  field changes. An identical check advances last_confirmed_at on the latest
+  observation instead of duplicating it. Keep the first raw payload and each
+  changed payload; later observations may reference the earlier unchanged
+  payload. Never delete old rows.
 - Show the last successful check and the sample size next to every number.
 - A failed source shows as failed with its reason, never as an empty result.
 
@@ -292,7 +296,7 @@ Eighteen objects. The brand is the centre: everything Exter knows hangs off a br
 | Watchlist | Brands, category keywords, countries, schedule | Brand |
 | Collection run | Source, start and end time, status, records new and updated, errors | Watchlist |
 | Ad | Platform, native ad ID, start and stop dates, last seen, platforms, ad copy, CTA link, Ad Library link | Brand |
-| Ad observation | Date, active or not, UK and EU reach, impression range, raw source data (one row per check, never overwritten) | Ad, collection run |
+| Ad observation | Change date, last confirmed date, active or not, UK and EU reach, impression range, raw source data or its retained reference (one row per changed state; historical evidence retained) | Ad, collection run |
 | Media asset | File hash, type, duration, stored file, thumbnail | Ad |
 | Creative analysis | Model, mode, prompt version, all fields from the creative table, tokens, cost | Ad, media asset |
 | Evidence item | One statement (a hook, claim, transcript line, review sentence), its source and timestamp, search embedding | Ad or review |

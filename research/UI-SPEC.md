@@ -319,6 +319,10 @@ budgets part of Budgets and tests.
   successful checks and record links in a smaller line inside Detail; omit
   unknown metadata instead of repeating empty columns. Data: `/api/connections`, `/api/infrastructure/status`,
   `/api/public/meta/watchlists`.
+- Collection database: show measured physical Postgres size and average growth
+  per day inside Source health, from the existing infrastructure health check.
+  Show its measurement interval; daily growth is Unavailable until checks are
+  at least 24 hours apart. Sample fixtures never show real database measurements.
 - Your ad accounts: owned accounts with status, latest data date and last error
   (`/api/owned/accounts`). Sync stays switched off unless
   `EXTER_OWNED_SYNC_ENABLED` is true.

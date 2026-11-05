@@ -69,7 +69,7 @@ with sync_playwright() as pw:
    expect(page.get_by_role('button',name='Score draft',exact=True)).to_be_disabled()
   if name=='Reports':expect(page.locator('.report-sections>section')).to_have_count(8)
   if name=='DataSources':
-   expect(page.get_by_role('region',name='Source health',exact=True).locator('tbody tr')).to_have_count(9)
+   expect(page.get_by_role('region',name='Source health',exact=True).locator('tbody tr')).to_have_count(10)
    assert all(not button.is_enabled() for button in page.get_by_role('button',name='Sync now',exact=True).all())
   page.screenshot(path=str(OUT/f'sample-{name}-1440.png'),full_page=True)
   checks.append({'screen':name,'sections':headings,'populated':True,'width':1440})

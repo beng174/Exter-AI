@@ -1,4 +1,4 @@
-import {Globe2,MessageSquareText} from "lucide-react";
+import {Database,Globe2,MessageSquareText} from "lucide-react";
 import type {ReactNode} from "react";
 import "./SourceLabel.css";
 export function sourceProviders(name:string){
@@ -12,5 +12,5 @@ export function SourceDetail({detail,checked,records}:{detail:string;checked?:st
 /** Bundled provider identifiers, never a third-party logo request. Names carry the accessible label. */
 export function SourceLabel({name,detail}:{name:string;detail:string}){
   const providers=sourceProviders(name);
-  return <span className="ui-source-label"><span className="ui-source-marks" aria-hidden="true">{providers.length?providers.map(provider=><span className="ui-source-mark" key={provider}><img src={`/providers/${provider}.svg`} alt=""/></span>):<span className="ui-source-mark">{name.toLowerCase().includes("review")?<MessageSquareText size={16}/>:<Globe2 size={16}/>}</span>}</span><span><strong>{name}</strong><small className="source-gives">{detail}</small></span></span>;
+  return <span className="ui-source-label"><span className="ui-source-marks" aria-hidden="true">{providers.length?providers.map(provider=><span className="ui-source-mark" key={provider}><img src={`/providers/${provider}.svg`} alt=""/></span>):<span className="ui-source-mark">{name.toLowerCase().includes("review")?<MessageSquareText size={16}/>:name.toLowerCase().includes("database")?<Database size={16}/>:<Globe2 size={16}/>}</span>}</span><span><strong>{name}</strong><small className="source-gives">{detail}</small></span></span>;
 }

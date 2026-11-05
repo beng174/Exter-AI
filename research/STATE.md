@@ -616,3 +616,37 @@ and blockers below remain unchanged.
 - Completed Page discovery review: https://github.com/beng174/Exter-AI/pull/15,
   based on the latest exter-test-drive. Readability and provider-icon work follows
   separately so that this completed feature remains reviewable.
+
+## Meta observation storage and size health, 5 Nov 2026
+
+- Authorised change from per-check snapshots to change history. Stored-field
+  fingerprints include all sanitised source fields plus normalised status/reach.
+  Identical scans only advance the latest scoped row's last_confirmed_at. New
+  states append; no old observations or payloads are deleted or consolidated.
+- Raw JSON is retained first and when changed. Normalised-only changes reference
+  the earlier payload directly, with both readers resolving it. Original change
+  timestamps stay intact; latest confirmation drives current check/endpoint time.
+  Workspace, watchlist/revision, lease, cursor and page transaction boundaries
+  remain. Opposite-order concurrent scans lock ads in a stable order.
+- Existing infrastructure status checks retain one physical Postgres size sample
+  per UTC hour. Data sources adds a Collection database row with measured size
+  and daily growth over the disclosed measured interval. The first 24-hour
+  baseline, failed measurements and missing configuration stay Unavailable.
+  A storage-only permission failure does not mark working collection disconnected.
+  Sample mode shows only its fixture explanation, never real database bytes.
+- Storage estimates for 1,000 ads and 30 checks are documented in docs/DEPLOY.md.
+  A 10%-changing fixture retained 3,900 observations instead of 30,000; measured
+  live rows were 4.86 MiB, while allocated observation storage including indexes
+  was 25.0 MiB. MVCC update space and compression are disclosed; if every ad
+  changes daily, all 30,000 observations are still kept. Figures are illustrative.
+- Type check, 450 unit tests and production build pass. Eleven disposable
+  Postgres integration cases pass; five real/sample browser width cases plus
+  Refresh, zero, first-day and failure states pass. The tracked-file secret scan
+  passes. All four required checks pass. Artifacts: output/playwright/storage/.
+- Fixtures are not live verification. Public collection flags, provider pacing,
+  budgets and secrets are unchanged. Owned-sync live gates stay open and its
+  default remains off; kernel work remains paused. No new dependencies or services.
+- Rollout: deploy exter-ai first to migrate and hydrate sparse payloads, then
+  exter-worker and exter-scheduler from exter-test-drive. Preserve disks, settings
+  and historical data. Once sparse rows exist, rollback must keep a compatible
+  reader. No new environment values or manual data rewrite is needed.

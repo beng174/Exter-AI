@@ -1,7 +1,7 @@
 import type pg from "pg";
 import { reserveCost } from "../infrastructure/budget.js";
 import { boundedPublicBody } from "./public-json.js";
-import { publishedReach } from "../../shared/meta-public.js";
+import {recordMetaObservation} from "../infrastructure/meta-observations.js";
 export const META_COVERAGE = "Commercial ads delivered in the UK or EU; searchable for one year. Public reach is not conversions or sales. Media requires a separate browser capture.";
 export const META_FIELDS = "id,page_id,page_name,ad_creation_time,ad_delivery_start_time,ad_delivery_stop_time,ad_creative_bodies,ad_creative_link_titles,ad_creative_link_descriptions,ad_creative_link_captions,ad_snapshot_url,publisher_platforms,languages,target_ages,target_gender,target_locations,eu_total_reach,total_reach_by_location,age_country_gender_reach_breakdown,beneficiary_payers";
 export function metaStatus(env:Record<string,string|undefined>=process.env) {
@@ -114,16 +114,15 @@ export async function collectMetaPage(pool: pg.Pool, runId: string, connector = 
       if (!cursor.rowCount) throw new MetaCollectionError("schema", "Meta pagination contains a cycle.");
     }
     let added = 0, updated = 0;
-    for (const row of page.rows) {
-      const active = row.ad_delivery_stop_time ? "inactive" : "unknown";
-      // Missing stop time alone does not prove an ad is currently active.
+    // A stable lock order also covers overlapping ads in concurrent workspace scans.
+    for (const row of [...page.rows].sort((left,right)=>String(left.id).localeCompare(String(right.id)))) {
       const inserted = await client.query(`INSERT INTO public_ads(platform,native_id,advertiser_id,start_time,stop_time)
         VALUES('Meta',$1,$2,$3,$4) ON CONFLICT DO NOTHING RETURNING native_id`, [String(row.id),row.page_id ?? null,row.ad_delivery_start_time ?? null,row.ad_delivery_stop_time ?? null]);
 
       await client.query("UPDATE public_ads SET advertiser_id=COALESCE($2,advertiser_id),start_time=COALESCE($3,start_time),stop_time=COALESCE($4,stop_time) WHERE platform='Meta' AND native_id=$1", [String(row.id),row.page_id ?? null,row.ad_delivery_start_time ?? null,row.ad_delivery_stop_time ?? null]);
-      const observation = await client.query(`INSERT INTO ad_observations(platform,native_id,run_id,workspace_id,active_status,reach,raw_payload)
-        VALUES('Meta',$1,$2,$3,$4,$5,$6) ON CONFLICT DO NOTHING RETURNING native_id`, [String(row.id),runId,run.workspace_id,active,publishedReach(row),row]);
-      if (observation.rowCount) { if (inserted.rowCount) added++; else updated++; }
+      const observation=await recordMetaObservation(client,run,row);
+      if(observation==="conflict")throw new MetaCollectionError("schema","Meta returned conflicting ad states in one collection run. Earlier snapshots are retained.");
+      if (observation==="inserted") { if (inserted.rowCount) added++; else updated++; }
     }
     const nextIndex = page.after ? run.query_index : run.query_index + 1;
     const complete = nextIndex >= queries.length;
