@@ -650,3 +650,9 @@ and blockers below remain unchanged.
   exter-worker and exter-scheduler from exter-test-drive. Preserve disks, settings
   and historical data. Once sparse rows exist, rollback must keep a compatible
   reader. No new environment values or manual data rewrite is needed.
+
+- Review: https://github.com/beng174/Exter-AI/pull/17 against exter-test-drive.
+  After merge: Render > exter-ai > Manual Deploy > Deploy latest commit; wait
+  for the migration and healthy compatible reader, then repeat for exter-worker
+  and exter-scheduler. Storage history begins with the first health measurement;
+  daily growth remains Unavailable until the 24-hour baseline exists.
