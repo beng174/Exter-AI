@@ -685,17 +685,47 @@ curious_coder actor was considered, but its public input contract did not promis
 retrieval of exact missing ad IDs. Recheck the chosen actor's maintenance, contract
 and prices before deliberately updating the pinned build.
 
-The first batch searches the confirmed watchlist Page ID, UK, all commercial ads,
-all activity statuses, over the rolling 12-month delivery window. Batches have a
-hard cap of 500 results. Successful batches immediately enqueue exact missing-ID
-batches until the retained official window has been attempted. Later daily runs
-request only IDs missing a complete image/poster set or a now-eligible full video.
+Every new batch requests exact archive IDs already collected for a confirmed
+watchlist Page, UK, all commercial ads and all activity statuses, over the rolling
+12-month window. maxAds and maxAdsPerQuery remain at most 500, with the same
+maximum charge ($0.25005 for 500). The actor's required deliveredBefore is capped
+to today's date in America/Los_Angeles. The official Graph connector sends only
+ad_delivery_date_min, never ad_delivery_date_max, including legacy saved runs.
+The 03:00 Europe/London schedule is unchanged.
+
+Never-requested IDs take priority over daily retries. Successful batches refill
+all eligible watchlists, not only the just-completed brand. An idle worker also
+refills the queue (at most once per minute), repairing a missed completion
+acknowledgement or restart without waiting for the next daily schedule. Brands
+with paused/uncertain runs remain blocked by their existing guards. Actual
+submitted IDs are recorded just before paid dispatch; queued target arrays are
+not requests. A legacy Page search cannot prove that every target was requested.
 Direct IDs come exclusively from that confirmed Page's official UK observations;
-every output must match both the archive ID and Page ID before any media is saved.
-The actor's archive ID is the official API's ad ID. Unknown, wrong-Page, duplicate
-and unusable returned items still count against the reservation. Ads already
-retained through the existing gallery are excluded from later paid requests.
+every output must match both archive and Page ID before any file is saved.
+Unknown, wrong-Page, duplicate and unusable returned items still count against
+the reservation. Existing gallery media is excluded from paid requests.
 Missing/unsupported/expired assets are attempted at most once per 24 hours.
+
+Data sources > Ad Library media shows distinct official ads per brand, images or
+posters, full videos, requested, returned, matched and still missing. Missing
+reasons partition ads without an image/poster: not requested, not returned,
+expired, unsupported, wrong Page, budget, disk limit or failed download. Coverage
+unions historical retained assets. Old Page searches are labelled incomplete:
+only confirmed matched records establish their known requests and returns.
+Run Details show the exact safe input (Page, GB, window, activity status and
+caps), local counts, the actor's INPUT archive-ID count, and recognised numeric
+run-summary requested/delivered/query counts and stop reasons. Unknown counts
+stay "Not recorded". Legacy runs still show their saved Page-search cap and
+window, clearly distinguished from recorded actor input. Summary/status rows
+are not mistaken for matched ads. No
+provider payload, media URL, console URL or token is stored with these counts.
+
+The small-batch diagnosis is from code and public actor documentation, not access
+to production logs: initial Page searches used a cap derived from the then-known
+corpus, and continuation depended on a post-completion enqueue. The new exact-ID
+inputs, durable request outcomes and idle refill remove those weaknesses. Future
+Details distinguish a provider that returns only 20/4 ads from a locally small
+request. Actor coverage itself still needs an owner-observed live run.
 
 ### Budget accounting
 
@@ -761,8 +791,8 @@ existing files; never assume every public ad needs a full original video.
 1. Merge the prerequisite recovery and public-signal PRs, then this media PR into
    exter-test-drive. Render > exter-ai > Manual Deploy > Deploy latest commit.
    Wait for automatic Postgres migrations and a healthy authenticated app. Then
-   deploy exter-worker and exter-scheduler. Keep all three
-   **EXTER_AD_MEDIA_ENABLED="false"**, as committed in render.yaml.
+   deploy exter-worker and exter-scheduler. Preserve the owner's current enable flags on all three services. Do not reset
+   them or raise the budget. Both switches currently remain owner-controlled.
 2. In exter-ai > Environment, set APIFY_TOKEN as a Render secret and configure
    EXTER_AD_MEDIA_GBP_PER_USD. The token follows the existing creator provider
    pattern; never paste it into a database, shell log or Git file. Media actor
@@ -798,3 +828,27 @@ and sample/default-off guards. Against a dedicated disposable Postgres database:
 `npx tsx --test --test-concurrency=1 tests/ad-media.integration.ts` with
 TEST_DATABASE_URL set securely. It owns isolated schemas. No real provider calls
 are permitted in tests.
+
+### Pacific-safe collection diagnostics (6 Nov 2026)
+
+Deploy exter-ai first and wait for additive Postgres migrations and health. Then
+deploy exter-worker and exter-scheduler from the same commit. Keep the existing
+Graph/media enable switches, per-run USD cap, monthly budget, actor build/prices
+and 03:00 UK schedule. No rows or files are removed. Old readers can ignore new
+columns; never delete request history when rolling back.
+
+After deployment, Data sources or Edit watchlist > Retry collection resumes a
+failed Graph run from its saved cursor through the existing guards. Meta's two
+user-facing error fields, error_user_title and error_user_msg, are now sanitised
+before storage: tokens/credential patterns and URLs are removed, controls are
+stripped and each field is limited to 300 Unicode characters. They are displayed
+as plain text alongside numeric codes. Generic provider messages, traces and
+paging URLs remain excluded. Earlier failures cannot recover text never stored.
+
+Use Collect missing media to resume safely paused media runs after correcting
+configuration or budget. Uncertain starts still require charge reconciliation;
+never create a second paid run just to replace an unknown start. Idle refill then
+progresses every enabled Page watchlist automatically within the existing budget.
+Fixtures include 1,200 official ads in 500/500/200-ID batches, a second brand,
+partial 20-ad responses, restarts and GMT/BST boundary times. No live provider
+calls were made; fixtures are not live verification.

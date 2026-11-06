@@ -119,3 +119,29 @@ CREATE TABLE IF NOT EXISTS ad_media_creatives (
  UNIQUE(run_id,native_id)
 );
 CREATE INDEX IF NOT EXISTS ad_media_creatives_latest ON ad_media_creatives(workspace_id,brand_key,native_id,created_at DESC);
+
+-- Only sanitised, explicitly approved user diagnostics; generic Graph text stays excluded.
+ALTER TABLE meta_collection_failures ADD COLUMN IF NOT EXISTS error_user_title text CHECK(char_length(error_user_title)<=300);
+ALTER TABLE meta_collection_failures ADD COLUMN IF NOT EXISTS error_user_msg text CHECK(char_length(error_user_msg)<=300);
+ALTER TABLE ad_media_runs ADD COLUMN IF NOT EXISTS requested_ids jsonb;
+ALTER TABLE ad_media_runs ADD COLUMN IF NOT EXISTS dispatched_at timestamptz;
+ALTER TABLE ad_media_runs ADD COLUMN IF NOT EXISTS returned_ads integer NOT NULL DEFAULT 0;
+ALTER TABLE ad_media_runs ADD COLUMN IF NOT EXISTS matched_ads integer NOT NULL DEFAULT 0;
+ALTER TABLE ad_media_runs ADD COLUMN IF NOT EXISTS actor_requested_count integer;
+ALTER TABLE ad_media_runs ADD COLUMN IF NOT EXISTS actor_returned_count integer;
+ALTER TABLE ad_media_runs ADD COLUMN IF NOT EXISTS actor_query_count integer;
+ALTER TABLE ad_media_runs ADD COLUMN IF NOT EXISTS actor_stop_reasons jsonb NOT NULL DEFAULT '[]';
+ALTER TABLE ad_media_runs ADD COLUMN IF NOT EXISTS input_details jsonb;
+CREATE TABLE IF NOT EXISTS ad_media_requests (
+ run_id text NOT NULL REFERENCES ad_media_runs,native_id text NOT NULL,
+ requested_at timestamptz NOT NULL DEFAULT clock_timestamp(),returned_at timestamptz,matched_at timestamptz,
+ outcome text NOT NULL DEFAULT 'requested' CHECK(outcome IN ('requested','not_returned','expired','unsupported','wrong_page','stored','disk','provider')),
+ PRIMARY KEY(run_id,native_id)
+);
+CREATE INDEX IF NOT EXISTS ad_media_requests_ad ON ad_media_requests(native_id,requested_at DESC);
+
+ALTER TABLE ad_media_runs ADD COLUMN IF NOT EXISTS actor_input_count integer;
+ALTER TABLE ad_media_runs ADD COLUMN IF NOT EXISTS actor_input_checked boolean NOT NULL DEFAULT false;
+
+CREATE TABLE IF NOT EXISTS ad_media_refill_gate(id integer PRIMARY KEY CHECK(id=1),next_check timestamptz NOT NULL);
+ALTER TABLE ad_media_runs ADD COLUMN IF NOT EXISTS known_media_ids jsonb NOT NULL DEFAULT '[]';
