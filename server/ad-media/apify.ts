@@ -1,5 +1,6 @@
-import {AD_MEDIA_ACTOR,AD_MEDIA_BUILD,mediaMaximumUsd} from "../../shared/ad-media.js";
+import {AD_MEDIA_ACTOR,AD_MEDIA_BUILD,mediaMaximumUsd,type MediaRunDiagnostics} from "../../shared/ad-media.js";
 import {assertProxySupport} from "../connectors/http.js";
+import {providerEndDate} from "../../shared/provider-dates.js";
 const API="https://api.apify.com";
 export const record=(value:unknown):Record<string,any>=>value&&typeof value==="object"&&!Array.isArray(value)?value as Record<string,any>:{};
 export const providerId=(value:unknown):value is string=>typeof value==="string"&&/^[A-Za-z0-9]{10,30}$/.test(value);
@@ -13,9 +14,23 @@ export function finalMediaCostUsd(run:Record<string,any>,results:number,cap:numb
   const billed=Math.max(results*.0005+.00005,counts["ad-result"]*.0005+counts["apify-actor-start"]*.00005,typeof run.usageTotalUsd==="number"?run.usageTotalUsd:0,typeof run.externalChargedTotalUsd==="number"?run.externalChargedTotalUsd:0);
   return Number.isFinite(billed)&&billed>=0&&billed<=mediaMaximumUsd(cap)+1e-10?Math.min(mediaMaximumUsd(cap),billed):null;
 }
-export function mediaActorInput(scope:ActorScope){
+export function mediaActorInput(scope:ActorScope,now=new Date()){
   if(!/^\d{1,30}$/.test(scope.pageId)||!Number.isSafeInteger(scope.cap)||scope.cap<1||scope.cap>500||scope.ids.length>500||scope.ids.some(id=>!/^\d{1,40}$/.test(id))||![scope.from,scope.to].every(v=>/^\d{4}-\d{2}-\d{2}$/.test(v))||scope.from>scope.to)throw new AdMediaError("configuration");
-  return {...(scope.ids.length?{adArchiveIds:scope.ids}:{pageIds:[scope.pageId]}),countries:["GB"],adType:"all",activeStatus:"all",deliveredAfter:scope.from,deliveredBefore:scope.to,maxAds:scope.cap,maxAdsPerQuery:scope.cap,fetchAdDetails:false,resolveLandingPages:false,fetchPageDetails:false,includePageMatches:false,onlyTotalCount:false,maxConcurrency:1};
+  return {...(scope.ids.length?{adArchiveIds:scope.ids}:{pageIds:[scope.pageId]}),countries:["GB"],adType:"all",activeStatus:"all",deliveredAfter:scope.from,deliveredBefore:providerEndDate(scope.to,now),maxAds:scope.cap,maxAdsPerQuery:scope.cap,fetchAdDetails:false,resolveLandingPages:false,fetchPageDetails:false,includePageMatches:false,onlyTotalCount:false,maxConcurrency:1};
+}
+const count=(v:unknown)=>typeof v==="number"&&Number.isSafeInteger(v)&&v>=0&&v<=2147483647?v:null;
+const STOP_REASONS=new Set(["cap","end_of_results","thin_pages","blocked","work_allowance","known_pages","empty","complete"]);
+export function mediaInputDetails(value:unknown):MediaRunDiagnostics["input"]{
+ const input=record(value);
+ if(typeof input.pageId!=="string"||!/^\d{1,30}$/.test(input.pageId)||!Array.isArray(input.countries)||input.countries.length!==1||input.countries[0]!=="GB"||![input.from,input.to].every(v=>typeof v==="string"&&/^\d{4}-\d{2}-\d{2}$/.test(v))||input.mode!=="adArchiveIds"||input.activeStatus!=="all"||input.adType!=="all"||count(input.maxAds)===null||input.maxAds<1||input.maxAds>500||input.maxAdsPerQuery!==input.maxAds||count(input.requested)===null||input.requested>input.maxAds)return null;
+ return {pageId:input.pageId,countries:["GB"],from:input.from,to:input.to,activeStatus:"all",adType:"all",maxAds:input.maxAds,maxAdsPerQuery:input.maxAds,mode:"adArchiveIds",requested:input.requested};
+}
+/** Read only recognised actor-owned counters/categories; never persist its summary payload. */
+export function actorCounts(value:unknown){
+ const row=record(value);if(row.type!=="run-summary")return null;
+ const queries=Array.isArray(row.queries)?row.queries.map(record):[];
+ const sum=(key:string)=>queries.length&&queries.every(q=>count(q[key])!==null)?count(queries.reduce((n,q)=>n+q[key],0)):null;
+ return {requested:count(row.requested)??count(row.requestedCount)??sum("requested"),returned:count(row.delivered)??count(row.returned)??sum("delivered"),queries:queries.length||null,stopReasons:[...new Set(queries.map(q=>q.stopReason).concat(row.stopReason).filter((v):v is string=>typeof v==="string"&&STOP_REASONS.has(v)))]};
 }
 /** Same header-only APIFY_TOKEN pattern as creator discovery. No URL/error payload is persisted. */
 export class AdMediaActor{
@@ -37,6 +52,7 @@ export class AdMediaActor{
   }
   async start(scope:ActorScope){return record(record(await this.json(`/v2/acts/${AD_MEDIA_ACTOR}/runs?build=${AD_MEDIA_BUILD}&memory=256&timeout=3600&restartOnError=false&maxTotalChargeUsd=${mediaMaximumUsd(scope.cap)}`,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(mediaActorInput(scope))})).data);}
   async run(id:string){if(!providerId(id))throw new AdMediaError("output");return record(record(await this.json(`/v2/actor-runs/${id}`)).data);}
+  async requestedCount(id:string){if(!providerId(id))throw new AdMediaError("output");const input=record(await this.json(`/v2/key-value-stores/${id}/records/INPUT`));return Array.isArray(input.adArchiveIds)&&input.adArchiveIds.length<=500&&input.adArchiveIds.every((v:unknown)=>typeof v==="string"&&/^\d{1,40}$/.test(v))?new Set(input.adArchiveIds).size:null;}
   async items(id:string,offset:number){if(!providerId(id)||!Number.isSafeInteger(offset)||offset<0)throw new AdMediaError("output");const rows=await this.json(`/v2/datasets/${id}/items?format=json&clean=false&limit=1&offset=${offset}`);if(!Array.isArray(rows)||rows.length>1)throw new AdMediaError("output");return rows as unknown[];}
 }
 export interface ActorMedia{adId:string;pageId:string;format:"image"|"video"|"carousel"|"catalogue"|null;images:string[];posters:string[];videos:string[]}

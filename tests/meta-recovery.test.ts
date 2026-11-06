@@ -46,7 +46,7 @@ test("whole requests use a 90-second deadline and timeouts at headers or body ca
 });
 test("smaller page requests change only the limit and preserve fields, Page, UK window and cursor",async()=>{
  for(const pageSize of [100,50,25,10] as const){
-  const connector=new MetaLibraryConnector({token,fetch:async target=>{const url=new URL(String(target));assert.equal(url.searchParams.get("limit"),String(pageSize));assert.equal(url.searchParams.get("fields"),META_FIELDS);assert.equal(url.searchParams.get("after"),query.after);assert.equal(url.searchParams.get("ad_type"),"ALL");assert.equal(url.searchParams.get("ad_active_status"),"ALL");assert.equal(url.searchParams.get("ad_delivery_date_min"),query.from);assert.equal(url.searchParams.get("ad_delivery_date_max"),query.to);assert.equal(url.searchParams.get("ad_reached_countries"),'["GB"]');return Response.json({data:[]});}});
+  const connector=new MetaLibraryConnector({token,fetch:async target=>{const url=new URL(String(target));assert.equal(url.searchParams.get("limit"),String(pageSize));assert.equal(url.searchParams.get("fields"),META_FIELDS);assert.equal(url.searchParams.get("after"),query.after);assert.equal(url.searchParams.get("ad_type"),"ALL");assert.equal(url.searchParams.get("ad_active_status"),"ALL");assert.equal(url.searchParams.get("ad_delivery_date_min"),query.from);assert.equal(url.searchParams.get("ad_delivery_date_max"),null);assert.equal(url.searchParams.get("ad_reached_countries"),'["GB"]');return Response.json({data:[]});}});
   assert.equal((await connector.page({...query,pageSize})).pageSize,pageSize);
  }
 });
@@ -66,4 +66,9 @@ test("per-brand retry guards stay disabled for samples, missing Page/access/budg
 test("brand progress uses readable counts, stopping time and numeric Graph details",()=>{
  const run=metaRunProjection({run_id:"local-run",run_status:"failed",records_new:7752,records_updated:0,pages_fetched:78,finished_at:"2026-11-05T09:00:00Z",failures:[{id:1,attempted_at:"2026-11-05T09:00:00Z",kind:"page_size",graph_code:1,graph_subcode:99,http_status:500,page_size:100}]});
  const html=renderToStaticMarkup(createElement(ui.MetaRunDetails,{run}));for(const value of ["7,752","78","Graph code 1","subcode 99","HTTP 500","Stopped 5 Nov 2026"])assert.ok(html.includes(value),value);assert.ok(!html.includes("local-run"));
+});
+
+test("Meta user diagnostics render as plain text in the shared Data sources and watchlist details",()=>{
+ const run=metaRunProjection({run_id:"fixture",run_status:"failed",failures:[{id:1,kind:"schema",error_user_title:"<script>not HTML</script>",error_user_msg:"Choose today. https://private.invalid",graph_code:100,graph_subcode:2334030,http_status:400}]});
+ const html=renderToStaticMarkup(createElement(ui.MetaRunDetails,{run}));assert(html.includes("&lt;script&gt;not HTML&lt;/script&gt;"));assert(!html.includes("<script>"));assert(html.includes("Choose today."));assert(!html.includes("private.invalid"));
 });

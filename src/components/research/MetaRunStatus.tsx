@@ -33,8 +33,8 @@ export function MetaRunDetails({run,compact=false}:{run:MetaRunSummary|null|unde
   return <div className="meta-run-details">{!compact&&<><StatusChip status={status(run)}/><dl className="meta-run-counts"><div><dt>Ads saved</dt><dd title="New or changed ad snapshots saved in this run. Unchanged ads are confirmed without adding rows.">{count(run.adsSaved)}</dd></div><div><dt>Pages fetched</dt><dd title="Successfully fetched pages committed at the saved cursor.">{count(run.pagesFetched)}</dd></div><div><dt>Page size</dt><dd>{run.pageSize}</dd></div></dl></>}
     {run.stoppedAt&&<small>{run.status==="complete"?"Finished":"Stopped"} {ukDate(run.stoppedAt,true)}</small>}
     {run.message&&<p>{run.message}</p>}
-    {run.failures[0]&&<small>Latest failure: {failureNumbers(run.failures[0])}</small>}
-    {run.failures.length>0&&<details><summary>Failure details ({run.failureCount})</summary><ol>{run.failures.map(failure=><li key={failure.id}><span>{failureNumbers(failure)}</span><small>{ukDate(failure.at,true)} · {failure.message}</small></li>)}</ol>{run.failureCount>run.failures.length&&<small>Latest {run.failures.length} of {run.failureCount} failures.</small>}</details>}
+    {run.failures[0]&&<><small>Latest failure: {failureNumbers(run.failures[0])}</small>{run.failures[0].userTitle&&<strong>{run.failures[0].userTitle}</strong>}{run.failures[0].userMessage&&<p>{run.failures[0].userMessage}</p>}</>}
+    {run.failures.length>0&&<details><summary>Failure details ({run.failureCount})</summary><ol>{run.failures.map(failure=><li key={failure.id}><span>{failureNumbers(failure)}</span>{failure.userTitle&&<strong>{failure.userTitle}</strong>}{failure.userMessage&&<p>{failure.userMessage}</p>}<small>{ukDate(failure.at,true)} · {failure.message}</small></li>)}</ol>{run.failureCount>run.failures.length&&<small>Latest {run.failures.length} of {run.failureCount} failures.</small>}</details>}
   </div>;
 }
 export function MetaRunTable({data,onSaved}:{data:ResearchData;onSaved:()=>void}){

@@ -34,7 +34,7 @@ test("Meta gates, per-brand backfill checkpoints, daily slots, restatements and 
   let calls=0;
   const connector=new MetaLibraryConnector({token:"fixture-only",fetch:async target=>{
     calls++;const url=new URL(String(target)),page=JSON.parse(url.searchParams.get("search_page_ids")!)[0],after=url.searchParams.get("after");
-    assert.equal(url.searchParams.get("ad_type"),"ALL");assert.equal(url.searchParams.get("ad_delivery_date_min"),"2025-07-01");assert.equal(url.searchParams.get("ad_delivery_date_max"),"2026-07-01");assert.equal(url.searchParams.has("search_terms"),false);
+    assert.equal(url.searchParams.get("ad_type"),"ALL");assert.equal(url.searchParams.get("ad_delivery_date_min"),"2025-07-01");assert.equal(url.searchParams.get("ad_delivery_date_max"),null);assert.equal(url.searchParams.has("search_terms"),false);
     return Response.json({data:[{id:page+(after?"02":"01"),page_id:page,ad_delivery_start_time:"2026-05-01",eu_total_reach:0,total_reach_by_location:[{key:"UK",value:after?30:10}],age_country_gender_reach_breakdown:[{country:"GB",age_gender_breakdowns:[{age_range:"25-34",female:10,male:0}]}]}],...(!after?{paging:{next:"https://graph.facebook.com/private?access_token=fixture-only",cursors:{after:"saved-next"}}}:{})});
   }});
   assert.equal(await workOnce(pool,connector,{env:{}}),false);assert.equal(calls,0);assert.equal((await pool.query("SELECT sum(attempts)::int AS attempts FROM collection_jobs")).rows[0].attempts,0);
