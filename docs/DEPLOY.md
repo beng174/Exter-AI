@@ -438,13 +438,23 @@ The earlier 7,752-ad failure has no recoverable
 Graph code if the old worker never recorded it; the generic message alone does
 not establish that a page was too large.
 
-Failed attempts retain only a controlled error kind, timestamp, page size,
-numeric Graph code/subcode, numeric HTTP status and timeout flag. No request URL,
-paging URL, provider message, trace text or token is stored or logged. The UI
-shows the latest failure and the latest 20 failure details; all events stay in
-the database. Resuming an older failed run preserves its known stopping time as
-a legacy event with no invented numeric code. A measurement/configuration or
-budget failure also gets a controlled event without claiming an HTTP response.
+Failed attempts retain a controlled error kind, timestamp, page size, numeric
+Graph code/subcode, numeric HTTP status and timeout flag. The two explicitly
+permitted Meta user-error fields are sanitised and limited to 300 characters
+as described below. No generic provider message, request/paging URL, trace or
+token is stored or logged. All events stay in the database; the latest 20 appear
+under **Failure history**. Resuming an older failed run preserves its known
+stopping time as a legacy event with no invented numeric code.
+
+Current failures are separate from history. Explicit resume and successful pages
+clear current errors; completed or resumed rows no longer promote an earlier
+failure. A new failure after successful progress becomes current again. Queued
+transient failures show the automatic retry and the next page size, not a manual
+retry action. **Next attempt after** is the later of the saved queue availability
+and the shared Meta pacing gate; it is an earliest eligible time, not a promise
+that the worker will start at that instant. Missing times stay hidden. The known
+100/2334030 code has a controlled end-date explanation. New occurrences require
+checking that the already-merged date fix is deployed to the worker.
 
 Each request has a 90-second deadline including body transfer. For Graph code 1,
 HTTP 500 or a timeout, the queue retries the **same cursor** at page sizes
@@ -468,7 +478,7 @@ data-provider budget. The authenticated same-origin POST checks workspace,
 switch, token and budget again; worker dispatch also enforces the shared rate
 slot, cooldown, budget and live lease. An unexpired lease cannot be stolen and
 an unsaved Page ID cannot silently redirect a retry. Queued/running controls
-stay disabled. **Collect ads** starts a brand with no run, and **Collect again**
+stay disabled and read **Queued** or **Collecting**. **Collect ads** starts a brand with no run, and **Collect again**
 starts the next run after completion. Deploying this change does not automatically
 resume previously failed jobs.
 
@@ -852,3 +862,14 @@ progresses every enabled Page watchlist automatically within the existing budget
 Fixtures include 1,200 official ads in 500/500/200-ID batches, a second brand,
 partial 20-ad responses, restarts and GMT/BST boundary times. No live provider
 calls were made; fixtures are not live verification.
+
+### Collection status reader rollout (8 Nov 2026)
+
+After merging the status fix into exter-test-drive, deploy exter-ai with
+Manual Deploy > Deploy latest commit and wait for health. This repair changes
+read-only status/UI code and needs no schema migration or worker retry-policy
+change. Ensure exter-worker already includes PR #20's merged date fix if it has
+not been deployed since 6 November; leave exter-scheduler and all enabled flags,
+budgets and schedules unchanged. An old 6 November error under Failure history
+is not proof of a new rejection. Review current status and progress before
+manually retrying; queued/running work is already active.

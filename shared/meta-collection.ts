@@ -39,4 +39,25 @@ export interface MetaRunSummary {
   id:string;status:"queued"|"running"|"complete"|"failed"|"paused"|"not_connected"|"superseded";
   adsSaved:number|null;pagesFetched:number|null;startedAt:string|null;stoppedAt:string|null;pageSize:MetaPageSize;
   message:string|null;failures:MetaAttemptFailure[];failureCount:number;
+  currentFailure?:MetaAttemptFailure|null;nextAttemptAt?:string|null;
+}
+export function metaFailureMessage(failure:Pick<MetaAttemptFailure,"kind"|"graphCode"|"graphSubcode">):string{
+  if(failure.graphCode===100&&failure.graphSubcode===2334030)return "Meta rejected the collection end date. Deploy the latest worker, then retry.";
+  return META_CONTROLLED_ERRORS[failure.kind];
+}
+/** History survives a retry; cleared current errors must not become a new outage. */
+export function currentMetaFailure(run:MetaRunSummary):MetaAttemptFailure|null{
+  if(["complete","superseded"].includes(run.status))return null;
+  if(run.currentFailure!==undefined)return run.currentFailure;
+  return run.message||["failed","paused","not_connected"].includes(run.status)?run.failures[0]??null:null;
+}
+export function metaCollectionActivity(run:MetaRunSummary):string|null{
+  const failure=currentMetaFailure(run);
+  if(run.status==="complete"||run.status==="superseded")return null;
+  if(["queued","running"].includes(run.status)){
+    if(failure?.kind==="rate_limited")return "Waiting for Meta's rate limit. Collection will retry automatically.";
+    if(failure&&["page_size","timeout","unavailable"].includes(failure.kind))return run.status==="queued"?`Retrying automatically with ${run.pageSize} ads per page.`:`Retrying with ${run.pageSize} ads per page.`;
+    return run.status==="queued"?"Waiting for the worker.":"Collecting ads.";
+  }
+  return run.message||(failure?metaFailureMessage(failure):"Collection stopped. Review the source settings before retrying.");
 }

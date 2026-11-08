@@ -1,0 +1,40 @@
+{
+  "checks": [
+    {
+      "width": 1280,
+      "historicalErrorsCollapsed": true,
+      "historyPreserved": true,
+      "automatic25AdRetry": true,
+      "activeActionsDisabled": true,
+      "noPageOverflow": true
+    },
+    {
+      "width": 1440,
+      "historicalErrorsCollapsed": true,
+      "historyPreserved": true,
+      "automatic25AdRetry": true,
+      "activeActionsDisabled": true,
+      "noPageOverflow": true
+    },
+    {
+      "width": 1920,
+      "historicalErrorsCollapsed": true,
+      "historyPreserved": true,
+      "automatic25AdRetry": true,
+      "activeActionsDisabled": true,
+      "noPageOverflow": true
+    },
+    {
+      "width": 390,
+      "historicalErrorsCollapsed": true,
+      "historyPreserved": true,
+      "automatic25AdRetry": true,
+      "activeActionsDisabled": true,
+      "noPageOverflow": true
+    }
+  ],
+  "externalRequests": [],
+  "writes": [],
+  "pageErrors": [],
+  "providerCalls": 0
+}

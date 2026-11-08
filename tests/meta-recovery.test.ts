@@ -72,3 +72,26 @@ test("Meta user diagnostics render as plain text in the shared Data sources and 
  const run=metaRunProjection({run_id:"fixture",run_status:"failed",failures:[{id:1,kind:"schema",error_user_title:"<script>not HTML</script>",error_user_msg:"Choose today. https://private.invalid",graph_code:100,graph_subcode:2334030,http_status:400}]});
  const html=renderToStaticMarkup(createElement(ui.MetaRunDetails,{run}));assert(html.includes("&lt;script&gt;not HTML&lt;/script&gt;"));assert(!html.includes("<script>"));assert(html.includes("Choose today."));assert(!html.includes("private.invalid"));
 });
+
+const oldDateFailure={id:1,attempted_at:"2026-11-06T03:01:00Z",kind:"schema",graph_code:100,graph_subcode:2334030,http_status:400,page_size:100};
+test("completed and resumed collection keep old date errors only in failure history",()=>{
+ for(const status of ["complete","running","queued"]){
+  const run=metaRunProjection({run_id:"fixture-progress",run_status:status,records_new:8,records_updated:0,pages_fetched:3,finished_at:status==="complete"?"2026-11-08T02:58:00Z":null,errors:status==="complete"?[{message:META_CONTROLLED_ERRORS.schema}]:[],failures:[oldDateFailure]})!;
+  assert.equal(run.currentFailure,null);assert.equal(run.message,null);assert.equal(run.failureCount,1);
+  const html=renderToStaticMarkup(createElement(ui.MetaRunDetails,{run})),current=html.split('<details>')[0];assert(!current.includes('Graph code 100'));assert(!current.includes('collection end date'));assert(html.includes('Failure history (1)'));assert(html.includes('subcode 2334030'));
+  if(status==='complete')assert(current.includes('Finished 8 Nov 2026'));
+  if(status==='running')assert(current.includes('Collecting ads.'));
+ }
+});
+test("a queued 50-ad failure explains its automatic 25-ad retry, time and disabled action",()=>{
+ const run=metaRunProjection({run_id:'fixture-retry',run_status:'queued',records_new:1850,records_updated:0,pages_fetched:19,request_page_size:25,next_attempt_at:'2026-11-08T03:01:00Z',errors:[{message:META_CONTROLLED_ERRORS.page_size}],failures:[{...oldDateFailure,attempted_at:'2026-11-08T02:59:00Z',kind:'page_size',graph_code:1,graph_subcode:null,http_status:500,page_size:50},oldDateFailure]})!;
+ assert.equal(run.currentFailure?.graphCode,1);assert.equal(run.nextAttemptAt,'2026-11-08T03:01:00.000Z');
+ const html=renderToStaticMarkup(createElement(ui.MetaRunDetails,{run}));for(const text of ['Retrying automatically with 25 ads per page.','Last attempt: Graph code 1','50 ads per page','Next attempt after 8 Nov 2026','Failure history (2)'])assert(html.includes(text),text);
+ const button=renderToStaticMarkup(createElement(ui.MetaRetryButton,{data,watchlist:{...watchlist,latestRun:run},onSaved:()=>{}}));assert(button.includes('disabled'));assert(button.includes('>Queued</button>'));assert(!button.includes('Retry collection'));
+ const running=renderToStaticMarkup(createElement(ui.MetaRetryButton,{data,watchlist:{...watchlist,latestRun:{...run,status:'running'}},onSaved:()=>{}}));assert(running.includes('disabled'));assert(running.includes('>Collecting</button>'));
+});
+test("a current rejected end date stays actionable while unknown queue times stay hidden",()=>{
+ const run=metaRunProjection({run_id:'fixture-date',run_status:'failed',next_attempt_at:'private-provider',errors:[{message:META_CONTROLLED_ERRORS.schema}],failures:[oldDateFailure]})!;
+ assert.equal(run.currentFailure?.graphSubcode,2334030);assert.equal(run.nextAttemptAt,null);
+ const html=renderToStaticMarkup(createElement(ui.MetaRunDetails,{run}));assert(html.includes('Meta rejected the collection end date.'));assert(html.includes('Deploy the latest worker, then retry.'));assert(html.includes('Current failure: Graph code 100'));assert(!html.includes('Next attempt after'));
+});

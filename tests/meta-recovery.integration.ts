@@ -113,3 +113,26 @@ test("bounded Meta user errors are stored and projected safely, including a save
   const latest=(await readMetaWatchlists(pool,'fixture'))[0].latestRun!;assert.equal(latest.failures[0].userTitle,stored.error_user_title);assert.equal(latest.failures[0].userMessage,stored.error_user_msg);assert.equal(latest.failures[0].graphSubcode,2334030);
  }finally{await pool.end();}
 });
+
+test("current failures clear after successful resumed pages, retain history and expose the effective paced retry time",async()=>{
+ const pool=testPool();try{
+  await reset(pool);const run=await enqueueCollection(pool,'own');let call=0;
+  const connector=new MetaLibraryConnector({token:'fixture-only',fetch:async target=>{
+   const url=new URL(String(target));assert.equal(url.searchParams.has('ad_delivery_date_max'),false);call++;
+   if(call<=2){assert.equal(url.searchParams.get('after'),null);return Response.json({error:{code:1}},{status:500});}
+   if(call===3){assert.equal(url.searchParams.get('limit'),'25');return Response.json({data:[{id:'901',page_id:'12'}],paging:{next:'https://fixture.invalid/never-save',cursors:{after:'fixture-next-page'}}});}
+   assert.equal(url.searchParams.get('after'),'fixture-next-page');if(call===4)return Response.json({error:{code:1}},{status:500});return Response.json({data:[]});
+  }});
+  for(const size of [50,25]){
+   await tick(pool);await dispatch(pool,connector);const projected=(await readMetaWatchlists(pool,'fixture'))[0].latestRun!;
+   assert.equal(projected.status,'queued');assert.equal(projected.currentFailure?.graphCode,1);assert.equal(projected.pageSize,size);
+   const gate=(await pool.query('SELECT next_request_at FROM meta_request_gate WHERE id=1')).rows[0].next_request_at;assert.equal(projected.nextAttemptAt,gate.toISOString());
+  }
+  await tick(pool);await dispatch(pool,connector);let projected=(await readMetaWatchlists(pool,'fixture'))[0].latestRun!;
+  assert.equal(projected.status,'running');assert.equal(projected.pagesFetched,1);assert.equal(projected.currentFailure,null);assert.equal(projected.message,null);assert.equal(projected.failures.length,2);
+  await tick(pool);await dispatch(pool,connector);projected=(await readMetaWatchlists(pool,'fixture'))[0].latestRun!;assert.equal(projected.status,'queued');assert.equal(projected.currentFailure?.graphCode,1);assert.equal(projected.pageSize,10);assert.equal(projected.failures.length,3);
+  const history=(await pool.query('SELECT * FROM meta_collection_failures WHERE run_id=$1 ORDER BY id',[run])).rows;
+  await tick(pool);await dispatch(pool,connector);projected=(await readMetaWatchlists(pool,'fixture'))[0].latestRun!;
+  assert.equal(projected.status,'complete');assert.equal(projected.currentFailure,null);assert.equal(projected.nextAttemptAt,null);assert.equal(projected.failures.length,3);assert.deepEqual((await pool.query('SELECT * FROM meta_collection_failures WHERE run_id=$1 ORDER BY id',[run])).rows,history);
+ }finally{await pool.end();}
+});
