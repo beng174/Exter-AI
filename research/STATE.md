@@ -816,3 +816,28 @@ and blockers below remain unchanged.
   it has not been deployed since the date fix merged. Leave the scheduler,
   schedules, credentials, switches and budgets unchanged. Historical date errors
   do not require interrupting queued/running work.
+
+## Web JavaScript heap abort (8 Nov 2026, 20:49 GMT)
+
+- Owner supplied the fatal Node heap-limit error and confirmed exter-ai (web),
+  instance 6k9vd. Render's private log link requires sign-in here; the exact live
+  allocation frame and post-deploy recovery remain unverified.
+- A clean aa7330f checkout aborts under a fixed 192 MiB production-mode fixture
+  heap when reading 7,800 ads with large stored-only raw fields. The repair
+  returns three overlapping full responses with matching counts and hashes under
+  the same limit. This is a synthetic load comparison, not production profiling.
+- Stream public observations into their existing creative projection and group
+  retained media history as rows arrive. Preserve SQL scope, latest selection,
+  missing/zero values, public/private cohorts and every stored row/file. Encode
+  the response incrementally, retain backpressure and queue overlapping heavy
+  library builds with a bounded busy response. No response data is truncated.
+- Collection workers, schedules, provider fields, budgets, Gemini settings,
+  render.yaml and production heap limits are unchanged. No schema migration,
+  paid calls or production data access. Kernel work and both owned-account live
+  gates retain their prior status.
+- Validation: npm run check, npm test (504 passed), npm run build and
+  npm run secrets:check passed. Seventeen disposable Postgres integration cases
+  passed. Fixture measurements and limitations are recorded in
+  .agent/plans/bounded-public-library-memory.md and docs/DEPLOY.md. After merge,
+  deploy exter-ai only, wait for health and verify library counts and memory.
+  Existing collection/media checkpoints continue without a fresh backfill.

@@ -873,3 +873,55 @@ not been deployed since 6 November; leave exter-scheduler and all enabled flags,
 budgets and schedules unchanged. An old 6 November error under Failure history
 is not proof of a new rejection. Review current status and progress before
 manually retrying; queued/running work is already active.
+
+### Web heap exhaustion and large-library reads (8 Nov 2026)
+
+The owner reported `FATAL ERROR: Reached heap limit Allocation failed -
+JavaScript heap out of memory` from exter-ai instance 6k9vd at 20:49 GMT. This
+confirms a Node heap abort, not its exact allocation frame. Private Render logs
+were not accessible from the development environment. A provider-disabled
+7,800-ad fixture reproduced the same abort on the original aa7330f reader.
+
+Public library reads now project pg row events directly into the creative list,
+without retaining a second array of raw payloads. The same latest-observation
+SELECT, workspace/revision checks, raw-payload references and 100,000-row bound
+remain. Saved media history is grouped as rows arrive, preserving older posters
+and files. Identity maps replace repeated full-list scans. An empty owned-account
+result no longer clones every public creative. No database row or file changes.
+
+The response keeps the same JSON shape and all its ads. It uses chunked HTTP
+encoding, row by row, with socket backpressure instead of building one large JSON
+string. Private no-store headers and authentication remain. Full-library builds
+are limited to one active response per web process, with up to eight waiting
+requests and a 30-second queue deadline. Queue overflow/expiry returns an explicit
+503 busy response with Retry-After: 2, never an empty successful library. Closed
+waiting requests are removed. Health, source-status and media routes do not use
+this gate. A slow client can delay another full-library response; it cannot queue
+unbounded copies of the dataset.
+
+A clean original checkout and the repaired checkout were compared in production
+mode with identical fixtures and a **192 MiB local test heap**. The original
+aborted before returning a library. The repair returned three overlapping
+responses, each with 7,800 ads and identical 11,326,079-byte JSON bodies. The
+fixture includes a 24 KB stored-only raw field per ad to stress raw buffering;
+its payload distribution is synthetic, not a production measurement. One final
+run sampled a 160.8 MiB heap peak, 68.4 MiB heap at completion and 301.1 MiB RSS.
+These figures vary by runtime and data. The full projected list still grows with
+ad/analysis count; this repair bounds transient raw/history/encoding copies and
+concurrent builds, without silently truncating records.
+
+The heap flag belongs only to the regression fixture. **Do not set it in Render**
+or raise the existing heap limit or plan for this patch. After merge into
+exter-test-drive, use **exter-ai > Manual Deploy > Deploy latest commit** and wait
+for health. Verify the authenticated /api/health route, the library ad count and
+Render's memory graph while opening Home, Creatives and Creative detail. Leave
+worker/scheduler checkpoints, flags, provider budgets, Gemini settings and the
+03:00 schedule unchanged. No migration or fresh collection is needed. A code
+rollback retains every observation, file and paid analysis.
+
+Reproduction: `node --max-old-space-size=192 --import tsx
+tests/fixtures/library-memory-server.ts` in production mode with fixture-only
+admin settings and FIXTURE_REQUESTS=3. The fixture blocks provider fetches and
+uses synthetic database responses. `npm test` includes this regression. Real pg
+streaming and retained-history checks use tests/library-read.integration.ts with
+a dedicated disposable TEST_DATABASE_URL. Fixtures are not live verification.
