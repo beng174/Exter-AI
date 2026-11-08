@@ -1,6 +1,7 @@
 import {useState} from "react";
+import {ChevronRight} from "lucide-react";
 import type {MetaWatchlist} from "../../../shared/meta-public";
-import type {MetaRunSummary} from "../../../shared/meta-collection";
+import {currentMetaFailure,metaCollectionActivity,metaFailureMessage,type MetaRunSummary} from "../../../shared/meta-collection";
 import type {ResearchData} from "./useResearchData";
 import {ukDate,plainEnum} from "../../../shared/creative-presentation";
 import {DataTable,StatusChip} from "../ui";
@@ -21,7 +22,7 @@ export function metaRetryReason(data:ResearchData,watchlist?:MetaWatchlist){
 export function MetaRetryButton({data,watchlist,onSaved,disabledReason}:{data:ResearchData;watchlist?:MetaWatchlist;onSaved:()=>void;disabledReason?:string|null}){
   const [busy,setBusy]=useState(false),[message,setMessage]=useState("");
   const reason=disabledReason||metaRetryReason(data,watchlist),run=watchlist?.latestRun;
-  const label=!run||run.status==="superseded"?"Collect ads":run.status==="complete"?"Collect again":"Retry collection";
+  const label=!run||run.status==="superseded"?"Collect ads":run.status==="complete"?"Collect again":run.status==="queued"?"Queued":run.status==="running"?"Collecting":"Retry collection";
   async function retry(){if(reason||!watchlist)return;setBusy(true);setMessage("");try{
     const response=await fetch("/api/public/meta/collect",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({watchlistId:watchlist.id,workspaceId:data.library.brand.id})});
     if(!response.ok)throw new Error();setMessage("Collection queued from its saved progress.");onSaved();
@@ -30,11 +31,13 @@ export function MetaRetryButton({data,watchlist,onSaved,disabledReason}:{data:Re
 }
 export function MetaRunDetails({run,compact=false}:{run:MetaRunSummary|null|undefined;compact?:boolean}){
   if(!run)return <span className="reference-muted">No collection run yet.</span>;
+  const current=currentMetaFailure(run),activity=metaCollectionActivity(run),retrying=["queued","running"].includes(run.status);
   return <div className="meta-run-details">{!compact&&<><StatusChip status={status(run)}/><dl className="meta-run-counts"><div><dt>Ads saved</dt><dd title="New or changed ad snapshots saved in this run. Unchanged ads are confirmed without adding rows.">{count(run.adsSaved)}</dd></div><div><dt>Pages fetched</dt><dd title="Successfully fetched pages committed at the saved cursor.">{count(run.pagesFetched)}</dd></div><div><dt>Page size</dt><dd>{run.pageSize}</dd></div></dl></>}
     {run.stoppedAt&&<small>{run.status==="complete"?"Finished":"Stopped"} {ukDate(run.stoppedAt,true)}</small>}
-    {run.message&&<p>{run.message}</p>}
-    {run.failures[0]&&<><small>Latest failure: {failureNumbers(run.failures[0])}</small>{run.failures[0].userTitle&&<strong>{run.failures[0].userTitle}</strong>}{run.failures[0].userMessage&&<p>{run.failures[0].userMessage}</p>}</>}
-    {run.failures.length>0&&<details><summary>Failure details ({run.failureCount})</summary><ol>{run.failures.map(failure=><li key={failure.id}><span>{failureNumbers(failure)}</span>{failure.userTitle&&<strong>{failure.userTitle}</strong>}{failure.userMessage&&<p>{failure.userMessage}</p>}<small>{ukDate(failure.at,true)} · {failure.message}</small></li>)}</ol>{run.failureCount>run.failures.length&&<small>Latest {run.failures.length} of {run.failureCount} failures.</small>}</details>}
+    {activity&&<p>{activity}</p>}
+    {current&&<><small>{retrying?"Last attempt":"Current failure"}: {failureNumbers(current)}{current.at&&` · ${ukDate(current.at,true)}`}</small>{current.userTitle&&<strong>{current.userTitle}</strong>}{current.userMessage&&<p>{current.userMessage}</p>}</>}
+    {retrying&&current&&run.nextAttemptAt&&<small title="The earliest allowed attempt. The worker may start later.">Next attempt after {ukDate(run.nextAttemptAt,true)}</small>}
+    {run.failures.length>0&&<details><summary><ChevronRight size={14} aria-hidden/>Failure history ({run.failureCount})</summary><ol>{run.failures.map(failure=><li key={failure.id}><span>{failureNumbers(failure)}</span>{failure.userTitle&&<strong>{failure.userTitle}</strong>}{failure.userMessage&&<p>{failure.userMessage}</p>}<small>{ukDate(failure.at,true)} · {metaFailureMessage(failure)}</small></li>)}</ol>{run.failureCount>run.failures.length&&<small>Latest {run.failures.length} of {run.failureCount} failures.</small>}</details>}
   </div>;
 }
 export function MetaRunTable({data,onSaved}:{data:ResearchData;onSaved:()=>void}){

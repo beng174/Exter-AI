@@ -786,3 +786,33 @@ and blockers below remain unchanged.
   owner's current enabled flags, actor build/prices, USD cap and provider budget.
   Use Retry collection for failed Graph checkpoints; Collect missing media can
   resume safe pauses. Reconcile an Uncertain paid start before retrying it.
+
+## Current collection status versus failure history (8 Nov 2026)
+
+- The owner reported running/completed collections still showing 6 November
+  date failures alongside a current queued HTTP 500 retry. Confirmed PR #20 is
+  merged into exter-test-drive; no production deployment or database was accessed.
+- Found the reporting defect: MetaRunDetails always promoted failures[0], even
+  after resume or successful pages had cleared the current run error. Completed
+  and resumed runs now keep those entries under Failure history only. A new
+  failure after successful progress becomes current again; nothing is deleted.
+- Queued transient failures show automatic retry, the smaller upcoming page size
+  and the earliest retry time from the queue/shared rate gate. Active controls
+  say Queued or Collecting and remain disabled. Failed/paused controls retain the
+  existing access, saved-Page, budget and lease guards. The known 100/2334030 code
+  now has a controlled end-date explanation instead of a generic schema message.
+- Reverified the same-cursor 100/50/25/10 path with fixtures. The collection worker,
+  fields, retry limits, pacing, daily 03:00 schedule and enabled flags are unchanged.
+  No schema migration, provider call, paid run or production write was made.
+- Validation: npm run check, npm test (495 passed), npm run build and
+  npm run secrets:check passed. Ten disposable Postgres recovery/activation
+  cases and browser fixtures at 1280/1440/1920/390 passed with no external calls.
+  Details and screenshots are recorded in
+  .agent/plans/meta-collection-current-status.md and
+  output/playwright/meta-current-status/. Fixtures are not live verification.
+  Both own-account live gates remain OPEN; kernel work remains paused.
+- Rollout: after merge, manually deploy the latest exter-test-drive commit on
+  exter-ai and wait for health. Ensure exter-worker already includes PR #20 if
+  it has not been deployed since the date fix merged. Leave the scheduler,
+  schedules, credentials, switches and budgets unchanged. Historical date errors
+  do not require interrupting queued/running work.
