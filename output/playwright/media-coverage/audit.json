@@ -1,0 +1,35 @@
+{
+  "checks": [
+    {
+      "width": 1280,
+      "threeBrands": true,
+      "inputAndActorCounts": true,
+      "sanitisedMetaErrors": true,
+      "noPageOverflow": true
+    },
+    {
+      "width": 1440,
+      "threeBrands": true,
+      "inputAndActorCounts": true,
+      "sanitisedMetaErrors": true,
+      "noPageOverflow": true
+    },
+    {
+      "width": 1920,
+      "threeBrands": true,
+      "inputAndActorCounts": true,
+      "sanitisedMetaErrors": true,
+      "noPageOverflow": true
+    },
+    {
+      "width": 390,
+      "threeBrands": true,
+      "inputAndActorCounts": true,
+      "sanitisedMetaErrors": true,
+      "noPageOverflow": true
+    }
+  ],
+  "providerCalls": 0,
+  "externalRequests": [],
+  "pageErrors": []
+}

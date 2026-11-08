@@ -1,3 +1,6 @@
+import {readMediaCoverage} from "./coverage.js";
+import {actorCounts,mediaInputDetails} from "./apify.js";
+import {diagnosticNumber} from "../../shared/meta-collection.js";
 import {createHash,randomUUID,timingSafeEqual} from "node:crypto";
 import {isIP} from "node:net";
 import type {Express} from "express";
@@ -7,12 +10,17 @@ import {readBrand} from "../db.js";
 import {infrastructureDatabase} from "../infrastructure/database.js";
 import {MEDIA_ERRORS,mediaEnabled,mediaGbpRate,type AdMediaRunSummary} from "../../shared/ad-media.js";
 import {AdMediaStorage,mediaDiskHealth} from "./storage.js";
-import {claimAdMedia,enqueueAdMedia,stepAdMedia} from "./jobs.js";
+import {claimAdMedia,enqueueAdMedia,stepAdMedia,scheduleAdMedia} from "./jobs.js";
 import {protectSettingsMutation} from "../request-guard.js";
 import {assertProxySupport} from "../connectors/http.js";
 import type {CreativeGalleryService} from "../demo/gallery.js";
 import {configuredCreativeCompetitors} from "../demo/creative-competitors.js";
 const digest=(value:string)=>createHash("sha256").update(value).digest();
+function savedMediaPlan(row:Record<string,any>){
+ const day=(value:unknown)=>value instanceof Date&&Number.isFinite(value.getTime())?value.toISOString().slice(0,10):typeof value==="string"&&/^\d{4}-\d{2}-\d{2}$/.test(value)?value:null;
+ const from=day(row.window_from),to=day(row.window_to),cap=diagnosticNumber(row.cap);
+ return typeof row.page_id==="string"&&/^\d{1,30}$/.test(row.page_id)&&from&&to&&cap&&cap<=500?{pageId:row.page_id,from,to,cap,mode:row.phase==="page"?"Page search":"Exact ad IDs"}:null;
+}
 export function mediaBrokerConfig(env:Record<string,string|undefined>){
   const token=env.EXTER_AD_MEDIA_BROKER_TOKEN||"",raw=env.EXTER_AD_MEDIA_BROKER_ORIGIN||"";
   if(token.length<32||token.length>4096||/\s|[\u0000-\u001f]/.test(token))return null;
@@ -20,7 +28,7 @@ export function mediaBrokerConfig(env:Record<string,string|undefined>){
 }
 export async function adMediaRuns(pool:pg.Pool,workspaceId:string):Promise<AdMediaRunSummary[]>{
   const result=await pool.query(`SELECT r.*,l.cost_gbp::float8,l.initial_reserved_gbp::float8,l.status AS cost_status FROM ad_media_runs r LEFT JOIN cost_ledger l ON l.id=r.reservation_id WHERE r.workspace_id=$1 ORDER BY r.started_at DESC LIMIT 20`,[workspaceId]);
-  return result.rows.map(r=>({id:r.id,brandKey:r.brand_key,status:r.status,startedAt:new Date(r.started_at).toISOString(),finishedAt:r.finished_at?new Date(r.finished_at).toISOString():null,results:r.results,adsWithMedia:r.ads_with_media,costGbp:r.cost_gbp??0,reservedGbp:r.initial_reserved_gbp??null,costStatus:r.cost_status||"not_started",gbpPerUsd:r.gbp_per_usd===null?null:Number(r.gbp_per_usd),error:r.error_kind?MEDIA_ERRORS[r.error_kind]||MEDIA_ERRORS.provider:null}));
+  return result.rows.map(r=>({diagnostics:{plan:savedMediaPlan(r),requested:Array.isArray(r.requested_ids)?r.requested_ids.length:null,returned:r.requested_ids?diagnosticNumber(r.returned_ads):null,matched:r.requested_ids?diagnosticNumber(r.matched_ads):null,actorRequested:diagnosticNumber(r.actor_requested_count),actorInput:diagnosticNumber(r.actor_input_count),actorReturned:diagnosticNumber(r.actor_returned_count),actorQueries:diagnosticNumber(r.actor_query_count),stopReasons:actorCounts({type:"run-summary",queries:(Array.isArray(r.actor_stop_reasons)?r.actor_stop_reasons:[]).map((stopReason:unknown)=>({stopReason}))})!.stopReasons,input:mediaInputDetails(r.input_details)},id:r.id,brandKey:r.brand_key,status:r.status,startedAt:new Date(r.started_at).toISOString(),finishedAt:r.finished_at?new Date(r.finished_at).toISOString():null,results:r.results,adsWithMedia:r.ads_with_media,costGbp:r.cost_gbp??0,reservedGbp:r.initial_reserved_gbp??null,costStatus:r.cost_status||"not_started",gbpPerUsd:r.gbp_per_usd===null?null:Number(r.gbp_per_usd),error:r.error_kind?MEDIA_ERRORS[r.error_kind]||MEDIA_ERRORS.provider:null}));
 }
 /** Dedicated machine auth grants one leased media step, with no general app access. */
 export function attachMediaStep(app:Express,db:DatabaseSync,getPool= infrastructureDatabase,env:Record<string,string|undefined>=process.env){
@@ -44,10 +52,14 @@ export function attachMediaStep(app:Express,db:DatabaseSync,getPool= infrastruct
     }catch{res.status(503).json({error:"The saved media step could not complete."});}
   });
 }
+async function refillMediaQueue(pool:pg.Pool,env:Record<string,string|undefined>,force=false){
+ const claimed=await pool.query(`INSERT INTO ad_media_refill_gate(id,next_check) VALUES(1,now()+interval '1 minute') ON CONFLICT(id) DO UPDATE SET next_check=excluded.next_check WHERE ad_media_refill_gate.next_check<=now() OR $1 RETURNING id`,[force]);
+ if(claimed.rowCount)await scheduleAdMedia(pool,env);
+}
 export async function workAdMediaOnce(pool:pg.Pool,options:{env?:Record<string,string|undefined>;fetch?:typeof fetch}={}){
   const env=options.env||process.env;if(!mediaEnabled(env))return false;
   const configuration=mediaBrokerConfig(env);if(!configuration)return false;
-  const owner=randomUUID(),run=await claimAdMedia(pool,owner);if(!run)return false;
+  const owner=randomUUID();let run=await claimAdMedia(pool,owner);if(!run){await refillMediaQueue(pool,env);run=await claimAdMedia(pool,owner);}if(!run)return false;
   let worked=false;
   try{
     assertProxySupport(Boolean(options.fetch),env);
@@ -60,14 +72,18 @@ export async function workAdMediaOnce(pool:pg.Pool,options:{env?:Record<string,s
   }catch{/* Reclaim the same checkpoint; never automatically start another paid run. */}
   await pool.query("UPDATE ad_media_runs SET lease_owner=NULL,lease_until=NULL,available_at=CASE WHEN $3 THEN available_at ELSE now()+interval '60 seconds' END WHERE id=$1 AND lease_owner=$2",[run.id,owner,worked]);
   const current=(await pool.query("SELECT status FROM ad_media_runs WHERE id=$1",[run.id])).rows[0];
-  if(current?.status==="complete")await enqueueAdMedia(pool,run.watchlist_id);
+  if(current?.status==="complete")await refillMediaQueue(pool,env,true);
   return true;
 }
 export function attachAdMedia(app:Express,db:DatabaseSync,getPool=infrastructureDatabase){
   app.get("/api/ad-media/status",async(req,res)=>{
     const brand=typeof req.query.workspaceId==="string"?readBrand(db,req.query.workspaceId):null;
     if(!brand||brand.mode==="demo"){res.status(404).json({error:"Real workspace not found."});return;}
-    try{res.json({enabled:mediaEnabled(),configured:Boolean(process.env.APIFY_TOKEN?.trim()&&mediaGbpRate(process.env)!==null),disk:await mediaDiskHealth(),runs:process.env.DATABASE_URL?await adMediaRuns(getPool(),brand.id):[]});}catch{res.status(503).json({error:"Saved media health could not be read."});}
+    try{
+      const pool=process.env.DATABASE_URL?getPool():null,coverage=pool?await readMediaCoverage(pool,brand.id):[];
+      const targets=[{key:brand.id,name:brand.name},...configuredCreativeCompetitors(db,brand,app.locals.demoCollection).map(c=>({key:c.brandId||c.key,name:c.name}))];
+      res.json({enabled:mediaEnabled(),configured:Boolean(process.env.APIFY_TOKEN?.trim()&&mediaGbpRate(process.env)!==null),disk:await mediaDiskHealth(),runs:pool?await adMediaRuns(pool,brand.id):[],coverage:coverage.map(c=>({...c,brandName:targets.find(t=>t.key===c.brandKey)?.name||"Watchlist brand"}))});
+    }catch{res.status(503).json({error:"Saved media health could not be read."});}
   });
   app.post("/api/ad-media/collect",protectSettingsMutation,async(req,res)=>{
     const brand=typeof req.body?.workspaceId==="string"?readBrand(db,req.body.workspaceId):null;

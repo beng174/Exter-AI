@@ -6,6 +6,19 @@ export function diagnosticNumber(value:unknown):number|null{
   const n=typeof value==="number"?value:typeof value==="string"&&/^\d{1,10}$/.test(value)?Number(value):NaN;
   return Number.isSafeInteger(n)&&n>=0&&n<=2147483647?n:null;
 }
+/** Only the two explicitly authorised user-facing fields may pass this boundary. */
+export function metaUserText(value:unknown,token=""):string|null{
+ if(typeof value!=="string")return null;
+ let text=value.replace(/\\\//g,"/");
+ for(let i=0;i<2;i++)text=text.replace(/(?:%[0-9a-f]{2})+/gi,part=>{try{return decodeURIComponent(part);}catch{return "[encoded text removed]";}});
+ for(const secret of [token,token?encodeURIComponent(token):""])if(secret)text=text.split(secret).join("[redacted]");
+ text=text.replace(/\bBearer\s+[^\s,;]+/gi,"[redacted]")
+  .replace(/\b(?:access[_-]?token|api[_-]?key|authorization|password|secret)\s*[:=]\s*[^\s,;]+/gi,"[redacted]")
+  .replace(/\b(?:[a-z][a-z0-9+.-]*:\/\/|www\.)[^\s<>"']+/gi,"[link removed]")
+  .replace(/\b(?:[a-z0-9-]+\.)+[a-z]{2,}(?::\d+)?(?:[/?#][^\s<>"']*)?/gi,"[link removed]")
+  .replace(/[\u0000-\u001f\u007f-\u009f\u202a-\u202e\u2066-\u2069]/g," ").replace(/\s+/g," ").trim();
+ return Array.from(text).slice(0,300).join("")||null;
+}
 export const META_CONTROLLED_ERRORS={
   legacy:"Collection stopped before numeric diagnostics were recorded. Earlier evidence is retained.",
   budget:"Jobs paused: data_providers monthly budget is unset or its 90% threshold would be reached.",
@@ -21,7 +34,7 @@ export const META_CONTROLLED_ERRORS={
   page_id:"Assign a Page ID to each brand in Edit watchlist before resuming collection."
 } as const;
 export type MetaFailureKind=keyof typeof META_CONTROLLED_ERRORS;
-export interface MetaAttemptFailure {id:number;at:string;kind:MetaFailureKind;message:string;graphCode:number|null;graphSubcode:number|null;httpStatus:number|null;pageSize:number|null;timedOut:boolean}
+export interface MetaAttemptFailure {id:number;at:string;kind:MetaFailureKind;message:string;graphCode:number|null;graphSubcode:number|null;httpStatus:number|null;pageSize:number|null;timedOut:boolean;userTitle?:string|null;userMessage?:string|null}
 export interface MetaRunSummary {
   id:string;status:"queued"|"running"|"complete"|"failed"|"paused"|"not_connected"|"superseded";
   adsSaved:number|null;pagesFetched:number|null;startedAt:string|null;stoppedAt:string|null;pageSize:MetaPageSize;

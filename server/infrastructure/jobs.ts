@@ -5,7 +5,7 @@ import { randomUUID } from "node:crypto";
 import type pg from "pg";
 import { collectMetaPage, MetaCollectionError, MetaLibraryConnector, metaStatus, metaLibraryEnabled } from "../connectors/meta-library.js";
 import {claimMetaRequest,delayMetaRequests} from "./meta-rate.js";
-import {META_CONTROLLED_ERRORS,smallerMetaPage,type MetaFailureKind,type MetaPageSize} from "../../shared/meta-collection.js";
+import {META_CONTROLLED_ERRORS,smallerMetaPage,metaUserText,type MetaFailureKind,type MetaPageSize} from "../../shared/meta-collection.js";
 const MAX_PAGE_ATTEMPTS = 5;
 export class CollectionBusyError extends Error {constructor(){super("Collection still has an active request. Retry after it finishes.");}}
 export async function enqueueCollection(pool: pg.Pool, watchlistId: string, day?: string, now=new Date()) {
@@ -123,8 +123,8 @@ export async function workOnce(pool: pg.Pool, connector?: MetaLibraryConnector, 
     await client.query("SELECT id FROM collection_runs WHERE id=$1 FOR UPDATE", [job.id]);
     const lease = await client.query("SELECT id FROM collection_jobs WHERE id=$1 AND lease_owner=$2 AND lease_until>now() FOR UPDATE", [job.id,owner]);
     if (!lease.rowCount) { await client.query("ROLLBACK"); return true; }
-    if(errorKind)await client.query(`INSERT INTO meta_collection_failures(run_id,kind,graph_code,graph_subcode,http_status,page_size,timed_out) VALUES($1,$2,$3,$4,$5,$6,$7)`,
-      [job.id,errorKind,numericError?.graphCode??null,numericError?.graphSubcode??null,numericError?.httpStatus??null,numericError?.pageSize??null,numericError?.timedOut??false]);
+    if(errorKind)await client.query(`INSERT INTO meta_collection_failures(run_id,kind,graph_code,graph_subcode,http_status,page_size,timed_out,error_user_title,error_user_msg) VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9)`,
+      [job.id,errorKind,numericError?.graphCode??null,numericError?.graphSubcode??null,numericError?.httpStatus??null,numericError?.pageSize??null,numericError?.timedOut??false,metaUserText(numericError?.userTitle,(options.env||process.env).META_ACCESS_TOKEN),metaUserText(numericError?.userMessage,(options.env||process.env).META_ACCESS_TOKEN)]);
     if (errorMessage) await client.query(`UPDATE collection_runs SET status=$2,errors=$3,finished_at=CASE WHEN $2='failed' THEN clock_timestamp() ELSE NULL END,
       stopped_at=CASE WHEN $2 IN ('failed','paused','not_connected','superseded') THEN clock_timestamp() ELSE NULL END WHERE id=$1`, [job.id,state,JSON.stringify([{ message: errorMessage }])]);
     await client.query(`UPDATE collection_jobs SET status=$3,available_at=now()+($4 * interval '1 millisecond'),lease_until=NULL,lease_owner=NULL,

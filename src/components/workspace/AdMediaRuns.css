@@ -11,3 +11,24 @@
 .ad-media-runs .ui-table-number { white-space:nowrap; }
 .reference-shell .reference-ui .ad-media-runs .ui-data-table table { min-width:400px; }
 .reference-shell .reference-ui .ad-media-runs .ui-data-table :is(th,td).ui-table-chip { width:84px;min-width:84px; }
+.ad-media-coverage { display:grid;gap:16px; }
+.ad-media-coverage-brand { padding:16px;border:1px solid var(--line,#e3e6ec);border-radius:12px;min-width:0; }
+.ad-media-coverage dl { display:grid;grid-template-columns:repeat(auto-fit,minmax(96px,1fr));gap:16px 12px;margin:16px 0 0; }
+.ad-media-coverage dl>div { display:grid;grid-template-rows:32px auto;gap:4px; }
+.ad-media-coverage dt,.ad-media-details dt { font-size:12px;color:var(--muted); }
+.ad-media-coverage dd { font-size:20px;font-weight:700;margin:0; }
+.ad-media-coverage p { margin:12px 0 0;font-size:12px; }
+.ad-media-run-details { display:grid;gap:8px; }
+.ad-media-details { padding:12px 16px;border:1px solid var(--line,#e3e6ec);border-radius:12px;min-width:0;white-space:normal; }
+.ad-media-details summary { min-height:44px;font-size:13px;cursor:pointer; }
+.ad-media-details summary .brand-name { margin:0 8px;vertical-align:middle; }
+.ad-media-details summary>span:last-child { color:var(--muted);font-size:12px; }
+.ad-media-details dl { display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px 24px;margin:16px 0; }
+.ad-media-details dl>div { display:grid;grid-template-columns:minmax(0,1fr) auto;gap:12px;align-items:baseline; }
+.ad-media-details dd { margin:0;text-align:right;font-size:13px; }
+.ad-media-details p { font-size:13px;overflow-wrap:anywhere; }
+.reference-shell .reference-ui .ad-media-runs .ui-data-table table { table-layout:fixed;width:100%; }
+.ad-media-runs .ad-media-brand { min-width:0;max-width:100%;white-space:normal; }
+.ad-media-runs .ad-media-brand .brand-name { max-width:100%; }
+.ad-media-runs .ad-media-brand .brand-name>span:last-child { overflow-wrap:anywhere;min-width:0; }
+@media(max-width:540px){.ad-media-coverage dl{grid-template-columns:repeat(2,minmax(0,1fr));}.ad-media-coverage-brand{padding:12px;}.ad-media-details dl{grid-template-columns:minmax(0,1fr);}.ad-media-details summary>span:last-child{display:block;margin-top:8px;}}

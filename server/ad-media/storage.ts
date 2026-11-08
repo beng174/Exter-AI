@@ -5,11 +5,12 @@ import {resolve} from "node:path";
 import {execFile} from "node:child_process";
 import {promisify} from "node:util";
 import {LocalImageMediaStore,probeImageFile,type ImageMediaOptions} from "../image/media.js";
-import {LocalVideoMediaStore,type VideoMediaOptions} from "../video/media.js";
+import {LocalVideoMediaStore,MediaStorageError,type VideoMediaOptions} from "../video/media.js";
 import {DiskKernelArtifactStore,type KernelArtifactRef} from "../kernel/artifacts.js";
 import type {MediaDiskHealth} from "../../shared/ad-media.js";
 import type {ActorMedia} from "./apify.js";
 const run=promisify(execFile),MAX_VIDEO=128*1024*1024;
+const missingReason=(error:unknown)=>error instanceof MediaStorageError&&["media_expired","media_not_found","media_forbidden"].includes(error.code)?"expired":error instanceof MediaStorageError&&["media_not_image","media_not_video","media_too_large","media_too_long","media_image_probe_failed"].includes(error.code)?"unsupported":error instanceof Error&&error.message==="disk"?"disk":"provider";
 export const mediaRoot=()=>resolve(process.env.MEDIA_STORAGE_PATH||process.env.EXTER_MEDIA_ROOT||".data/media");
 export function mediaDiskMeasurement(total:number,available:number,now=new Date()):MediaDiskHealth{
   if(!Number.isSafeInteger(total)||!Number.isSafeInteger(available)||total<=0||available<0||available>total)throw new Error("Invalid disk measurement.");
@@ -36,7 +37,7 @@ export class AdMediaStorage{
       const images=new LocalImageMediaStore({...this.options.images,root:resolve(temporary,"images"),timeoutMs:20000});
       for(const [role,links]of [["image",input.images],["poster",input.posters]]as const){for(const [index,url]of links.entries()){
         try{const saved=await images.store({brandId:workspace,adId:`${input.adId}:${role}:${index}`,kind:"image",sourceUrls:[url],signal});const image=saved.images[0];await put(image.absolutePath,image.mimeType,role,index);}
-        catch{error="media";}
+        catch(failure){error=missingReason(failure);}
       }}
       if(priority)for(const [index,url]of input.videos.entries()){
         if(!videoFitsDisk(await this.disk())){error="disk";break;}
@@ -59,11 +60,11 @@ export class AdMediaStorage{
             if((await stat(poster)).size>8*1024*1024||dimensions.width*dimensions.height>40_000_000)throw new Error("Invalid poster.");
             await put(poster,"image/jpeg","poster",index);
           }
-        }catch{error=error||"media";}
+        }catch(failure){error=error||missingReason(failure);}
       }
       const posters=Math.max(input.posters.length,input.videos.length,input.format==="video"?1:0);
       const complete=assets.length>0&&assets.filter(a=>a.role==="image").length>=input.images.length&&assets.filter(a=>a.role==="poster").length>=posters&&(!priority||assets.filter(a=>a.role==="video").length>=input.videos.length&&!(input.format==="video"&&!input.videos.length));
-      error=complete?null:error||"media";
+      error=complete?null:error||"unsupported";
       return {assets,error};
     }finally{await rm(temporary,{recursive:true,force:true});}
   }

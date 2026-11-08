@@ -103,3 +103,13 @@ test("the authenticated per-brand retry action enforces access, workspace, budge
   const lists=await (await fetch(base+"/api/public/meta/watchlists?workspaceId=fixture",{headers})).json();assert.equal(lists[0].latestRun.status,"queued");assert.ok(!JSON.stringify(lists).includes("retained-fixture-cursor"));
  }finally{if(previous.enabled===undefined)delete process.env.EXTER_META_LIBRARY_ENABLED;else process.env.EXTER_META_LIBRARY_ENABLED=previous.enabled;if(previous.token===undefined)delete process.env.META_ACCESS_TOKEN;else process.env.META_ACCESS_TOKEN=previous.token;if(server)await new Promise<void>(resolve=>server!.close(()=>resolve()));db.close();await pool.end();}
 });
+
+test("bounded Meta user errors are stored and projected safely, including a saved legacy end date",async()=>{
+ const pool=testPool();try{
+  await reset(pool);const run=await enqueueCollection(pool,'own');await pool.query("UPDATE collection_runs SET config=config||'{\"from\":\"2025-11-06\",\"to\":\"2099-01-01\"}'::jsonb WHERE id=$1",[run]);
+  const connector=new MetaLibraryConnector({token:'fixture-only',fetch:async target=>{const url=new URL(String(target));assert.equal(url.searchParams.has('ad_delivery_date_max'),false);assert.equal(url.searchParams.get('ad_delivery_date_min'),'2025-11-06');return Response.json({error:{code:100,error_subcode:2334030,message:'never-store-generic',fbtrace_id:'never-store-trace',error_user_title:'Invalid end date fixture-only',error_user_msg:'Choose today. https://fixture.invalid/?access_token=fixture-only '+ 'x'.repeat(500)}},{status:400});}});
+  await dispatch(pool,connector);const stored=(await pool.query('SELECT * FROM meta_collection_failures WHERE run_id=$1',[run])).rows[0];assert.equal(stored.error_user_title,'Invalid end date [redacted]');assert.equal(stored.error_user_msg.length,300);
+  const saved=JSON.stringify(stored);for(const bad of ['fixture-only','https://','never-store'])assert(!saved.includes(bad));
+  const latest=(await readMetaWatchlists(pool,'fixture'))[0].latestRun!;assert.equal(latest.failures[0].userTitle,stored.error_user_title);assert.equal(latest.failures[0].userMessage,stored.error_user_msg);assert.equal(latest.failures[0].graphSubcode,2334030);
+ }finally{await pool.end();}
+});

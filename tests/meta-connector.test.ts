@@ -8,7 +8,7 @@ test("Meta API version override and ALL type apply to Page and category requests
   try{for(const query of [{pageIds:["12"]},{searchTerm:"home fragrance"}]){
     const connector=new MetaLibraryConnector({token:fakeToken,fetch:async target=>{
       const url=new URL(String(target));assert.equal(url.pathname,"/v27.0/ads_archive");assert.equal(url.searchParams.get("ad_type"),"ALL");
-      assert.equal(url.searchParams.get("ad_delivery_date_min"),"2025-11-05");assert.equal(url.searchParams.get("ad_delivery_date_max"),"2026-11-05");
+      assert.equal(url.searchParams.get("ad_delivery_date_min"),"2025-11-05");assert.equal(url.searchParams.get("ad_delivery_date_max"),null);
       return Response.json({data:[]});
     }});await connector.page({...query,countries:["GB"],after:"fixture-cursor",from:"2025-11-05",to:"2026-11-05"});
   }}finally{if(old===undefined)delete process.env.META_API_VERSION;else process.env.META_API_VERSION=old;}

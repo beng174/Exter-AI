@@ -752,3 +752,37 @@ and blockers below remain unchanged.
   secret scan passes. Media UI also fits the 1280px and 1920px desktop columns. No live or paid actor run was made. Fixtures
   are not live verification; actual actor access and hosted encoding capacity
   remain unverified. Phase 0/Phase 1 owned-account live gates stay open.
+
+## Media coverage and Pacific-safe collection (6 Nov 2026)
+
+- Code diagnosis: initial media runs searched a Page with a cap taken from the
+  then-known corpus. Continuation depended on a post-completion enqueue, and
+  queued targets counted as attempts before dispatch. Production actor runs were
+  not accessed; the reported 20/4-result cause is not claimed as live-verified.
+- New batches use exact official IDs from the start, at most 500 per run. Durable
+  per-ad requests/outcomes distinguish submitted, returned, matched and retained
+  files. Never-requested IDs take priority over retries. Completion and idle-worker
+  refill cover every enabled watchlist brand and recover missed acknowledgements.
+  Paused/uncertain paid starts retain their existing holds and explicit guards.
+- Data sources shows coverage and missing reasons per brand, safe actor input,
+  actor-owned INPUT/summary counts and controlled stop reasons in run Details.
+  Earlier Page searches are explicitly incomplete; unknown counts are not zero.
+- Official Graph requests omit ad_delivery_date_max for daily, backfill and legacy
+  saved configs. Any required actor end date is capped to America/Los_Angeles.
+  The 03:00 Europe/London schedule, collected fields and reach formulas are unchanged.
+- Only Meta error_user_title/error_user_msg are newly permitted: sanitised before
+  storage and display, token/URLs removed, control characters stripped, each at
+  most 300 Unicode characters and rendered as plain text. Generic messages,
+  traces, paging URLs and tokens remain excluded. Data sources and Edit watchlist
+  use the same failure component. Historical text cannot be recovered retrospectively.
+- Validation: npm run check, npm test (492 passed), npm run build and
+  npm run secrets:check; disposable Postgres and browser fixture results are in
+  .agent/plans/media-coverage-and-meta-dates.md. Fictional screenshots and the
+  Data sources reference comparison are under output/playwright/media-coverage/.
+  No live Graph, paid actor or production database calls. Fixtures are not live
+  verification; both owned-account live gates remain OPEN.
+- Rollout: deploy exter-ai first, wait for additive migrations and health, then
+  deploy exter-worker and exter-scheduler from the same commit. Preserve the
+  owner's current enabled flags, actor build/prices, USD cap and provider budget.
+  Use Retry collection for failed Graph checkpoints; Collect missing media can
+  resume safe pauses. Reconcile an Uncertain paid start before retrying it.
