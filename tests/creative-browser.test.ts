@@ -28,12 +28,13 @@ test("UI-02 filters intersect, search transcript/OCR/copy and keep URL state thr
     assert.ok(url.endsWith("#evidence"));
     assert.equal(new URL(creativeUrl(url, "workspace-a"), "http://fixture.local").searchParams.has("id"), false);
 });
-test("UI-03 similarity requires known labels and excludes own/private/self records", () => {
-    const selected = browserCreative();
-    const rows = [selected, browserCreative({ adId: "same", workspaceBrand: false }), browserCreative({ adId: "private", workspaceBrand: false, owned: true }), browserCreative({ adId: "other", workspaceBrand: false, angle: "refill" }), browserCreative({ adId: "unknown", workspaceBrand: false, angle: null, creativeFormat: null })];
-    assert.deepEqual(similarPublicCreatives(selected, rows).map(row => row.adId), ["same"]);
-    assert.deepEqual(similarPublicCreatives(browserCreative({ angle: null, creativeFormat: null }), rows), []);
+test("UI-03 similarity requires categories and media type and excludes own/private/self records",()=>{
+ const selected=browserCreative({adFormat:"video",productCategories:["candles"]});
+ const rows=[selected,browserCreative({...selected,adId:"same",workspaceBrand:false,brandId:"competitor"}),browserCreative({...selected,adId:"private",brandId:"competitor",workspaceBrand:false,owned:true}),browserCreative({...selected,adId:"other",brandId:"competitor",workspaceBrand:false,adFormat:"static_image"}),browserCreative({...selected,adId:"unknown",brandId:"competitor",workspaceBrand:false,productCategories:null})];
+ assert.deepEqual(similarPublicCreatives(selected,rows).map(row=>row.adId),["same"]);
+ assert.deepEqual(similarPublicCreatives({...selected,adFormat:null,mediaAvailable:false},rows),[]);
 });
+
 test("UI-02/UI-03 preserve real zero, missing and too-early states and isolate private cohorts", () => {
     const metric = ownedMetrics([ownedDay()]);
     const cohort = { id: "a", accountId: "a", platform: "Meta", currency: "GBP", attribution: "7d_click", conversionEvent: "purchase", from: "2026-11-01", to: "2026-11-04", lastChecked: null, benchmarkSampleSize: 1, metrics: metric, benchmark: metric };

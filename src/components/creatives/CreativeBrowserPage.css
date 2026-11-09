@@ -20,3 +20,5 @@
 
 .creative-advanced-filters summary { display:none; }.creative-advanced-filters { min-width:0; }
 @media(max-width:719px) { .creative-advanced-filters summary { display:flex;align-items:center;min-height:44px;cursor:pointer;font-size:14px;font-weight:600;color:var(--exter-blue); }.creative-advanced-filters summary::after { content:"+";margin-left:auto;font-size:20px; }.creative-advanced-filters[open] summary::after { content:"−"; } }
+
+.creative-media-coverage { margin:0;color:var(--muted);font-size:13px; }

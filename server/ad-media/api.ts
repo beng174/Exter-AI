@@ -41,14 +41,18 @@ export function attachMediaStep(app:Express,db:DatabaseSync,getPool= infrastruct
     try{
       const pool=getPool(),r=(await pool.query("SELECT workspace_id,brand_key FROM ad_media_runs WHERE id=$1 AND lease_owner=$2 AND lease_until>now()",[req.params.runId,req.params.owner])).rows[0],brand=r?readBrand(db,r.workspace_id):null;
       if(!brand||brand.mode==="demo"){res.status(404).json({error:"Real workspace not found."});return;}
-      const existingIds=new Set<string>(),gallery=app.locals.creativeGallery as CreativeGalleryService|undefined;
+      const existingIds=new Set<string>(),existingVideoIds=new Set<string>(),existingVideoCandidates=new Set<string>(),gallery=app.locals.creativeGallery as CreativeGalleryService|undefined;
       const target=r.brand_key===brand.id?brand.id:configuredCreativeCompetitors(db,brand,app.locals.demoCollection).find(c=>(c.brandId||c.key)===r.brand_key)?.brandId;
       if(gallery&&target){
         // A failed legacy media read must not become permission to buy those files again.
         const saved=await gallery.list(target);
-        for(const row of saved.creatives)if(row.mediaAvailable&&["Meta","Facebook","Instagram"].includes(row.platform||""))existingIds.add(row.nativeId);
+        for(const row of saved.creatives)if(row.mediaAvailable&&["Meta","Facebook","Instagram"].includes(row.platform||"")){
+          if(row.thumbnailUrl||row.imageUrls.length)existingIds.add(row.nativeId);
+          if(row.videoUrl)existingVideoIds.add(row.nativeId);
+          if(row.mediaKind==="video")existingVideoCandidates.add(row.nativeId);
+        }
       }
-      res.json({worked:await stepAdMedia(pool,String(req.params.runId),String(req.params.owner),{env,existingIds})});
+      res.json({worked:await stepAdMedia(pool,String(req.params.runId),String(req.params.owner),{env,existingIds,existingVideoIds,existingVideoCandidates})});
     }catch{res.status(503).json({error:"The saved media step could not complete."});}
   });
 }

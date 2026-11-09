@@ -11,7 +11,7 @@ import type {MetaSourceHealth} from "../../../shared/meta-public";
 export type Watchlist=import("../../../shared/meta-public").MetaWatchlist;
 export interface BudgetState {cost_type:string;monthly_budget_gbp:number;used_gbp:number;paused:boolean;pause_reason:string|null}
 export interface InfrastructureState {mediaDisk?:MediaDiskHealth;meta?:{status:string};tiktok?:{status:string};database?:string;storage?:DatabaseStorageHealth;budgets?:BudgetState[]}
-export interface ResearchData {library:CreativeBrowserResponse;window:ResearchWindow;brand:Brand|undefined;research:BrandResearch|null;researchFailed:boolean;watchlists:Watchlist[]|null;watchlistPollFailed?:boolean;infrastructure:InfrastructureState|null;connections:{status:string;platform?:string;name?:string}[]|null;budgets:BudgetState[]|null}
+export interface ResearchData {comparison?:import("./comparison").ComparisonState;library:CreativeBrowserResponse;window:ResearchWindow;brand:Brand|undefined;research:BrandResearch|null;researchFailed:boolean;watchlists:Watchlist[]|null;watchlistPollFailed?:boolean;infrastructure:InfrastructureState|null;connections:{status:string;platform?:string;name?:string}[]|null;budgets:BudgetState[]|null}
 export function useResearchData(brandId:string,brands:Brand[],from:string|undefined,to:string|undefined,refresh:number) {
   const [data,setData]=useState<ResearchData|null>(null),[error,setError]=useState(false),[loading,setLoading]=useState(true);
   useEffect(()=>{

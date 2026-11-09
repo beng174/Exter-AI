@@ -1,3 +1,6 @@
+import {comparableBriefs,comparisonEvidenceIds,cohortLabel} from "../../../shared/public-comparisons";
+import {ComparisonFilters} from "../ui/ComparisonFilters";
+import {NAVIGATION_EVENT} from "../../navigation";
 import { BrandText } from "../ui/BrandIdentity";
 import { scoreCheckLabel } from "../../../shared/creative-score-presentation";
 import { CreativeScoreBreakdown, ScoreHeadline } from "../ui/CreativeScoreBreakdown";
@@ -19,12 +22,16 @@ function Evidence({items,workspaceId}:{items:DemoEvidence[];workspaceId:string})
 function Point({point,workspaceId}:{point:DemoPoint;workspaceId:string}) {return <><p><BrandText>{point.text}</BrandText></p><Evidence items={point.evidence} workspaceId={workspaceId}/></>;}
 export function BriefsPage({data,header}:ActionProps) {
   const [selected,setSelected]=useState("");const {base,drafts}=data,id=base.library.brand.id;
-  const opportunities=drafts.value?.opportunities||[],chosen=opportunities.find(item=>item.id===selected)||opportunities[0];
-  if(base.library.presentation)return <>{header()}<BriefsReadModel library={base.library} model={base.library.presentation}/></>;
+  const filter={category:new URLSearchParams(typeof window==="undefined"?"":window.location.search).get("category")||"mine",adFormat:new URLSearchParams(typeof window==="undefined"?"":window.location.search).get("adFormat")||"same"};
+  const source=(drafts.value?.opportunities||[]).map(brief=>({...brief,evidence:comparisonEvidenceIds(brief).map(adId=>({adId}))}));
+  const matched=comparableBriefs(source,base.library.creatives,base.library.brand.primaryCategories||[],filter),opportunities=matched.map(item=>(drafts.value?.opportunities||[]).find(brief=>brief.id===item.brief.id)!),chosen=opportunities.find(item=>item.id===selected)||opportunities[0];
+  const change=(patch:Record<string,string>)=>{const url=new URL(window.location.href);for(const [key,value]of Object.entries(patch))url.searchParams.set(key,value);window.history.pushState({},"",url);window.dispatchEvent(new Event(NAVIGATION_EVENT));};
+
+  if(base.library.presentation&&matched.length){const group=matched[0].group,library={...base.library,creatives:group.rows},model=base.library.presentation;return <>{header()}<ComparisonFilters filter={filter} onChange={change}/><p className="reference-muted">{cohortLabel(group)}</p><BriefsReadModel library={library} model={{...model,Briefs:{...model.Briefs,proof:model.Briefs.proof.filter(item=>group.rows.some(row=>row.title===item.title))}}}/></>;}
   const gap="Ranked opportunities appear once creative results and customer needs can be compared.";
   const draftGap=drafts.failed?"Saved briefs could not be read.":"No evidence-backed brief is saved yet.";
-  return <>{header()}<div className="reference-rail-layout brief-layout">
-    <SectionCard title="Opportunities this week"><p className="reference-muted">{gap}</p><div className="brief-options">{opportunities.map(item=><button key={item.id} aria-pressed={chosen?.id===item.id} onClick={()=>setSelected(item.id)}><StatusChip status="Draft"/><strong>{item.title}</strong><small>Draft recommendation</small></button>)}</div></SectionCard>
+  return <>{header()}<ComparisonFilters filter={filter} onChange={change}/><div className="reference-rail-layout brief-layout">
+    <SectionCard title="Opportunities this week"><p className="reference-muted">{gap}</p><div className="brief-options">{opportunities.map(item=><button key={item.id} aria-pressed={chosen?.id===item.id} onClick={()=>setSelected(item.id)}><StatusChip status="Draft"/><strong>{item.title}</strong><small>{matched.find(match=>match.brief.id===item.id)?cohortLabel(matched.find(match=>match.brief.id===item.id)!.group):"Draft recommendation"}</small></button>)}</div></SectionCard>
     <div className="reference-stack">
       <SectionCard title={chosen?.title||"Selected opportunity"} actions={<div className="reference-actions"><Disabled reason="Editing saved briefs is not available yet.">Edit</Disabled><Disabled reason="PDF export is not available yet.">Export PDF</Disabled><Disabled reason="Approval storage is not available yet.">Approve</Disabled><Disabled primary reason="Creator delivery is not available yet.">Send to creator</Disabled></div>}>
         {chosen?<>

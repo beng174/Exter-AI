@@ -870,3 +870,30 @@ and blockers below remain unchanged.
   .agent/plans/bounded-public-library-memory.md and docs/DEPLOY.md. After merge,
   deploy exter-ai only, wait for health and verify library counts and memory.
   Existing collection/media checkpoints continue without a fresh backfill.
+
+
+## Public previews and comparable categories (9 Nov 2026)
+
+- Owner authorised complete preview targets, daily missing-media retries and
+  text-only product classification, followed by same-category/media comparisons.
+  Added credits do not authorise higher budgets or per-run caps; those remain.
+- Media handoff runs after official collection, then the existing refill visits
+  every watchlist. Missing previews retry by UK day with controlled reasons.
+  Seven actual failed days are required for “No preview from Meta”. Posters can
+  be extracted from bounded video input; optional 720p videos follow priority,
+  then newest-first ordering under the existing 80% disk limit.
+- Media format is Observed and separate from Modelled creative style. Product
+  categories use asynchronous gemini-2.5-flash-lite batches, bounded text inputs,
+  pre-dispatch inference holds, exact keyed output checks and source hashes.
+  Keys stay on web; the diskless worker uses the existing authenticated broker.
+- Brand research edits primary categories. Comparisons default to My categories
+  and Same format: one table with format groups, own-count ordering, hidden only
+  if both sides have fewer than 10 ads, one hidden-groups line and a chart switch.
+  Detail matches its own format/category before angle/offer ranking. Private
+  account cohorts, official reach/dates, paid analyses and stored history remain.
+- Fixture validation and screenshots are recorded in
+  .agent/plans/public-media-comparisons.md. No real provider calls were made;
+  100% live coverage is a target and remains unverified. PR #24 targets
+  exter-test-drive; deployment is pending.
+  Kernel work stays paused; Phase 0 and Phase 1 owned-account live gates stay open.
+  See docs/DEPLOY.md for the additive migration and web, worker, scheduler order.

@@ -1,0 +1,105 @@
+import {randomUUID,createHash} from "node:crypto";
+import type pg from "pg";
+import {categoryText,creativeCategoryInput,type CategoryInput} from "../../shared/public-category-input.js";
+import {mediaEnabled,mediaGbpRate} from "../../shared/ad-media.js";
+import type {BrowserCreative} from "../../shared/creative-browser.js";
+import {visitPublicCategoryInputs} from "../infrastructure/meta-evidence.js";
+import {reserveCost,settleGeminiCost,releaseGeminiCost} from "../infrastructure/budget.js";
+import {mediaBrokerConfig} from "../ad-media/api.js";
+import {assertProxySupport} from "../connectors/http.js";
+import {CATEGORY_MODEL,CATEGORY_VERSION,CATEGORY_BATCH_SIZE,categoryHash,categoryResult,categoryBatchInput,PublicCategoryProvider,CategoryError,type CategoryRequest} from "./provider.js";
+interface Item {brandKey:string;pageId:string;nativeId:string;sourceHash:string;key:string}
+const keyFor=(brand:string,page:string,native:string,hash:string)=>createHash('sha256').update(JSON.stringify([brand,page,native,hash])).digest('hex');
+async function inputs(pool:pg.Pool,workspace:string,known=new Set<string>(),targets?:Set<string>){
+ const result:{item:Item;input:CategoryInput}[]=[];
+ await visitPublicCategoryInputs(pool,workspace,row=>{
+  if(!row.brand_key||!row.advertiser_id||!row.page_ids.includes(row.advertiser_id))return;
+  const input=categoryText(row.raw_payload),sourceHash=categoryHash(input);
+  const key=keyFor(row.brand_key,row.advertiser_id,row.native_id,sourceHash);
+  if(result.length>=CATEGORY_BATCH_SIZE||known.has(key)||targets&&!targets.has(key))return;
+  result.push({item:{brandKey:row.brand_key,pageId:row.advertiser_id,nativeId:row.native_id,sourceHash,key:keyFor(row.brand_key,row.advertiser_id,row.native_id,sourceHash)},input});
+ });return result;
+}
+export async function enqueueCategoryBatch(pool:pg.Pool,workspace:string,now=new Date()){
+ const client=await pool.connect();
+ try{
+  await client.query('BEGIN');await client.query('SELECT pg_advisory_xact_lock(hashtext($1))',[`public-categories:${workspace}`]);
+  const existing=(await client.query('SELECT brand_key,page_id,native_id,source_hash FROM public_ad_categories WHERE workspace_id=$1 AND prompt_version=$2',[workspace,CATEGORY_VERSION])).rows;
+  const known=new Set(existing.map(r=>keyFor(r.brand_key,r.page_id,r.native_id,r.source_hash)));
+  const attempted=(await client.query("SELECT items FROM public_category_batches WHERE workspace_id=$1 AND (status IN ('queued','starting','running','uncertain','paused') OR (COALESCE(finished_at,available_at,created_at) AT TIME ZONE 'Europe/London')::date=($2::timestamptz AT TIME ZONE 'Europe/London')::date)",[workspace,now])).rows.flatMap(r=>r.items as Item[]);
+  for(const item of attempted)known.add(item.key);
+  const items=(await inputs(pool,workspace,known)).slice(0,CATEGORY_BATCH_SIZE).map(row=>row.item);
+  if(!items.length){await client.query('ROLLBACK');return null;}
+  const id=randomUUID();await client.query('INSERT INTO public_category_batches(id,workspace_id,items,model) VALUES($1,$2,$3,$4)',[id,workspace,JSON.stringify(items),CATEGORY_MODEL]);await client.query('COMMIT');return id;
+ }catch(e){await client.query('ROLLBACK');throw e;}finally{client.release();}
+}
+export async function schedulePublicCategories(pool:pg.Pool,env:Record<string,string|undefined>=process.env){
+ if(!mediaEnabled(env))return;
+ const due=await pool.query("INSERT INTO public_category_refill_gate(id,next_check) VALUES(1,now()+interval '1 minute') ON CONFLICT(id) DO UPDATE SET next_check=excluded.next_check WHERE public_category_refill_gate.next_check<=now() RETURNING id");
+ if(!due.rowCount)return;
+ await pool.query("UPDATE public_category_batches SET status=CASE WHEN provider_name IS NULL THEN 'queued' ELSE 'running' END,error_kind=NULL,available_at=now() WHERE status='paused' AND (reservation_id IS NULL OR provider_name IS NOT NULL) AND (available_at AT TIME ZONE 'Europe/London')::date<(now() AT TIME ZONE 'Europe/London')::date");
+ const workspaces=await pool.query("SELECT DISTINCT workspace_id FROM watchlists WHERE enabled AND purpose='brand' AND brand_key IS NOT NULL");
+ for(const row of workspaces.rows)for(let n=0;n<10;n++){if(!await enqueueCategoryBatch(pool,row.workspace_id))break;}
+}
+export async function claimCategoryBatch(pool:pg.Pool,owner:string){return (await pool.query(`UPDATE public_category_batches SET lease_owner=$1,lease_until=now()+interval '6 minutes' WHERE id=(SELECT id FROM public_category_batches WHERE status IN ('queued','starting','running') AND available_at<=now() AND (lease_until IS NULL OR lease_until<now()) ORDER BY available_at FOR UPDATE SKIP LOCKED LIMIT 1) RETURNING *`,[owner])).rows[0]||null;}
+export async function stepCategoryBatch(pool:pg.Pool,id:string,owner:string,options:{env?:Record<string,string|undefined>;provider?:PublicCategoryProvider}={}){
+ const env=options.env||process.env;if(!mediaEnabled(env))return false;
+ const client=await pool.connect();let run:any;
+ try{
+  if(!(await client.query('SELECT pg_try_advisory_lock(hashtext($1)) AS locked',[`category-step:${id}`])).rows[0].locked)return false;
+  run=(await client.query('SELECT * FROM public_category_batches WHERE id=$1 AND lease_owner=$2 AND lease_until>now()',[id,owner])).rows[0];
+  if(!run||!['queued','starting','running'].includes(run.status))return false;
+  const update=async(status:string,error:string|null=null)=>client.query("UPDATE public_category_batches SET status=$3,error_kind=$4,available_at=now()+interval '1 minute',finished_at=CASE WHEN $3 IN ('complete','failed') THEN clock_timestamp() ELSE NULL END WHERE id=$1 AND lease_owner=$2 AND lease_until>now()",[id,owner,status,error]);
+  if(run.status==='starting'&&!run.provider_name){await update('uncertain','uncertain');return true;}
+  const provider=options.provider||new PublicCategoryProvider({env}),items=run.items as Item[];
+  const save=async(item:Item,categories:string[],model:string)=>client.query(`INSERT INTO public_ad_categories(workspace_id,brand_key,page_id,native_id,source_hash,prompt_version,model,categories,batch_id) SELECT $1,$2,$3,$4,$5,$6,$7,$8,$9 WHERE EXISTS(SELECT 1 FROM watchlists w WHERE w.workspace_id=$1 AND w.brand_key=$2 AND w.enabled AND w.page_ids->>0=$3) ON CONFLICT DO NOTHING`,[run.workspace_id,item.brandKey,item.pageId,item.nativeId,item.sourceHash,CATEGORY_VERSION,model,JSON.stringify(categories),id]);
+  if(!run.provider_name){
+   const live=new Map((await inputs(pool,run.workspace_id,new Set(),new Set(items.map(item=>item.key)))).map(row=>[row.item.key,row.input]));
+   const requests:CategoryRequest[]=[];
+   for(const item of items){const input=live.get(item.key);if(!input)continue;if(!input.copy&&!input.headlines.length&&!input.landingPaths.length)await save(item,[],'unavailable');else requests.push({key:item.key,input});}
+   if(!requests.length){await update('complete');return true;}
+   const rate=mediaGbpRate(env),minimum=Number(env.GEMINI_REQUEST_RESERVE_GBP);
+   if(!env.GEMINI_API_KEY?.trim()||rate===null||!Number.isFinite(minimum)||minimum<=0){await update('paused','configuration');return true;}
+   const body=categoryBatchInput(requests),bytes=Buffer.byteLength(JSON.stringify(body));if(bytes>16_000_000)throw new CategoryError('output');
+   const bound=(bytes*.05+requests.length*128*.20)/1_000_000*rate;
+   let reservation:string;try{reservation=await reserveCost(pool,'inference','gemini',Math.max(minimum,Math.ceil(bound*1e6)/1e6));}catch{await update('paused','budget');return true;}
+   const fenced=await client.query("UPDATE public_category_batches SET status='starting',reservation_id=$3,gbp_per_usd=$4 WHERE id=$1 AND lease_owner=$2 AND lease_until>now() RETURNING id",[id,owner,reservation,rate]);if(!fenced.rowCount){await releaseGeminiCost(reservation,pool);return true;}
+   try{const name=await provider.start(requests);await client.query("UPDATE public_category_batches SET status='running',provider_name=$3,available_at=now()+interval '1 minute' WHERE id=$1 AND lease_owner=$2 AND lease_until>now()",[id,owner,name]);}catch(error){if(error instanceof CategoryError&&error.rejected){await releaseGeminiCost(reservation,pool);await update('failed','configuration');}else await update('uncertain','uncertain');}
+   return true;
+  }
+  const result=await provider.poll(run.provider_name),state=result.metadata?.state;
+  if(!result.done&&!['JOB_STATE_SUCCEEDED','JOB_STATE_FAILED','JOB_STATE_CANCELLED','JOB_STATE_EXPIRED'].includes(state)){await update('running');return true;}
+  if(state!=='JOB_STATE_SUCCEEDED'){await update('failed','provider');return true;}
+  const inline=result.response?.inlinedResponses,responses=Array.isArray(inline)?inline:inline?.inlinedResponses;
+  if(!Array.isArray(responses)||responses.length>items.length)throw new CategoryError('output');
+  const requested=new Map(items.map(item=>[item.key,item])),seen=new Set<string>();let inputTokens=0,outputTokens=0,priced=true,partial=false;
+  const valid:{item:Item;parsed:NonNullable<ReturnType<typeof categoryResult>>}[]=[];
+  for(const response of responses){
+   const key=response.metadata?.key,item=requested.get(key);if(!item||seen.has(key))throw new CategoryError('output');seen.add(key);
+   const parsed=categoryResult(response.response);if(!parsed){partial=true;priced=false;continue;}
+   valid.push({item,parsed});
+   if(parsed.inputTokens===null||parsed.outputTokens===null||!parsed.model)priced=false;else{inputTokens+=parsed.inputTokens;outputTokens+=parsed.outputTokens;}
+  }
+  for(const {item,parsed} of valid)await save(item,parsed.categories,parsed.model||'unreported');
+  if(priced&&seen.size===items.length&&run.reservation_id){const estimate=(inputTokens*.05+outputTokens*.20)/1_000_000*Number(run.gbp_per_usd),held=(await client.query('SELECT initial_reserved_gbp FROM cost_ledger WHERE id=$1',[run.reservation_id])).rows[0];if(held&&estimate<=Number(held.initial_reserved_gbp))await settleGeminiCost(run.reservation_id,estimate,pool);else partial=true;}
+  await update('complete',partial||seen.size<items.length?'partial':null);return true;
+ }catch(error){if(run)await client.query("UPDATE public_category_batches SET status=CASE WHEN provider_name IS NULL AND reservation_id IS NOT NULL THEN 'uncertain' WHEN $3='output' THEN 'failed' ELSE 'paused' END,error_kind=$3,available_at=now()+interval '15 minutes' WHERE id=$1 AND lease_owner=$2",[id,owner,error instanceof CategoryError?error.kind:'provider']);return true;}
+ finally{await client.query('SELECT pg_advisory_unlock(hashtext($1))',[`category-step:${id}`]).catch(()=>{});client.release();}
+}
+export async function workPublicCategoriesOnce(pool:pg.Pool,options:{env?:Record<string,string|undefined>;fetch?:typeof fetch}={}){
+ const env=options.env||process.env,configuration=mediaBrokerConfig(env);if(!mediaEnabled(env)||!configuration)return false;
+ const owner=randomUUID();let run=await claimCategoryBatch(pool,owner);if(!run){await schedulePublicCategories(pool,env);run=await claimCategoryBatch(pool,owner);}if(!run)return false;
+ let worked=false;try{
+  assertProxySupport(Boolean(options.fetch),env);
+  const response=await(options.fetch||fetch)(`${configuration.origin}/api/public-categories/step/${run.id}/${owner}`,{method:'POST',headers:{'X-Exter-Ad-Media-Token':configuration.token},redirect:'error',signal:AbortSignal.timeout(120000)});
+  if(response.ok&&response.body&&Number(response.headers.get('content-length'))<=1024){const reader=response.body.getReader(),chunks:Uint8Array[]=[];let bytes=0;try{while(true){const item=await reader.read();if(item.done)break;bytes+=item.value.length;if(bytes>1024)throw new Error('Unsupported acknowledgement.');chunks.push(item.value);}worked=JSON.parse(Buffer.concat(chunks).toString()).worked===true;}finally{await reader.cancel().catch(()=>{});reader.releaseLock();}}
+  await response.body?.cancel().catch(()=>{});
+ }catch{}
+
+ await pool.query("UPDATE public_category_batches SET lease_owner=NULL,lease_until=NULL,available_at=CASE WHEN $3 THEN available_at ELSE now()+interval '1 minute' END WHERE id=$1 AND lease_owner=$2",[run.id,owner,worked]);return true;
+}
+export async function mergeProductCategories(pool:pg.Pool,workspace:string,rows:BrowserCreative[]){
+ const labels=await pool.query(`SELECT c.* FROM public_ad_categories c JOIN watchlists w ON w.workspace_id=c.workspace_id AND w.brand_key=c.brand_key AND w.page_ids->>0=c.page_id WHERE c.workspace_id=$1 AND c.prompt_version=$2 ORDER BY c.created_at DESC`,[workspace,CATEGORY_VERSION]);
+ const byKey=new Map<string,any>();for(const label of labels.rows){const key=JSON.stringify([label.brand_key,label.native_id,label.source_hash]);if(!byKey.has(key))byKey.set(key,label);}
+ return rows.map(row=>{const hash=row.categorySourceHash||categoryHash(creativeCategoryInput(row)),label=byKey.get(JSON.stringify([row.brandId,row.nativeId,hash]));return label?{...row,productCategories:label.categories,productCategoryModel:label.model==='unavailable'?undefined:label.model}:row;});
+}

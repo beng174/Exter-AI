@@ -972,3 +972,82 @@ admin settings and FIXTURE_REQUESTS=3. The fixture blocks provider fetches and
 uses synthetic database responses. `npm test` includes this regression. Real pg
 streaming and retained-history checks use tests/library-read.integration.ts with
 a dedicated disposable TEST_DATABASE_URL. Fixtures are not live verification.
+
+
+### Complete previews and product-category batches (9 Nov 2026)
+
+Deploy this change after the large-library memory/navigation repairs. It does not
+change `render.yaml`, enable flags, budgets, the 03:00 UK collection schedule,
+official reach/dates or existing video/kernel models. Do not reset the owner's
+switches or raise any cap because more provider credit is available.
+
+1. Merge the PR into **exter-test-drive**. In Render, open **exter-ai > Manual
+   Deploy > Deploy latest commit**. Wait for its automatic additive Postgres
+   migration and healthy app before deploying the other services. No rows or
+   media files are deleted. The new preview-day/category tables are additive.
+2. On **exter-ai > Environment**, keep the existing `APIFY_TOKEN`,
+   `EXTER_AD_MEDIA_GBP_PER_USD`, `GEMINI_API_KEY` and positive finite
+   `GEMINI_REQUEST_RESERVE_GBP` secret/configuration values. The GBP/USD ceiling
+   must be positive and at most 10. The web service owns media files and paid
+   provider transport; do not copy provider keys to the scheduler or worker.
+3. Deploy **exter-worker**, then **exter-scheduler**, from the same commit. Keep
+   the shared media broker secret on web/worker, fixed public HTTPS broker origin
+   on worker, and matching owner-selected `EXTER_AD_MEDIA_ENABLED` values across
+   all three. Existing owned-sync and kernel gates retain their current status.
+4. Check **Data sources > Ad Library media** and **Category tagging**, then edit
+   **Brand research > Primary categories**. Existing missing ads refill in batches
+   of at most 500 under the same per-run provider ceiling. New collection runs
+   hand their ads to the queue; daily retries are limited by UK calendar day.
+   Creatives shows observed public image/video coverage. Unknown media/category
+   tags remain outside comparisons until enrichment finishes.
+5. Verify a real preview, full-video playback, run costs and a same-format sample.
+   Fixture results below are **not live verification**. A missing provider preview
+   remains a copy tile with its original ad link. Seven distinct failed retry
+   days with a reason permit the final “No preview from Meta” label; queued days,
+   missing keys and budget pauses do not advance that counter.
+
+The existing pinned media actor and charge guard are unchanged. Catalogue product
+images and nested snapshots are accepted as media only; actor reach/dates/copy do
+not replace the official API. Video-only results can yield a bounded JPEG poster
+without retaining the full video. Preview gaps precede optional video upgrades;
+priority full videos precede other videos, newest first. All full videos remain
+720p H.264, content-addressed, and fail closed at the existing 80% disk guard.
+Legacy posters are recorded separately from known full videos so they can upgrade.
+
+Product tagging uses `gemini-2.5-flash-lite:batchGenerateContent`, a genuine
+asynchronous inline batch of at most 500 text-only requests. On 9 Nov 2026 the
+[official pricing](https://ai.google.dev/gemini-api/docs/pricing#gemini-2.5-flash-lite)
+lists batch input at USD 0.05 and output at USD 0.20 per million tokens, lower than
+the other Flash-Lite model. See [batch API](https://ai.google.dev/gemini-api/docs/batch-api)
+and [model lifecycle](https://ai.google.dev/gemini-api/docs/deprecations). There is
+no synchronous or more expensive fallback, and no change to existing analysis
+models. Batch completion can take up to 24 hours; several bounded batches can be
+pending at once. Untagged, unchanged ads are not submitted again after a valid
+unknown result; changed text gets a new source hash and retains the prior label
+history. Reach/date restatements alone do not reclassify an ad.
+
+Before each paid start, reserve the greater of the existing request minimum and
+a conservative token-byte/output bound using the configured currency ceiling.
+The inference budget guard applies independently of the media-provider guard.
+Hold the reserve when usage/model provenance is missing or settlement would exceed
+it. Confirmed HTTP rejections release an uncharged hold. Interrupted or ambiguous
+starts become **Needs review** and cannot start again automatically: reconcile the
+Google batch name and cost with the existing held row before resuming. Transient
+poll failures reuse the same operation; failed/partial outputs can retry missing
+labels on a later UK day. Never store tokens, provider URLs or provider error text.
+
+Storage planning, additional to existing media/observation storage: 1,000 unchanged
+ads normally need two category-batch metadata rows and 1,000 compact category rows,
+roughly 1–3 MB including indexes (not media). If all 1,000 ads lack previews for an
+entire 30-day month, 30,000 compact failed-day rows at a planning allowance of
+0.5–1 KB each use about 15–30 MB including indexes. Successful previews stop adding
+failed-day rows. Actual copy lengths, changed classifications, indexes and database
+page allocation vary; use Data sources health measurements for real growth.
+No retention cleanup or deletion is introduced.
+
+Local fixture validation uses `tests/public-comparisons.test.ts`,
+`tests/public-category-api.test.ts`, `tests/public-media.integration.ts` and
+`tests/ui_public_media_browser.py`, alongside the existing media/memory tests.
+The integration runner requires a dedicated disposable `TEST_DATABASE_URL` and
+owns isolated schemas. All providers/files are substituted; browser external
+requests are blocked. No live or paid test calls are permitted.

@@ -1,4 +1,5 @@
 import {workAdMediaOnce} from "../ad-media/api.js";
+import {workPublicCategoriesOnce} from "../public-categories/jobs.js";
 import { infrastructureDatabase, migrate } from "./database.js";
 import { schedule, workOnce, workOwnedOnce } from "./jobs.js";
 import { configuredKernelArtifactClient, workKernelOnce } from "../kernel/worker.js";
@@ -18,8 +19,9 @@ try {
       const collected = await workOnce(pool);
       const owned = !stopping ? await workOwnedOnce(pool) : false;
       const media = !stopping ? await workAdMediaOnce(pool) : false;
+      const categories = !stopping ? await workPublicCategoriesOnce(pool) : false;
       const staged = artifactClient && !stopping ? await workKernelOnce(pool, artifactClient, { signal: shutdown.signal }) : false;
-      if (!collected && !owned && !media && !staged && !stopping) await new Promise(resolve => setTimeout(resolve,1000));
+      if (!collected && !owned && !media && !categories && !staged && !stopping) await new Promise(resolve => setTimeout(resolve,1000));
     }
   } else throw new Error("Unknown runtime role.");
 } catch {

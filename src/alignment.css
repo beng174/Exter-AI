@@ -172,3 +172,17 @@ body,input,select,textarea,button,table { font-variant-numeric:tabular-nums; }
  .reference-shell .reference-ui .reference-source-pills { grid-template-columns:1fr;gap:8px;justify-items:start; }
  .reference-shell .reference-ui .creative-detail:not([data-read-model]) .creative-performance { grid-template-columns:repeat(auto-fit,minmax(min(100%,128px),1fr)); }
 }
+
+/* Enriched cards keep one column inside the existing five shared body tracks. */
+.reference-shell .reference-ui .ui-creative-body { grid-template-columns:minmax(0,1fr); }
+.reference-shell .reference-ui .ui-creative-body>* { grid-column:1;min-width:0; }
+.reference-shell .reference-ui .ui-creative-format { display:flex;align-items:baseline;flex-wrap:wrap;gap:8px; }
+.reference-shell .reference-ui .ui-creative-card h3 { display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:2;overflow:hidden; }
+.reference-shell .reference-ui .ui-creative-card dd .ui-data-label { display:inline-flex;width:auto;font-size:9px;padding:1px 3px; }
+.reference-shell .reference-ui .ui-creative-card dd button { display:inline-flex;align-items:baseline;flex-wrap:nowrap;white-space:nowrap;gap:4px; }
+.reference-shell .reference-ui .research-competitor-card .research-creative-grid { display:flex;gap:8px;align-items:flex-start; }
+.reference-shell .reference-ui .research-competitor-card .ui-creative-card { display:block;grid-row:auto;flex:1;max-width:80px; }
+.reference-shell .reference-ui .research-competitor-card .ui-creative-open { display:block;grid-row:auto; }
+.reference-shell .reference-ui .research-competitor-card .ui-creative-card :is(.ui-creative-body,dl,.ui-card-source-link) { display:none; }
+.reference-shell .reference-ui .research-competitor-card .ui-ad-preview { min-height:100px;padding:4px;gap:4px;font-size:8px; }
+.reference-shell .reference-ui .research-competitor-card .ui-ad-preview :is(.brand-name,.ui-ad-preview-platform,small) { font-size:8px; }

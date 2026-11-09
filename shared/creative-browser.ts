@@ -1,3 +1,4 @@
+import {similarCompetitors,mediaFormat} from "./public-comparisons.js";
 import type { DemoGalleryCreative } from "./creative-gallery.js";
 import type { DemoAdScore } from "./brand-demo.js";
 import { measurementEligible, selectResearchAds, type EvidenceSelection } from "./creative-research.js";
@@ -20,6 +21,13 @@ export interface CreativePerformance {
 }
 import type { WorkspacePresentation, CreativePresentation } from "./workspace-presentation.js";
 export interface BrowserCreative extends DemoGalleryCreative {
+    previewState?:import("./ad-media.js").PreviewState;
+    adFormat?:"video"|"static_image"|"carousel"|"catalogue"|null;
+    headlines?:string[];
+    landingPaths?:string[];
+    productCategories?:string[]|null;
+    productCategoryModel?:string;
+    categorySourceHash?:string;
     publicReach?:PublicReach;
     publicDetails?:PublicAdDetails;
     reachObservedAt?:string;
@@ -40,6 +48,8 @@ export interface BrowserCreative extends DemoGalleryCreative {
 }
 export interface CreativeCompetitor { key:string;brandId:string|null;name:string;status:string }
 export interface CreativeBrowserResponse {
+    mediaReadStatus?:"available"|"unavailable"|"not_configured";
+    categoryReadStatus?:"available"|"unavailable"|"not_configured";
     metaSource?:MetaSourceHealth;
     presentation?:WorkspacePresentation;
     conversation?:{question:string;answer:string;sources:string[]}[];
@@ -48,6 +58,7 @@ export interface CreativeBrowserResponse {
         id: string;
         name: string;
         domain: string;
+        primaryCategories?:string[];
     };
     creatives: BrowserCreative[];
     sources: {
@@ -83,16 +94,18 @@ export interface BrowserFilters extends EvidenceSelection {
     search?: string;
     sort?: string;
     layout?: string;
+    similarTo?:string;
 }
-export const BROWSER_FILTERS = ["demographicCountry","reachAge","reachGender","reachCountry","measure","take","dimension","value","kind","activityFrom","activityTo","asOf","ad","cohort", "show", "brand", "platform", "format", "hook", "angle", "offer", "ugc", "status", "from", "to", "search", "sort", "layout"] as const;
+export const BROWSER_FILTERS = ["similarTo","category","adFormat","demographicCountry","reachAge","reachGender","reachCountry","measure","take","dimension","value","kind","activityFrom","activityTo","asOf","ad","cohort", "show", "brand", "platform", "format", "hook", "angle", "offer", "ugc", "status", "from", "to", "search", "sort", "layout"] as const;
 export function browserFilters(params: URLSearchParams): BrowserFilters {
     return Object.fromEntries(BROWSER_FILTERS.flatMap(key => params.get(key) ? [[key, params.get(key)!]] : []));
 }
-export function filterBrowserCreatives(rows: BrowserCreative[], filters: BrowserFilters) {
+export function filterBrowserCreatives(rows: BrowserCreative[], filters: BrowserFilters,primary:readonly string[]=[]) {
     const match = (selected: string | undefined, value: string | null | undefined) => !selected || selected === "all" || value === selected;
     const needle = filters.search?.trim().toLocaleLowerCase();
     const researchSelection=filters.kind||filters.dimension||filters.asOf||filters.ad||filters.demographicCountry?new Set(selectResearchAds(rows,{...filters,take:undefined,measure:undefined}).map(row=>row.adId)):null;
-    const result = rows.filter(row => (!filters.reachCountry||countryReach(row.publicReach,filters.reachCountry)!==null)&& (!researchSelection||researchSelection.has(row.adId))&& (!filters.show || filters.show === "all" || filters.show === "yours" && row.workspaceBrand || filters.show === "competitors" && !row.workspaceBrand) &&
+    const anchor=filters.similarTo?rows.find(row=>row.adId===filters.similarTo):undefined,similar=filters.similarTo?new Set(anchor?similarCompetitors(anchor,rows,{category:filters.category,adFormat:filters.adFormat},primary).map(row=>row.adId):[]):null;
+    const result = rows.filter(row => (!similar||similar.has(row.adId))&& (!filters.category||filters.category==="all"||Boolean(row.productCategories?.some(c=>(filters.category==="mine"?primary:filters.category!.split(",")).includes(c))))&&(!filters.adFormat||filters.adFormat==="same"||mediaFormat(row)===filters.adFormat)&& (!filters.reachCountry||countryReach(row.publicReach,filters.reachCountry)!==null)&& (!researchSelection||researchSelection.has(row.adId))&& (!filters.show || filters.show === "all" || filters.show === "yours" && row.workspaceBrand || filters.show === "competitors" && !row.workspaceBrand) &&
         (!filters.cohort || row.workspaceBrand && row.owned && row.performance.some(item => item.id === filters.cohort)) &&
         match(filters.brand, row.brandId) && match(filters.platform, row.platform) &&
         (!filters.format || filters.format === "all" || [row.creativeFormat, row.mediaKind].includes(filters.format)) &&
@@ -112,10 +125,7 @@ export function filterBrowserCreatives(rows: BrowserCreative[], filters: Browser
     const take=Number(filters.take);const limited=filters.take&&Number.isInteger(take)&&take>0&&take<=100?ordered.slice(0,take):ordered;return filters.measure?limited.filter(row=>measurementEligible(row,filters.measure!)):limited;
 }
 export function similarPublicCreatives(selected: BrowserCreative, rows: BrowserCreative[]) {
-    if (!selected.angle && !selected.creativeFormat)
-        return [];
-    return rows.filter(row => row.adId !== selected.adId && !row.workspaceBrand && !row.owned &&
-        (!selected.angle || row.angle === selected.angle) && (!selected.creativeFormat || row.creativeFormat === selected.creativeFormat));
+    return similarCompetitors(selected,rows);
 }
 export function creativeUrl(base: string, brandId: string, adId?: string) {
     const url = new URL(base, "http://exter.local");
