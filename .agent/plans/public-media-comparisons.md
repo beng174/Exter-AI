@@ -18,7 +18,7 @@ Official reach, dates, history and provider caps must remain intact.
 - [x] 2026-11-09 UTC: primary category settings, grouped overview tables, chart switches, exact detail matches and category/format evidence links.
 - [x] 2026-11-09 UTC: pure selector, settings, local media and Postgres fixtures; 34 real-like screen/width cases and all 15 sample screens at three desktop widths plus mobile.
 - [x] 2026-11-09 UTC: all four required checks pass; 522 unit cases, 22 Postgres media/category cases and real-like/sample browser verification.
-- [ ] Publish the reviewed feature and screenshot evidence against exter-test-drive.
+- [x] 2026-11-09 UTC: published PR #24 against exter-test-drive, including app/reference pairs and exact rollout steps.
 
 ## Surprises and discoveries
 
@@ -46,7 +46,7 @@ jobs, without changing any existing analysis model or enabling the kernel.
 
 ## Outcomes and retrospective
 
-Implementation complete, final publication pending. Automatic media handoff, daily
+Implementation complete and published as PR #24 against exter-test-drive. Automatic media handoff, daily
 preview outcomes, additional video ordering, product batches, editable categories
 and format-matched comparisons are fixture-tested. Coverage is a target, not a
 promise that a provider can return every preview. Seven failed days requires seven distinct recorded retry

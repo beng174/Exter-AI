@@ -893,6 +893,7 @@ and blockers below remain unchanged.
   account cohorts, official reach/dates, paid analyses and stored history remain.
 - Fixture validation and screenshots are recorded in
   .agent/plans/public-media-comparisons.md. No real provider calls were made;
-  100% live coverage is a target and remains unverified. Deployment is pending.
+  100% live coverage is a target and remains unverified. PR #24 targets
+  exter-test-drive; deployment is pending.
   Kernel work stays paused; Phase 0 and Phase 1 owned-account live gates stay open.
   See docs/DEPLOY.md for the additive migration and web, worker, scheduler order.
