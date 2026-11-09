@@ -1,11 +1,14 @@
+import {visitDatabaseRows} from "../infrastructure/read-rows.js";
 import {createHash} from "node:crypto";
 import type pg from "pg";
 import type {BrowserCreative} from "../../shared/creative-browser.js";
 import type {MediaAsset} from "./storage.js";
 export interface RetainedCreative{workspace_id:string;brand_key:string;native_id:string;format:string|null;assets:MediaAsset[]}
 export function mergeRetainedMedia(rows:BrowserCreative[],saved:RetainedCreative[],workspaceId:string){
+  const index=new Map<string,RetainedCreative>(),key=(brand:string,native:string)=>JSON.stringify([brand,native]);
+  for(const media of saved)if(media.workspace_id===workspaceId&&!index.has(key(media.brand_key,media.native_id)))index.set(key(media.brand_key,media.native_id),media);
   return rows.map(row=>{
-    const media=saved.find(m=>m.workspace_id===workspaceId&&m.brand_key===row.brandId&&m.native_id===row.nativeId);
+    const media=index.get(key(row.brandId,row.nativeId));
     if(!media||row.mediaAvailable||!row.publicEvidence||!["Meta","Facebook","Instagram"].includes(row.platform))return row;
     const url=(a:MediaAsset)=>`/api/ad-media/files/${encodeURIComponent(workspaceId)}/${encodeURIComponent(row.brandId)}/${encodeURIComponent(row.nativeId)}/${a.ref.artifactId}`;
     const images=media.assets.filter(a=>a.role==="image").sort((a,b)=>a.index-b.index),posters=media.assets.filter(a=>a.role==="poster"),video=media.assets.find(a=>a.role==="video");
@@ -15,11 +18,9 @@ export function mergeRetainedMedia(rows:BrowserCreative[],saved:RetainedCreative
   });
 }
 export async function readRetainedMedia(pool:pg.Pool,workspaceId:string):Promise<RetainedCreative[]>{
-  const history=(await pool.query(`SELECT c.workspace_id,c.brand_key,c.native_id,c.format,c.assets
-    FROM ad_media_creatives c JOIN watchlists w ON w.workspace_id=c.workspace_id AND w.brand_key=c.brand_key
-    WHERE c.workspace_id=$1 AND w.page_ids->>0=c.page_id AND jsonb_array_length(c.assets)>0 ORDER BY c.created_at DESC LIMIT 100001`,[workspaceId])).rows as RetainedCreative[];
-  if(history.length>100000)throw new Error("Retained media exceeds the read bound.");
   const groups=new Map<string,RetainedCreative>();
-  for(const row of history){const key=JSON.stringify([row.brand_key,row.native_id]),saved=groups.get(key);if(!saved)groups.set(key,{...row,assets:[...row.assets]});else for(const asset of row.assets)if(!saved.assets.some(a=>a.role===asset.role&&a.index===asset.index))saved.assets.push(asset);}
+  await visitDatabaseRows<RetainedCreative>(pool,`SELECT c.workspace_id,c.brand_key,c.native_id,c.format,c.assets
+    FROM ad_media_creatives c JOIN watchlists w ON w.workspace_id=c.workspace_id AND w.brand_key=c.brand_key
+    WHERE c.workspace_id=$1 AND w.page_ids->>0=c.page_id AND jsonb_array_length(c.assets)>0 ORDER BY c.created_at DESC LIMIT 100001`,[workspaceId],row=>{const key=JSON.stringify([row.brand_key,row.native_id]),saved=groups.get(key);if(!saved)groups.set(key,{...row,assets:[...row.assets]});else for(const asset of row.assets)if(!saved.assets.some(a=>a.role===asset.role&&a.index===asset.index))saved.assets.push(asset);});
   return [...groups.values()];
 }

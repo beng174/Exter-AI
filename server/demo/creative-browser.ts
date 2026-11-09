@@ -1,3 +1,5 @@
+import {writeJsonRows} from "../infrastructure/json-rows.js";
+import {LibraryReadGate} from "../infrastructure/library-read-gate.js";
 import {readRetainedMedia,mergeRetainedMedia} from "../ad-media/read.js";
 import type { Express } from "express";
 import type { DatabaseSync } from "node:sqlite";
@@ -11,13 +13,14 @@ import type { CreativeGalleryService } from "./gallery.js";
 import type { BrandDemoService } from "./service.js";
 import { infrastructureDatabase } from "../infrastructure/database.js";
 import {metaLibraryEnabled} from "../connectors/meta-library.js";
-import {metaSourceHealth,readPublicObservations,mergePublicEvidence} from "../infrastructure/meta-evidence.js";
+import {metaSourceHealth,readPublicCreatives} from "../infrastructure/meta-evidence.js";
 import type {MetaSourceHealth} from "../../shared/meta-public.js";
 export interface BrowserOptions {
     getPool?: () => pg.Pool | null;
     now?: () => Date;
 }
 export function attachCreativeBrowser(app: Express, db: DatabaseSync, options: BrowserOptions = {}) {
+    const libraryReads=new LibraryReadGate();
     app.get("/api/brands/:brandId/creative-competitors",(req,res)=>{
         res.setHeader("Cache-Control","private, no-store");
         try {
@@ -43,12 +46,16 @@ export function attachCreativeBrowser(app: Express, db: DatabaseSync, options: B
             res.status(400).json({ error: "The reporting start must precede the end." });
             return;
         }
+        const disconnected=new AbortController(),onClose=()=>disconnected.abort();res.once("close",onClose);
+        const release=await libraryReads.acquire(disconnected.signal);
+        if(!release){res.off("close",onClose);if(!res.destroyed){res.setHeader("Retry-After","2");res.status(503).json({error:"The creative library is busy. Please try again shortly."});}return;}
+        if(res.destroyed){res.off("close",onClose);release();return;}
         try {
             const gallery = app.locals.creativeGallery as CreativeGalleryService, reports = app.locals.brandDemo as BrandDemoService;
             const competitors=configuredCreativeCompetitors(db,brand,app.locals.demoCollection);
             const ids=new Set([brand.id,...competitors.flatMap(item=>item.brandId?[item.brandId]:[])]);
             const sources:CreativeBrowserResponse["sources"]=competitors.map(item=>({brandId:item.brandId,name:item.name,status:item.status}));
-            const creatives: BrowserCreative[] = [];
+            let creatives: BrowserCreative[] = [];
             for (const id of ids) {
                 try {
                     const list = await gallery.list(id);
@@ -74,23 +81,24 @@ export function attachCreativeBrowser(app: Express, db: DatabaseSync, options: B
             try {
                 const pool=options.getPool?options.getPool():process.env.DATABASE_URL?infrastructureDatabase():null;
                 if(pool){
-                    const [observations,health]=await Promise.all([readPublicObservations(pool,brand.id),metaSourceHealth(pool,brand.id)]);
-                    const official=mergePublicEvidence(creatives,observations,brand,competitors);
+                    const official=await readPublicCreatives(pool,brand.id,creatives,brand,competitors);
+                    const health=await metaSourceHealth(pool,brand.id);
                     let merged=official;
                     try{merged=mergeRetainedMedia(official,await readRetainedMedia(pool,brand.id),brand.id);}catch{/* An upgrade or media failure cannot hide official evidence. */}
-                    creatives.splice(0,creatives.length,...merged);metaSource=health;
+                    creatives=merged;metaSource=health;
                     for(const source of sources){const target=source.brandId||competitors.find(b=>b.name===source.name)?.key;if(source.status!=="error"&&creatives.some(row=>!row.owned&&row.brandId===target))source.status="collected";}
                 }
             }catch{metaSource={status:"unavailable",enabled:metaLibraryEnabled(),lastSuccessfulCheck:null,message:"Saved public collection could not be read. Earlier media and analysis are retained."};}
+            if(res.destroyed)return;
             let ownedStatus: CreativeBrowserResponse["ownedStatus"] = "not_configured";
             try {
                 const pool = options.getPool ? options.getPool() : process.env.DATABASE_URL ? infrastructureDatabase() : null;
                 if (pool) {
-                    const withOwned=creatives.map(item=>({...item,performance:[] as CreativePerformance[]}));
-                    const ownedIndex=new Map(withOwned.filter(item=>item.workspaceBrand).map(item=>[JSON.stringify([item.platform,item.nativeId]),item]));
                     const result = await pool.query("SELECT d.data FROM owned_ad_days d JOIN owned_accounts a ON a.id=d.owned_account_id WHERE a.workspace_id=$1 AND d.day BETWEEN $2::date AND $3::date ORDER BY d.day,d.ad_id LIMIT 100001", [brand.id, from, to]);
                     if (result.rows.length > 100000)
                         throw new Error("Narrow the reporting window.");
+                    const withOwned=result.rows.length?creatives.map(item=>({...item,performance:[] as CreativePerformance[]})):creatives;
+                    const ownedIndex=new Map(withOwned.filter(item=>item.workspaceBrand).map(item=>[JSON.stringify([item.platform,item.nativeId]),item]));
                     const rows = result.rows.map(row => row.data as OwnedDay), groups = new Map<string, OwnedDay[]>();
                     for (const row of rows) {
                         const key = JSON.stringify([row.platform, row.accountId, row.currency, row.attribution, row.conversionEvent]);
@@ -120,8 +128,7 @@ export function attachCreativeBrowser(app: Express, db: DatabaseSync, options: B
                             creative.performance.push(cohort);
                         }
                     }
-                    creatives.length=0;
-                    for(const item of withOwned)creatives.push(item);
+                    creatives=withOwned;
                     ownedStatus = "available";
                 }
             }
@@ -129,10 +136,12 @@ export function attachCreativeBrowser(app: Express, db: DatabaseSync, options: B
                 ownedStatus = "error";
             }
             const dates = creatives.flatMap(item => [item.firstObservedAt, item.observedAt].filter((value): value is string => Boolean(value))).sort();
-            res.json({ metaSource, brand: { id: brand.id, name: brand.name, domain: brand.domain }, creatives, competitors, sources, ownedStatus, dateRange: { from: dates[0] || null, to: dates.at(-1) || null }, lastChecked: dates.at(-1) || null, reportingRange: { from, to } } satisfies CreativeBrowserResponse);
+            if(res.destroyed)return;
+            await writeJsonRows(res,{ metaSource, brand: { id: brand.id, name: brand.name, domain: brand.domain }, creatives, competitors, sources, ownedStatus, dateRange: { from: dates[0] || null, to: dates.at(-1) || null }, lastChecked: dates.at(-1) || null, reportingRange: { from, to } } satisfies CreativeBrowserResponse,"creatives");
         }
         catch {
-            res.status(503).json({ error: "Stored creative evidence is unavailable. No source collection or analysis was started." });
-        }
+            if(!res.destroyed&&!res.headersSent)res.status(503).json({ error: "Stored creative evidence is unavailable. No source collection or analysis was started." });
+            else if(!res.destroyed)res.destroy();
+        }finally{res.off("close",onClose);release();}
     });
 }

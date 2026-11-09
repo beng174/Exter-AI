@@ -75,6 +75,7 @@ test("UI-02 read endpoint is authenticated, read-only, scoped and does not turn 
     const pool = { async query(sql: string, params: unknown[]) { queries++; if(sql.includes("FROM ad_observations")||sql.startsWith("SELECT DISTINCT ON(w.id)")){assert.deepEqual(params,[root.id]);return {rows:[]};} assert.match(sql, /^SELECT d.data FROM owned_ad_days d JOIN owned_accounts/); assert.match(sql, /a.workspace_id=\$1/); assert.match(sql, /LIMIT 100001/); assert.deepEqual(params, [root.id, "2026-11-01", "2026-11-04"]); if (failOwned)
             throw new Error("private database detail"); if (overflow)
             return { rows: new Array(100001).fill({ data: ownedDay() }) }; return { rows: [ownedDay(), ownedDay({ spend: 120, pulledAt: "2026-11-05T00:00:00Z" }), ownedDay({ accountId: "account-b", currency: "USD", spend: 300 }), ownedDay({ attribution: "1d_click", spend: 40 })].map(data => ({ data })) }; } } as unknown as pg.Pool;
+    pool.connect=async()=>({query(q:any){queueMicrotask(()=>{void pool.query(q.text,q.values).then(result=>{for(const row of result.rows)q.emit("row",row);q.emit("end",{rows:[]});}).catch(error=>q.emit("error",error));});return q;},release(){}}) as any;
     attachCreativeBrowser(app, db, { getPool: () => pool });
     const server = createServer(app);
     await new Promise<void>(resolve => server.listen(0, "127.0.0.1", resolve));
