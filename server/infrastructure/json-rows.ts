@@ -1,15 +1,20 @@
 import type {Response} from "express";
-import {finished} from "node:stream/promises";
+import {finished, pipeline} from "node:stream/promises";
+import {createGzip, constants} from "node:zlib";
 /** Encode the large array a row at a time, respecting socket backpressure. */
-export async function writeJsonRows(res:Response,value:Record<string,unknown>,rowKey:string):Promise<void>{
+export async function writeJsonRows(res:Response,value:Record<string,unknown>,rowKey:string,options:{gzip?:boolean}={}):Promise<void>{
   res.setHeader("Content-Type","application/json; charset=utf-8");
-  const sent=finished(res,{cleanup:true}).catch(()=>{});
+  if(options.gzip)res.setHeader("Content-Encoding","gzip");
+  const compressor=options.gzip?createGzip({level:constants.Z_BEST_SPEED}):null;
+  const output=compressor||res;
+  const sent=compressor?pipeline(compressor,res):finished(res,{cleanup:true});
+  void sent.catch(()=>{});
   const write=async(chunk:string)=>{
-    if(res.destroyed)throw new Error("Response closed.");
-    if(!res.write(chunk))await new Promise<void>((resolve,reject)=>{
-      const cleanup=()=>{res.off("drain",drained);res.off("close",closed);res.off("error",closed);};
+    if(res.destroyed||output.destroyed)throw new Error("Response closed.");
+    if(!output.write(chunk))await new Promise<void>((resolve,reject)=>{
+      const cleanup=()=>{output.off("drain",drained);output.off("close",closed);output.off("error",closed);};
       const drained=()=>{cleanup();resolve();},closed=()=>{cleanup();reject(new Error("Response closed."));};
-      res.once("drain",drained);res.once("close",closed);res.once("error",closed);
+      output.once("drain",drained);output.once("close",closed);output.once("error",closed);
     });
   };
   try{
@@ -23,6 +28,6 @@ export async function writeJsonRows(res:Response,value:Record<string,unknown>,ro
         const json=JSON.stringify(item);if(json!==undefined){await write(`${first?"":","}${JSON.stringify(key)}:${json}`);first=false;}
       }
     }
-    res.end("}");await sent;
-  }catch(error){res.destroy();await sent;throw error;}
+    output.end("}");await sent;
+  }catch(error){output.destroy();res.destroy();await sent.catch(()=>{});throw error;}
 }

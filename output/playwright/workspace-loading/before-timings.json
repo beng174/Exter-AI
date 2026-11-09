@@ -1,0 +1,58 @@
+{
+  "steps": [
+    {
+      "step": "Cold Home",
+      "ms": 3249,
+      "libraryRequests": 2
+    },
+    {
+      "step": "Weekly report link",
+      "ms": 2793,
+      "libraryRequests": 2
+    },
+    {
+      "step": "Creatives",
+      "ms": 1292,
+      "libraryRequests": 1
+    },
+    {
+      "step": "Creative detail",
+      "ms": 85,
+      "libraryRequests": 0
+    },
+    {
+      "step": "Winners",
+      "ms": 24605,
+      "libraryRequests": 2
+    },
+    {
+      "step": "Scores",
+      "ms": 3289,
+      "libraryRequests": 2
+    },
+    {
+      "step": "Data sources",
+      "ms": 91,
+      "libraryRequests": 0
+    },
+    {
+      "step": "Return Home",
+      "ms": 2454,
+      "libraryRequests": 2
+    },
+    {
+      "step": "Market count link",
+      "ms": 1554,
+      "libraryRequests": 1
+    },
+    {
+      "step": "Browser back",
+      "ms": 2791,
+      "libraryRequests": 2
+    }
+  ],
+  "libraryRequests": 14,
+  "uncompressedLibraryBytes": 140303940,
+  "documentLoads": 4,
+  "apiRequests": 103
+}

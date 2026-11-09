@@ -49,6 +49,26 @@ export function resolveNavigation(input: string) {
   return {id,screen:canonical.screen!,url,redirect,brandId:url.searchParams.get("brandId"),adId:id==="creative"?url.searchParams.get("id"):null};
 }
 export const NAVIGATION_EVENT="exter:navigation";
+/** Follow workspace links without discarding already loaded session data. */
+export function navigateHref(input: string | URL) {
+  const current=new URL(window.location.href),url=new URL(input,current);
+  if(url.origin!==current.origin||url.pathname!=="/")return false;
+  if(current.searchParams.get("demo")==="1"&&!url.searchParams.has("demo"))url.searchParams.set("demo","1");
+  if(!url.searchParams.has("brandId")&&current.searchParams.has("brandId"))url.searchParams.set("brandId",current.searchParams.get("brandId")!);
+  const resolved=resolveNavigation(url.href);
+  const detail=resolved.id==="creative"&&(resolveNavigation(current.href).id!=="creative"||Boolean(window.history.state?.exterCreative));
+  if(resolved.url.href!==current.href)window.history.pushState({exterCreative:detail},"",resolved.url);
+  window.dispatchEvent(new Event(NAVIGATION_EVENT));
+  if(!resolved.url.hash)window.scrollTo(0,0);
+  return true;
+}
+export function followWorkspaceLink(event: MouseEvent) {
+  if(event.defaultPrevented||event.button!==0||event.metaKey||event.ctrlKey||event.shiftKey||event.altKey)return;
+  const link=event.target instanceof Element?event.target.closest<HTMLAnchorElement>("a[href]"):null;
+  if(!link||link.hasAttribute("download")||link.target&&link.target!=="_self"||link.getAttribute("rel")?.split(/\s+/).includes("external"))return;
+  if(link.getAttribute("href")?.startsWith("#"))return;
+  if(navigateHref(link.href))event.preventDefault();
+}
 export function navigateTo(view:ViewId|Page,brandId?:string,options:{replace?:boolean;adId?:string}={}) {
   const item=navigation.find(item=>item.id===view || item.screen===view && !item.hidden);
   const url=new URL(window.location.href);

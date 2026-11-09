@@ -141,3 +141,12 @@ test("UI-06 comparison columns align text, numbers and headers as one column",()
  assert.match(html,/<td class="ui-table-number" data-label="Fixture brand">Founder-led<\/td>/);
  assert.match(html,/<td class="ui-table-number" data-label="Fixture brand">Free shipping<\/td>/);
 });
+
+test("large tables render fifty rows, retain full totals and inspect alignment only once per column",()=>{
+ const rows=Array.from({length:7800},(_,id)=>({id,name:`Ad ${id+1}`,days:7800-id}));let valuesRead=0;
+ const table=render(ui.DataTable,{caption:"Fixture ads",rows,rowKey:(row:any)=>String(row.id),basis:"Observed",meta:{sampleSize:rows.length,from:"2026-11-01",to:"2026-11-08",lastChecked:"2026-11-09T00:00:00Z"},columns:[{key:"ad",label:"Ad",value:(row:any)=>{valuesRead++;return row.name;}},{key:"days",label:"Duration",value:(row:any)=>{valuesRead++;return row.days;}},{key:"absent",label:"Missing metric",value:()=>null}]});
+ assert.equal((table.split("<tbody>")[1].split("</tbody>")[0].match(/<tr/g)||[]).length,50);
+ assert.match(table,/Showing 1 to 50 of 7,800/);assert.match(table,/n = 7800 ads/);assert.match(table,/class="ui-table-number"[^>]*>Duration/);
+ assert(valuesRead<rows.length*10,`Alignment reads were ${valuesRead}`);assert.ok(!table.includes('data-label="Missing metric"'));
+ const small=render(ui.DataTable,{caption:"Small",rows:[{id:1}],rowKey:(row:any)=>String(row.id),basis:"Observed",columns:[{key:"id",label:"ID",value:(row:any)=>row.id}]});assert.ok(!small.includes("ui-table-pagination"));
+});

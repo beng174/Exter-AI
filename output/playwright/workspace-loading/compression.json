@@ -1,0 +1,6 @@
+{
+  "fixtureAds": 7800,
+  "jsonBytes": 10021710,
+  "gzipBytes": 185369,
+  "note": "Offline compression of the identical fixture JSON; no live traffic."
+}

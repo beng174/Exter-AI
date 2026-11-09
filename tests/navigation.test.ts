@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { navigation, navigationGroups, visibleNavigation, resolveNavigation, viewForScreen, navigateTo, canonicaliseLocation, openCreativeRoute, closeCreativeRoute } from "../src/navigation.js";
+import { navigation, navigationGroups, visibleNavigation, resolveNavigation, viewForScreen, navigateTo, navigateHref, followWorkspaceLink, canonicaliseLocation, openCreativeRoute, closeCreativeRoute } from "../src/navigation.js";
 import type { Page } from "../shared/types.js";
 
 test("UI-00 config has unique canonical IDs, ordered groups and only existing ready screens",()=>{
@@ -67,4 +67,20 @@ test("UI-E/UI-F all remaining screens are ready and budgets retain only operator
 
 test("UI-16 old budget bookmarks redirect to Data sources without losing their target",()=>{
  const route=resolveNavigation("/?view=settings&brandId=real-brand#monthly-budgets");assert.equal(route.id,"data");assert.equal(route.url.searchParams.get("view"),"data");assert.equal(route.url.searchParams.get("brandId"),"real-brand");assert.equal(route.url.hash,"#monthly-budgets");assert.equal(route.redirect,true);
+});
+
+test("workspace links keep history, filters and sample scope without intercepting native link actions",()=>{
+ const originalWindow=Object.getOwnPropertyDescriptor(globalThis,"window"),originalElement=Object.getOwnPropertyDescriptor(globalThis,"Element");
+ let href="https://exter.example/?view=overview&brandId=sample-northwick&demo=1",pushes=0,prevented=false;
+ class Link {target="";attrs=new Map([["href","/?view=ads&angle=gifting"]]);get href(){return new URL(this.attrs.get("href")!,href).href;}closest(){return this;}hasAttribute(key:string){return this.attrs.has(key);}getAttribute(key:string){return this.attrs.get(key)||null;}}
+ const link=new Link(),event={target:link,button:0,defaultPrevented:false,metaKey:false,ctrlKey:false,shiftKey:false,altKey:false,preventDefault(){prevented=true;}};
+ Object.defineProperty(globalThis,"Element",{value:Link,configurable:true});
+ Object.defineProperty(globalThis,"window",{value:{location:{get href(){return href;}},history:{state:null,pushState(_s:unknown,_t:string,url:URL){href=String(url);pushes++;}},dispatchEvent(){},scrollTo(){}},configurable:true});
+ try{
+  followWorkspaceLink(event as unknown as MouseEvent);assert.equal(prevented,true);assert.equal(pushes,1);const route=resolveNavigation(href);assert.equal(route.id,"creatives");assert.equal(route.url.searchParams.get("angle"),"gifting");assert.equal(route.url.searchParams.get("demo"),"1");assert.equal(route.brandId,"sample-northwick");
+  for(const patch of [{ctrlKey:true},{metaKey:true},{shiftKey:true},{altKey:true},{button:1},{defaultPrevented:true}]){prevented=false;followWorkspaceLink({...event,...patch} as unknown as MouseEvent);assert.equal(prevented,false);}
+  for(const attrs of [{href:"#about-data"},{href:"https://external.example/"},{href:"/api/reports/one/download"},{href:"/?view=reports",download:"report"},{href:"/?view=reports",rel:"external"}]){link.attrs=new Map(Object.entries(attrs));prevented=false;followWorkspaceLink(event as unknown as MouseEvent);assert.equal(prevented,false);}
+  link.attrs=new Map([["href","/?view=reports"]]);link.target="_blank";prevented=false;followWorkspaceLink(event as unknown as MouseEvent);assert.equal(prevented,false);
+  assert.equal(navigateHref("https://external.example/"),false);assert.equal(pushes,1);
+ }finally{if(originalWindow)Object.defineProperty(globalThis,"window",originalWindow);else Reflect.deleteProperty(globalThis,"window");if(originalElement)Object.defineProperty(globalThis,"Element",originalElement);else Reflect.deleteProperty(globalThis,"Element");}
 });

@@ -67,16 +67,16 @@ test("UI-02 read endpoint is authenticated, read-only, scoped and does not turn 
     app.use(basicAuth({ EXTER_ADMIN_USER: "browser-fixture", EXTER_ADMIN_PASSWORD: "fixture-only" }));
     let failGallery = false, failOwned = false, overflow = false;
     const reads: string[] = [];
-    let queries = 0;
+    let queries = 0, expectedRange=["2026-11-01","2026-11-04"];
     app.locals.creativeGallery = { async list(id: string) { reads.push(id); if (failGallery)
             throw new Error("private provider detail"); return { creatives: id === root.id ? [browserCreative()] : [browserCreative({ adId: "public-competitor", brandId: id, workspaceBrand: false }), browserCreative({ adId: "private-competitor", brandId: id, workspaceBrand: false, owned: true })] }; } };
     app.locals.demoCollection={snapshot(){return {competitors:[{brandId:"competitor-a",name:"Fixture competitor",status:"complete"},{brandId:null,name:"Pending competitor",status:"not-started"}]};}};
     app.locals.brandDemo = { report() { throw new Error("No scoring evidence"); } };
-    const pool = { async query(sql: string, params: unknown[]) { queries++; if(sql.includes("FROM ad_observations")||sql.startsWith("SELECT DISTINCT ON(w.id)")){assert.deepEqual(params,[root.id]);return {rows:[]};} assert.match(sql, /^SELECT d.data FROM owned_ad_days d JOIN owned_accounts/); assert.match(sql, /a.workspace_id=\$1/); assert.match(sql, /LIMIT 100001/); assert.deepEqual(params, [root.id, "2026-11-01", "2026-11-04"]); if (failOwned)
+    const pool = { async query(sql: string, params: unknown[]) { queries++; if(sql.includes("FROM ad_observations")||sql.startsWith("SELECT DISTINCT ON(w.id)")){assert.deepEqual(params,[root.id]);return {rows:[]};} assert.match(sql, /^SELECT d.data FROM owned_ad_days d JOIN owned_accounts/); assert.match(sql, /a.workspace_id=\$1/); assert.match(sql, /LIMIT 100001/); assert.deepEqual(params, [root.id, ...expectedRange]); if (failOwned)
             throw new Error("private database detail"); if (overflow)
             return { rows: new Array(100001).fill({ data: ownedDay() }) }; return { rows: [ownedDay(), ownedDay({ spend: 120, pulledAt: "2026-11-05T00:00:00Z" }), ownedDay({ accountId: "account-b", currency: "USD", spend: 300 }), ownedDay({ attribution: "1d_click", spend: 40 })].map(data => ({ data })) }; } } as unknown as pg.Pool;
     pool.connect=async()=>({query(q:any){queueMicrotask(()=>{void pool.query(q.text,q.values).then(result=>{for(const row of result.rows)q.emit("row",row);q.emit("end",{rows:[]});}).catch(error=>q.emit("error",error));});return q;},release(){}}) as any;
-    attachCreativeBrowser(app, db, { getPool: () => pool });
+    attachCreativeBrowser(app, db, { getPool: () => pool, now:()=>new Date("2026-11-05T12:00:00Z") });
     const server = createServer(app);
     await new Promise<void>(resolve => server.listen(0, "127.0.0.1", resolve));
     const base = `http://127.0.0.1:${(server.address() as AddressInfo).port}/api/brands/${root.id}/creatives`, headers = { authorization: `Basic ${Buffer.from("browser-fixture:fixture-only").toString("base64")}` };
@@ -90,6 +90,8 @@ test("UI-02 read endpoint is authenticated, read-only, scoped and does not turn 
         const response = await fetch(base + "?from=2026-11-01&to=2026-11-04", { headers });
         assert.equal(response.status, 200);
         assert.match(response.headers.get("cache-control")!, /no-store/);
+        assert.match(response.headers.get("vary")!, /Accept-Encoding/i);
+        assert.equal(response.headers.get("content-encoding"),"gzip");
         const data = await response.json() as CreativeBrowserResponse;
         assert.deepEqual(reads, ["workspace-a", "competitor-a"]);
         const configured=await (await fetch(base.replace("/creatives","/creative-competitors"),{headers})).json();
@@ -108,6 +110,18 @@ test("UI-02 read endpoint is authenticated, read-only, scoped and does not turn 
         assert.equal(data.creatives.some(row => row.adId === "private-competitor"), false);
         assert.equal(own.score, null, "saved creatives survive unavailable scoring");
         assert.equal(own.scoreError,true,"a checklist read failure is explicit");
+        // The research preset resolves the same shared window before querying owned days.
+        expectedRange=["2026-10-29","2026-11-04"];
+        reads.length=0;
+        const preset=await (await fetch(base+"?window=research",{headers})).json() as CreativeBrowserResponse;
+        assert.deepEqual(preset.reportingRange,{from:expectedRange[0],to:expectedRange[1]});
+        assert.deepEqual(reads,["workspace-a","competitor-a"],"one gallery pass, one response");
+        assert.deepEqual(preset.creatives.find(row=>row.workspaceBrand)!.performance.map(cohort=>[cohort.from,cohort.to,cohort.currency,cohort.metrics.Spend.value]),[[...expectedRange,"GBP",120],[...expectedRange,"USD",300],[...expectedRange,"GBP",40]]);
+        const explicit=await (await fetch(base+"?from=2026-10-29&to=2026-11-04",{headers})).json();
+        assert.deepEqual(preset,explicit,"same data and cohorts as the old second read");
+        expectedRange=["2026-10-07","2026-11-05"];
+        const defaults=await (await fetch(base,{headers})).json();assert.deepEqual(defaults.reportingRange,{from:expectedRange[0],to:expectedRange[1]},"other clients keep the thirty-day default");
+        expectedRange=["2026-11-01","2026-11-04"];
         failOwned = true;
         let failed = await (await fetch(base + "?from=2026-11-01&to=2026-11-04", { headers })).json();
         assert.equal(failed.ownedStatus, "error");

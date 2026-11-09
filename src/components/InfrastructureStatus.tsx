@@ -1,6 +1,6 @@
 import { plainEnum,ukDate } from "../../shared/creative-presentation";
 import { useEffect, useState } from "react";
-import { api } from "../lib/api";
+import {workspaceRead} from "../lib/workspace-read";
 interface Status {
   meta?: { message: string; coverage: string };
   database?: string;
@@ -11,11 +11,11 @@ interface Status {
 export function InfrastructureStatus() {
   const [status,setStatus] = useState<Status | null>(null);
   useEffect(() => {
-    let active = true;
-    const update = () => api<Status>("/api/infrastructure/status").then(s => { if (active) setStatus(s); }).catch(() => { if (active) setStatus({ message: "Collection status unavailable. Check the collection database and service logs." }); });
+    let active = true;const leases=new Set<{release:()=>void}>();
+    const update = () => {const lease=workspaceRead<Status>("/api/infrastructure/status");leases.add(lease);return lease.promise.then(s => { if (active) setStatus(s); }).catch(() => { if (active) setStatus({ message: "Collection status unavailable. Check the collection database and service logs." }); }).finally(()=>{lease.release();leases.delete(lease);});};
     void update();
     const timer = setInterval(() => void update(),30000);
-    return () => { active = false; clearInterval(timer); };
+    return () => { active = false; clearInterval(timer); for(const lease of leases)lease.release(); };
   },[]);
   if (!status) return null;
   return <aside aria-label="Collection and budget status" style={{ padding: "12px 18px", marginBottom: 16, border: "1px solid #d5d9df", borderRadius: 8 }}>

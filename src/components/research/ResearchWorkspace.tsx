@@ -1,3 +1,4 @@
+import {invalidateWorkspaceReads} from "../../lib/read-cache";
 import {MetaWatchlistDialog} from "./MetaWatchlistEditor";
 import { BrandName } from "../ui/BrandIdentity";
 import { Caveat } from "../ui/Caveat";
@@ -25,7 +26,7 @@ export function ResearchWorkspace({brandId,brands,route,onManageBrands}:{brandId
   const [refresh,setRefresh]=useState(0),[editingWatchlist,setEditingWatchlist]=useState(false);
   const from=params.get("from")||undefined,to=params.get("to")||undefined;
   const {data,error,loading}=useResearchData(brandId,brands,from,to,refresh);
-  const retry=()=>setRefresh(value=>value+1);
+  const retry=()=>{invalidateWorkspaceReads();setRefresh(value=>value+1);};
   const update=(patch:Record<string,string>)=>{const url=new URL(window.location.href);for(const [key,value] of Object.entries(patch)){if(value&&value!=="all")url.searchParams.set(key,value);else url.searchParams.delete(key);}window.history.pushState({},"",url);window.dispatchEvent(new Event(NAVIGATION_EVENT));};
   const dimension=(params.get("dimension")||(view==="patterns"?"hook":"format")) as ResearchDimension;
   const selection={asOf:data?.window.asOf||undefined,platform:params.get("platform")||undefined,...(view==="winners"&&params.get("brand")?{brand:params.get("brand")!}:{})};

@@ -7,6 +7,7 @@ import type pg from "pg";
 import { configuredCreativeCompetitors } from "./creative-competitors.js";
 import type { BrowserCreative, CreativeBrowserResponse, CreativePerformance } from "../../shared/creative-browser.js";
 import { ownedMetrics, type OwnedDay } from "../../shared/owned-metrics.js";
+import {researchWindow} from "../../shared/creative-research.js";
 import { readBrand } from "../db.js";
 import { resolveDemoBrandId } from "./reconcile.js";
 import type { CreativeGalleryService } from "./gallery.js";
@@ -31,6 +32,7 @@ export function attachCreativeBrowser(app: Express, db: DatabaseSync, options: B
     });
     app.get("/api/brands/:brandId/creatives", async (req, res) => {
         res.setHeader("Cache-Control", "private, no-store");
+        res.vary("Accept-Encoding");
         const brand = readBrand(db, resolveDemoBrandId(db, String(req.params.brandId)));
         if (!brand || brand.mode === "demo") {
             res.status(404).json({ error: "Real workspace not found." });
@@ -41,8 +43,8 @@ export function attachCreativeBrowser(app: Express, db: DatabaseSync, options: B
             res.status(400).json({ error: "Choose valid reporting dates." });
             return;
         }
-        const from = String(req.query.from || new Date(now.getTime() - 29 * 86400000).toISOString().slice(0, 10)), to = String(req.query.to || now.toISOString().slice(0, 10));
-        if (from > to) {
+        let from = String(req.query.from || new Date(now.getTime() - 29 * 86400000).toISOString().slice(0, 10)), to = String(req.query.to || now.toISOString().slice(0, 10));
+        if (from > to && (req.query.window !== "research" || req.query.from && req.query.to)) {
             res.status(400).json({ error: "The reporting start must precede the end." });
             return;
         }
@@ -90,6 +92,13 @@ export function attachCreativeBrowser(app: Express, db: DatabaseSync, options: B
                 }
             }catch{metaSource={status:"unavailable",enabled:metaLibraryEnabled(),lastSuccessfulCheck:null,message:"Saved public collection could not be read. Earlier media and analysis are retained."};}
             if(res.destroyed)return;
+            // Resolve the research window before owned cohorts, without a second library response.
+            if(req.query.window === "research") {
+                const window=researchWindow(creatives,req.query.from as string|undefined,req.query.to as string|undefined,now);
+                if(window.from)from=window.from;
+                if(window.to)to=window.to;
+            }
+            if(from>to){res.status(400).json({error:"The reporting start must precede the end."});return;}
             let ownedStatus: CreativeBrowserResponse["ownedStatus"] = "not_configured";
             try {
                 const pool = options.getPool ? options.getPool() : process.env.DATABASE_URL ? infrastructureDatabase() : null;
@@ -137,7 +146,7 @@ export function attachCreativeBrowser(app: Express, db: DatabaseSync, options: B
             }
             const dates = creatives.flatMap(item => [item.firstObservedAt, item.observedAt].filter((value): value is string => Boolean(value))).sort();
             if(res.destroyed)return;
-            await writeJsonRows(res,{ metaSource, brand: { id: brand.id, name: brand.name, domain: brand.domain }, creatives, competitors, sources, ownedStatus, dateRange: { from: dates[0] || null, to: dates.at(-1) || null }, lastChecked: dates.at(-1) || null, reportingRange: { from, to } } satisfies CreativeBrowserResponse,"creatives");
+            await writeJsonRows(res,{ metaSource, brand: { id: brand.id, name: brand.name, domain: brand.domain }, creatives, competitors, sources, ownedStatus, dateRange: { from: dates[0] || null, to: dates.at(-1) || null }, lastChecked: dates.at(-1) || null, reportingRange: { from, to } } satisfies CreativeBrowserResponse,"creatives",{gzip:req.acceptsEncodings("gzip")==="gzip"});
         }
         catch {
             if(!res.destroyed&&!res.headersSent)res.status(503).json({ error: "Stored creative evidence is unavailable. No source collection or analysis was started." });

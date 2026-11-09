@@ -1,3 +1,4 @@
+import {navigateHref} from "../../navigation";
 import { BrandText } from "./BrandIdentity";
 import type { ReactNode } from "react";
 import type { BrowserCreative, CreativeBrowserResponse } from "../../../shared/creative-browser";
@@ -20,7 +21,7 @@ export function EvidenceLink({library,children,adId,brand,dimension,value,view}:
  if(view)url.searchParams.set("view",view);url.searchParams.set("demo","1");
  return <a href={url.pathname+url.search}><BrandText>{children}</BrandText></a>;
 }
-export function openModelEvidence(library:CreativeBrowserResponse,selection:EvidenceSelection={kind:"all"}) {const url=new URL(evidenceUrl(library.brand.id,selection),window.location.origin);url.searchParams.set("demo","1");window.location.assign(url);}
+export function openModelEvidence(library:CreativeBrowserResponse,selection:EvidenceSelection={kind:"all"}) {const url=new URL(evidenceUrl(library.brand.id,selection),window.location.origin);url.searchParams.set("demo","1");navigateHref(url);}
 export function ModelTable<T>({library,title,rows,columns,basis="Observed",rowBasis,showBasis=true,selection,meta}:{library:CreativeBrowserResponse;title:string;rows:readonly T[];columns:readonly DataColumn<T>[];basis?:DataBasis;rowBasis?:(row:T)=>DataBasis;showBasis?:boolean;selection?:(row:T)=>EvidenceSelection;meta?:MetaLineProps}) {
  return <DataTable caption={title} rows={rows} columns={columns} basis={basis} rowBasis={rowBasis} showBasis={showBasis} hideUnavailable={true} rowKey={row=>String(rows.indexOf(row))} onRow={row=>openModelEvidence(library,selection?.(row))} meta={{sampleSize:library.creatives.length,from:library.dateRange.from,to:library.dateRange.to,lastChecked:library.lastChecked,...meta}}/>;
 }
