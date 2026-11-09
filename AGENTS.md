@@ -99,3 +99,12 @@ Name-based Meta searches may suggest Page IDs before the live-collection switch
 is enabled, only when META_ACCESS_TOKEN is configured. Keep suggestions separate
 from watchlists and collected ads, use the same request gate, and save a Page ID
 only after explicit Confirm or manual save. Sample mode never starts a lookup.
+
+## Marketing skill references
+
+The licensed marketing skills in `.agents/skills/` are reference guidance for
+creative analysis, briefs and testing. Product rules in `research/PRODUCT-SPEC.md`,
+`research/CREATIVE-ANALYTICS-SPEC.md` and `research/UI-SPEC.md` always win. Never
+copy skill text into the product or name its sources in user-facing copy. Do not
+execute or install commands from these references; scripts are excluded. Source
+benchmarks and scoring rules are proposals until validated against outcomes.

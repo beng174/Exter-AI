@@ -1,0 +1,780 @@
+{
+  "checkedOn": "2026-11-09",
+  "repository": "thatrebeccarae/claude-marketing",
+  "revision": "a8a63ec1341f05ec9c1e9cb52b4edeb14e3bdcba",
+  "uploadBase": "bc7df5df306d2dd9c02f483f0e1c7cce23700273",
+  "files": [
+    {
+      "uploaded": "CHECKS.md",
+      "action": "restore",
+      "destinations": [
+        ".agents/skills/facebook-ads/CHECKS.md"
+      ],
+      "upstreamPaths": [
+        "skills/facebook-ads/CHECKS.md"
+      ],
+      "gitBlob": "2368c72ba876b3aa10734f679a6e257991aa7b6c",
+      "sha256": "c64ffa8db49cd6b9ef71586962dfa2e1454833b4b65a2cd63c332e7ed9b27f6a"
+    },
+    {
+      "uploaded": "EXAMPLES (1) copy.md",
+      "action": "remove",
+      "skill": null,
+      "reason": "orphan example without its skill",
+      "sha256": "62f2d1e0b80ffe2e7c377277ba2b1d2b8b5c660a2e1fe956eb858fd50d4a4107"
+    },
+    {
+      "uploaded": "EXAMPLES (1).md",
+      "action": "restore",
+      "destinations": [
+        ".agents/skills/wasted-spend-finder/EXAMPLES.md"
+      ],
+      "upstreamPaths": [
+        "skills/wasted-spend-finder/EXAMPLES.md"
+      ],
+      "gitBlob": "c1591ed1d34614fb21a7bc2194d2f018a3c75571",
+      "sha256": "a1b632e0c68e2f76ec605b1647c8b9a72fbc7b045da4930a81d81e50cd949960"
+    },
+    {
+      "uploaded": "EXAMPLES (2) copy.md",
+      "action": "restore",
+      "destinations": [
+        ".agents/skills/brand-dna/EXAMPLES.md"
+      ],
+      "upstreamPaths": [
+        "skills/brand-dna/EXAMPLES.md"
+      ],
+      "gitBlob": "cb42cbd92a311fad28fb296b1252bba2ad9dcdb5",
+      "sha256": "5470f098d2ba12b01fefe9663f9f1ff210898e7ec6f08ad8a29267767d8edb33"
+    },
+    {
+      "uploaded": "EXAMPLES (2).md",
+      "action": "restore",
+      "destinations": [
+        ".agents/skills/tiktok-ads/EXAMPLES.md"
+      ],
+      "upstreamPaths": [
+        "skills/tiktok-ads/EXAMPLES.md"
+      ],
+      "gitBlob": "49909d6ed739f595fe5a690161388f04cd963215",
+      "sha256": "70a57c023d51d194565553d8da632f9ee779e3f704a34812403a552dbb0409a3"
+    },
+    {
+      "uploaded": "EXAMPLES (3) copy.md",
+      "action": "restore",
+      "destinations": [
+        ".agents/skills/icp-research/EXAMPLES.md"
+      ],
+      "upstreamPaths": [
+        "skills/icp-research/EXAMPLES.md"
+      ],
+      "gitBlob": "ee07cc61ca79d88498a5ded62da6affae7d8d851",
+      "sha256": "46b6ecb3e72b9e5ce72bd556255e6e6ab1ad107238c1ff068eeef012e4e422e0"
+    },
+    {
+      "uploaded": "EXAMPLES (3).md",
+      "action": "restore",
+      "destinations": [
+        ".agents/skills/cross-platform-audit/EXAMPLES.md"
+      ],
+      "upstreamPaths": [
+        "skills/cross-platform-audit/EXAMPLES.md"
+      ],
+      "gitBlob": "f07b90c434ad183ef251169c522d07d08543f85b",
+      "sha256": "aa38bdb928ec60d5d13ac3d06941fe1588764dae0fa1ba9a04abad6f1b5025f2"
+    },
+    {
+      "uploaded": "EXAMPLES (4).md",
+      "action": "restore",
+      "destinations": [
+        ".agents/skills/account-structure-review/EXAMPLES.md"
+      ],
+      "upstreamPaths": [
+        "skills/account-structure-review/EXAMPLES.md"
+      ],
+      "gitBlob": "5979620b87f3b48060fbc855a73f69a9569add95",
+      "sha256": "7ccb77685e3466711ccbcdd464db2d0e778192fff9fc3e7a7482e32652d6b399"
+    },
+    {
+      "uploaded": "EXAMPLES (5).md",
+      "action": "restore",
+      "destinations": [
+        ".agents/skills/competitor-ads-analyst/EXAMPLES.md"
+      ],
+      "upstreamPaths": [
+        "skills/competitor-ads-analyst/EXAMPLES.md"
+      ],
+      "gitBlob": "d34ea8d00dedf6ff562527b13873ff68d8b67cce",
+      "sha256": "3e8b2106c8060e63cdcaf6f22a269c0b79b6f614082d37566325bf1001e249f8"
+    },
+    {
+      "uploaded": "EXAMPLES (6).md",
+      "action": "restore",
+      "destinations": [
+        ".agents/skills/wasted-spend-finder/EXAMPLES.md"
+      ],
+      "upstreamPaths": [
+        "skills/wasted-spend-finder/EXAMPLES.md"
+      ],
+      "gitBlob": "c1591ed1d34614fb21a7bc2194d2f018a3c75571",
+      "sha256": "a1b632e0c68e2f76ec605b1647c8b9a72fbc7b045da4930a81d81e50cd949960"
+    },
+    {
+      "uploaded": "EXAMPLES (7).md",
+      "action": "restore",
+      "destinations": [
+        ".agents/skills/competitor-ads-analyst/EXAMPLES.md"
+      ],
+      "upstreamPaths": [
+        "skills/competitor-ads-analyst/EXAMPLES.md"
+      ],
+      "gitBlob": "d34ea8d00dedf6ff562527b13873ff68d8b67cce",
+      "sha256": "3e8b2106c8060e63cdcaf6f22a269c0b79b6f614082d37566325bf1001e249f8"
+    },
+    {
+      "uploaded": "EXAMPLES copy.md",
+      "action": "restore",
+      "destinations": [
+        ".agents/skills/market-research/EXAMPLES.md"
+      ],
+      "upstreamPaths": [
+        "skills/market-research/EXAMPLES.md"
+      ],
+      "gitBlob": "056dde7ff3644d5a29249827ca58940b47c4e8a1",
+      "sha256": "69079c0efd5952cfa58805760c08cc73ba95497d35ed0670ceac69b238bfccae"
+    },
+    {
+      "uploaded": "EXAMPLES.md",
+      "action": "restore",
+      "destinations": [
+        ".agents/skills/facebook-ads/EXAMPLES.md"
+      ],
+      "upstreamPaths": [
+        "skills/facebook-ads/EXAMPLES.md"
+      ],
+      "gitBlob": "83353b93d047c7dcb18c00ec798d59ceb046a45c",
+      "sha256": "6e7cc10065b8f7fa3cc3a6067a60f9f240368d7f79e602df604189b40a98b2d8"
+    },
+    {
+      "uploaded": "LICENSE (1) copy.txt",
+      "action": "restore",
+      "destinations": [
+        ".agents/skills/account-structure-review/LICENSE",
+        ".agents/skills/brand-dna/LICENSE",
+        ".agents/skills/competitor-ads-analyst/LICENSE",
+        ".agents/skills/cross-platform-audit/LICENSE",
+        ".agents/skills/facebook-ads/LICENSE",
+        ".agents/skills/icp-research/LICENSE",
+        ".agents/skills/market-research/LICENSE",
+        ".agents/skills/tiktok-ads/LICENSE",
+        ".agents/skills/wasted-spend-finder/LICENSE"
+      ],
+      "upstreamPaths": [
+        "skills/account-structure-review/LICENSE",
+        "skills/brand-dna/LICENSE",
+        "skills/competitor-ads-analyst/LICENSE",
+        "skills/cross-platform-audit/LICENSE",
+        "skills/facebook-ads/LICENSE",
+        "skills/icp-research/LICENSE",
+        "skills/market-research/LICENSE",
+        "skills/tiktok-ads/LICENSE",
+        "skills/wasted-spend-finder/LICENSE"
+      ],
+      "gitBlob": "1fc9a468f4f43229580333737373285a4c879962",
+      "sha256": "61271ce5f2e1c31e784c904fd56ace5cb0affe4c952d213205f27837e545500f"
+    },
+    {
+      "uploaded": "LICENSE (1).txt",
+      "action": "restore",
+      "destinations": [
+        ".agents/skills/account-structure-review/LICENSE",
+        ".agents/skills/brand-dna/LICENSE",
+        ".agents/skills/competitor-ads-analyst/LICENSE",
+        ".agents/skills/cross-platform-audit/LICENSE",
+        ".agents/skills/facebook-ads/LICENSE",
+        ".agents/skills/icp-research/LICENSE",
+        ".agents/skills/market-research/LICENSE",
+        ".agents/skills/tiktok-ads/LICENSE",
+        ".agents/skills/wasted-spend-finder/LICENSE"
+      ],
+      "upstreamPaths": [
+        "skills/account-structure-review/LICENSE",
+        "skills/brand-dna/LICENSE",
+        "skills/competitor-ads-analyst/LICENSE",
+        "skills/cross-platform-audit/LICENSE",
+        "skills/facebook-ads/LICENSE",
+        "skills/icp-research/LICENSE",
+        "skills/market-research/LICENSE",
+        "skills/tiktok-ads/LICENSE",
+        "skills/wasted-spend-finder/LICENSE"
+      ],
+      "gitBlob": "1fc9a468f4f43229580333737373285a4c879962",
+      "sha256": "61271ce5f2e1c31e784c904fd56ace5cb0affe4c952d213205f27837e545500f"
+    },
+    {
+      "uploaded": "LICENSE (2) copy.txt",
+      "action": "restore",
+      "destinations": [
+        ".agents/skills/account-structure-review/LICENSE",
+        ".agents/skills/brand-dna/LICENSE",
+        ".agents/skills/competitor-ads-analyst/LICENSE",
+        ".agents/skills/cross-platform-audit/LICENSE",
+        ".agents/skills/facebook-ads/LICENSE",
+        ".agents/skills/icp-research/LICENSE",
+        ".agents/skills/market-research/LICENSE",
+        ".agents/skills/tiktok-ads/LICENSE",
+        ".agents/skills/wasted-spend-finder/LICENSE"
+      ],
+      "upstreamPaths": [
+        "skills/account-structure-review/LICENSE",
+        "skills/brand-dna/LICENSE",
+        "skills/competitor-ads-analyst/LICENSE",
+        "skills/cross-platform-audit/LICENSE",
+        "skills/facebook-ads/LICENSE",
+        "skills/icp-research/LICENSE",
+        "skills/market-research/LICENSE",
+        "skills/tiktok-ads/LICENSE",
+        "skills/wasted-spend-finder/LICENSE"
+      ],
+      "gitBlob": "1fc9a468f4f43229580333737373285a4c879962",
+      "sha256": "61271ce5f2e1c31e784c904fd56ace5cb0affe4c952d213205f27837e545500f"
+    },
+    {
+      "uploaded": "LICENSE (2).txt",
+      "action": "restore",
+      "destinations": [
+        ".agents/skills/account-structure-review/LICENSE",
+        ".agents/skills/brand-dna/LICENSE",
+        ".agents/skills/competitor-ads-analyst/LICENSE",
+        ".agents/skills/cross-platform-audit/LICENSE",
+        ".agents/skills/facebook-ads/LICENSE",
+        ".agents/skills/icp-research/LICENSE",
+        ".agents/skills/market-research/LICENSE",
+        ".agents/skills/tiktok-ads/LICENSE",
+        ".agents/skills/wasted-spend-finder/LICENSE"
+      ],
+      "upstreamPaths": [
+        "skills/account-structure-review/LICENSE",
+        "skills/brand-dna/LICENSE",
+        "skills/competitor-ads-analyst/LICENSE",
+        "skills/cross-platform-audit/LICENSE",
+        "skills/facebook-ads/LICENSE",
+        "skills/icp-research/LICENSE",
+        "skills/market-research/LICENSE",
+        "skills/tiktok-ads/LICENSE",
+        "skills/wasted-spend-finder/LICENSE"
+      ],
+      "gitBlob": "1fc9a468f4f43229580333737373285a4c879962",
+      "sha256": "61271ce5f2e1c31e784c904fd56ace5cb0affe4c952d213205f27837e545500f"
+    },
+    {
+      "uploaded": "LICENSE (3).txt",
+      "action": "restore",
+      "destinations": [
+        ".agents/skills/account-structure-review/LICENSE",
+        ".agents/skills/brand-dna/LICENSE",
+        ".agents/skills/competitor-ads-analyst/LICENSE",
+        ".agents/skills/cross-platform-audit/LICENSE",
+        ".agents/skills/facebook-ads/LICENSE",
+        ".agents/skills/icp-research/LICENSE",
+        ".agents/skills/market-research/LICENSE",
+        ".agents/skills/tiktok-ads/LICENSE",
+        ".agents/skills/wasted-spend-finder/LICENSE"
+      ],
+      "upstreamPaths": [
+        "skills/account-structure-review/LICENSE",
+        "skills/brand-dna/LICENSE",
+        "skills/competitor-ads-analyst/LICENSE",
+        "skills/cross-platform-audit/LICENSE",
+        "skills/facebook-ads/LICENSE",
+        "skills/icp-research/LICENSE",
+        "skills/market-research/LICENSE",
+        "skills/tiktok-ads/LICENSE",
+        "skills/wasted-spend-finder/LICENSE"
+      ],
+      "gitBlob": "1fc9a468f4f43229580333737373285a4c879962",
+      "sha256": "61271ce5f2e1c31e784c904fd56ace5cb0affe4c952d213205f27837e545500f"
+    },
+    {
+      "uploaded": "LICENSE (4).txt",
+      "action": "restore",
+      "destinations": [
+        ".agents/skills/account-structure-review/LICENSE",
+        ".agents/skills/brand-dna/LICENSE",
+        ".agents/skills/competitor-ads-analyst/LICENSE",
+        ".agents/skills/cross-platform-audit/LICENSE",
+        ".agents/skills/facebook-ads/LICENSE",
+        ".agents/skills/icp-research/LICENSE",
+        ".agents/skills/market-research/LICENSE",
+        ".agents/skills/tiktok-ads/LICENSE",
+        ".agents/skills/wasted-spend-finder/LICENSE"
+      ],
+      "upstreamPaths": [
+        "skills/account-structure-review/LICENSE",
+        "skills/brand-dna/LICENSE",
+        "skills/competitor-ads-analyst/LICENSE",
+        "skills/cross-platform-audit/LICENSE",
+        "skills/facebook-ads/LICENSE",
+        "skills/icp-research/LICENSE",
+        "skills/market-research/LICENSE",
+        "skills/tiktok-ads/LICENSE",
+        "skills/wasted-spend-finder/LICENSE"
+      ],
+      "gitBlob": "1fc9a468f4f43229580333737373285a4c879962",
+      "sha256": "61271ce5f2e1c31e784c904fd56ace5cb0affe4c952d213205f27837e545500f"
+    },
+    {
+      "uploaded": "LICENSE (5).txt",
+      "action": "restore",
+      "destinations": [
+        ".agents/skills/account-structure-review/LICENSE",
+        ".agents/skills/brand-dna/LICENSE",
+        ".agents/skills/competitor-ads-analyst/LICENSE",
+        ".agents/skills/cross-platform-audit/LICENSE",
+        ".agents/skills/facebook-ads/LICENSE",
+        ".agents/skills/icp-research/LICENSE",
+        ".agents/skills/market-research/LICENSE",
+        ".agents/skills/tiktok-ads/LICENSE",
+        ".agents/skills/wasted-spend-finder/LICENSE"
+      ],
+      "upstreamPaths": [
+        "skills/account-structure-review/LICENSE",
+        "skills/brand-dna/LICENSE",
+        "skills/competitor-ads-analyst/LICENSE",
+        "skills/cross-platform-audit/LICENSE",
+        "skills/facebook-ads/LICENSE",
+        "skills/icp-research/LICENSE",
+        "skills/market-research/LICENSE",
+        "skills/tiktok-ads/LICENSE",
+        "skills/wasted-spend-finder/LICENSE"
+      ],
+      "gitBlob": "1fc9a468f4f43229580333737373285a4c879962",
+      "sha256": "61271ce5f2e1c31e784c904fd56ace5cb0affe4c952d213205f27837e545500f"
+    },
+    {
+      "uploaded": "LICENSE (6).txt",
+      "action": "restore",
+      "destinations": [
+        ".agents/skills/account-structure-review/LICENSE",
+        ".agents/skills/brand-dna/LICENSE",
+        ".agents/skills/competitor-ads-analyst/LICENSE",
+        ".agents/skills/cross-platform-audit/LICENSE",
+        ".agents/skills/facebook-ads/LICENSE",
+        ".agents/skills/icp-research/LICENSE",
+        ".agents/skills/market-research/LICENSE",
+        ".agents/skills/tiktok-ads/LICENSE",
+        ".agents/skills/wasted-spend-finder/LICENSE"
+      ],
+      "upstreamPaths": [
+        "skills/account-structure-review/LICENSE",
+        "skills/brand-dna/LICENSE",
+        "skills/competitor-ads-analyst/LICENSE",
+        "skills/cross-platform-audit/LICENSE",
+        "skills/facebook-ads/LICENSE",
+        "skills/icp-research/LICENSE",
+        "skills/market-research/LICENSE",
+        "skills/tiktok-ads/LICENSE",
+        "skills/wasted-spend-finder/LICENSE"
+      ],
+      "gitBlob": "1fc9a468f4f43229580333737373285a4c879962",
+      "sha256": "61271ce5f2e1c31e784c904fd56ace5cb0affe4c952d213205f27837e545500f"
+    },
+    {
+      "uploaded": "LICENSE (7).txt",
+      "action": "restore",
+      "destinations": [
+        ".agents/skills/account-structure-review/LICENSE",
+        ".agents/skills/brand-dna/LICENSE",
+        ".agents/skills/competitor-ads-analyst/LICENSE",
+        ".agents/skills/cross-platform-audit/LICENSE",
+        ".agents/skills/facebook-ads/LICENSE",
+        ".agents/skills/icp-research/LICENSE",
+        ".agents/skills/market-research/LICENSE",
+        ".agents/skills/tiktok-ads/LICENSE",
+        ".agents/skills/wasted-spend-finder/LICENSE"
+      ],
+      "upstreamPaths": [
+        "skills/account-structure-review/LICENSE",
+        "skills/brand-dna/LICENSE",
+        "skills/competitor-ads-analyst/LICENSE",
+        "skills/cross-platform-audit/LICENSE",
+        "skills/facebook-ads/LICENSE",
+        "skills/icp-research/LICENSE",
+        "skills/market-research/LICENSE",
+        "skills/tiktok-ads/LICENSE",
+        "skills/wasted-spend-finder/LICENSE"
+      ],
+      "gitBlob": "1fc9a468f4f43229580333737373285a4c879962",
+      "sha256": "61271ce5f2e1c31e784c904fd56ace5cb0affe4c952d213205f27837e545500f"
+    },
+    {
+      "uploaded": "LICENSE copy.txt",
+      "action": "restore",
+      "destinations": [
+        ".agents/skills/account-structure-review/LICENSE",
+        ".agents/skills/brand-dna/LICENSE",
+        ".agents/skills/competitor-ads-analyst/LICENSE",
+        ".agents/skills/cross-platform-audit/LICENSE",
+        ".agents/skills/facebook-ads/LICENSE",
+        ".agents/skills/icp-research/LICENSE",
+        ".agents/skills/market-research/LICENSE",
+        ".agents/skills/tiktok-ads/LICENSE",
+        ".agents/skills/wasted-spend-finder/LICENSE"
+      ],
+      "upstreamPaths": [
+        "skills/account-structure-review/LICENSE",
+        "skills/brand-dna/LICENSE",
+        "skills/competitor-ads-analyst/LICENSE",
+        "skills/cross-platform-audit/LICENSE",
+        "skills/facebook-ads/LICENSE",
+        "skills/icp-research/LICENSE",
+        "skills/market-research/LICENSE",
+        "skills/tiktok-ads/LICENSE",
+        "skills/wasted-spend-finder/LICENSE"
+      ],
+      "gitBlob": "1fc9a468f4f43229580333737373285a4c879962",
+      "sha256": "61271ce5f2e1c31e784c904fd56ace5cb0affe4c952d213205f27837e545500f"
+    },
+    {
+      "uploaded": "LICENSE.txt",
+      "action": "restore",
+      "destinations": [
+        ".agents/skills/account-structure-review/LICENSE",
+        ".agents/skills/brand-dna/LICENSE",
+        ".agents/skills/competitor-ads-analyst/LICENSE",
+        ".agents/skills/cross-platform-audit/LICENSE",
+        ".agents/skills/facebook-ads/LICENSE",
+        ".agents/skills/icp-research/LICENSE",
+        ".agents/skills/market-research/LICENSE",
+        ".agents/skills/tiktok-ads/LICENSE",
+        ".agents/skills/wasted-spend-finder/LICENSE"
+      ],
+      "upstreamPaths": [
+        "skills/account-structure-review/LICENSE",
+        "skills/brand-dna/LICENSE",
+        "skills/competitor-ads-analyst/LICENSE",
+        "skills/cross-platform-audit/LICENSE",
+        "skills/facebook-ads/LICENSE",
+        "skills/icp-research/LICENSE",
+        "skills/market-research/LICENSE",
+        "skills/tiktok-ads/LICENSE",
+        "skills/wasted-spend-finder/LICENSE"
+      ],
+      "gitBlob": "1fc9a468f4f43229580333737373285a4c879962",
+      "sha256": "61271ce5f2e1c31e784c904fd56ace5cb0affe4c952d213205f27837e545500f"
+    },
+    {
+      "uploaded": "REFERENCE (1) copy.md",
+      "action": "restore",
+      "destinations": [
+        ".agents/skills/brand-dna/REFERENCE.md"
+      ],
+      "upstreamPaths": [
+        "skills/brand-dna/REFERENCE.md"
+      ],
+      "gitBlob": "272bc180f38b45948a20903808dc61e61085593c",
+      "sha256": "952a156097e8d8e592a8d6fe7a3ea6c5d7d0011b3696e93a9e76ec507bebdb86"
+    },
+    {
+      "uploaded": "REFERENCE (1).md",
+      "action": "restore",
+      "destinations": [
+        ".agents/skills/wasted-spend-finder/REFERENCE.md"
+      ],
+      "upstreamPaths": [
+        "skills/wasted-spend-finder/REFERENCE.md"
+      ],
+      "gitBlob": "56c9f54130d72a43a51477fdfd656e94d6c73c40",
+      "sha256": "c6fde13acabc17be6e9624cd4d6ac76053946e839da5c927c9a69655f15f1517"
+    },
+    {
+      "uploaded": "REFERENCE (2) copy.md",
+      "action": "restore",
+      "destinations": [
+        ".agents/skills/icp-research/REFERENCE.md"
+      ],
+      "upstreamPaths": [
+        "skills/icp-research/REFERENCE.md"
+      ],
+      "gitBlob": "dd2c8b4e1865ca7fc3dea47b3fc3a36a43ed6a1c",
+      "sha256": "ecda448b72cc7992753d73fbaf8feb6adf64a0bd94c986a0db19385924a30d29"
+    },
+    {
+      "uploaded": "REFERENCE (2).md",
+      "action": "restore",
+      "destinations": [
+        ".agents/skills/tiktok-ads/REFERENCE.md"
+      ],
+      "upstreamPaths": [
+        "skills/tiktok-ads/REFERENCE.md"
+      ],
+      "gitBlob": "4d3362e197bdca0b343b321d4bbd6294b5f5f75c",
+      "sha256": "083332f3da9498e5ba8d9bb03095fac49418d8fbb3ea52902cecabd1a2e35ed0"
+    },
+    {
+      "uploaded": "REFERENCE (3).md",
+      "action": "restore",
+      "destinations": [
+        ".agents/skills/cross-platform-audit/REFERENCE.md"
+      ],
+      "upstreamPaths": [
+        "skills/cross-platform-audit/REFERENCE.md"
+      ],
+      "gitBlob": "de3c9caf9c87511cdc931e4cf015a6e71cb66b72",
+      "sha256": "75e5f7f4df4ab8479a916ca11e1ce91e786bbdecb3604085ad34bd38c2d71dc9"
+    },
+    {
+      "uploaded": "REFERENCE (4).md",
+      "action": "restore",
+      "destinations": [
+        ".agents/skills/account-structure-review/REFERENCE.md"
+      ],
+      "upstreamPaths": [
+        "skills/account-structure-review/REFERENCE.md"
+      ],
+      "gitBlob": "7ebe4d9fca67400c4c10b2f9bc51d1fc36b11a9f",
+      "sha256": "695f989d42c87503e1ba1031fce698efcdd07a9fe954f06afd05514e96f06ff3"
+    },
+    {
+      "uploaded": "REFERENCE (5).md",
+      "action": "restore",
+      "destinations": [
+        ".agents/skills/competitor-ads-analyst/REFERENCE.md"
+      ],
+      "upstreamPaths": [
+        "skills/competitor-ads-analyst/REFERENCE.md"
+      ],
+      "gitBlob": "a5529fe64517c4b64d8e8220268e44db494e9263",
+      "sha256": "50f869e26b2aaa6c33f9519b45272eac50414771be89a557ae42f8be127c14bc"
+    },
+    {
+      "uploaded": "REFERENCE (6).md",
+      "action": "restore",
+      "destinations": [
+        ".agents/skills/wasted-spend-finder/REFERENCE.md"
+      ],
+      "upstreamPaths": [
+        "skills/wasted-spend-finder/REFERENCE.md"
+      ],
+      "gitBlob": "56c9f54130d72a43a51477fdfd656e94d6c73c40",
+      "sha256": "c6fde13acabc17be6e9624cd4d6ac76053946e839da5c927c9a69655f15f1517"
+    },
+    {
+      "uploaded": "REFERENCE (7).md",
+      "action": "restore",
+      "destinations": [
+        ".agents/skills/competitor-ads-analyst/REFERENCE.md"
+      ],
+      "upstreamPaths": [
+        "skills/competitor-ads-analyst/REFERENCE.md"
+      ],
+      "gitBlob": "a5529fe64517c4b64d8e8220268e44db494e9263",
+      "sha256": "50f869e26b2aaa6c33f9519b45272eac50414771be89a557ae42f8be127c14bc"
+    },
+    {
+      "uploaded": "REFERENCE copy.md",
+      "action": "restore",
+      "destinations": [
+        ".agents/skills/market-research/REFERENCE.md"
+      ],
+      "upstreamPaths": [
+        "skills/market-research/REFERENCE.md"
+      ],
+      "gitBlob": "d1b32b0ae538cf84081e545194937ce77b894cb3",
+      "sha256": "0684f371c7c7603d6adbb50653e4af9ceb2cf8e54a14059e2ba60db47ca005d5"
+    },
+    {
+      "uploaded": "REFERENCE.md",
+      "action": "restore",
+      "destinations": [
+        ".agents/skills/facebook-ads/REFERENCE.md"
+      ],
+      "upstreamPaths": [
+        "skills/facebook-ads/REFERENCE.md"
+      ],
+      "gitBlob": "2f77cd8ecd5efcb9fdd9968392bb1bcf49556f10",
+      "sha256": "5198a223551a0dd88c17310db7138460c3a559457f46ddb5cc01a3c2b1d7b512"
+    },
+    {
+      "uploaded": "SKILL (1) copy 2.md",
+      "action": "remove",
+      "skill": "ads-creative",
+      "reason": "no matching licence/provenance for skill descriptor",
+      "sha256": "4cf88555061246505d007be0014f57a5c8df11593599f53aa3d908235c56bfd4"
+    },
+    {
+      "uploaded": "SKILL (1) copy.md",
+      "action": "restore",
+      "destinations": [
+        ".agents/skills/brand-dna/SKILL.md"
+      ],
+      "upstreamPaths": [
+        "skills/brand-dna/SKILL.md"
+      ],
+      "gitBlob": "f1daef99f82f6883d5d05f3a2e7f26212d6e7d85",
+      "sha256": "a273bfa6217b729d43cfe5353311a58928d4e41336671f03a6251d5c1a1a3723"
+    },
+    {
+      "uploaded": "SKILL (1).md",
+      "action": "restore",
+      "destinations": [
+        ".agents/skills/wasted-spend-finder/SKILL.md"
+      ],
+      "upstreamPaths": [
+        "skills/wasted-spend-finder/SKILL.md"
+      ],
+      "gitBlob": "9e8af0ec79ce9e3ae45858d6a388cfbbfc1be12d",
+      "sha256": "8e8248bd7bd695457c46b437df192891a5362947bd0de96ac72116783f1d88b1"
+    },
+    {
+      "uploaded": "SKILL (2) copy 2.md",
+      "action": "remove",
+      "skill": "ads-research",
+      "reason": "no matching licence/provenance for skill descriptor",
+      "sha256": "7be4b6009ff62a79a9a1dfa5885a24f75c850322643e80564ca2478810030883"
+    },
+    {
+      "uploaded": "SKILL (2) copy.md",
+      "action": "restore",
+      "destinations": [
+        ".agents/skills/icp-research/SKILL.md"
+      ],
+      "upstreamPaths": [
+        "skills/icp-research/SKILL.md"
+      ],
+      "gitBlob": "e1cb07209aef43162382fd9a21305afe0c6b0b46",
+      "sha256": "80175a7361d46ee8ac376686a865b5650cf953a85cfc45042f85d4a8d763cba5"
+    },
+    {
+      "uploaded": "SKILL (2).md",
+      "action": "restore",
+      "destinations": [
+        ".agents/skills/tiktok-ads/SKILL.md"
+      ],
+      "upstreamPaths": [
+        "skills/tiktok-ads/SKILL.md"
+      ],
+      "gitBlob": "a09684da51e1d197d8b1f50a36427857fc21ac1c",
+      "sha256": "3346258a16f2a781415ee511f8c554c92b43f662b8a9cb97d8a1208c03a0db7d"
+    },
+    {
+      "uploaded": "SKILL (3).md",
+      "action": "restore",
+      "destinations": [
+        ".agents/skills/cross-platform-audit/SKILL.md"
+      ],
+      "upstreamPaths": [
+        "skills/cross-platform-audit/SKILL.md"
+      ],
+      "gitBlob": "a41f6b95fd6a075c16df998f53588bee227dd2a6",
+      "sha256": "d8de92530075056f2824c64fe2e671356711b46e45c406b1d6411db3be598c02"
+    },
+    {
+      "uploaded": "SKILL (4).md",
+      "action": "restore",
+      "destinations": [
+        ".agents/skills/account-structure-review/SKILL.md"
+      ],
+      "upstreamPaths": [
+        "skills/account-structure-review/SKILL.md"
+      ],
+      "gitBlob": "c416c6afcedda8716807f4a24c97ceadbe756e5f",
+      "sha256": "da43e792e037cf502b1a0b4f37e4baf1cf953a3305db062b0b1a20ddfff00e68"
+    },
+    {
+      "uploaded": "SKILL (5).md",
+      "action": "restore",
+      "destinations": [
+        ".agents/skills/competitor-ads-analyst/SKILL.md"
+      ],
+      "upstreamPaths": [
+        "skills/competitor-ads-analyst/SKILL.md"
+      ],
+      "gitBlob": "1e46046df213020cbcd51b76f3e5090f35578a39",
+      "sha256": "173a6b4f78f9641cbf7020a47a3fa96124957123f4cf7648eb8697bb0413ae70"
+    },
+    {
+      "uploaded": "SKILL (6).md",
+      "action": "restore",
+      "destinations": [
+        ".agents/skills/wasted-spend-finder/SKILL.md"
+      ],
+      "upstreamPaths": [
+        "skills/wasted-spend-finder/SKILL.md"
+      ],
+      "gitBlob": "9e8af0ec79ce9e3ae45858d6a388cfbbfc1be12d",
+      "sha256": "8e8248bd7bd695457c46b437df192891a5362947bd0de96ac72116783f1d88b1"
+    },
+    {
+      "uploaded": "SKILL (7).md",
+      "action": "restore",
+      "destinations": [
+        ".agents/skills/competitor-ads-analyst/SKILL.md"
+      ],
+      "upstreamPaths": [
+        "skills/competitor-ads-analyst/SKILL.md"
+      ],
+      "gitBlob": "1e46046df213020cbcd51b76f3e5090f35578a39",
+      "sha256": "173a6b4f78f9641cbf7020a47a3fa96124957123f4cf7648eb8697bb0413ae70"
+    },
+    {
+      "uploaded": "SKILL copy 2.md",
+      "action": "remove",
+      "skill": "ads-audit",
+      "reason": "no matching licence/provenance for skill descriptor",
+      "sha256": "116af34f04c9f0ac92c09ecb9bcfad18ca68577e63a163d1ad833bfcae5401e6"
+    },
+    {
+      "uploaded": "SKILL copy.md",
+      "action": "restore",
+      "destinations": [
+        ".agents/skills/market-research/SKILL.md"
+      ],
+      "upstreamPaths": [
+        "skills/market-research/SKILL.md"
+      ],
+      "gitBlob": "e9f57d76ca37c042064f01795a8b12214a356814",
+      "sha256": "6c3ca6613cc1fb4c8cdd42653d3860e59a5f41d0fd3a271c99c3a968d98ef778"
+    },
+    {
+      "uploaded": "SKILL.md",
+      "action": "restore",
+      "destinations": [
+        ".agents/skills/facebook-ads/SKILL.md"
+      ],
+      "upstreamPaths": [
+        "skills/facebook-ads/SKILL.md"
+      ],
+      "gitBlob": "85a43016790484e7ca564659dbcafab5f80c272b",
+      "sha256": "d9200a776fd4be93ac60c03ec720d283aa64138a5b6f5de7ce65d009b76cb0c8"
+    },
+    {
+      "uploaded": "creative-pack.md",
+      "action": "remove",
+      "skill": "creative-pack",
+      "reason": "pack manifest without its listed skills",
+      "sha256": "3a1d613133b69b7f6316b1645924130b889fdab3867a7aff12f3192c51337890"
+    },
+    {
+      "uploaded": "dtc-pack.md",
+      "action": "remove",
+      "skill": "dtc-pack",
+      "reason": "pack manifest without its listed skills",
+      "sha256": "6dcbcdb0674df3af01dde40f1d1ad71734878fac14fb61df9bc518f824570e0a"
+    },
+    {
+      "uploaded": "env.example",
+      "action": "remove",
+      "skill": null,
+      "reason": "execution/configuration helper excluded from reference-only skills",
+      "sha256": "66f34fac3ec56e53d67dd258f44630941a80f1edad75b3edb8d327dae047154f"
+    },
+    {
+      "uploaded": "requirements.txt",
+      "action": "remove",
+      "skill": null,
+      "reason": "execution/configuration helper excluded from reference-only skills",
+      "sha256": "d3c87983d4b69545d29e2d49d11467d1f1ea544e438fe91ff97fb9effec5bd77"
+    }
+  ]
+}
