@@ -12,7 +12,7 @@ provider calls or deployment settings. Work from exter-test-drive and target it.
 - [x] 2026-11-09 UTC: Share bounded, short-lived reads across navigation; invalidate after changes.
 - [x] 2026-11-09 UTC: Remove unrelated loading waterfalls and full-document internal navigation.
 - [x] 2026-11-09 UTC: Verify with fictional fixtures, 90 desktop and two mobile browser cases, and all four checks (511 unit tests).
-- [ ] Document results, push and open a PR against exter-test-drive.
+- [x] 2026-11-09 UTC: Document results, push 39c4e08 and open PR #23 against exter-test-drive: https://github.com/beng174/Exter-AI/pull/23.
 
 ## Surprises and discoveries
 
@@ -20,8 +20,10 @@ provider calls or deployment settings. Work from exter-test-drive and target it.
 window, then reads the same library again for owned metrics. The server default
 is thirty days. The 7,800-ad fixture responses are 10 to 11 MB. Five
 ancillary requests start only afterwards; action screens then wait for four more.
-Cleanup ignores results but does not cancel abandoned requests. Shared DataTable also renders all 7,800 rows and re-infers alignment with a full scan for every cell; the parent Winners transition takes 24.6 seconds in the final fixture run. Several internal
-links reload the document. PR #22 correctly serialises heavy reads to protect the
+Cleanup ignores results but does not cancel abandoned requests. Shared DataTable
+also renders all 7,800 rows and re-infers alignment with a full scan for every
+cell; the parent Winners transition takes 24.6 seconds in the final fixture run.
+Several internal links reload the document. PR #22 correctly serialises heavy reads to protect the
 web heap, making duplicate and abandoned reads especially costly.
 
 ## Decision log
@@ -30,7 +32,10 @@ web heap, making duplicate and abandoned reads especially costly.
 using the existing shared date calculation before owned metrics are read. Keep
 default API behaviour. Reuse client reads with short freshness, bounded capacity,
 request sharing and cancellation. Preserve server memory protection; do not add
-a large server cache or increase heap, cost caps or plans. Also stream negotiated gzip with Node zlib, keeping the memory gate and backpressure. Compute alignment once per column and paginate large tables at 50 rows; sort and count the complete set.
+a large server cache or increase heap, cost caps or plans. Also stream negotiated
+gzip with Node zlib, keeping the memory gate and backpressure. Compute alignment
+once per column and paginate large tables at 50 rows; sort and count the complete
+set.
 
 ## Outcomes and retrospective
 
@@ -73,7 +78,8 @@ direct creative links and all main views. Final commands passed: `npm run check`
 overlapping 7,800-ad responses with matching hashes. The browser script checks
 90 desktop cases and two mobile cases, external/write blocking, global sort and
 pagination, mode/date boundaries and history. Artifacts and raw timings are in
-`output/playwright/workspace-loading/`. A final staged secret scan precedes push.
+`output/playwright/workspace-loading/`. The final staged secret scan also passed
+before push. PR #23 is open; live deployment and timing verification remain pending.
 
 ## Idempotence and recovery
 

@@ -838,7 +838,7 @@ and blockers below remain unchanged.
   not live Render timings. All 15 screens passed in both workspace modes at
   1280, 1440 and 1920px, plus mobile source/table checks. No external calls.
 - Final validation: check, 511 unit tests, build and secrets scan pass.
-  Publication is recorded in the execution plan. Fixtures
+  PR #23 targets exter-test-drive; deployment is pending. Fixtures
   cover date/cohort parity, cache isolation, expiry, mutation invalidation,
   cancellation, pagination, compression and the existing 192 MiB memory guard.
 - No database/collection, schedule, provider, budget, dependency or Render
