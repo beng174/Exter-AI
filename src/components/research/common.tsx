@@ -21,7 +21,7 @@ export function Measure({metric,data,suffix=""}:{metric:EvidenceMeasure;data:Res
   return <span title={`${metric.known} eligible records; ${metric.excluded} excluded because the required source fields are missing.`}><EvidenceNumber value={metric.value} data={data} selection={metric.selection} suffix={suffix}/></span>;
 }
 export function CreativeTile({row,workspaceId}:{row:BrowserCreative;workspaceId:string}) {
-  return <CreativeCard title={creativeTitle(row)} secondary={creativeSecondary(row)} thumbnail={row.thumbnailUrl} duration={row.durationSeconds} source={row.workspaceBrand?`You · ${row.brandName}`:row.brandName} format={row.creativeFormat?plainEnum(row.creativeFormat):null} tags={creativeTags([row.hookType,row.angle,row.offerType])} metrics={cardMetrics(row)} onOpen={()=>openCreativeRoute(row.adId,workspaceId)}/>;
+  return <CreativeCard creative={row} title={creativeTitle(row)} secondary={creativeSecondary(row)} thumbnail={row.thumbnailUrl} duration={row.durationSeconds} source={row.workspaceBrand?`You · ${row.brandName}`:row.brandName} format={row.creativeFormat?plainEnum(row.creativeFormat):null} tags={creativeTags([row.hookType,row.angle,row.offerType])} metrics={cardMetrics(row)} onOpen={()=>openCreativeRoute(row.adId,workspaceId)}/>;
 }
 export function SafeLink({href,children}:{href:string|null|undefined;children:ReactNode}) {
   let safe:string|null=null;try{const url=new URL(href||"");if(url.protocol==="https:"&&!url.username&&!url.password)safe=url.href;}catch{}

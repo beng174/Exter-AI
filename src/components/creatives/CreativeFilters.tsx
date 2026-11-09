@@ -1,3 +1,4 @@
+import {AD_FORMATS,PRODUCT_CATEGORIES,formatName} from "../../../shared/public-comparisons";
 import { CalendarDays, ChevronDown, Plus, RotateCcw, Search } from "lucide-react";
 import { plainEnum, ukDate } from "../../../shared/creative-presentation";
 import type { BrowserCreative, BrowserFilters } from "../../../shared/creative-browser";
@@ -33,7 +34,9 @@ export function CreativeFilters({ creatives, filters, onChange, datesOpen, onDat
                 <div className="creative-filter-panel"><label>Observed from<input type="date" value={filters.from || ""} max={filters.to} onChange={event => onChange({ from: event.target.value })}/></label><label>Observed to<input type="date" value={filters.to || ""} min={filters.from} onChange={event => onChange({ to: event.target.value })}/></label><button onClick={() => { onChange({ from: "", to: "" }); onDatesOpen(false); }}>All dates</button><button onClick={() => onDatesOpen(false)}>Done</button></div>
             </details>
             {select("brand", "Brand", [...new Map(creatives.map(row => [row.brandId, { value: row.brandId, label: row.brandName }])).values()])}
-            {select("format", "Format", [...new Set([...values("creativeFormat"), ...values("mediaKind")])])}
+            {select("adFormat", "Format", AD_FORMATS.map(value=>({value,label:formatName(value)})))}
+            {select("category","Category",[{value:"mine",label:"My categories"},...PRODUCT_CATEGORIES.map(value=>({value,label:value}))])}
+            {filters.format&&select("format","Creative style",values("creativeFormat"))}
             {select("hook", "Hook", values("hookType"))}
             {select("angle", "Angle", values("angle"))}
             {select("offer", "Offer", values("offerType"))}

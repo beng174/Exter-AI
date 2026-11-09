@@ -71,7 +71,7 @@ test("raster host, redirects, MIME, size and expiring-link failures preserve ear
 test("eligible videos are locally re-encoded to bounded 720p H.264, deduplicated and survive a store restart",async()=>{
   const root=await mkdtemp(join(tmpdir(),"exter-ad-media-video-"));
   try{const original=join(root,"fixture.mp4");assert.equal(spawnSync("ffmpeg",["-v","error","-f","lavfi","-i","color=c=blue:s=1920x1080:r=1","-t","1","-c:v","libx264","-threads","1","-pix_fmt","yuv420p","-y",original]).status,0);const bytes=await readFile(original),store=new AdMediaStorage({root,disk,videos:{resolve:imageOptions.resolve,fetch:async()=>new Response(bytes,{headers:{"content-type":"video/mp4"}})}});const media={adId:"9001",pageId:"12001",format:"video" as const,images:[],posters:[],videos:["https://video.fixture.fbcdn.net/file.mp4?temporary=private"]};
-    const result=await store.retain("workspace-one",media,true);assert.equal(result.error,null);assert.equal(result.assets.length,2);assert(result.assets.some(a=>a.role==="poster"));const file=await new AdMediaStorage({root}).store.load(result.assets[0].ref);assert(file);const probe=spawnSync("ffprobe",["-v","error","-show_streams","-of","json",file.absolutePath],{encoding:"utf8"});const info=JSON.parse(probe.stdout).streams[0];assert.equal(info.codec_name,"h264");assert.equal(info.width,1280);assert.equal(info.height,720);
+    const result=await store.retain("workspace-one",media,true);assert.equal(result.error,null);assert.equal(result.assets.length,2);assert(result.assets.some(a=>a.role==="poster"));const file=await new AdMediaStorage({root}).store.load(result.assets.find(a=>a.role==="video")!.ref);assert(file);const probe=spawnSync("ffprobe",["-v","error","-show_streams","-of","json",file.absolutePath],{encoding:"utf8"});const info=JSON.parse(probe.stdout).streams[0];assert.equal(info.codec_name,"h264");assert.equal(info.width,1280);assert.equal(info.height,720);
     const again=await store.retain("workspace-one",{...media,adId:"9002"},true);assert.equal(again.assets[0].ref.artifactId,result.assets[0].ref.artifactId);
   }finally{await rm(root,{recursive:true,force:true});}
 });
@@ -92,4 +92,18 @@ test("the diskless worker uses only the authenticated fixed-origin step and boun
  const env={EXTER_AD_MEDIA_ENABLED:"true",EXTER_AD_MEDIA_BROKER_TOKEN:"fixture-only-service-".repeat(3),EXTER_AD_MEDIA_BROKER_ORIGIN:"https://exter-fixture.example"};let queries=0,calls=0;
  const pool:any={query:async(sql:string)=>{queries++;return sql.includes("RETURNING *")?{rows:[{id:"00000000-0000-4000-8000-000000000001",watchlist_id:"fixture-watch"}]}:sql.startsWith("SELECT status")?{rows:[{status:"running"}]}:{rows:[]};}};
  assert.equal(await workAdMediaOnce(pool,{env,fetch:async(url,init)=>{calls++;assert(String(url).startsWith(env.EXTER_AD_MEDIA_BROKER_ORIGIN+"/api/ad-media/step/"));assert(!String(url).includes(env.EXTER_AD_MEDIA_BROKER_TOKEN));assert.equal(init?.method,"POST");assert.equal(init?.redirect,"error");assert.equal(new Headers(init?.headers).get("X-Exter-Ad-Media-Token"),env.EXTER_AD_MEDIA_BROKER_TOKEN);assert(!new Headers(init?.headers).has("Authorization"));return Response.json({worked:true});}}),true);assert.equal(calls,1);assert.equal(queries,3);
+});
+
+test('video-only results keep a JPEG poster for non-priority ads without retaining a full video at the disk limit',async()=>{
+ const root=await mkdtemp(join(tmpdir(),'exter-poster-only-'));
+ try{
+  const original=join(root,'fixture.mp4');assert.equal(spawnSync('ffmpeg',['-v','error','-f','lavfi','-i','color=c=blue:s=320x240:r=1','-t','1','-c:v','libx264','-threads','1','-pix_fmt','yuv420p','-y',original]).status,0);const bytes=await readFile(original);let calls=0;
+  const store=new AdMediaStorage({root,disk:async()=>mediaDiskMeasurement(10*1024**3,2*1024**3),videos:{resolve:imageOptions.resolve,fetch:async()=>{calls++;return new Response(bytes,{headers:{'content-type':'video/mp4'}});}}});
+  const result=await store.retain('workspace',{adId:'9001',pageId:'12001',format:'video',images:[],posters:[],videos:['https://video.fixture.fbcdn.net/temporary.mp4']},false);
+  assert.equal(calls,1);assert.equal(result.error,null);assert.deepEqual(result.assets.map(a=>[a.role,a.ref.mimeType]),[['poster','image/jpeg']]);assert(await store.store.load(result.assets[0].ref));
+ }finally{await rm(root,{recursive:true,force:true});}
+});
+test('nested catalogue snapshot media supplies product images and keeps its observed format',()=>{
+ const row=actorMedia({adArchiveId:'9001',pageId:'12001',snapshot:{display_format:'DPA',cards:[{original_image_url:url}],videos:[],images:[]}});
+ assert.equal(row?.format,'catalogue');assert.deepEqual(row?.images,[url]);
 });

@@ -1,0 +1,313 @@
+[
+  {
+    "screen": "Main",
+    "sections": [
+      "What to work on",
+      "You against the market",
+      "Your account",
+      "Top working ads",
+      "What changed",
+      "Needs attention"
+    ],
+    "populated": true,
+    "width": 1440
+  },
+  {
+    "screen": "Brands",
+    "sections": [
+      "Northwick Candle Co.",
+      "What the public sources say",
+      "Positioning signals",
+      "Competitor set",
+      "Profiles, creators and limits"
+    ],
+    "populated": true,
+    "width": 1440
+  },
+  {
+    "screen": "Competitors",
+    "sections": [
+      "Scorecard",
+      "Creative mix by brand",
+      "What each competitor leans on"
+    ],
+    "populated": true,
+    "width": 1440
+  },
+  {
+    "screen": "Creatives",
+    "sections": [],
+    "populated": true,
+    "width": 1440
+  },
+  {
+    "screen": "CreativeDetail",
+    "sections": [
+      "Scenes \u00b7 jump to a moment",
+      "Source and running history",
+      "Performance",
+      "Creative score",
+      "Viewer retention",
+      "What is said and shown",
+      "How Exter reads it",
+      "In the market"
+    ],
+    "populated": true,
+    "width": 1440
+  },
+  {
+    "screen": "Formats",
+    "sections": [
+      "Format league table",
+      "How winning ads are built"
+    ],
+    "populated": true,
+    "width": 1440
+  },
+  {
+    "screen": "Patterns",
+    "sections": [
+      "You against the category",
+      "What each action means"
+    ],
+    "populated": true,
+    "width": 1440
+  },
+  {
+    "screen": "Audience",
+    "sections": [
+      "Customer voice",
+      "Words customers use",
+      "Who the ads reach",
+      "How each brand talks"
+    ],
+    "populated": true,
+    "width": 1440
+  },
+  {
+    "screen": "Winners",
+    "sections": [
+      "Working Score",
+      "Your account winners"
+    ],
+    "populated": true,
+    "width": 1440
+  },
+  {
+    "screen": "Briefs",
+    "sections": [
+      "7 opportunities this week",
+      "Gift-ready unboxing",
+      "The brief"
+    ],
+    "populated": true,
+    "width": 1440
+  },
+  {
+    "screen": "Creators",
+    "sections": [
+      "Ama",
+      "Hana",
+      "Cleo",
+      "Priya",
+      "Megan",
+      "Sofia"
+    ],
+    "populated": true,
+    "width": 1440
+  },
+  {
+    "screen": "Scores",
+    "sections": [
+      "Score a draft",
+      "Gift box, version 2",
+      "Recent scores",
+      "Predictive score"
+    ],
+    "populated": true,
+    "width": 1440
+  },
+  {
+    "screen": "Ask",
+    "sections": [
+      "Answer",
+      "Sources for this answer",
+      "Earlier questions"
+    ],
+    "populated": true,
+    "width": 1440
+  },
+  {
+    "screen": "Reports",
+    "sections": [
+      "Weekly packs",
+      "Client link",
+      "Northwick Candle Co. \u00b7 27 Oct to 2 Nov"
+    ],
+    "populated": true,
+    "width": 1440
+  },
+  {
+    "screen": "DataSources",
+    "sections": [
+      "Source health",
+      "Your ad accounts",
+      "Ad naming convention",
+      "Budgets and schedule",
+      "Users and client access",
+      "Category tagging"
+    ],
+    "populated": true,
+    "width": 1440
+  },
+  {
+    "screen": "Main",
+    "width": 1280,
+    "sample": true
+  },
+  {
+    "screen": "Brands",
+    "width": 1280,
+    "sample": true
+  },
+  {
+    "screen": "Competitors",
+    "width": 1280,
+    "sample": true
+  },
+  {
+    "screen": "Creatives",
+    "width": 1280,
+    "sample": true
+  },
+  {
+    "screen": "CreativeDetail",
+    "width": 1280,
+    "sample": true
+  },
+  {
+    "screen": "Formats",
+    "width": 1280,
+    "sample": true
+  },
+  {
+    "screen": "Patterns",
+    "width": 1280,
+    "sample": true
+  },
+  {
+    "screen": "Audience",
+    "width": 1280,
+    "sample": true
+  },
+  {
+    "screen": "Winners",
+    "width": 1280,
+    "sample": true
+  },
+  {
+    "screen": "Briefs",
+    "width": 1280,
+    "sample": true
+  },
+  {
+    "screen": "Creators",
+    "width": 1280,
+    "sample": true
+  },
+  {
+    "screen": "Scores",
+    "width": 1280,
+    "sample": true
+  },
+  {
+    "screen": "Ask",
+    "width": 1280,
+    "sample": true
+  },
+  {
+    "screen": "Reports",
+    "width": 1280,
+    "sample": true
+  },
+  {
+    "screen": "DataSources",
+    "width": 1280,
+    "sample": true
+  },
+  {
+    "screen": "Main",
+    "width": 1920,
+    "sample": true
+  },
+  {
+    "screen": "Brands",
+    "width": 1920,
+    "sample": true
+  },
+  {
+    "screen": "Competitors",
+    "width": 1920,
+    "sample": true
+  },
+  {
+    "screen": "Creatives",
+    "width": 1920,
+    "sample": true
+  },
+  {
+    "screen": "CreativeDetail",
+    "width": 1920,
+    "sample": true
+  },
+  {
+    "screen": "Formats",
+    "width": 1920,
+    "sample": true
+  },
+  {
+    "screen": "Patterns",
+    "width": 1920,
+    "sample": true
+  },
+  {
+    "screen": "Audience",
+    "width": 1920,
+    "sample": true
+  },
+  {
+    "screen": "Winners",
+    "width": 1920,
+    "sample": true
+  },
+  {
+    "screen": "Briefs",
+    "width": 1920,
+    "sample": true
+  },
+  {
+    "screen": "Creators",
+    "width": 1920,
+    "sample": true
+  },
+  {
+    "screen": "Scores",
+    "width": 1920,
+    "sample": true
+  },
+  {
+    "screen": "Ask",
+    "width": 1920,
+    "sample": true
+  },
+  {
+    "screen": "Reports",
+    "width": 1920,
+    "sample": true
+  },
+  {
+    "screen": "DataSources",
+    "width": 1920,
+    "sample": true
+  }
+]

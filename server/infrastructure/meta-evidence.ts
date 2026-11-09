@@ -1,4 +1,6 @@
 import {visitDatabaseRows} from "./read-rows.js";
+import {categoryText} from "../../shared/public-category-input.js";
+import {categoryHash} from "../public-categories/provider.js";
 import type pg from "pg";
 import type {BrowserCreative,CreativeBrowserResponse} from "../../shared/creative-browser.js";
 import type {MetaSourceHealth} from "../../shared/meta-public.js";
@@ -34,6 +36,7 @@ function publicEvidenceMerger(creatives:BrowserCreative[],brand:CreativeBrowserR
       result.push(row);index.set(key(target.id,item.native_id),row);
     }
     row.publicEvidence=true;row.publicReach=publishedReach(item.raw_payload);row.publicDetails=publishedAdDetails(item.raw_payload);row.reachObservedAt=observed;
+    const categoryInput=categoryText(item.raw_payload);row.headlines=categoryInput.headlines;row.landingPaths=categoryInput.landingPaths;row.categorySourceHash=categoryHash(categoryInput);
     const bodies=item.raw_payload.ad_creative_bodies;
     if(!row.copy&&Array.isArray(bodies))row.copy=bodies.filter((v):v is string=>typeof v==="string").join("\n\n");
     row.searchText=[row.searchText,row.copy].join(" ");
@@ -53,6 +56,11 @@ const PUBLIC_OBSERVATIONS_SQL=`SELECT DISTINCT ON(o.platform,o.native_id) o.nati
     LEFT JOIN ad_observations p ON p.platform=o.platform AND p.native_id=o.native_id AND p.run_id=o.raw_payload_run_id AND p.workspace_id=o.workspace_id
     WHERE o.workspace_id=$1 AND w.workspace_id=$1 AND w.purpose='brand' AND w.brand_key IS NOT NULL AND r.config->>'revision'=w.revision::text
     ORDER BY o.platform,o.native_id,o.observed_at DESC,o.run_id DESC LIMIT 100001`;
+export async function visitPublicCategoryInputs(pool:pg.Pool,workspace:string,visit:(row:PublicObservation)=>void){
+ const payload="COALESCE(o.raw_payload,p.raw_payload)",fields=["ad_creative_bodies","ad_creative_link_titles","ad_creative_link_captions","ad_creative_link_urls"];
+ const projection=`jsonb_build_object(${fields.map(field=>`'${field}',${payload}->'${field}'`).join(",")}) AS raw_payload`;
+ await visitDatabaseRows<PublicObservation>(pool,PUBLIC_OBSERVATIONS_SQL.replace(`${payload} AS raw_payload`,projection).replace("WHERE o.workspace_id=$1","WHERE w.enabled AND o.workspace_id=$1"),[workspace],visit);
+}
 export async function readPublicCreatives(pool:pg.Pool,workspaceId:string,creatives:BrowserCreative[],brand:CreativeBrowserResponse["brand"],competitors:CreativeBrowserResponse["competitors"]):Promise<BrowserCreative[]>{
   const merge=publicEvidenceMerger(creatives,brand,competitors);
   await visitDatabaseRows<PublicObservation>(pool,PUBLIC_OBSERVATIONS_SQL,[workspaceId],merge.add);

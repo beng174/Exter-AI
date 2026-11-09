@@ -1,10 +1,12 @@
+import {mediaFormat} from "./public-comparisons.js";
 import type { BrowserCreative, CreativeBrowserResponse } from "./creative-browser.js";
 import {countryReach} from "./meta-public.js";
 import { ANGLE_VALUES, CLAIM_TYPE_VALUES, FORMAT_VALUES, HOOK_TYPE_VALUES, OFFER_TYPE_VALUES } from "./creative-taxonomy.js";
 
 export type ResearchDimension="format"|"hook"|"angle"|"offer"|"claim";
 export type EvidenceKind="all"|"active"|"launches"|"stopped"|"running"|"analysed"|"unanalysed"|"talking";
-export interface EvidenceSelection {reachCountry?:string;demographicCountry?:string;reachAge?:string;reachGender?:string;show?:string;brand?:string;platform?:string;dimension?:ResearchDimension;value?:string;kind?:EvidenceKind;activityFrom?:string;activityTo?:string;asOf?:string;ad?:string;take?:string;measure?:"duration"|"talkingKnown"}
+export interface EvidenceSelection {
+ category?:string;adFormat?:string;reachCountry?:string;demographicCountry?:string;reachAge?:string;reachGender?:string;show?:string;brand?:string;platform?:string;dimension?:ResearchDimension;value?:string;kind?:EvidenceKind;activityFrom?:string;activityTo?:string;asOf?:string;ad?:string;take?:string;measure?:"duration"|"talkingKnown"}
 export interface ResearchWindow {from:string|null;to:string|null;previousFrom:string|null;previousTo:string|null;asOf:string|null}
 export interface EvidenceMeasure {value:number|null;selection:EvidenceSelection;known:number;excluded:number}
 export interface BrandSnapshot {id:string;name:string;workspaceBrand:boolean;available:boolean;status:string;sample:number;lastChecked:string|null;active:EvidenceMeasure;launched:EvidenceMeasure;stopped:EvidenceMeasure;medianDays:EvidenceMeasure;shareActive:EvidenceMeasure;previousLaunches:EvidenceMeasure}
@@ -29,6 +31,8 @@ export function dimensionValues(row:BrowserCreative,dimension:ResearchDimension)
 }
 export function selectResearchAds(rows:BrowserCreative[],selection:EvidenceSelection={}):BrowserCreative[] {
   const filtered=rows.filter(row=>{
+    if(selection.category&&!["all","mine"].includes(selection.category)&&!row.productCategories?.some(c=>selection.category!.split(",").includes(c)))return false;
+    if(selection.adFormat&&selection.adFormat!=="same"&&mediaFormat(row)!==selection.adFormat)return false;
     if(selection.demographicCountry&&!row.publicReach?.demographics?.value?.some(cell=>cell.country===selection.demographicCountry&&(!selection.reachAge||cell.age===selection.reachAge)&&(!selection.reachGender||cell.gender===selection.reachGender)))return false;
     if(selection.reachCountry&&countryReach(row.publicReach,selection.reachCountry)===null)return false;
     if(!publicCreative(row)||!row.workspaceBrand&&row.owned)return false;
@@ -60,7 +64,7 @@ export function evidenceUrl(workspaceId:string,selection:EvidenceSelection={},ex
 }
 export function selectionFromParams(params:URLSearchParams):EvidenceSelection {
   const result:EvidenceSelection={};
-  for(const key of ["demographicCountry","reachAge","reachGender","reachCountry","show","brand","platform","dimension","value","kind","activityFrom","activityTo","asOf","ad","take","measure"] as const){const value=params.get(key);if(value)(result as Record<string,string>)[key]=value;}
+  for(const key of ["category","adFormat","demographicCountry","reachAge","reachGender","reachCountry","show","brand","platform","dimension","value","kind","activityFrom","activityTo","asOf","ad","take","measure"] as const){const value=params.get(key);if(value)(result as Record<string,string>)[key]=value;}
   return result;
 }
 export function median(values:(number|null|undefined)[]):number|null {

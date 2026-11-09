@@ -7,7 +7,7 @@ import json,re,shutil
 from PIL import Image,ImageDraw
 from playwright.sync_api import sync_playwright,expect
 BASE='http://127.0.0.1:3118'
-OUT=Path('output/playwright');OUT.mkdir(parents=True,exist_ok=True)
+OUT=Path('output/playwright/public-media-sample');OUT.mkdir(parents=True,exist_ok=True)
 SCREENS={
  'Main':('overview',['What to work on','You against the market','Your account','Top working ads','What changed','Needs attention']),
  'Brands':('brands',['Northwick Candle Co.','What the public sources say','Positioning signals','Competitor set','Profiles, creators and limits']),
@@ -23,7 +23,7 @@ SCREENS={
  'Scores':('scores',['Score a draft','Gift box, version 2','Recent scores','Predictive score']),
  'Ask':('ask',['Answer','Sources for this answer','Earlier questions']),
  'Reports':('reports',['Weekly packs','Client link','Northwick Candle Co. · 27 Oct to 2 Nov']),
- 'DataSources':('data',['Source health','Your ad accounts','Ad naming convention','Budgets and schedule','Users and client access'])
+ 'DataSources':('data',['Source health','Your ad accounts','Ad naming convention','Budgets and schedule','Users and client access','Category tagging'])
 }
 checks=[]
 with sync_playwright() as pw:
@@ -99,6 +99,14 @@ with sync_playwright() as pw:
  expect(page.get_by_role('button',name='Create workspace',exact=True)).to_be_disabled()
  page.keyboard.press('Escape')
  assert page.evaluate('localStorage.getItem("exter-brand")')==real_preference
+ # Grouped comparison tables and shared controls must fit every desktop width.
+ for width in (1280,1920):
+  page.set_viewport_size({'width':width,'height':1100})
+  for name,(view,_) in SCREENS.items():
+   page.goto(BASE+'/?demo=1&brandId=sample-northwick&view='+view,wait_until='networkidle')
+   expect(page.locator('main h1')).to_have_count(1)
+   assert page.evaluate('document.documentElement.scrollWidth<=innerWidth'),(name,width)
+   checks.append({'screen':name,'width':width,'sample':True})
  # Legacy operator links remain labelled and cannot escape the read-only sample.
  for view in ('demo','settings','labelling'):
   page.goto(BASE+'/?demo=1&brandId=sample-northwick&view='+view,wait_until='networkidle')
@@ -126,5 +134,5 @@ for name in [*SCREENS,'Sidebar']:
  canvas=Image.new('RGB',(app.width+ref.width,max(app.height,ref.height)+36),'#e5e7eb');draw=ImageDraw.Draw(canvas)
  draw.text((16,10),'APP: explicit fictional sample workspace',fill='#1f2937');draw.text((app.width+16,10),'APPROVED REFERENCE: fictional sample values',fill='#1f2937')
  canvas.paste(app,(0,36));canvas.paste(ref,(app.width,36));canvas.save(OUT/f'sample-{name}-comparison.png',optimize=True)
-Path('work/sample-acceptance.json').write_text(json.dumps(checks,indent=2))
+(OUT/'audit.json').write_text(json.dumps(checks,indent=2))
 print('PASS all 15 sample screens and sidebar: populated reference section order, Sample labels, isolated brand selection and API data, read-only actions, canned Ask with sources, creative history/scenes, no competitor private outcomes, link/new-tab flag preservation, mobile overflow and 16 app/reference pairs. No external requests. Fixtures are not live verification.')

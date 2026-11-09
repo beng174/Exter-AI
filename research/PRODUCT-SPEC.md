@@ -84,6 +84,45 @@ Search works by keyword (up to 50 characters) with filters for publish date (fro
 - Show the last successful check and the sample size next to every number.
 - A failed source shows as failed with its reason, never as an empty result.
 
+## Public previews and like-for-like comparisons (9 Nov 2026)
+
+Owner-authorised extension to public collection; official reach and dates do not change.
+Target an image, video poster or catalogue product image for every collected ad.
+Hand new ads to the existing media queue after each successful collection. Retry
+missing previews daily, with controlled reasons. Show “No preview from Meta” only
+after seven distinct failed UK days with a recorded reason. Budget/configuration
+pauses do not count as failed media days. Show public image/video coverage on Creatives.
+
+Retain full 720p H.264 videos for priority ads first (30+ days, brand top 20 by
+published reach, or launched in the last seven days). With headroom below the
+existing 80% disk limit, extend full videos to other known video ads, newest first.
+Missing previews take precedence over optional video upgrades. Keep existing actor
+result limits, price ceiling, budget guards, files and history.
+
+Keep two separate fields: **media format** is Observed from media (video, static
+image, carousel, catalogue); **creative style** remains the existing Modelled
+UGC/creator-led/studio classification. **Product categories** are Modelled from
+copy, headline and landing-page path using low-cost asynchronous Flash-Lite batches.
+Store classification provenance separately; never replace official fields.
+Unknown classifications are excluded from comparisons rather than guessed.
+
+Each workspace has editable primary categories in Brand research. The owner's
+home-fragrance workspace defaults to home fragrance and candles. Public comparisons
+on Home, Competitors, Winners, Formats, Patterns, Creative detail and Briefs default
+to **My categories** and **Same format**. Explicit category/format controls and
+source-linked sample sizes describe the selected group. This does not filter or
+combine private account performance, currencies or reporting scopes.
+
+- Overview tables use format row groups inside one table, ordered by the brand's
+  ad count, largest first. Show “Video · you 46 ads · competitors 312”.
+- Hide a format group only when both sides have fewer than 10 ads; mention the
+  hidden formats once. This visibility rule does not change metric formulas.
+- Charts use a format switch, defaulting to the brand's largest visible format.
+- Detail comparisons always use the selected ad's own format and a shared product
+  category. Rank similar competitor ads by matching angle, then matching offer.
+- Brief comparisons require all cited ads to belong to one eligible format group.
+- Samples remain fictional, read-only and isolated behind `?demo=1`.
+
 ## Getting access: Meta and TikTok
 
 Meta is waiting on Meta; TikTok needs one application, which TikTok says it answers within 2 working days. Exter collects nothing new from either until access is live.

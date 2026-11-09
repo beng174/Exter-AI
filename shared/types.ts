@@ -34,6 +34,7 @@ export type Page =
   | "scores"
   | "ask";
 export interface Brand {
+  primaryCategories?:string[];
   id: string;
   metaPageId?: string;
   name: string;

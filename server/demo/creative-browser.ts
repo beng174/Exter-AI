@@ -1,6 +1,8 @@
 import {writeJsonRows} from "../infrastructure/json-rows.js";
 import {LibraryReadGate} from "../infrastructure/library-read-gate.js";
-import {readRetainedMedia,mergeRetainedMedia} from "../ad-media/read.js";
+import {readRetainedMedia,mergeRetainedMedia,mergePreviewState} from "../ad-media/read.js";
+import {mergeProductCategories} from "../public-categories/jobs.js";
+import {primaryCategories} from "../../shared/public-comparisons.js";
 import type { Express } from "express";
 import type { DatabaseSync } from "node:sqlite";
 import type pg from "pg";
@@ -79,6 +81,7 @@ export function attachCreativeBrowser(app: Express, db: DatabaseSync, options: B
                     sources.push({ brandId: id, name: competitors.find(item => item.brandId === id)?.name || "Configured brand", status: "error", message: "Stored creative data could not be read. Earlier records are preserved." });
                 }
             }
+            let mediaReadStatus:CreativeBrowserResponse["mediaReadStatus"]="not_configured",categoryReadStatus:CreativeBrowserResponse["categoryReadStatus"]="not_configured";
             let metaSource:MetaSourceHealth={status:metaLibraryEnabled()?"unavailable":"off",enabled:metaLibraryEnabled(),lastSuccessfulCheck:null,message:metaLibraryEnabled()?"Collection database is not configured.":"Live collection is off. Saved evidence is retained."};
             try {
                 const pool=options.getPool?options.getPool():process.env.DATABASE_URL?infrastructureDatabase():null;
@@ -86,11 +89,13 @@ export function attachCreativeBrowser(app: Express, db: DatabaseSync, options: B
                     const official=await readPublicCreatives(pool,brand.id,creatives,brand,competitors);
                     const health=await metaSourceHealth(pool,brand.id);
                     let merged=official;
-                    try{merged=mergeRetainedMedia(official,await readRetainedMedia(pool,brand.id),brand.id);}catch{/* An upgrade or media failure cannot hide official evidence. */}
+                    try{merged=mergeRetainedMedia(official,await readRetainedMedia(pool,brand.id),brand.id);mediaReadStatus="available";}catch{mediaReadStatus="unavailable";/* An upgrade or media failure cannot hide official evidence. */}
+                    try{merged=await mergePreviewState(pool,brand.id,merged);}catch{/* Earlier observations still render during an upgrade. */}
+                    try{merged=await mergeProductCategories(pool,brand.id,merged);categoryReadStatus="available";}catch{categoryReadStatus="unavailable";/* Missing tags exclude comparisons, never official records. */}
                     creatives=merged;metaSource=health;
                     for(const source of sources){const target=source.brandId||competitors.find(b=>b.name===source.name)?.key;if(source.status!=="error"&&creatives.some(row=>!row.owned&&row.brandId===target))source.status="collected";}
                 }
-            }catch{metaSource={status:"unavailable",enabled:metaLibraryEnabled(),lastSuccessfulCheck:null,message:"Saved public collection could not be read. Earlier media and analysis are retained."};}
+            }catch{mediaReadStatus="unavailable";categoryReadStatus="unavailable";metaSource={status:"unavailable",enabled:metaLibraryEnabled(),lastSuccessfulCheck:null,message:"Saved public collection could not be read. Earlier media and analysis are retained."};}
             if(res.destroyed)return;
             // Resolve the research window before owned cohorts, without a second library response.
             if(req.query.window === "research") {
@@ -146,7 +151,7 @@ export function attachCreativeBrowser(app: Express, db: DatabaseSync, options: B
             }
             const dates = creatives.flatMap(item => [item.firstObservedAt, item.observedAt].filter((value): value is string => Boolean(value))).sort();
             if(res.destroyed)return;
-            await writeJsonRows(res,{ metaSource, brand: { id: brand.id, name: brand.name, domain: brand.domain }, creatives, competitors, sources, ownedStatus, dateRange: { from: dates[0] || null, to: dates.at(-1) || null }, lastChecked: dates.at(-1) || null, reportingRange: { from, to } } satisfies CreativeBrowserResponse,"creatives",{gzip:req.acceptsEncodings("gzip")==="gzip"});
+            await writeJsonRows(res,{ mediaReadStatus,categoryReadStatus,metaSource, brand: { id: brand.id, name: brand.name, domain: brand.domain,primaryCategories:primaryCategories(brand) }, creatives, competitors, sources, ownedStatus, dateRange: { from: dates[0] || null, to: dates.at(-1) || null }, lastChecked: dates.at(-1) || null, reportingRange: { from, to } } satisfies CreativeBrowserResponse,"creatives",{gzip:req.acceptsEncodings("gzip")==="gzip"});
         }
         catch {
             if(!res.destroyed&&!res.headersSent)res.status(503).json({ error: "Stored creative evidence is unavailable. No source collection or analysis was started." });

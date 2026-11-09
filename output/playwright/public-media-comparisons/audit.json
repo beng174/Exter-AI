@@ -1,0 +1,143 @@
+{
+  "cases": [
+    {
+      "screen": "Home",
+      "width": 1280
+    },
+    {
+      "screen": "BrandResearch",
+      "width": 1280
+    },
+    {
+      "screen": "Competitors",
+      "width": 1280
+    },
+    {
+      "screen": "Creatives",
+      "width": 1280
+    },
+    {
+      "screen": "CreativeDetail",
+      "width": 1280
+    },
+    {
+      "screen": "Formats",
+      "width": 1280
+    },
+    {
+      "screen": "Patterns",
+      "width": 1280
+    },
+    {
+      "screen": "Winners",
+      "width": 1280
+    },
+    {
+      "screen": "Briefs",
+      "width": 1280
+    },
+    {
+      "screen": "DataSources",
+      "width": 1280
+    },
+    {
+      "screen": "Home",
+      "width": 1440
+    },
+    {
+      "screen": "BrandResearch",
+      "width": 1440
+    },
+    {
+      "screen": "Competitors",
+      "width": 1440
+    },
+    {
+      "screen": "Creatives",
+      "width": 1440
+    },
+    {
+      "screen": "CreativeDetail",
+      "width": 1440
+    },
+    {
+      "screen": "Formats",
+      "width": 1440
+    },
+    {
+      "screen": "Patterns",
+      "width": 1440
+    },
+    {
+      "screen": "Winners",
+      "width": 1440
+    },
+    {
+      "screen": "Briefs",
+      "width": 1440
+    },
+    {
+      "screen": "DataSources",
+      "width": 1440
+    },
+    {
+      "screen": "Home",
+      "width": 1920
+    },
+    {
+      "screen": "BrandResearch",
+      "width": 1920
+    },
+    {
+      "screen": "Competitors",
+      "width": 1920
+    },
+    {
+      "screen": "Creatives",
+      "width": 1920
+    },
+    {
+      "screen": "CreativeDetail",
+      "width": 1920
+    },
+    {
+      "screen": "Formats",
+      "width": 1920
+    },
+    {
+      "screen": "Patterns",
+      "width": 1920
+    },
+    {
+      "screen": "Winners",
+      "width": 1920
+    },
+    {
+      "screen": "Briefs",
+      "width": 1920
+    },
+    {
+      "screen": "DataSources",
+      "width": 1920
+    },
+    {
+      "screen": "Home",
+      "width": 390
+    },
+    {
+      "screen": "Creatives",
+      "width": 390
+    },
+    {
+      "screen": "CreativeDetail",
+      "width": 390
+    },
+    {
+      "screen": "DataSources",
+      "width": 390
+    }
+  ],
+  "providerCalls": 0,
+  "externalRequests": 0,
+  "fixtureCategorySaves": 1
+}

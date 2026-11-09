@@ -60,11 +60,12 @@ const urls=(values:unknown[])=>[...new Set(values.filter((v):v is string=>typeof
 /** Deliberate allowlist: actor reach, dates, spend, targeting, text and status never enter evidence. */
 export function actorMedia(value:unknown):ActorMedia|null{
   const row=record(value);if(typeof row.adArchiveId!=="string"||!/^\d{1,40}$/.test(row.adArchiveId)||typeof row.pageId!=="string"||!/^\d{1,30}$/.test(row.pageId))return null;
-  const cards=Array.isArray(row.cards)?row.cards.map(record):[],images=Array.isArray(row.images)?row.images.map(record):[],videos=[...(Array.isArray(row.videos)?row.videos.map(record):[]),...cards.filter(c=>c.videoHdUrl||c.videoSdUrl||c.video_hd_url||c.video_sd_url)];
-  const format=({IMAGE:"image",VIDEO:"video",CAROUSEL:"carousel",MULTI_IMAGES:"carousel",DPA:"catalogue",DCO:"catalogue"} as const)[row.displayFormat as "IMAGE"]||null;
+  const snapshot=record(row.snapshot);
+  const cards:Record<string,any>[]=Array.isArray(row.cards||snapshot.cards)?(row.cards||snapshot.cards).map(record):[],images:Record<string,any>[]=Array.isArray(row.images||snapshot.images)?(row.images||snapshot.images).map(record):[],videos:Record<string,any>[]=[...(Array.isArray(row.videos||snapshot.videos)?(row.videos||snapshot.videos).map(record):[]),...cards.filter(c=>c.videoHdUrl||c.videoSdUrl||c.video_hd_url||c.video_sd_url)];
+  const format=({IMAGE:"image",VIDEO:"video",CAROUSEL:"carousel",MULTI_IMAGES:"carousel",DPA:"catalogue",DCO:"catalogue"} as const)[(row.displayFormat||snapshot.display_format) as "IMAGE"]||null;
   const list=(value:unknown)=>Array.isArray(value)?value:[];
   const imageLinks=list(row.imageUrls).length?row.imageUrls:images.map(i=>i.url||i.originalImageUrl||i.original_image_url||i.resizedUrl||i.resizedImageUrl);
   const videoLinks=list(row.videoUrls).length?row.videoUrls:videos.map(v=>v.videoHdUrl||v.video_hd_url||v.hdUrl||v.videoSdUrl||v.video_sd_url||v.sdUrl);
   const posterLinks=list(row.videoPreviewImageUrls).length?row.videoPreviewImageUrls:videos.map(v=>v.videoPreviewImageUrl||v.previewImageUrl||v.video_preview_image_url||v.thumbnailUrl||v.previewUrl);
-  return {adId:row.adArchiveId,pageId:row.pageId,format,images:urls([...imageLinks,...(list(row.imageUrls).length?[]:cards.map(c=>c.originalImageUrl||c.original_image_url||c.imageUrl||c.image?.url||c.resizedImageUrl))]),posters:urls(posterLinks),videos:urls(videoLinks)};
+  return {adId:row.adArchiveId,pageId:row.pageId,format,images:urls([...imageLinks,...(Array.isArray(row.products)?row.products.map((p:unknown)=>{const item=record(p);return item.imageUrl||item.image_url||record(item.image).url;}):[]),...(list(row.imageUrls).length?[]:cards.map(c=>c.originalImageUrl||c.original_image_url||c.imageUrl||c.image?.url||c.resizedImageUrl))]),posters:urls(posterLinks),videos:urls(videoLinks)};
 }

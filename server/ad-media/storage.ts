@@ -39,11 +39,18 @@ export class AdMediaStorage{
         try{const saved=await images.store({brandId:workspace,adId:`${input.adId}:${role}:${index}`,kind:"image",sourceUrls:[url],signal});const image=saved.images[0];await put(image.absolutePath,image.mimeType,role,index);}
         catch(failure){error=missingReason(failure);}
       }}
-      if(priority)for(const [index,url]of input.videos.entries()){
-        if(!videoFitsDisk(await this.disk())){error="disk";break;}
+      for(const [index,url]of input.videos.entries()){
+        const full=priority&&videoFitsDisk(await this.disk()),needsPoster=!assets.some(a=>a.role==="poster"&&a.index===index);
+        if(!full&&!needsPoster){if(priority)error="disk";continue;}
         try{
           const videos=new LocalVideoMediaStore({...this.options.videos,root:resolve(temporary,`video-${index}`),maxBytes:MAX_VIDEO,timeoutMs:30000});
           const original=await videos.store({brandId:workspace,adId:input.adId,sourceUrl:url,signal});
+          if(needsPoster){
+            const poster=resolve(temporary,`source-poster-${index}.jpg`);
+            await run("ffmpeg",["-v","error","-nostdin","-protocol_whitelist","file,pipe","-i",original.absolutePath,"-map","0:v:0","-frames:v","1","-vf","scale=720:720:force_original_aspect_ratio=decrease","-c:v","mjpeg","-threads","1","-q:v","3","-map_metadata","-1","-y",poster],{timeout:15000,maxBuffer:256*1024,signal});
+            await probeImageFile(poster);await put(poster,"image/jpeg","poster",index);
+          }
+          if(!full){if(priority)error="disk";continue;}
           const output=resolve(temporary,`720p-${index}.mp4`);
           // Local verified input only. The short edge is at most 720px, with no upscaling.
           await run("ffmpeg",["-v","error","-nostdin","-protocol_whitelist","file,pipe","-i",original.absolutePath,"-map","0:v:0","-map","0:a:0?","-sn","-dn","-map_metadata","-1","-vf","scale=w='if(gte(iw,ih),min(iw,1280),min(iw,720))':h='if(gte(iw,ih),min(ih,720),min(ih,1280))':force_original_aspect_ratio=decrease:force_divisible_by=2,setsar=1","-c:v","libx264","-threads","2","-preset","veryfast","-crf","25","-pix_fmt","yuv420p","-c:a","aac","-b:a","96k","-movflags","+faststart","-fs",String(MAX_VIDEO),"-y",output],{timeout:90000,maxBuffer:256*1024,signal});

@@ -120,6 +120,32 @@ CREATE TABLE IF NOT EXISTS ad_media_creatives (
 );
 CREATE INDEX IF NOT EXISTS ad_media_creatives_latest ON ad_media_creatives(workspace_id,brand_key,native_id,created_at DESC);
 
+ALTER TABLE ad_media_runs ADD COLUMN IF NOT EXISTS download_videos boolean NOT NULL DEFAULT false;
+ALTER TABLE ad_media_runs ADD COLUMN IF NOT EXISTS known_video_ids jsonb NOT NULL DEFAULT '[]';
+ALTER TABLE ad_media_runs ADD COLUMN IF NOT EXISTS known_video_candidates jsonb NOT NULL DEFAULT '[]';
+CREATE TABLE IF NOT EXISTS ad_media_preview_days (
+ workspace_id text NOT NULL,brand_key text NOT NULL,page_id text NOT NULL,native_id text NOT NULL,
+ day date NOT NULL,run_id text NOT NULL REFERENCES ad_media_runs,attempted_at timestamptz NOT NULL DEFAULT clock_timestamp(),
+ reason text NOT NULL CHECK(reason IN ('not_returned','expired','unsupported','wrong_page','provider','disk')),
+ PRIMARY KEY(workspace_id,brand_key,page_id,native_id,day)
+);
+CREATE TABLE IF NOT EXISTS ad_media_disk_health (
+ id integer PRIMARY KEY CHECK(id=1),data jsonb NOT NULL,measured_at timestamptz NOT NULL DEFAULT now()
+);
+CREATE TABLE IF NOT EXISTS public_category_batches (
+ id text PRIMARY KEY,workspace_id text NOT NULL,items jsonb NOT NULL,status text NOT NULL DEFAULT 'queued',
+ model text NOT NULL,provider_name text,reservation_id text REFERENCES cost_ledger,gbp_per_usd numeric,
+ error_kind text,created_at timestamptz NOT NULL DEFAULT now(),finished_at timestamptz,
+ available_at timestamptz NOT NULL DEFAULT now(),lease_owner text,lease_until timestamptz
+);
+CREATE INDEX IF NOT EXISTS public_category_workspace ON public_category_batches(workspace_id,status);
+CREATE TABLE IF NOT EXISTS public_category_refill_gate(id integer PRIMARY KEY CHECK(id=1),next_check timestamptz NOT NULL);
+CREATE TABLE IF NOT EXISTS public_ad_categories (
+ workspace_id text NOT NULL,brand_key text NOT NULL,page_id text NOT NULL,native_id text NOT NULL,source_hash text NOT NULL,
+ prompt_version text NOT NULL,model text NOT NULL,categories jsonb NOT NULL,batch_id text NOT NULL REFERENCES public_category_batches,
+ created_at timestamptz NOT NULL DEFAULT now(),PRIMARY KEY(workspace_id,brand_key,page_id,native_id,source_hash,prompt_version)
+);
+
 -- Only sanitised, explicitly approved user diagnostics; generic Graph text stays excluded.
 ALTER TABLE meta_collection_failures ADD COLUMN IF NOT EXISTS error_user_title text CHECK(char_length(error_user_title)<=300);
 ALTER TABLE meta_collection_failures ADD COLUMN IF NOT EXISTS error_user_msg text CHECK(char_length(error_user_msg)<=300);

@@ -1,4 +1,5 @@
-import {scheduleAdMedia} from "../ad-media/jobs.js";
+import {schedulePublicCategories} from "../public-categories/jobs.js";
+import {scheduleAdMedia,enqueueAdMedia} from "../ad-media/jobs.js";
 import { scheduleOwnedSync } from "../owned/jobs.js";
 export { enqueueOwnedSync, workOwnedOnce } from "../owned/jobs.js";
 import { randomUUID } from "node:crypto";
@@ -133,6 +134,9 @@ export async function workOnce(pool: pg.Pool, connector?: MetaLibraryConnector, 
     await client.query("COMMIT");
   } catch (error) { await client.query("ROLLBACK"); throw error; }
   finally { client.release(); }
+  if(state==="complete"&&(options.env||process.env).EXTER_AD_MEDIA_ENABLED==="true"){
+    try{const completed=(await pool.query("SELECT watchlist_id FROM collection_runs WHERE id=$1",[job.id])).rows[0];if(completed)await enqueueAdMedia(pool,completed.watchlist_id,new Date(),job.id);}catch{/* The durable refill gate retries the handoff without repeating official collection. */}
+  }
   return true;
 }
 export function rollingYearStart(day:string){const date=new Date(day+"T00:00:00Z"),month=date.getUTCMonth();date.setUTCFullYear(date.getUTCFullYear()-1);if(date.getUTCMonth()!==month)date.setUTCDate(0);return date.toISOString().slice(0,10);}
@@ -144,7 +148,7 @@ export function metaScheduleDay(now:Date):string|null {
 export async function schedule(pool: pg.Pool, now = new Date(), env:Record<string,string|undefined>=process.env) {
   await scheduleOwnedSync(pool,now);
   const day=metaScheduleDay(now);
-  if(day)await scheduleAdMedia(pool,env,now);
+  if(day){await scheduleAdMedia(pool,env,now);await schedulePublicCategories(pool,env);}
   if(!metaLibraryEnabled(env)||!day)return;
   const watchlists = await pool.query("SELECT id FROM watchlists WHERE enabled AND ((brand_key IS NOT NULL AND jsonb_array_length(page_ids)>0) OR purpose='discovery') ORDER BY id");
   for (const row of watchlists.rows) await enqueueCollection(pool,row.id,day,now);

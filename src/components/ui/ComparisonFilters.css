@@ -1,0 +1,14 @@
+.ui-comparison-filters { display:flex;align-items:center;gap:16px;flex-wrap:wrap;margin:0 0 16px; }
+.reference-ui .ui-comparison-filters label { display:flex;flex-direction:row;align-items:center;text-align:left;gap:8px;font-size:13px;color:var(--muted); }
+.ui-comparison-filters select { min-height:44px;padding:8px 12px;border:1px solid var(--line-soft);border-radius:8px;background:var(--surface);color:var(--text);max-width:100%; }
+.ui-format-switch { display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:16px; }
+.ui-format-switch button { min-height:44px;border:1px solid var(--line-soft);border-radius:8px;background:var(--surface);padding:8px 12px; }
+.ui-format-switch button[aria-pressed=true] { color:var(--exter-blue);background:var(--chip-teal-bg); }
+.ui-table-group th { text-align:left!important;background:var(--surface-subtle)!important;position:static!important;padding:12px;font-weight:600; }
+.ui-format-control { display:flex;flex-direction:column;gap:4px;align-items:flex-start; }
+.ui-format-control .ui-format-switch { margin:0; }
+.ui-format-control small { color:var(--muted);font-size:12px; }
+.research-primary-categories { margin:16px 0; }
+.research-primary-categories fieldset { display:grid;gap:8px;padding:12px;margin-top:12px;border:1px solid var(--line-soft);border-radius:8px; }
+.research-primary-categories label { display:flex;align-items:center;gap:8px;min-height:44px; }
+.research-primary-categories input { width:auto; }

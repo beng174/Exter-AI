@@ -1,4 +1,5 @@
 import {attachAdMedia,attachMediaStep} from "./ad-media/api.js";
+import {attachCategoryStep,attachPrimaryCategories} from "./public-categories/api.js";
 import { attachBrandLogos } from "./brand-logos.js";
 import { attachSampleWorkspace } from "./sample.js";
 import { attachCreativeBrowser } from "./demo/creative-browser.js";
@@ -249,6 +250,7 @@ export function createApp(db: DatabaseSync = openDatabase()) {
   const broker = new KernelMediaBroker(db, { video: () => app.locals.videoAnalysis, images: () => app.locals.geminiSmoke.images });
   attachKernelArtifactDownload(app, broker);
   attachMediaStep(app,db);
+  attachCategoryStep(app,db);
   app.use(authenticate);
   app.disable("x-powered-by");
   app.use(express.json({ limit: "20mb" }));
@@ -265,6 +267,7 @@ export function createApp(db: DatabaseSync = openDatabase()) {
   });
   attachSampleWorkspace(app);
   attachAdMedia(app,db);
+  attachPrimaryCategories(app,db);
   app.use(["/api/public/meta", "/api/budgets", "/api/gemini-smoke", "/api/labelling", "/api/creator-research", "/api/brands", "/api/brand-research", "/api/brand-logos"], protectSettingsMutation);
   attachBrandLogos(app,db);
   attachInfrastructure(app, db);

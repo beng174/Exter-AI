@@ -1,3 +1,4 @@
+import {scorecardCohorts,longestByFormat,creativeGroup,tableGroup} from "./comparison";
 import {navigateHref} from "../../navigation";
 import {reachScorecard} from "../../../shared/meta-research";
 import {REACH_SHARE_NOTE} from "../../../shared/meta-public";
@@ -13,33 +14,36 @@ import { Measure, metadata, number, type ScreenProps } from "./common";
 import type { CreativePerformance } from "../../../shared/creative-browser";
 
 export function HomeScreen({data,selection,refresh}:ScreenProps) {
-  if(data.library.presentation)return <HomeReadModel library={data.library} model={data.library.presentation}/>;
-  const {brands,hasReach}=reachScorecard(data.library,data.window,selection.platform),you=brands[0],top=longestRunning(data.library.creatives,selection,5);
+  const {brands,hasReach}=reachScorecard(data.library,data.window,selection.platform),you=brands[0],top=longestByFormat(data,selection,5);
+  const cards=scorecardCohorts(data,selection);
   const collection={href:`/?view=settings&brandId=${encodeURIComponent(data.library.brand.id)}#demo-collection`,linkLabel:"Collect competitor ads"};
   const source={href:`/?view=data&brandId=${encodeURIComponent(data.library.brand.id)}`,linkLabel:"Data sources"};
-  const rows=([['Active ads','active'],['New ads this week','launched'],['Stopped this week','stopped'],['Median days running','medianDays'],['Share of voice','shareActive']] as const).map(([label,key])=>{
-    const average=competitorAverage(brands,key);average.selection={...average.selection,asOf:data.window.asOf||undefined,platform:selection.platform,...(key==="launched"||key==="stopped"?{activityFrom:data.window.from||undefined,activityTo:data.window.to||undefined}:{})};
-    if(key==="shareActive"&&hasReach)average.selection={...selection,show:"competitors",kind:"all",reachCountry:"GB"};
-    return {label:key==="shareActive"?hasReach?"Share of voice by reach":"Share of active ads":label,key,yours:you[key],average,previous:key==="launched"?you.previousLaunches:null};
-  });
-  return <>
-    <SectionCard title="What to work on" actions={<a href={`/?view=briefs&brandId=${encodeURIComponent(data.library.brand.id)}`}>All opportunities</a>} empty={{reason:"Recommendations appear once creative results and customer needs can be compared."}}/>
-    <div className="research-grid-two">
-      <SectionCard title="You against the market" help="Weekly scorecard" empty={!rows.some(row=>[row.yours.value,row.average.value,row.previous?.value].some(hasValue))&&{reason:"No comparable activity is saved.",...collection}} actions={<a href={`/?view=competitors&brandId=${encodeURIComponent(data.library.brand.id)}`}>Full scorecard</a>} meta={metadata(data,selection)}>
-        <Caveat>{hasReach?REACH_SHARE_NOTE:"Measures without comparable saved evidence are omitted. Share of active ads counts captures, not impressions or reach."}</Caveat><DataTable caption="Saved activity scorecard" basis="Observed" rowBasis={row=>[row.yours.value,row.average.value,row.previous?.value].some(hasValue)?row.key==="shareActive"&&hasReach?"Estimated":"Observed":"Unavailable"} rows={rows.filter(row=>[row.yours.value,row.average.value,row.previous?.value].some(hasValue))} rowKey={row=>row.key} onRow={row=>navigateHref(evidenceUrl(data.library.brand.id,row.yours.selection))} columns={[
+  const rows=cards.flatMap(card=>([['Active ads','active'],['New ads this week','launched'],['Stopped this week','stopped'],['Median days running','medianDays'],['Share of voice','shareActive']] as const).map(([label,key])=>{
+    const own=card.brands[0],average=competitorAverage(card.brands,key);average.selection={...average.selection,...card.selection,asOf:data.window.asOf||undefined,platform:selection.platform,...(key==="launched"||key==="stopped"?{activityFrom:data.window.from||undefined,activityTo:data.window.to||undefined}:{})};
+    if(key==="shareActive"&&card.hasReach)average.selection={...card.selection,asOf:data.window.asOf||undefined,platform:selection.platform,show:"competitors",kind:"all",reachCountry:"GB"};
+    return {label:key==="shareActive"?(card.hasReach?"Share of voice by reach":"Share of active ads"):label,key:`${card.group?.format||"all"}:${key}`,metric:key,yours:own[key],average,previous:key==="launched"?own.previousLaunches:null,cohort:card.group,hasReach:card.hasReach};
+  }));
+  const market=<SectionCard title="You against the market" help="Weekly scorecard" empty={!rows.some(row=>[row.yours.value,row.average.value,row.previous?.value].some(hasValue))&&{reason:"No comparable activity is saved.",...collection}} actions={<a href={`/?view=competitors&brandId=${encodeURIComponent(data.library.brand.id)}`}>Full scorecard</a>} meta={metadata(data,selection)}>
+        <Caveat>{hasReach?REACH_SHARE_NOTE:"Measures without comparable saved evidence are omitted. Share of active ads counts captures, not impressions or reach."}</Caveat><DataTable caption="Saved activity scorecard" basis="Observed" rowBasis={row=>[row.yours.value,row.average.value,row.previous?.value].some(hasValue)?row.metric==="shareActive"&&row.hasReach?"Estimated":"Observed":"Unavailable"} rows={rows.filter(row=>[row.yours.value,row.average.value,row.previous?.value].some(hasValue))} rowKey={row=>row.key} groupBy={row=>tableGroup(row.cohort,data)} onRow={row=>navigateHref(evidenceUrl(data.library.brand.id,row.yours.selection))} columns={[
           {key:"measure",label:"Measure",value:row=>row.label},
-          {key:"you",label:"You",value:row=>row.yours.value,render:row=><Measure data={data} metric={row.yours} suffix={row.key==="shareActive"?"%":""}/>},
-          {key:"average",label:"Competitor average",value:row=>row.average.value,render:row=><Measure data={data} metric={row.average} suffix={row.key==="shareActive"?"%":""}/>},
+          {key:"you",label:"You",value:row=>row.yours.value,render:row=><Measure data={data} metric={row.yours} suffix={row.metric==="shareActive"?"%":""}/>},
+          {key:"average",label:"Competitor average",value:row=>row.average.value,render:row=><Measure data={data} metric={row.average} suffix={row.metric==="shareActive"?"%":""}/>},
           {key:"previous",label:"Previous window",value:row=>row.previous?.value,render:row=><Measure data={data} metric={row.previous!}/>,unavailable:()=>({reason:"No matching historical status snapshot is saved. Only explicit launch dates support the previous-window count."})}
         ]}/>
 
-      </SectionCard>
-      <AccountPanel data={data}/>
+      </SectionCard>;
+  const working=<SectionCard title="Longest running" help="Observed days running, you and competitors" meta={metadata(data,{...selection,kind:"running"})} actions={<a href={`/?view=winners&brandId=${encodeURIComponent(data.library.brand.id)}`}>Open Winners</a>} empty={!top.length&&{reason:"No source-linked running durations are saved.",...collection}}>
+        <div className="reference-longest-list">{top.map((row,index)=><div key={row.adId}>{creativeGroup(row,data)?.key!==creativeGroup(top[index-1]||row,data)?.key||index===0?<small>{creativeGroup(row,data)?.label}</small>:null}<a className="reference-longest-row" key={row.adId} href={evidenceUrl(data.library.brand.id,{...selection,ad:row.adId})}><CreativeRow row={row}/><strong>{row.daysRunning} days</strong></a></div>)}</div>
+      </SectionCard>;
+  if(data.library.presentation)return <HomeReadModel library={data.library} model={data.library.presentation} market={market}/>;
+  return <>
+    <SectionCard title="What to work on" actions={<a href={`/?view=briefs&brandId=${encodeURIComponent(data.library.brand.id)}`}>All opportunities</a>} empty={{reason:"Recommendations appear once creative results and customer needs can be compared."}}/>
+    <div className="research-grid-two">
+      {market}
+      <AccountPanel data={data.comparison?{...data,library:data.comparison.originalLibrary}:data}/>
     </div>
     <div className="research-grid-two">
-      <SectionCard title="Longest running" help="Observed days running, you and competitors" meta={metadata(data,{...selection,kind:"running"})} actions={<a href={`/?view=winners&brandId=${encodeURIComponent(data.library.brand.id)}`}>Open Winners</a>} empty={!top.length&&{reason:"No source-linked running durations are saved.",...collection}}>
-        <div className="reference-longest-list">{top.map(row=><a className="reference-longest-row" key={row.adId} href={evidenceUrl(data.library.brand.id,{...selection,ad:row.adId})}><CreativeRow row={row}/><strong>{row.daysRunning} days</strong></a>)}</div>
-      </SectionCard>
+      {working}
       <SectionCard title="What changed" help="Observed source activity" actions={<a href={`/?view=competitors&brandId=${encodeURIComponent(data.library.brand.id)}`}>Open Competitors</a>} meta={metadata(data,selection)}>
         <div className="research-change-row"><span>Ads launched</span><Measure data={data} metric={you.launched}/></div>
         <div className="research-change-row"><span>Ads stopped</span><Measure data={data} metric={you.stopped}/></div>
