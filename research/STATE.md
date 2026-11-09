@@ -817,6 +817,35 @@ and blockers below remain unchanged.
   schedules, credentials, switches and budgets unchanged. Historical date errors
   do not require interrupting queued/running work.
 
+## Workspace page-loading repair (9 Nov 2026)
+
+- Follow-up to the merged web heap repair. Research screens downloaded the whole
+  library twice for different date windows, then waited for contextual reads.
+  Action screens also waited for unrelated reports, briefs and creator data.
+  Some evidence/report links reloaded the app. Large tables rendered every ad
+  and repeated full-dataset alignment scans for each cell.
+- Resolve the existing research window before owned metrics in one response.
+  Share short-lived, bounded client reads by URL/date/sample scope; cancel
+  abandoned reads and invalidate after writes/manual refresh. Start independent
+  reads together, request only relevant action data and keep internal navigation
+  inside the app. Preserve API defaults and every metric/cohort calculation.
+- Stream gzip without a full JSON buffer. Keep the bounded server read gate and
+  backpressure. Paginate shared tables at 50 rows, preserving full sorting,
+  availability decisions and totals; infer alignment once per column.
+- Fictional 7,800-ad browser flow: 14 to two full-library requests, four to one
+  document loads, Winners 24.6 seconds to about 0.3 seconds. The fixture JSON
+  compresses from 10,021,710 to 185,369 bytes. These are local fixture results,
+  not live Render timings. All 15 screens passed in both workspace modes at
+  1280, 1440 and 1920px, plus mobile source/table checks. No external calls.
+- Final validation: check, 511 unit tests, build and secrets scan pass.
+  PR #23 targets exter-test-drive; deployment is pending. Fixtures
+  cover date/cohort parity, cache isolation, expiry, mutation invalidation,
+  cancellation, pagination, compression and the existing 192 MiB memory guard.
+- No database/collection, schedule, provider, budget, dependency or Render
+  configuration changes. Kernel pause and both owned-account live gates remain.
+  Merge against exter-test-drive, deploy exter-ai only, hard-refresh a tab and
+  verify live speed/heap. Exact rollout is in docs/DEPLOY.md.
+
 ## Web JavaScript heap abort (8 Nov 2026, 20:49 GMT)
 
 - Owner supplied the fatal Node heap-limit error and confirmed exter-ai (web),

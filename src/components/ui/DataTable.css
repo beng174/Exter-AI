@@ -13,3 +13,7 @@
 .ui-data-table :is(th,td).ui-table-basis { width:100px;min-width:100px;white-space:nowrap;position:sticky;right:0;background:var(--surface);z-index:1; }
 .ui-data-table th.ui-table-basis { z-index:2; }
 .ui-data-table .ui-table-basis .ui-data-label { white-space:nowrap;flex-shrink:0; }
+.ui-table-pagination { display:flex;align-items:center;justify-content:space-between;gap:16px;margin-top:16px;font-size:14px;color:var(--muted); }
+.ui-table-pagination>div { display:flex;align-items:center;gap:8px; }
+.ui-table-pagination button { min-height:44px;padding:8px 12px;border:1px solid var(--line-soft);border-radius:8px;background:var(--surface); }
+.ui-table-pagination button:disabled { opacity:.45;cursor:default; }

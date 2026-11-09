@@ -2,7 +2,7 @@ import { SAMPLE_BRAND_ID, isSampleId } from "../shared/sample/identity";
 import { useEffect, useRef, useState } from "react";
 import { ArrowRight, ArrowUpRight, Check, ChevronRight, CircleHelp, Globe2, LoaderCircle, Menu, MessageSquareText, Plus, Search, X } from "lucide-react";
 import type { Brand, Category, Page } from "../shared/types";
-import { canonicaliseLocation, navigateTo, NAVIGATION_EVENT, resolveNavigation, navigation, type ViewId } from "./navigation";
+import { canonicaliseLocation, navigateTo, followWorkspaceLink, NAVIGATION_EVENT, resolveNavigation, navigation, type ViewId } from "./navigation";
 import {workspaceBrands,preferredWorkspace} from "./lib/workspace-brands";
 import { api } from "./lib/api";
 import { Sidebar } from "./components/Sidebar";
@@ -171,6 +171,7 @@ function WorkspaceApp() {
   const [brands,setBrands]=useState<Brand[]>([]),[brandOpen,setBrandOpen]=useState(false),[menuOpen,setMenuOpen]=useState(false),[helpOpen,setHelpOpen]=useState(false),[error,setError]=useState("");
   const demoEnabled=route.url.searchParams.get("demo")==="1",brand=brands.find(item=>item.id===brandId);
   const page=route.screen,current=navigation.find(item=>item.id===route.id)!;
+  useEffect(()=>{document.addEventListener("click",followWorkspaceLink);return()=>document.removeEventListener("click",followWorkspaceLink);},[]);
   useEffect(()=>{const sync=()=>{const next=canonicaliseLocation();setRoute(next);if(next.brandId)setBrandId(next.brandId);setMenuOpen(false);};sync();window.addEventListener("popstate",sync);window.addEventListener(NAVIGATION_EVENT,sync);return()=>{window.removeEventListener("popstate",sync);window.removeEventListener(NAVIGATION_EVENT,sync);};},[]);
   useEffect(()=>{let active=true;setBrandBusy(true);
     api<unknown>("/api/brands").then(value=>{if(!active)return;const result=workspaceBrands(value,demoEnabled);setBrands(result.brands);setError(result.unavailable?"Some brand details are unavailable.":"");const preferred=preferredWorkspace(result.brands,brandId);if(preferred)setBrandId(preferred.id);}).catch(()=>{if(active)setError("Brand list is unavailable. Your current page is still available.");}).finally(()=>{if(active)setBrandBusy(false);});
@@ -180,7 +181,7 @@ function WorkspaceApp() {
   useEffect(()=>{const key=(event:KeyboardEvent)=>{if(event.key==="Escape"){setBrandOpen(false);setHelpOpen(false);setMenuOpen(false);}};window.addEventListener("keydown",key);return()=>window.removeEventListener("keydown",key);},[]);
   const modalIsOpen=brandOpen||helpOpen;
   useEffect(()=>{if(!modalIsOpen)return;const previous=document.activeElement as HTMLElement|null,dialog=document.querySelector<HTMLElement>('[role="dialog"]');if(!dialog)return;const targets=()=>Array.from(dialog.querySelectorAll<HTMLElement>('button:not([disabled]),a[href],input,select,textarea,[tabindex="0"]')).filter(el=>el.getClientRects().length);targets()[0]?.focus();const trap=(event:KeyboardEvent)=>{if(event.key!=="Tab")return;const list=targets(),first=list[0],last=list.at(-1);if(event.shiftKey&&document.activeElement===first){event.preventDefault();last?.focus();}else if(!event.shiftKey&&document.activeElement===last){event.preventDefault();first?.focus();}};document.addEventListener("keydown",trap);return()=>{document.removeEventListener("keydown",trap);previous?.focus();};},[modalIsOpen]);
-  useEffect(()=>{const id=window.location.hash.slice(1);if(!id)return;const timer=window.setTimeout(()=>document.getElementById(id)?.scrollIntoView({block:"start"}),300);return()=>window.clearTimeout(timer);},[route.id,brandId]);
+  useEffect(()=>{const id=window.location.hash.slice(1);if(!id)return;const timer=window.setTimeout(()=>document.getElementById(id)?.scrollIntoView({block:"start"}),300);return()=>window.clearTimeout(timer);},[route.id,brandId,route.url.hash]);
   function navigate(id:ViewId){navigateTo(id,brandId);window.scrollTo(0,0);}
   useEffect(()=>{
     if(!demoEnabled)return;

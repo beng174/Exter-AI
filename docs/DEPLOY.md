@@ -874,6 +874,53 @@ budgets and schedules unchanged. An old 6 November error under Failure history
 is not proof of a new rejection. Review current status and progress before
 manually retrying; queued/running work is already active.
 
+### Workspace navigation and large tables (9 Nov 2026)
+
+Research pages request `window=research` on the existing creative read endpoint.
+It resolves the existing seven-day research window before reading owned cohorts,
+so one response replaces the former two full-library responses. Explicit dates,
+cohort separation and the default thirty-day API behaviour are preserved.
+
+The browser shares pending reads and reuses library results for 30 seconds and
+context/health results for 20 seconds. Keys include the URL, reporting dates and
+sample mode. Retention is bounded to two unused library results and 24 context
+results; active consumers retain their own results. Nothing is persisted in browser
+storage or a new server cache. Leaving the last consumer cancels a pending read,
+unless the next screen immediately takes it over. Failed reads are retryable.
+Successful API writes and manual page refreshes invalidate these results.
+Existing live-run status polling remains fresh and does not reload the full library.
+
+Internal workspace links keep the app running and preserve browser history,
+filters and sample scope. Action screens request only their relevant extra data.
+Shared tables calculate alignment once per column and render 50 rows per page;
+sorting, column availability and totals still use every matching row. Pagination
+never discards ads or changes metric calculations. Small tables keep their layout.
+
+The creative endpoint negotiates streaming gzip using Node's existing zlib at
+the fastest compression level, with `Vary: Accept-Encoding`. Socket backpressure,
+disconnect cleanup and the one-at-a-time library gate still apply. Clients asking
+for identity encoding receive the same uncompressed JSON. No new dependency,
+schema, provider call, Render setting, heap increase or worker change is required.
+
+Fixture-only comparison against 0ee47f6: 7,800 fictional ads, 600 ms library delay
+and 150 ms context delay. The recorded navigation flow drops from 14 full-library
+requests to two, and four document loads to one. Winners drops from 24.6 seconds
+to about 0.3 seconds. Cold Home drops from 3.25 seconds to about 1.8 seconds.
+Some already fast transitions vary by a few hundred milliseconds; these local
+measurements are not production timing guarantees. The identical fixture library
+is 10,021,710 bytes as JSON and 185,369 bytes with gzip level 1. Browser timings use
+uncompressed intercepted fixture responses, so they exclude the gzip benefit.
+See `output/playwright/workspace-loading/` and the execution plan for raw results.
+
+After merging into exter-test-drive: Render > exter-ai > Manual Deploy > Deploy
+latest commit. Wait for `/health` to pass, then hard-refresh one browser tab to
+load the new bundle. Check Home, Winners, a filtered Creatives link, Creative
+detail and browser Back. Confirm the library request has `Content-Encoding: gzip`
+and that recent navigation reuses it. Leave worker/scheduler, switches, secrets,
+budgets and stored collection checkpoints unchanged. Roll back the web deploy if
+needed; no migration or data recovery is involved. Live timing and heap recovery
+still need observation after deployment.
+
 ### Web heap exhaustion and large-library reads (8 Nov 2026)
 
 The owner reported `FATAL ERROR: Reached heap limit Allocation failed -

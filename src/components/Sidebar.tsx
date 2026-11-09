@@ -3,6 +3,7 @@ import { ArrowUpRight, ChevronDown, CircleHelp, Settings2 } from "lucide-react";
 import type { Brand } from "../../shared/types";
 import { visibleNavigation, type ViewId } from "../navigation";
 import { api } from "../lib/api";
+import {workspaceRead} from "../lib/workspace-read";
 import { brandContext } from "../lib/brand-context";
 import "./Sidebar.css";
 import { BrandMark,useBrandIdentity } from "./ui/BrandIdentity";
@@ -20,16 +21,19 @@ export function Sidebar({brand,brandId,current,demo,open,onNavigate,onSwitchBran
     return()=>{active=false;window.clearInterval(timer);};
   },[brandId]);
   useEffect(()=>{
-    let active=true;
+    let active=true;const leases=new Set<{release:()=>void}>();
     async function check() {
-      const results=await Promise.allSettled([api<{connections:{status:string}[]}>(`/api/connections?${new URLSearchParams({brandId})}`),api<{meta?:{status:string};tiktok?:{status:string};database?:string}>("/api/infrastructure/status")]);
+      const connections=workspaceRead<{connections:{status:string}[]}>(`/api/connections?${new URLSearchParams({brandId})}`),health=workspaceRead<{meta?:{status:string};tiktok?:{status:string};database?:string}>("/api/infrastructure/status");
+      leases.add(connections);leases.add(health);
+      const results=await Promise.allSettled([connections.promise,health.promise]);
+      for(const lease of [connections,health]){lease.release();leases.delete(lease);}
       if(!active)return;
       if(results[0].status!=="fulfilled"||results[1].status!=="fulfilled"){setAttention("Source health is unavailable");return;}
       const states=[...results[0].value.connections.map(item=>item.status),results[1].value.meta?.status,results[1].value.tiktok?.status];
       setAttention(states.some(state=>!state||state!=="connected")||results[1].value.database==="unavailable"?"Sources are waiting or need attention":null);
     }
     void check();const timer=window.setInterval(()=>void check(),60000);
-    return()=>{active=false;window.clearInterval(timer);};
+    return()=>{active=false;window.clearInterval(timer);for(const lease of leases)lease.release();};
   },[brandId]);
   useEffect(()=>{
     if(!open)return;
