@@ -12,7 +12,7 @@ jobs:
       - name: Install media tools
         run: |
           sudo apt-get update -qq
-          sudo apt-get install -y --no-install-recommends ffmpeg
+          sudo apt-get install -y --no-install-recommends ffmpeg libheif-examples libheif-plugin-libde265
       - run: npm ci
       - run: npm run secrets:check
       - run: npm test

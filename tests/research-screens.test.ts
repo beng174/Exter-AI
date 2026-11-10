@@ -31,7 +31,7 @@ test("UI-07/UI-08 no saved analysis yields compact gaps rather than guessed form
 
 test("Review fixes hide universal unavailable winner columns and mark uncollected brand headers once",()=>{
  const source=data();source.library.competitors.push({key:"pending",brandId:null,name:"Pending advertiser",status:"not-started"});
- const winners=render("WinnersScreen",source);assert.ok(!winners.includes('data-label="Working Score"')&&!winners.includes('data-label="Confidence"'));assert.match(winners,/reference-thumb/);assert.match(winners,/First line/);
+ source.library.creatives=source.library.creatives.map(row=>({...row,thumbnailUrl:"/fixture/preview.png",mediaAvailable:true}));const winners=render("WinnersScreen",source);assert.ok(!winners.includes('data-label="Working Score"')&&!winners.includes('data-label="Confidence"'));assert.match(winners,/reference-thumb/);assert.match(winners,/First line/);
  const competitors=render("CompetitorsScreen",source);assert.equal((competitors.match(/not-collected-header/g)||[]).length,0);assert.match(competitors,/configured competitors have no collected ads/);
  for(const name of ["HomeScreen","BrandScreen","CompetitorsScreen","FormatsScreen","PatternsScreen","AudienceScreen","WinnersScreen"])assert.doesNotMatch(render(name,source),/\b(?:CA|UI)-\d+/);
 });
@@ -51,5 +51,10 @@ test("Scorecards never label unsupported share of voice Observed, and keep genui
 test("Winners recovers the unfiltered library when no comparison qualifies and links to the real gap fixes",()=>{
  const source=data(),original=source.library;original.brand.primaryCategories=['candles'];original.creatives=original.creatives.map(row=>({...row,productCategories:[],adFormat:null,mediaAvailable:false,thumbnailUrl:null,imageUrls:[],videoUrl:null,publicEvidence:true}));
  source.library={...original,creatives:[]};source.comparison={originalLibrary:original,groups:[],hidden:[],primary:['candles'],filter:{},chartFormat:null};
- const html=render('WinnersScreen',source);assert.match(html,/Not yet like-for-like/);assert.match(html,/Coverage/);assert.match(html,/0% tagged/);assert.match(html,/ads need a category tag/);assert.match(html,/ads have unknown format/);assert.match(html,/First line/);assert.match(html,/#public-category-status/);assert.match(html,/#ads-without-media/);assert.doesNotMatch(html,/No supported source running durations|Review collection/);
+ original.creatives=original.creatives.map(row=>({...row,thumbnailUrl:'/fixture/preview.png',mediaAvailable:true,mediaKind:'unknown'}));const html=render('WinnersScreen',source);assert.match(html,/Not yet like-for-like/);assert.match(html,/Coverage/);assert.match(html,/0% tagged/);assert.match(html,/ads need a category tag/);assert.match(html,/ads have unknown format/);assert.match(html,/First line/);assert.match(html,/#public-category-status/);assert.match(html,/#ads-without-media/);assert.doesNotMatch(html,/No supported source running durations|Review collection/);
+});
+
+test('Winners defaults to previews only and explains the hidden ads without invented media',()=>{
+ const source=data();source.library.creatives=source.library.creatives.map(row=>({...row,thumbnailUrl:null,imageUrls:[],videoUrl:null,mediaAvailable:false}));
+ const html=render('WinnersScreen',source);assert.match(html,/type="checkbox" checked/);assert.match(html,/Only ads with previews/);assert.match(html,/waiting for previews/);assert.match(html,/Turn off the preview filter/);assert.doesNotMatch(html,/reference-creative-row/);
 });

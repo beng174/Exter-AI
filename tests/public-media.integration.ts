@@ -24,20 +24,20 @@ async function fixture(work:(pool:pg.Pool)=>Promise<void>,count=12){
  }finally{await pool.end();await admin.query(`DROP SCHEMA ${schema} CASCADE`);await admin.end();}
 }
 const emptyActor=(started:()=>void)=>new AdMediaActor({env,fetch:async(_url,init)=>{if(init?.method==='POST'){started();return Response.json({data:{id:'fixtureRun10000001',defaultDatasetId:'fixtureData100001'}});}if(String(_url).includes('/items'))return Response.json([]);return Response.json({data:{id:'fixtureRun10000001',status:'SUCCEEDED'}});}});
-async function mediaTick(pool:pg.Pool,actor:AdMediaActor){await pool.query("UPDATE ad_media_runs SET available_at=now(),lease_until=NULL,lease_owner=NULL WHERE status IN ('queued','running')");const owner=randomUUID(),run=await claimAdMedia(pool,owner);assert(run);await stepAdMedia(pool,run.id,owner,{env,actor,storage:new AdMediaStorage({disk:async()=>mediaDiskMeasurement(10*1024**3,9*1024**3)})});return run.id;}
+async function mediaTick(pool:pg.Pool,actor:AdMediaActor,now?:Date){await pool.query("UPDATE ad_media_runs SET available_at=now(),lease_until=NULL,lease_owner=NULL WHERE status IN ('queued','running')");const owner=randomUUID(),run=await claimAdMedia(pool,owner);assert(run);await stepAdMedia(pool,run.id,owner,{env,actor,now,storage:new AdMediaStorage({disk:async()=>mediaDiskMeasurement(10*1024**3,9*1024**3)})});return run.id;}
 async function categoryTick(pool:pg.Pool,provider:PublicCategoryProvider){await pool.query("UPDATE public_category_batches SET available_at=now(),lease_until=NULL,lease_owner=NULL WHERE status IN ('queued','running')");const owner=randomUUID(),run=await claimCategoryBatch(pool,owner);assert(run);await stepCategoryBatch(pool,run.id,owner,{env,provider});return run.id;}
 function categoryProvider(onStart?:(requests:any[])=>void){let requests:any[]=[];return new PublicCategoryProvider({env,fetch:async(_url,init)=>{if(init?.method==='POST'){requests=JSON.parse(String(init.body)).batch.input_config.requests.requests;onStart?.(requests);return Response.json({name:'batches/fixture-1'});}return Response.json({done:true,metadata:{state:'JOB_STATE_SUCCEEDED'},response:{inlinedResponses:{inlinedResponses:[...requests].reverse().map(item=>({metadata:item.metadata,response:{modelVersion:'gemini-2.5-flash-lite',usageMetadata:{promptTokenCount:10,candidatesTokenCount:2},candidates:[{content:{parts:[{text:'{"categories":["candles","home fragrance"]}'}]}}]}}))}}});}});}
 
 test('daily missing-preview attempts count distinct UK days and keep reasons, without altering official history',async()=>fixture(async pool=>{
  const before=(await pool.query('SELECT row_to_json(o)::text AS data FROM ad_observations o ORDER BY native_id')).rows;let starts=0;const actor=emptyActor(()=>starts++);
  for(let day=1;day<=7;day++){
-  const date=`2026-11-${String(day+8).padStart(2,'0')}`;assert(await enqueueAdMedia(pool,'own',new Date(date+'T12:00:00Z')));const id=await mediaTick(pool,actor);
-  await pool.query("UPDATE ad_media_requests SET requested_at=$2::timestamptz WHERE run_id=$1",[id,date+'T12:00:00Z']);await mediaTick(pool,actor);
+  const date=`2026-11-${String(day+8).padStart(2,'0')}`;assert(await enqueueAdMedia(pool,'own',new Date(date+'T12:00:00Z')));await pool.query("UPDATE ad_media_runs SET lookup_mode='ad_id' WHERE status='queued'");const id=await mediaTick(pool,actor);
+  await pool.query("UPDATE ad_media_requests SET requested_at=$2::timestamptz WHERE run_id=$1",[id,date+'T12:00:00Z']);await mediaTick(pool,actor,new Date(date+'T12:00:00Z'));
   assert.equal(await enqueueAdMedia(pool,'own',new Date(date+'T20:00:00Z')),null);
   const rows=await mergePreviewState(pool,'workspace',[browserCreative({brandId:'house',nativeId:'1001'})]);assert.equal(rows[0].previewState?.failedDays,day);assert.equal(rows[0].previewState?.reason,'not_returned');
  }
  assert.equal(starts,7);assert.deepEqual((await pool.query('SELECT row_to_json(o)::text AS data FROM ad_observations o ORDER BY native_id')).rows,before);
-}));
+},1));
 test('budget pauses and missing keys make no provider calls and add no failed preview day',async()=>fixture(async pool=>{
  await pool.query("UPDATE budget_settings SET monthly_budget_gbp=0 WHERE cost_type='data_providers'");let calls=0;await enqueueAdMedia(pool,'own');await mediaTick(pool,emptyActor(()=>calls++));assert.equal(calls,0);assert.equal((await pool.query('SELECT count(*)::integer AS n FROM ad_media_preview_days')).rows[0].n,0);
 }));
@@ -95,11 +95,11 @@ test('legacy video posters remain eligible for full-video upgrades without re-bu
  await pool.query('INSERT INTO ad_media_disk_health(id,data) VALUES(1,$1)',[JSON.stringify(mediaDiskMeasurement(10*1024**3,9*1024**3))]);
  const next=await enqueueAdMedia(pool,'own');assert(next);const run=(await pool.query('SELECT download_videos,target_ids FROM ad_media_runs WHERE id=$1',[next])).rows[0];assert(run.download_videos);assert.deepEqual(run.target_ids,['1001']);
 }));
-test('a failed media poll records one controlled failed day and cannot increment it twice',async()=>fixture(async pool=>{
+test('temporary media status failures keep the paid run and do not count as failed preview days',async()=>fixture(async pool=>{
  const id=await enqueueAdMedia(pool,'own');await mediaTick(pool,emptyActor(()=>{}));
  const failed=new AdMediaActor({env,fetch:async()=>{throw new Error('private-provider-text https://do-not-store.example/ fixture-only');}});
- await mediaTick(pool,failed);const rows=(await pool.query('SELECT native_id,reason FROM ad_media_preview_days')).rows;assert.equal(rows.length,12);assert(rows.every(row=>row.reason==='provider'));
- await pool.query("UPDATE ad_media_runs SET status='running'");await mediaTick(pool,failed);assert.equal((await pool.query('SELECT count(*)::integer AS n FROM ad_media_preview_days')).rows[0].n,12);
+ await mediaTick(pool,failed);const rows=(await pool.query('SELECT native_id,reason FROM ad_media_preview_days')).rows;assert.equal(rows.length,0);
+ await pool.query("UPDATE ad_media_runs SET status='running'");await mediaTick(pool,failed);assert.equal((await pool.query('SELECT count(*)::integer AS n FROM ad_media_preview_days')).rows[0].n,0);
  const run=(await pool.query('SELECT error_kind FROM ad_media_runs WHERE id=$1',[id])).rows[0];assert.equal(run.error_kind,'provider');
 }));
 
@@ -108,7 +108,7 @@ test('completing an official collection automatically hands its new ads to the m
  const run=await enqueueCollection(pool,'own');let calls=0;
  const connector=new MetaLibraryConnector({token:'fixture-only',fetch:async()=>{calls++;return Response.json({data:[{id:'9999',page_id:'12',ad_creative_bodies:['A new fictional candle.'],ad_delivery_start_time:'2026-11-09'}]});}});
  assert(await workOnce(pool,connector,{env:{...env,EXTER_META_LIBRARY_ENABLED:'true'},paceMs:0}));assert.equal(calls,1);assert.equal((await pool.query('SELECT status FROM collection_runs WHERE id=$1',[run])).rows[0].status,'complete');
- const queued=(await pool.query('SELECT status,target_ids FROM ad_media_runs')).rows;assert.equal(queued.length,1);assert.equal(queued[0].status,'queued');assert.equal(queued[0].target_ids[0],'9999');assert.equal((await pool.query("SELECT count(*)::integer AS n FROM cost_ledger WHERE provider='apify_ad_media'")).rows[0].n,0);
+ const queued=(await pool.query('SELECT status,target_ids FROM ad_media_runs')).rows;assert.equal(queued.length,1);assert.equal(queued[0].status,'queued');assert(queued[0].target_ids.includes('9999'));assert.equal(queued[0].target_ids[0],'1001','older winners precede the newest collected ad');assert.equal((await pool.query("SELECT count(*)::integer AS n FROM cost_ledger WHERE provider='apify_ad_media'")).rows[0].n,0);
 }));
 
 test('text tagging runs independently of the media switch, quotes one bounded batch and never exceeds its reviewed reserve',async()=>fixture(async pool=>{

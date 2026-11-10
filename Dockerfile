@@ -8,7 +8,7 @@ RUN --mount=type=secret,id=proxy_ca \
 COPY . .
 RUN npm run check && npm run build
 FROM node:24-trixie-slim
-RUN apt-get update && apt-get install -y --no-install-recommends ffmpeg chromium ca-certificates postgresql-client && rm -rf /var/lib/apt/lists/*
+RUN apt-get update && apt-get install -y --no-install-recommends ffmpeg libheif-examples libheif-plugin-libde265 chromium ca-certificates postgresql-client && rm -rf /var/lib/apt/lists/*
 WORKDIR /app
 COPY --from=build /app /app
 ENV NODE_ENV=production PORT=3000 MEDIA_STORAGE_TYPE=disk MEDIA_STORAGE_PATH=/var/data/media EXTER_DB_PATH=/var/data/exter.db

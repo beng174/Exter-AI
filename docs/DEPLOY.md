@@ -1375,3 +1375,51 @@ PRs target exter-test-drive. Nothing is deployed by these instructions alone.
 Verification uses fictional websites, Graph/model/actor responses and isolated
 local database schemas. It is not live verification of Meta permissions, a real
 brand's competitor set, costs, match accuracy, previews or prediction gates.
+
+### Continuous preview backfill and catalogue recovery (10 Nov 2026)
+
+Build the updated Docker image; restarting an old image does not install its HEIC
+support. The web image now includes `libheif-examples` and
+`libheif-plugin-libde265`, alongside existing FFmpeg. No npm dependency, model,
+Render plan, budget limit or live switch changes. JPEG/PNG previews remain accepted;
+WebP/AVIF are decoded and resized to JPEG. HEIC uses bounded local HEIF decoding,
+then the same JPEG preview path. Decoded images are limited to 40 million pixels,
+source files to the existing 8 MiB limit, previews to 1600px, videos to 128 MiB.
+HTML/SVG, private hosts, unapproved redirects and invalid containers remain blocked.
+Official dates, reach and historical rows are unchanged.
+
+1. Merge the preview-recovery PR into `exter-test-drive`.
+2. Run `npm run db:migrate` against the shared collection database.
+3. Rebuild and deploy the same revision to `exter-ai`, `exter-worker` and
+   `exter-scheduler`. Keep the existing token, broker origin/secret, exchange-rate
+   ceiling, switches and budgets. The worker still sends retention work to the
+   disk-owning web service; it cannot read the web disk itself.
+4. Existing undispatched plans are retained and reordered without a paid start.
+   Never-requested ads proceed in consecutive batches of at most 500. Longest-
+   running leaders and high UK reach precede newer ads. Initial batches continue
+   automatically for every enabled watchlist Page, not just the first brand.
+5. `Collect missing media` starts/resumes all enabled brands in the workspace;
+   per-brand actions scope it to that brand. Watch requested/media counts and the
+   estimated first-pass remaining cost. Estimates exclude unpredictable fallback
+   lookups. Each paid start independently reserves within the existing provider
+   budget and per-run cap. Disk checks precede paid starts; videos stop at 80%.
+6. Recovery first re-reads recognised failed results from their existing paid
+   dataset, without starting or charging another actor. Temporary media URLs
+   remain in the provider's dataset, never in Exter's database or logs. Expired
+   datasets and missing/expired/wrong-Page results get one exact-ID detail lookup,
+   without dates and without a GB query filter. The saved official UK ad and its
+   Page must still match. Unresolved failed ads retry daily; unknown paid starts
+   retain their hold and never automatically restart. Safe read failures keep
+   the same actor run. Optional full-video transcodes follow preview coverage.
+7. Check Data sources → Ads without media. Filter by an archive ID to see its
+   Page, returned/matched status, one missing reason and bounded file diagnostics
+   (MIME/category, controlled code and HTTP number). Reason totals are distinct
+   ads and sum to the missing count; per-file details may contain several attempts.
+8. Winners initially shows only ads with previews. Its toggle reveals loading
+   states and reasons. Catalogue titles/descriptions use stored product-card
+   details when official copy is a template; the original official copy stays
+   unchanged. Brand logos use the existing shared saved-logo/fallback path.
+
+The release target is at least 95% preview coverage for each brand. Fixture results
+are not a production forecast. See `docs/review/media-backfill/README.md` for
+confirmed code causes, supplied production figures and the limits of verification.

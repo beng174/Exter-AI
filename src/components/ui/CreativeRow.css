@@ -1,1 +1,13 @@
-.reference-creative-row img { width:100%;height:100%;object-fit:cover;border-radius:6px; }
+.reference-ui .reference-creative-row>.reference-thumb { width:64px;height:80px;flex:0 0 64px;overflow:hidden; }
+.reference-creative-row .reference-thumb>img { width:100%;height:100%;object-fit:cover;border-radius:6px; }
+.reference-creative-row>span:last-child { min-width:0;flex:1; }
+.reference-creative-row small { display:flex;align-items:center;gap:4px;flex-wrap:wrap; }
+.reference-creative-row .brand-mark img { width:100%;height:100%;object-fit:contain; }
+
+.winners-preview-toggle { display:inline-flex;align-items:center;gap:8px;min-height:44px;font-size:14px; }
+.winners-preview-toggle input { width:18px;height:18px; }
+.reference-ui .ui-data-table tbody td { vertical-align:middle; }
+
+.reference-shell .reference-ui label.winners-preview-toggle { display:inline-flex;flex-direction:row;justify-content:flex-start;align-items:center;align-self:flex-start;width:auto;gap:8px;margin:0;text-align:left;min-height:44px; }
+.reference-shell .reference-ui .winners-preview-toggle input { width:18px;height:18px;min-height:18px;margin:0;flex:0 0 18px; }
+.winner-format { white-space:nowrap; }

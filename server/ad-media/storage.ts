@@ -21,7 +21,8 @@ export const missingMediaDisk=():MediaDiskHealth=>({status:"unavailable",totalBy
 export async function mediaDiskHealth(root=mediaRoot()):Promise<MediaDiskHealth>{try{await mkdir(root,{recursive:true,mode:0o700});const fs=await statfs(root);return mediaDiskMeasurement(fs.blocks*fs.bsize,fs.bavail*fs.bsize);}catch{return missingMediaDisk();}}
 export function videoFitsDisk(disk:MediaDiskHealth,reserve=MAX_VIDEO){return disk.status==="available"&&disk.usedBytes!==null&&disk.totalBytes!==null&&!disk.videoDownloadsPaused&&disk.usedBytes+reserve<=disk.totalBytes*0.8;}
 export interface MediaAsset{role:"image"|"poster"|"video";index:number;ref:KernelArtifactRef;durationSeconds?:number;sourceSha256?:string}
-export interface RetainedMedia{assets:MediaAsset[];error:string|null}
+export interface MediaFileDiagnostic{role:string;type:string;host:string;code:string;httpStatus:number|null}
+export interface RetainedMedia{assets:MediaAsset[];error:string|null;diagnostics?:MediaFileDiagnostic[]}
 export class AdMediaStorage{
   readonly store:DiskKernelArtifactStore;
   constructor(private options:{root?:string;images?:ImageMediaOptions;videos?:VideoMediaOptions;disk?:()=>Promise<MediaDiskHealth>}={}){this.store=new DiskKernelArtifactStore({root:resolve(options.root||mediaRoot(),"public-ad-files"),maxBytes:MAX_VIDEO});}
@@ -34,8 +35,9 @@ export class AdMediaStorage{
   }
   disk(){return this.options.disk?.()||mediaDiskHealth(this.options.root||mediaRoot());}
   async retain(workspace:string,input:ActorMedia,priority:boolean):Promise<RetainedMedia>{
-    const temporary=await mkdtemp(resolve(tmpdir(),"exter-ad-media-")),assets:MediaAsset[]=[];let error:string|null=null;
+    const temporary=await mkdtemp(resolve(tmpdir(),"exter-ad-media-")),assets:MediaAsset[]=[],diagnostics:MediaFileDiagnostic[]=[];let error:string|null=null;
     const signal=AbortSignal.timeout(180000);
+    const diagnose=(failure:unknown,role:string,url:string,type?:string)=>{const file=new URL(url),ext=/\.(avif|heic|heif|webp|png|jpe?g|mp4|webm)(?:$|[?])/i.exec(file.pathname)?.[1]?.toLowerCase()||'unknown';diagnostics.push({role,type:type||ext,host:file.hostname.endsWith('.fbcdn.net')?'meta_cdn':file.hostname.endsWith('.cdninstagram.com')?'photo_cdn':file.hostname==='cdn.shopify.com'?'shop_cdn':'other',code:failure instanceof MediaStorageError?(failure.code==='media_invalid'&&/approved public HTTPS/.test(failure.message)?'host_not_approved':failure.code==='media_invalid'&&/private, local/.test(failure.message)?'address_not_public':failure.code):failure instanceof Error&&failure.message==='disk'?'disk_limit':'decode_failed',httpStatus:failure instanceof MediaStorageError?failure.sourceHttpStatus??null:null});};
     const retry=async<T>(operation:()=>Promise<T>):Promise<T>=>{for(let attempt=0;;attempt++){try{return await operation();}catch(failure){if(attempt>=3||signal.aborted||missingReason(failure)!=="provider")throw failure;await new Promise(resolve=>setTimeout(resolve,Math.min(250*2**attempt,1000)));}}};
     const put=async(path:string,mimeType:string,role:MediaAsset["role"],index:number,durationSeconds?:number)=>{
       const size=(await stat(path)).size,disk=await this.disk();
@@ -43,10 +45,11 @@ export class AdMediaStorage{
       const saved=await this.store.put(workspace,mimeType,createReadStream(path),{signal});assets.push({role,index,ref:saved.ref,...(durationSeconds?{durationSeconds}:{})});
     };
     try{
-      const images=new LocalImageMediaStore({...this.options.images,root:resolve(temporary,"images"),timeoutMs:20000});
+      let imageType="unknown";
+      const images=new LocalImageMediaStore({...this.options.images,root:resolve(temporary,"images"),normalisePreview:true,inspect:type=>{imageType=type;},allowedHosts:["*.fbcdn.net","*.cdninstagram.com","*.fbsbx.com","cdn.shopify.com",...(process.env.EXTER_MEDIA_ALLOWED_HOSTS?.split(",").map(host=>host.trim()).filter(Boolean)||[]),...(this.options.images?.allowedHosts||[])],timeoutMs:45000});
       for(const [role,links]of [["image",input.images],["poster",input.posters]]as const){for(const [index,url]of links.entries()){
-        try{const saved=await retry(()=>images.store({brandId:workspace,adId:`${input.adId}:${role}:${index}`,kind:"image",sourceUrls:[url],signal}));const image=saved.images[0];await put(image.absolutePath,image.mimeType,role,index);}
-        catch(failure){error=missingReason(failure);}
+        imageType="unknown";try{const saved=await retry(()=>images.store({brandId:workspace,adId:`${input.adId}:${role}:${index}`,kind:"image",sourceUrls:[url],signal}));const image=saved.images[0];await put(image.absolutePath,image.mimeType,role,index);diagnostics.push({role,type:imageType,host:"approved_cdn",code:"stored",httpStatus:200});}
+        catch(failure){error=missingReason(failure);diagnose(failure,role,url,imageType);}
       }}
       for(const [index,url]of input.videos.entries()){
         const full=priority&&videoFitsDisk(await this.disk()),needsPoster=!assets.some(a=>a.role==="poster"&&a.index===index);
@@ -76,12 +79,12 @@ export class AdMediaStorage{
             if((await stat(poster)).size>8*1024*1024||dimensions.width*dimensions.height>40_000_000)throw new Error("Invalid poster.");
             await put(poster,"image/jpeg","poster",index);
           }
-        }catch(failure){error=error||missingReason(failure);}
+        }catch(failure){error=error||missingReason(failure);diagnose(failure,"video",url);}
       }
       const posters=Math.max(input.posters.length,input.videos.length,input.format==="video"?1:0);
       const complete=assets.length>0&&assets.filter(a=>a.role==="image").length>=input.images.length&&assets.filter(a=>a.role==="poster").length>=posters&&(!priority||assets.filter(a=>a.role==="video").length>=input.videos.length&&!(input.format==="video"&&!input.videos.length));
       error=complete?null:error||"unsupported";
-      return {assets,error};
+      return {assets,error,diagnostics};
     }finally{await rm(temporary,{recursive:true,force:true});}
   }
 }

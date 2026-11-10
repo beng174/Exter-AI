@@ -16,7 +16,7 @@ body,input,select,textarea,button,table { font-variant-numeric:tabular-nums; }
 .reference-shell .reference-ui :is(.reference-actions,.ui-page-actions,.creative-header-actions,.read-model-priorities footer) { display:flex;align-items:center;flex-wrap:wrap;gap:8px; }
 .reference-shell .reference-ui :is(.reference-actions,.ui-page-actions,.creative-header-actions,.read-model-priorities footer)>:is(a,button,.disabled-control) { min-height:44px;box-sizing:border-box;display:inline-flex;align-items:center; }
 .reference-shell .reference-ui :is(.reference-actions,.ui-page-actions) .button { min-height:44px; }
-.reference-shell .reference-ui :is(.ui-creative-card h3,.reference-creative-row strong) { display:block;-webkit-line-clamp:unset;line-clamp:unset;overflow:visible;white-space:normal; }
+.reference-shell .reference-ui :is(.ui-creative-card h3,.reference-creative-row strong) { display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;white-space:normal;overflow-wrap:anywhere; }
 
 /* Shared row tracks make long text contribute to the height of every sibling. */
 .reference-shell .reference-ui .read-model-priorities { display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:16px;align-items:stretch; }

@@ -72,7 +72,7 @@ test("UI-02 repeated missing values have one short label and a reason tooltip",(
   const table=render(ui.DataTable,{hideUnavailable:false,caption:"Ads",rows:[{id:"a",spend:null}],columns:[{key:"spend",label:"Spend",value:(row:any)=>row.spend,unavailable:()=>({reason:"No owned rows."})}],rowKey:(row:any)=>row.id,basis:"Observed"});
   assert.ok(!table.includes("<p"));assert.match(table,/title="No owned rows/);
   const card=render(ui.CreativeCard,{title:"Saved creative",source:"You",onOpen:()=>{},metrics:[{label:"Spend",value:null,basis:"Observed",reason:"No owned rows.",missingLabel:"Not synced"}]});
-  assert.ok(!card.includes("<p"));assert.ok(!card.includes("/?view=data"));assert.match(text(card),/MetricsNot synced/);
+  assert.doesNotMatch(card,/<p(?:\s|>)/);assert.ok(!card.includes("/?view=data"));assert.match(text(card),/MetricsNot synced/);
 });
 
 test("Creative cards show m:ss, no None tags or unknown-format line, compact Modelled chip and no per-card metadata",()=>{
@@ -151,7 +151,7 @@ test("large tables render fifty rows, retain full totals and inspect alignment o
  const small=render(ui.DataTable,{caption:"Small",rows:[{id:1}],rowKey:(row:any)=>String(row.id),basis:"Observed",columns:[{key:"id",label:"ID",value:(row:any)=>row.id}]});assert.ok(!small.includes("ui-table-pagination"));
 });
 
-test("copy-only cards do not duplicate titles and source actions follow their metrics",()=>{
+test("preview-loading cards show one title and source actions follow their metrics",()=>{
  const title="A fictional candle for quiet evenings.",html=render(ui.CreativeCard,{title,creative:{brandName:"Fictional Candle House",platform:"Meta",copy:title,sourceUrl:"https://www.facebook.com/ads/library/?id=9001",deliveryStartAt:"2025-08-21",adFormat:"video",previewState:{failedDays:1,reason:"file_missing",lastAttemptAt:"2026-11-10"}},source:"Fictional Candle House",metrics:[{label:"UK reach",value:1234567,basis:"Observed"}],onOpen:()=>{}});
- assert.match(html,/Media not collected yet/);assert.match(html,/File missing from disk/);assert.match(html,/Video/);assert.match(html,/1,234,567/);assert.match(html,/Observed/);assert.doesNotMatch(html,/<h3/);assert(html.indexOf('</dl>')<html.indexOf('class="ui-card-source-link"'));
+ assert.match(html,/Preview loading/);assert.match(html,/File missing from disk/);assert.match(html,/Video/);assert.match(html,/1,234,567/);assert.match(html,/Observed/);assert.equal((html.match(/<h3/g)||[]).length,1);assert(html.indexOf('</dl>')<html.indexOf('class="ui-card-source-link"'));
 });

@@ -16,14 +16,14 @@ import {readMediaCoverage} from "../server/ad-media/coverage.js";
 const env={EXTER_AD_MEDIA_ENABLED:"true",APIFY_TOKEN:"fixture-only",EXTER_AD_MEDIA_GBP_PER_USD:"1"};
 const png=Buffer.concat([Buffer.from([137,80,78,71,13,10,26,10]),Buffer.alloc(40)]);
 const assetUrl="https://image.fixture.fbcdn.net/file.png?token=NEVER-PERSIST";
-async function fixture(fn:(pool:pg.Pool,storage:AdMediaStorage)=>Promise<void>){
+async function fixture(fn:(pool:pg.Pool,storage:AdMediaStorage)=>Promise<void>,count=10){
   assert(process.env.TEST_DATABASE_URL,"Use a dedicated disposable TEST_DATABASE_URL.");
   const schema="ad_media_test_"+randomUUID().replaceAll("-",""),admin=new pg.Pool({connectionString:process.env.TEST_DATABASE_URL});await admin.query(`CREATE SCHEMA ${schema}`);
   const pool=new pg.Pool({connectionString:process.env.TEST_DATABASE_URL,options:`-c search_path=${schema},public`,max:5}),root=await mkdtemp(join(tmpdir(),"exter-ad-media-pg-"));
   try{await migrate(pool);await migrate(pool);await pool.query("UPDATE budget_settings SET monthly_budget_gbp=10 WHERE cost_type='data_providers'");
     await pool.query(`INSERT INTO watchlists(id,workspace_id,brand_key,page_ids) VALUES('watch','workspace','fictional-brand','["12001"]');
       INSERT INTO collection_runs(id,watchlist_id,config,status) VALUES('official','watch','{"revision":1}','complete');
-      INSERT INTO public_ads(platform,native_id,advertiser_id,start_time) SELECT 'Meta',(9000+n)::text,'12001',now()-interval '40 days' FROM generate_series(1,10)n;
+      INSERT INTO public_ads(platform,native_id,advertiser_id,start_time) SELECT 'Meta',(9000+n)::text,'12001',now()-interval '40 days' FROM generate_series(1,${count})n;
       INSERT INTO ad_observations(platform,native_id,run_id,workspace_id,active_status,reach,raw_payload)
         SELECT 'Meta',native_id,'official','workspace','unknown','{}',jsonb_build_object('id',native_id,'page_id','12001','ad_creative_bodies',jsonb_build_array('Fictional source copy'),'total_reach_by_location',jsonb_build_array(jsonb_build_object('country','GB','reach',100))) FROM public_ads;`);
     const storage=new AdMediaStorage({root,disk:async()=>mediaDiskMeasurement(10*1024**3,9*1024**3),images:{fetch:async()=>new Response(png,{headers:{"content-type":"image/png"}}),resolve:async()=>[{address:"8.8.8.8",family:4}],probe:async()=>({width:40,height:30})}});
@@ -38,13 +38,13 @@ test("media batches retain official history, match Page/archive/workspace IDs, c
   const id=await enqueueAdMedia(pool,"watch");assert(id);assert.equal(await enqueueAdMedia(pool,"watch"),null);assert.equal((await readMediaCoverage(pool,"workspace"))[0].requested,0,"Queued plans are not submitted requests.");
   const items=[{type:"ad",adArchiveId:"9001",pageId:"12001",displayFormat:"IMAGE",imageUrls:[assetUrl],reach:999999,spend:999,startDate:"2000-01-01"},{type:"ad",adArchiveId:"9999",pageId:"12001",displayFormat:"IMAGE",imageUrls:[assetUrl]},{type:"ad",adArchiveId:"9002",pageId:"12002",imageUrls:[assetUrl]},{type:"ad",adArchiveId:"9001",pageId:"12001",displayFormat:"IMAGE",imageUrls:[assetUrl]}];let starts=0;
   const actor=actorFixture(items,()=>starts++);for(let i=0;i<6;i++)await tick(pool,actor,storage);
-  const run=(await adMediaRuns(pool,"workspace"))[0];assert.equal(run.status,"complete");assert.equal(run.results,4);assert.equal(run.adsWithMedia,1);assert.equal(starts,1);assert.equal(run.costStatus,"settled");assert.equal(run.costGbp,.00205);
-  const coverage=(await readMediaCoverage(pool,"workspace"))[0];assert.equal(coverage.requested,10);assert.equal(coverage.returned,2);assert.equal(coverage.matched,1);assert.equal(coverage.reasons.wrong_page,1);assert.equal(coverage.reasons.not_returned,8);
+  const run=(await adMediaRuns(pool,"workspace")).find(run=>run.id===id)!;assert.equal(run.status,"complete");assert.equal(run.results,4);assert.equal(run.adsWithMedia,1);assert.equal(starts,1);assert.equal(run.costStatus,"settled");assert.equal(run.costGbp,.00205);
+  const coverage=(await readMediaCoverage(pool,"workspace"))[0];assert.equal(coverage.requested,10);assert.equal(coverage.returned,2);assert.equal(coverage.matched,1);assert.equal(coverage.reasons.queued,1,"wrong-Page result queues one exact-ID fallback");assert.equal(coverage.reasons.not_returned,8);
   const stored=await readRetainedMedia(pool,"workspace");assert.equal(stored.length,1);assert.equal(stored[0].native_id,"9001");assert.equal((await readRetainedMedia(pool,"other")).length,0);
   assert.deepEqual((await pool.query("SELECT row_to_json(o)::text AS data FROM ad_observations o ORDER BY native_id")).rows,before);
   const all=JSON.stringify((await pool.query("SELECT row_to_json(c) FROM ad_media_creatives c UNION ALL SELECT row_to_json(r) FROM ad_media_runs r")).rows);assert(!all.includes("NEVER-PERSIST")&&!all.includes("https://")&&!all.includes("fixture-only"));
   const next=await enqueueAdMedia(pool,"watch");assert.equal(next,null,"Dispatched IDs wait one day, including IDs not returned.");
-  const retry=await enqueueAdMedia(pool,"watch",new Date(Date.now()+25*3600000));assert(retry);const config=(await pool.query("SELECT phase,target_ids FROM ad_media_runs WHERE id=$1",[retry])).rows[0];assert.equal(config.phase,"missing");assert(!config.target_ids.includes("9001"));assert(config.target_ids.includes("9002"));
+  const retry=(await pool.query("SELECT id FROM ad_media_runs WHERE watchlist_id='watch' AND status='queued'")).rows[0]?.id||await enqueueAdMedia(pool,"watch",new Date(Date.now()+25*3600000));assert(retry);const config=(await pool.query("SELECT phase,target_ids FROM ad_media_runs WHERE id=$1",[retry])).rows[0];assert.equal(config.phase,"missing");assert(!config.target_ids.includes("9001"));assert(config.target_ids.includes("9002"));
 }));
 test("budget and token failures make zero paid calls; an ambiguous start keeps its hold and can never automatically start twice",async()=>fixture(async(pool,storage)=>{
   let calls=0;const actor=actorFixture([],()=>calls++);const id=await enqueueAdMedia(pool,"watch");await pool.query("UPDATE budget_settings SET monthly_budget_gbp=0 WHERE cost_type='data_providers'");await tick(pool,actor,storage);assert.equal(calls,0);assert.equal((await pool.query("SELECT status,error_kind FROM ad_media_runs WHERE id=$1",[id])).rows[0].error_kind,"budget");assert.equal((await pool.query("SELECT count(*)::int n FROM cost_ledger")).rows[0].n,0);assert.equal((await readMediaCoverage(pool,"workspace"))[0].reasons.budget,10);
@@ -75,7 +75,7 @@ test("results with no retained media are bounded to one paid attempt per day; a 
   const id=await enqueueAdMedia(pool,"watch"),actor=actorFixture([{type:"ad",adArchiveId:"9001",pageId:"12001",displayFormat:"IMAGE",imageUrls:["https://unapproved.example/expired.png"]}]);for(let i=0;i<3;i++)await tick(pool,actor,storage);assert.equal((await pool.query("SELECT jsonb_array_length(assets) n FROM ad_media_creatives")).rows[0].n,0);
   assert.equal(await enqueueAdMedia(pool,"watch"),null,"Every dispatched ID has a daily cooldown, even if not returned.");
   await pool.query("UPDATE ad_media_runs SET status='complete'");const tomorrow=await enqueueAdMedia(pool,"watch",new Date(Date.now()+25*3600000));assert(tomorrow);assert((await pool.query("SELECT target_ids FROM ad_media_runs WHERE id=$1",[tomorrow])).rows[0].target_ids.includes("9001"));assert(id);
-}));
+},1));
 test("separate media batches share the existing monthly budget guard and cannot reserve beyond its threshold",async()=>fixture(async(pool,storage)=>{
   await pool.query(`UPDATE budget_settings SET monthly_budget_gbp=.01 WHERE cost_type='data_providers';
     INSERT INTO watchlists(id,workspace_id,brand_key,page_ids) VALUES('second','workspace','second-fictional','["12002"]');
@@ -103,7 +103,7 @@ for(const limit of [Infinity,20])test(`1,200 official ads and another brand prog
   const actor=new AdMediaActor({env,fetch:async(target,init)=>{
     const url=new URL(String(target));
     if(init?.method==='POST'){
-      const input=JSON.parse(String(init.body));inputs.push(input);assert(input.adArchiveIds?.length<=500);assert(!input.pageIds);assert.equal(input.activeStatus,'all');assert.deepEqual(input.countries,['GB']);assert.equal(input.maxAds,input.adArchiveIds.length);assert(Number(url.searchParams.get('maxTotalChargeUsd'))<=.25005);
+      const input=JSON.parse(String(init.body));inputs.push(input);assert(input.adArchiveIds?.length<=500);assert(!input.pageIds);assert.equal(input.activeStatus,'all');assert.deepEqual(input.countries,input.adArchiveIds.length===1&&input.countries[0]==='ALL'?['ALL']:['GB']);assert.equal(input.maxAds,input.adArchiveIds.length);assert(Number(url.searchParams.get('maxTotalChargeUsd'))<=.25005);
       const suffix=String(inputs.length).padStart(8,'0'),run='fixtureRun'+suffix,dataset='fixtureData'+suffix,store='fixtureStore'+suffix,page=input.adArchiveIds[0]<20000?'12001':'12002';
       const returned=input.adArchiveIds.slice(0,limit).map((id:string)=>({type:'ad',adArchiveId:id,pageId:page,displayFormat:'IMAGE',imageUrls:[assetUrl]}));
       data.set(dataset,[...returned,{type:'run-summary',requested:input.adArchiveIds.length,queries:[{delivered:returned.length,stopReason:'end_of_results'}]}]);requested.set(store,input.adArchiveIds);
@@ -117,11 +117,11 @@ for(const limit of [Infinity,20])test(`1,200 official ads and another brand prog
   const workerEnv={...env,EXTER_AD_MEDIA_BROKER_ORIGIN:'https://exter-fixture.example',EXTER_AD_MEDIA_BROKER_TOKEN:'fixture-only-service-'.repeat(3)};
   const work=()=>workAdMediaOnce(pool,{env:workerEnv,fetch:async(target)=>{const parts=new URL(String(target)).pathname.split('/');return Response.json({worked:await stepAdMedia(pool,parts.at(-2)!,parts.at(-1)!,{env,actor,storage})});}});
   // The worker starts with an empty queue. Its idle refill must discover both brands.
-  let ticks=0;while(await work()){assert(++ticks<1300);await pool.query("UPDATE ad_media_runs SET available_at=now() WHERE status IN ('queued','running')");}
-  assert.deepEqual(inputs.filter(i=>i.adArchiveIds[0]<20000).map(i=>i.adArchiveIds.length),[500,500,200]);assert.equal(inputs.filter(i=>i.adArchiveIds[0]>=20000).length,1);
-  const ids=inputs.flatMap(i=>i.adArchiveIds);assert.equal(ids.length,1204);assert.equal(new Set(ids).size,1204);
+  let ticks=0;while(await work()){assert(++ticks<6500);await pool.query("UPDATE ad_media_runs SET available_at=now() WHERE status IN ('queued','running')");}
+  assert.deepEqual(inputs.filter(i=>i.adArchiveIds[0]<20000&&i.countries[0]==='GB').map(i=>i.adArchiveIds.length),[500,500,200]);assert.equal(inputs.filter(i=>i.adArchiveIds[0]>=20000).length,1);
+  const ids=inputs.flatMap(i=>i.adArchiveIds);assert.equal(ids.length,limit===Infinity?1204:2344);assert.equal(new Set(ids).size,1204);
   const coverage=await readMediaCoverage(pool,'workspace'),first=coverage.find(c=>c.brandKey==='fictional-brand')!,second=coverage.find(c=>c.brandKey==='second-fictional')!;
-  assert.equal(first.official,1200);assert.equal(first.requested,1200);assert.equal(first.returned,limit===Infinity?1200:60);assert.equal(first.matched,first.returned);assert.equal(first.images,first.returned);assert.equal(first.reasons.not_requested,0);assert.equal(first.reasons.not_returned,1200-first.returned);assert.equal(second.requested,4);assert.equal(second.images,4);
+  assert.equal(first.official,1200);assert.equal(first.requested,1200);assert.equal(first.returned,1200);assert.equal(first.matched,first.returned);assert.equal(first.images,first.returned);assert.equal(first.reasons.not_requested,0);assert.equal(first.reasons.not_returned,0);assert.equal(inputs.filter(i=>i.countries[0]==='ALL').length,limit===Infinity?0:1140);assert.equal(second.requested,4);assert.equal(second.images,4);
   for(const run of await adMediaRuns(pool,'workspace')){assert.equal(run.status,'complete');assert.equal(run.diagnostics?.requested,run.diagnostics?.actorInput);assert.equal(run.diagnostics?.requested,run.diagnostics?.actorRequested);assert.equal(run.diagnostics?.actorReturned,run.diagnostics?.returned);assert((run.reservedGbp??Infinity)<=.25005);}
   // Simulate a missed completion acknowledgement: clear the refill timer and
   // append new official ads. A fresh idle worker recovers without a manual enqueue.
@@ -153,5 +153,5 @@ test("missing-media diagnostics cover every ad, active and inactive, with disk-a
  coverage=(await readMediaCoverage(pool,'workspace'))[0];assert.equal(coverage.images,0);assert.equal(coverage.reasons.file_missing,1);assert.equal(Object.values(coverage.reasons).reduce((a,b)=>a+b),10);
  const missing=await readMissingMedia(pool,'workspace',{reason:'file_missing'});assert.equal(missing.total,1);assert.equal(missing.ads[0].nativeId,'9005');assert.equal(missing.ads[0].copy,'Fictional source copy');assert.equal((await readMissingMedia(pool,'other-workspace')).total,0);
  const cards=await mergePreviewState(pool,'workspace',[browserCreative({brandId:'fictional-brand',nativeId:'9005'}),browserCreative({brandId:'fictional-brand',nativeId:'9001'})]);assert.equal(cards[0].previewState?.reason,'file_missing');assert.equal(cards[1].previewState?.reason,'no_media');
- const retry=await enqueueAdMedia(pool,'watch',new Date(Date.now()+25*3600000));assert(retry);assert((await pool.query('SELECT target_ids FROM ad_media_runs WHERE id=$1',[retry])).rows[0].target_ids.includes('9005'));
+ const retry=await enqueueAdMedia(pool,'watch',new Date(Date.now()+25*3600000));assert(retry);assert((await pool.query('SELECT target_ids FROM ad_media_runs WHERE id=$1',[retry])).rows[0].target_ids.includes('9006'),'initial never-requested ads precede daily failed retries');assert.equal((await readMissingMedia(pool,'workspace',{reason:'file_missing'})).ads[0].nativeId,'9005');
 }));

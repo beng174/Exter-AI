@@ -7,7 +7,7 @@ test("UI-02/UI-03 title fallback rejects templates, uses the first retained copy
   const row=browserCreative({title:"{{product.name}}",copy:"\nA complete retained first line\nSecond line"});
   assert.equal(creativeTitle(row),"A complete retained first line");assert.equal(row.title,"{{product.name}}");
   assert.equal(creativeTitle({...row,title:"Valid saved title"}),"A complete retained first line");
-  assert.equal(creativeTitle({...row,copy:"{{product.name}}\nAnother line"}),"Studio, gifting");
+  assert.equal(creativeTitle({...row,copy:"{{product.name}}\nAnother line"}),"Catalogue ad · product details loading");
   assert.equal(creativeTitle({...row,title:"",copy:""}),"Studio, gifting");
 });
 test("UI-03 source enums use plain labels, preserving the platform names and attribution meaning",()=>{
