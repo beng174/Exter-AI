@@ -12,7 +12,7 @@ runs. Preserve strict qualification, budget caps, source privacy and saved histo
 - [x] 2026-11-10 UTC: settle confirmed usage and add guarded reconciliation, including legacy holds.
 - [x] 2026-11-10 UTC: show run links/live counts and add provider/database/browser fixtures.
 - [x] 2026-11-10 UTC: all four checks pass; npm test reports 588 passed.
-- [ ] Publish the verified changes as a PR against exter-test-drive.
+- [x] 2026-11-10 UTC: publish PR #31 against exter-test-drive.
 
 ## Surprises and discoveries
 Base e2332a3 includes PR #30. collectPublic starts runs with timeout=120, stops
@@ -40,6 +40,7 @@ real settlement and confirmed historical mappings. Browser checks pass at 1280/1
 actions and no overflow/console errors. npm run check, npm test (588 passed), npm run build and npm run secrets:check
 pass. Both isolated Postgres/API tests pass. Screenshots and reference differences
 are in docs/review/creator-run-recovery/.
+PR: https://github.com/beng174/Exter-AI/pull/31.
 Fixtures are not live verification or evidence of actual refunded funds.
 
 ## Context and orientation
