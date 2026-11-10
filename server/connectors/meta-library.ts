@@ -1,3 +1,4 @@
+import {sourceAdFormat} from "../../shared/source-ad-format.js";
 import type pg from "pg";
 import { reserveCost } from "../infrastructure/budget.js";
 import { boundedPublicBody } from "./public-json.js";
@@ -90,7 +91,7 @@ export class MetaLibraryConnector {
     // Source copy is untrusted too. Remove credentials and paging URLs recursively.
     const pagingUrls=[body.paging?.next,body.paging?.previous].filter((v):v is string=>typeof v==="string"&&v.length>0);
     const clean=(value:any):any=>typeof value==="string"?pagingUrls.reduce((s,url)=>s.split(url).join("[redacted]"),value).split(token).join("[redacted]"):Array.isArray(value)?value.map(clean):value&&typeof value==="object"?Object.fromEntries(Object.entries(value).filter(([key])=>!["paging","next","previous","access_token","error"].includes(key)).map(([key,v])=>[key,clean(v)])):value;
-    const rows = body.data.map((row:any)=>({...clean(Object.fromEntries(META_FIELDS.split(",").filter(key=>key in row).map(key=>[key,row[key]]))),ad_snapshot_url:`https://www.facebook.com/ads/library/?id=${row.id}`}));
+    const rows = body.data.map((row:any)=>({...clean(Object.fromEntries(META_FIELDS.split(",").filter(key=>key in row).map(key=>[key,row[key]]))),...(sourceAdFormat(row)?{source_format:sourceAdFormat(row)}:{}),ad_snapshot_url:`https://www.facebook.com/ads/library/?id=${row.id}`}));
     return {rows,after:after as string|null,backoffMs:metaResponseDelay(response),pageSize};
   }
 }

@@ -150,3 +150,8 @@ test("large tables render fifty rows, retain full totals and inspect alignment o
  assert(valuesRead<rows.length*10,`Alignment reads were ${valuesRead}`);assert.ok(!table.includes('data-label="Missing metric"'));
  const small=render(ui.DataTable,{caption:"Small",rows:[{id:1}],rowKey:(row:any)=>String(row.id),basis:"Observed",columns:[{key:"id",label:"ID",value:(row:any)=>row.id}]});assert.ok(!small.includes("ui-table-pagination"));
 });
+
+test("copy-only cards do not duplicate titles and source actions follow their metrics",()=>{
+ const title="A fictional candle for quiet evenings.",html=render(ui.CreativeCard,{title,creative:{brandName:"Fictional Candle House",platform:"Meta",copy:title,sourceUrl:"https://www.facebook.com/ads/library/?id=9001",deliveryStartAt:"2025-08-21",adFormat:"video",previewState:{failedDays:1,reason:"file_missing",lastAttemptAt:"2026-11-10"}},source:"Fictional Candle House",metrics:[{label:"UK reach",value:1234567,basis:"Observed"}],onOpen:()=>{}});
+ assert.match(html,/Media not collected yet/);assert.match(html,/File missing from disk/);assert.match(html,/Video/);assert.match(html,/1,234,567/);assert.match(html,/Observed/);assert.doesNotMatch(html,/<h3/);assert(html.indexOf('</dl>')<html.indexOf('class="ui-card-source-link"'));
+});

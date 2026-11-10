@@ -32,3 +32,11 @@
 .ad-media-runs .ad-media-brand .brand-name { max-width:100%; }
 .ad-media-runs .ad-media-brand .brand-name>span:last-child { overflow-wrap:anywhere;min-width:0; }
 @media(max-width:540px){.ad-media-coverage dl{grid-template-columns:repeat(2,minmax(0,1fr));}.ad-media-coverage-brand{padding:12px;}.ad-media-details dl{grid-template-columns:minmax(0,1fr);}.ad-media-details summary>span:last-child{display:block;margin-top:8px;}}
+
+.ad-media-missing { min-width:0;display:grid;gap:16px;scroll-margin-top:24px; }
+.ad-media-filters,.ad-media-pagination { display:flex;align-items:center;flex-wrap:wrap;gap:12px; }
+.ad-media-filters label { display:grid;gap:4px;font-size:12px; }
+.ad-media-filters select,.ad-media-pagination button { min-height:44px;max-width:100%; }
+.ad-media-ad-copy { display:grid;gap:8px;max-width:400px;min-width:180px; }
+.ad-media-ad-copy>a:first-child { display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;white-space:normal; }
+.ad-media-missing .ui-data-table td { white-space:normal; }

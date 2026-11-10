@@ -1,12 +1,13 @@
+import {createHash} from "node:crypto";
 import {createReadStream} from "node:fs";
-import {mkdtemp,mkdir,rm,statfs,stat} from "node:fs/promises";
+import {mkdtemp,mkdir,rm,statfs,stat,lstat} from "node:fs/promises";
 import {tmpdir} from "node:os";
 import {resolve} from "node:path";
 import {execFile} from "node:child_process";
 import {promisify} from "node:util";
 import {LocalImageMediaStore,probeImageFile,type ImageMediaOptions} from "../image/media.js";
 import {LocalVideoMediaStore,MediaStorageError,type VideoMediaOptions} from "../video/media.js";
-import {DiskKernelArtifactStore,type KernelArtifactRef} from "../kernel/artifacts.js";
+import {DiskKernelArtifactStore,validateKernelArtifactRef,type KernelArtifactRef} from "../kernel/artifacts.js";
 import type {MediaDiskHealth} from "../../shared/ad-media.js";
 import type {ActorMedia} from "./apify.js";
 const run=promisify(execFile),MAX_VIDEO=128*1024*1024;
@@ -24,10 +25,18 @@ export interface RetainedMedia{assets:MediaAsset[];error:string|null}
 export class AdMediaStorage{
   readonly store:DiskKernelArtifactStore;
   constructor(private options:{root?:string;images?:ImageMediaOptions;videos?:VideoMediaOptions;disk?:()=>Promise<MediaDiskHealth>}={}){this.store=new DiskKernelArtifactStore({root:resolve(options.root||mediaRoot(),"public-ad-files"),maxBytes:MAX_VIDEO});}
+  /** Cheap presence check on the web disk. Serving still verifies the full content hash. */
+  async exists(value:KernelArtifactRef){
+    const ref=validateKernelArtifactRef(value),directory=resolve(this.store.root,createHash("sha256").update(ref.workspaceId).digest("hex"));
+    try{for(const path of [this.store.root,directory]){const item=await lstat(path);if(!item.isDirectory()||item.isSymbolicLink())return false;}
+      const file=await lstat(resolve(directory,ref.artifactId));return file.isFile()&&!file.isSymbolicLink()&&file.size===ref.bytes;
+    }catch(error){if((error as NodeJS.ErrnoException).code==="ENOENT")return false;throw error;}
+  }
   disk(){return this.options.disk?.()||mediaDiskHealth(this.options.root||mediaRoot());}
   async retain(workspace:string,input:ActorMedia,priority:boolean):Promise<RetainedMedia>{
     const temporary=await mkdtemp(resolve(tmpdir(),"exter-ad-media-")),assets:MediaAsset[]=[];let error:string|null=null;
     const signal=AbortSignal.timeout(180000);
+    const retry=async<T>(operation:()=>Promise<T>):Promise<T>=>{for(let attempt=0;;attempt++){try{return await operation();}catch(failure){if(attempt>=3||signal.aborted||missingReason(failure)!=="provider")throw failure;await new Promise(resolve=>setTimeout(resolve,Math.min(250*2**attempt,1000)));}}};
     const put=async(path:string,mimeType:string,role:MediaAsset["role"],index:number,durationSeconds?:number)=>{
       const size=(await stat(path)).size,disk=await this.disk();
       if(disk.status!=="available"||disk.remainingBytes===null||disk.remainingBytes<size+8*1024*1024||role==="video"&&!videoFitsDisk(disk,size))throw new Error("disk");
@@ -36,7 +45,7 @@ export class AdMediaStorage{
     try{
       const images=new LocalImageMediaStore({...this.options.images,root:resolve(temporary,"images"),timeoutMs:20000});
       for(const [role,links]of [["image",input.images],["poster",input.posters]]as const){for(const [index,url]of links.entries()){
-        try{const saved=await images.store({brandId:workspace,adId:`${input.adId}:${role}:${index}`,kind:"image",sourceUrls:[url],signal});const image=saved.images[0];await put(image.absolutePath,image.mimeType,role,index);}
+        try{const saved=await retry(()=>images.store({brandId:workspace,adId:`${input.adId}:${role}:${index}`,kind:"image",sourceUrls:[url],signal}));const image=saved.images[0];await put(image.absolutePath,image.mimeType,role,index);}
         catch(failure){error=missingReason(failure);}
       }}
       for(const [index,url]of input.videos.entries()){
@@ -44,7 +53,7 @@ export class AdMediaStorage{
         if(!full&&!needsPoster){if(priority)error="disk";continue;}
         try{
           const videos=new LocalVideoMediaStore({...this.options.videos,root:resolve(temporary,`video-${index}`),maxBytes:MAX_VIDEO,timeoutMs:30000});
-          const original=await videos.store({brandId:workspace,adId:input.adId,sourceUrl:url,signal});
+          const original=await retry(()=>videos.store({brandId:workspace,adId:input.adId,sourceUrl:url,signal}));
           if(needsPoster){
             const poster=resolve(temporary,`source-poster-${index}.jpg`);
             await run("ffmpeg",["-v","error","-nostdin","-protocol_whitelist","file,pipe","-i",original.absolutePath,"-map","0:v:0","-frames:v","1","-vf","scale=720:720:force_original_aspect_ratio=decrease","-c:v","mjpeg","-threads","1","-q:v","3","-map_metadata","-1","-y",poster],{timeout:15000,maxBuffer:256*1024,signal});

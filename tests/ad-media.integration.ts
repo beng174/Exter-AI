@@ -135,3 +135,23 @@ test("status and summary rows do not consume the ad cap; excess ad rows fail clo
  for(let i=0;i<12;i++)await tick(pool,actor,storage);
  const run=(await adMediaRuns(pool,'workspace'))[0];assert.equal(run.id,id);assert.equal(run.status,'paused');assert.equal(run.costStatus,'reserved');assert.equal(run.diagnostics?.returned,10);assert.equal(run.adsWithMedia,0);
 }));
+
+test("missing-media diagnostics cover every ad, active and inactive, with disk-aware coverage and scoped pagination",async()=>fixture(async(pool,storage)=>{
+ const {readMissingMedia}=await import('../server/ad-media/coverage.js'),{checkedRetainedMedia}=await import('../server/ad-media/file-health.js'),{mergePreviewState}=await import('../server/ad-media/read.js'),{browserCreative}=await import('./fixtures/creative-browser.js');
+ const fresh=await readMissingMedia(pool,'workspace');assert.equal(fresh.total,10);assert(fresh.ads.every(ad=>ad.reason==='not_requested'));
+ await pool.query("UPDATE public_ads SET start_time='2025-08-21',stop_time='2025-09-01' WHERE native_id='9001'");
+ const id=await enqueueAdMedia(pool,'watch');assert((await readMissingMedia(pool,'workspace')).ads.every(ad=>ad.reason==='queued'));assert.equal((await readMediaCoverage(pool,'workspace'))[0].requested,0);
+ assert((await pool.query('SELECT target_ids FROM ad_media_runs WHERE id=$1',[id])).rows[0].target_ids.includes('9001'));
+ await pool.query("UPDATE ad_media_runs SET status='complete' WHERE id=$1",[id]);
+ await pool.query(`INSERT INTO ad_media_requests(run_id,native_id,returned_at,matched_at,outcome) VALUES
+  ($1,'9001',now(),now(),'no_media'),($1,'9002',NULL,NULL,'not_returned'),($1,'9003',now(),now(),'expired'),($1,'9004',now(),now(),'provider')`,[id]);
+ const kept=await storage.retain('workspace',{adId:'9005',pageId:'12001',format:'image',images:['https://image.fixture.fbcdn.net/file.png'],posters:[],videos:[]},false);
+ await pool.query(`INSERT INTO ad_media_creatives(id,run_id,workspace_id,brand_key,native_id,page_id,format,assets) VALUES('saved-file',$1,'workspace','fictional-brand','9005','12001','image',$2)`,[id,JSON.stringify(kept.assets)]);
+ await checkedRetainedMedia(pool,await readRetainedMedia(pool,'workspace'),storage,1);
+ let coverage=(await readMediaCoverage(pool,'workspace'))[0];assert.equal(coverage.images,1);assert.equal(coverage.reasons.no_media,1);assert.equal(coverage.reasons.not_returned,1);assert.equal(coverage.reasons.expired,1);assert.equal(coverage.reasons.provider,1);assert.equal(coverage.missing,9);
+ const {unlink}=await import('node:fs/promises'),file=await storage.store.load(kept.assets[0].ref);await unlink(file!.absolutePath);await checkedRetainedMedia(pool,await readRetainedMedia(pool,'workspace'),storage,60002);
+ coverage=(await readMediaCoverage(pool,'workspace'))[0];assert.equal(coverage.images,0);assert.equal(coverage.reasons.file_missing,1);assert.equal(Object.values(coverage.reasons).reduce((a,b)=>a+b),10);
+ const missing=await readMissingMedia(pool,'workspace',{reason:'file_missing'});assert.equal(missing.total,1);assert.equal(missing.ads[0].nativeId,'9005');assert.equal(missing.ads[0].copy,'Fictional source copy');assert.equal((await readMissingMedia(pool,'other-workspace')).total,0);
+ const cards=await mergePreviewState(pool,'workspace',[browserCreative({brandId:'fictional-brand',nativeId:'9005'}),browserCreative({brandId:'fictional-brand',nativeId:'9001'})]);assert.equal(cards[0].previewState?.reason,'file_missing');assert.equal(cards[1].previewState?.reason,'no_media');
+ const retry=await enqueueAdMedia(pool,'watch',new Date(Date.now()+25*3600000));assert(retry);assert((await pool.query('SELECT target_ids FROM ad_media_runs WHERE id=$1',[retry])).rows[0].target_ids.includes('9005'));
+}));

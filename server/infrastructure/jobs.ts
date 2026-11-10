@@ -1,5 +1,5 @@
 import { scheduleCreatorRefresh } from "../creators/discovery-jobs.js";
-import {schedulePublicCategories} from "../public-categories/jobs.js";
+import {schedulePublicCategories,enqueueCategoryBatch,categoryConfigured} from "../public-categories/jobs.js";
 import {scheduleAdMedia,enqueueAdMedia} from "../ad-media/jobs.js";
 import { scheduleOwnedSync } from "../owned/jobs.js";
 export { enqueueOwnedSync, workOwnedOnce } from "../owned/jobs.js";
@@ -135,8 +135,13 @@ export async function workOnce(pool: pg.Pool, connector?: MetaLibraryConnector, 
     await client.query("COMMIT");
   } catch (error) { await client.query("ROLLBACK"); throw error; }
   finally { client.release(); }
-  if(state==="complete"&&(options.env||process.env).EXTER_AD_MEDIA_ENABLED==="true"){
-    try{const completed=(await pool.query("SELECT watchlist_id FROM collection_runs WHERE id=$1",[job.id])).rows[0];if(completed)await enqueueAdMedia(pool,completed.watchlist_id,new Date(),job.id);}catch{/* The durable refill gate retries the handoff without repeating official collection. */}
+  if(state==="complete"){
+    try{const completed=(await pool.query("SELECT r.watchlist_id,w.workspace_id FROM collection_runs r JOIN watchlists w ON w.id=r.watchlist_id WHERE r.id=$1",[job.id])).rows[0];
+      if(completed){
+        if((options.env||process.env).EXTER_AD_MEDIA_ENABLED==="true")await enqueueAdMedia(pool,completed.watchlist_id,new Date(),job.id);
+        if(categoryConfigured(options.env||process.env))await enqueueCategoryBatch(pool,completed.workspace_id);
+      }
+    }catch{/* Durable refill gates retry enrichment without repeating official collection. */}
   }
   return true;
 }

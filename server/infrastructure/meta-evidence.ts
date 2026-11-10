@@ -1,3 +1,4 @@
+import {sourceAdFormat} from "../../shared/source-ad-format.js";
 import {visitDatabaseRows} from "./read-rows.js";
 import {categoryText} from "../../shared/public-category-input.js";
 import {categoryHash} from "../public-categories/provider.js";
@@ -35,6 +36,7 @@ function publicEvidenceMerger(creatives:BrowserCreative[],brand:CreativeBrowserR
       row={adId:`public:Meta:${item.native_id}`,nativeId:item.native_id,brandId:target.id,brandName:target.name,title:"",copy:"",sourceUrl:`https://www.facebook.com/ads/library/?id=${item.native_id}`,mediaKind:"unknown",durationSeconds:null,thumbnailUrl:null,videoUrl:null,imageUrls:[],imageCount:0,mediaAvailable:false,mediaStatus:"not-stored",analysis:null,creativeFormat:null,hookType:null,angle:null,offerType:null,ugc:null,creatorEvidence:[],partnershipAttribution:null,deliveryStatus:"unknown",deliveryStartAt:null,deliveryStopAt:null,observedAt:null,firstObservedAt:null,daysRunning:null,daysRunningAsOf:null,daysRunningBasis:null,searchText:"",platform:"Meta",publicEvidence:true,owned:false,workspaceBrand:target.id===brand.id,sourceKind:"public",placements:[],score:null,performance:[],scenes:[]};
       result.push(row);index.set(key(target.id,item.native_id),row);
     }
+    row.adFormat=sourceAdFormat(item.raw_payload)||row.adFormat||null;
     row.publicEvidence=true;row.publicReach=publishedReach(item.raw_payload);row.publicDetails=publishedAdDetails(item.raw_payload);row.reachObservedAt=observed;
     const categoryInput=categoryText(item.raw_payload);row.headlines=categoryInput.headlines;row.landingPaths=categoryInput.landingPaths;row.categorySourceHash=categoryHash(categoryInput);
     const bodies=item.raw_payload.ad_creative_bodies;

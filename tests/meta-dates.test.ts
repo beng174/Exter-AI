@@ -18,7 +18,8 @@ for(const [instant,london,pacific] of times)test(`UK collection at ${instant} ($
   const connector=new MetaLibraryConnector({token,fetch:async target=>{calls++;const url=new URL(String(target));assert.equal(url.searchParams.get("ad_delivery_date_min"),from);assert.equal(url.searchParams.has("ad_delivery_date_max"),false,phase);assert.equal(url.searchParams.get("ad_type"),"ALL");return Response.json({data:[]});}});
   await connector.page({pageIds:["12001"],countries:["GB"],from,to:ukDay,...(phase==="backfill"?{after:"fixture-saved-cursor"}:{})});assert.equal(calls,1);
  }
- assert.equal(mediaActorInput({pageId:"12001",from:"2025-01-01",to:ukDay,ids:["9001"],cap:1},now).deliveredBefore,pacific);
+ assert.equal(mediaActorInput({pageId:"12001",from:"2025-01-01",to:ukDay,ids:["9001"],cap:1},now).deliveredBefore,undefined);
+ assert.equal(mediaActorInput({pageId:"12001",from:"2025-01-01",to:ukDay,ids:[],cap:1},now).deliveredBefore,pacific);
 });
 test("Meta user diagnostics remove credentials, URLs and control characters before the 300-character limit",()=>{
  for(const link of ["https://graph.fixture.invalid/path?access_token="+token,"www.fixture.invalid/path", "fixture.invalid/path",encodeURIComponent("https://fixture.invalid/path?token="+token),encodeURIComponent(encodeURIComponent("https://fixture.invalid/path"))]){

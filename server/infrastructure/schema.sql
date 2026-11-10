@@ -242,3 +242,14 @@ ALTER TABLE creator_discovery_runs ADD COLUMN IF NOT EXISTS reconcile_note text;
 ALTER TABLE creator_discovery_runs ADD COLUMN IF NOT EXISTS reconciled_at timestamptz;
 ALTER TABLE creator_discovery_runs ADD COLUMN IF NOT EXISTS reconcile_mappings jsonb NOT NULL DEFAULT '[]';
 ALTER TABLE creator_discovery_runs ADD COLUMN IF NOT EXISTS reconcile_window_end timestamptz;
+
+-- Web disk checks contain only scoped file identities and controlled availability.
+CREATE TABLE IF NOT EXISTS ad_media_file_checks (
+ workspace_id text NOT NULL, artifact_id text NOT NULL, available boolean NOT NULL,
+ checked_at timestamptz NOT NULL DEFAULT now(), PRIMARY KEY(workspace_id,artifact_id)
+);
+
+ALTER TABLE ad_media_requests DROP CONSTRAINT IF EXISTS ad_media_requests_outcome_check;
+ALTER TABLE ad_media_requests ADD CONSTRAINT ad_media_requests_outcome_check CHECK(outcome IN ('requested','not_returned','expired','unsupported','wrong_page','stored','disk','provider','no_media'));
+
+ALTER TABLE public_category_batches ADD COLUMN IF NOT EXISTS max_cost_gbp numeric CHECK(max_cost_gbp>=0);

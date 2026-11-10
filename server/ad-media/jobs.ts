@@ -20,8 +20,8 @@ export async function enqueueAdMedia(pool:pg.Pool,watchlistId:string,now=new Dat
     const projected=await readPublicCreatives(pool,w.workspace_id,[],{id:w.workspace_id,name:"",domain:""},[{key:w.brand_key,brandId:w.brand_key,name:"",status:"configured"}]);
     const observations=projected.filter(row=>row.brandId===w.brand_key).map(row=>({native_id:row.nativeId,start_time:row.deliveryStartAt,stop_time:row.deliveryStopAt,first_seen_at:row.firstObservedAt,observed_at:row.observedAt,days:row.daysRunning,reach:row.publicReach}));
     const priority=priorityVideoIds(observations.map(o=>({nativeId:o.native_id,brandId:w.brand_key,deliveryStartAt:o.start_time,daysRunning:o.days,publicReach:o.reach})),now);
-    const retained=await lock.query(`SELECT native_id,bool_or(EXISTS(SELECT 1 FROM jsonb_array_elements(assets)a WHERE a->>'role' IN ('image','poster'))) AS image,
-      bool_or(EXISTS(SELECT 1 FROM jsonb_array_elements(assets)a WHERE a->>'role'='video')) AS video,
+    const retained=await lock.query(`SELECT native_id,bool_or(EXISTS(SELECT 1 FROM jsonb_array_elements(assets)a WHERE a->>'role' IN ('image','poster') AND NOT EXISTS(SELECT 1 FROM ad_media_file_checks f WHERE f.workspace_id=$1 AND f.artifact_id=a->'ref'->>'artifactId' AND NOT f.available))) AS image,
+      bool_or(EXISTS(SELECT 1 FROM jsonb_array_elements(assets)a WHERE a->>'role'='video' AND NOT EXISTS(SELECT 1 FROM ad_media_file_checks f WHERE f.workspace_id=$1 AND f.artifact_id=a->'ref'->>'artifactId' AND NOT f.available))) AS video,
       bool_or(format='video' OR expected_videos>0) AS is_video
       FROM ad_media_creatives WHERE workspace_id=$1 AND brand_key=$2 AND page_id=$3 GROUP BY native_id`,[w.workspace_id,w.brand_key,w.page_ids[0]]);
     const files=new Map<string,{image:boolean;video:boolean;is_video:boolean}>(retained.rows.map(r=>[r.native_id,r]));
@@ -30,6 +30,8 @@ export async function enqueueAdMedia(pool:pg.Pool,watchlistId:string,now=new Dat
       const previous=files.get(native)||{image:false,video:false,is_video:false};
       files.set(native,{image:previous.image||row.known_media_ids.includes(native),video:previous.video||row.known_video_ids.includes(native),is_video:previous.is_video||row.known_video_candidates.includes(native)});
     }
+    const missingFiles=await lock.query(`SELECT DISTINCT c.native_id FROM ad_media_creatives c CROSS JOIN LATERAL jsonb_array_elements(c.assets) a JOIN ad_media_file_checks f ON f.workspace_id=c.workspace_id AND f.artifact_id=a->'ref'->>'artifactId' WHERE c.workspace_id=$1 AND c.brand_key=$2 AND c.page_id=$3 AND NOT f.available AND a->>'role' IN ('image','poster')`,[w.workspace_id,w.brand_key,w.page_ids[0]]);
+    for(const row of missingFiles.rows){const file=files.get(row.native_id);if(file&&!retained.rows.find(r=>r.native_id===row.native_id)?.image)file.image=false;}
     const attempts=await lock.query(`SELECT q.native_id,max(q.requested_at) AS attempted_at FROM ad_media_requests q JOIN ad_media_runs r ON r.id=q.run_id WHERE r.workspace_id=$1 AND r.brand_key=$2 AND r.page_id=$3 GROUP BY q.native_id`,[w.workspace_id,w.brand_key,w.page_ids[0]]);
     const attempted=new Map<string,number>(attempts.rows.map(r=>[r.native_id,new Date(r.attempted_at).getTime()]));
     const legacy=await lock.query(`SELECT native_id,max(created_at) AS attempted_at FROM ad_media_creatives WHERE workspace_id=$1 AND brand_key=$2 AND page_id=$3 GROUP BY native_id`,[w.workspace_id,w.brand_key,w.page_ids[0]]);
@@ -85,10 +87,10 @@ export async function stepAdMedia(pool:pg.Pool,id:string,owner:string,options:{e
       try{reservation=await reserveCost(pool,"data_providers","apify_ad_media",Math.ceil(mediaMaximumUsd(run.cap)*rate*1e6)/1e6);}catch{await update("paused","budget");return true;}
       const scope:ActorScope={pageId:run.page_id,from:isoDay(run.window_from),to:isoDay(run.window_to),ids:requested,cap:run.cap};
       const input=mediaActorInput(scope);
-      scope.to=input.deliveredBefore;
+
       // Persist the hold BEFORE a chargeable request. A crash cannot cause an automatic second start.
       await client.query("BEGIN");
-      await client.query("UPDATE ad_media_runs SET status='starting',phase='missing',reservation_id=$3,gbp_per_usd=$4,requested_ids=$5,dispatched_at=clock_timestamp(),input_details=$6 WHERE id=$1 AND lease_owner=$2",[id,owner,reservation,rate,JSON.stringify(requested),JSON.stringify({pageId:run.page_id,countries:input.countries,from:input.deliveredAfter,to:input.deliveredBefore,activeStatus:input.activeStatus,adType:input.adType,maxAds:input.maxAds,maxAdsPerQuery:input.maxAdsPerQuery,mode:"adArchiveIds",requested:requested.length})]);
+      await client.query("UPDATE ad_media_runs SET status='starting',phase='missing',reservation_id=$3,gbp_per_usd=$4,requested_ids=$5,dispatched_at=clock_timestamp(),input_details=$6 WHERE id=$1 AND lease_owner=$2",[id,owner,reservation,rate,JSON.stringify(requested),JSON.stringify({pageId:run.page_id,countries:input.countries,from:scope.from,to:scope.to,dateFiltered:false,activeStatus:input.activeStatus,adType:input.adType,maxAds:input.maxAds,maxAdsPerQuery:input.maxAdsPerQuery,mode:"adArchiveIds",requested:requested.length})]);
       await client.query("INSERT INTO ad_media_requests(run_id,native_id) SELECT $1,unnest($2::text[]) ON CONFLICT DO NOTHING",[id,requested]);
       await client.query("COMMIT");
       try{
@@ -111,16 +113,17 @@ export async function stepAdMedia(pool:pg.Pool,id:string,owner:string,options:{e
       const raw=record(items[0]),returnedId=typeof raw.adArchiveId==="string"&&/^\d{1,40}$/.test(raw.adArchiveId)?raw.adArchiveId:null;
       if(returnedId&&run.returned_ads>=run.cap)throw new AdMediaError("output");
       const media=actorMedia(items[0]);
-      if(returnedId)await client.query("UPDATE ad_media_requests SET returned_at=COALESCE(returned_at,clock_timestamp()),outcome=$3 WHERE run_id=$1 AND native_id=$2",[id,returnedId,media&&media.pageId!==run.page_id?"wrong_page":"unsupported"]);
+      if(returnedId)await client.query("UPDATE ad_media_requests SET returned_at=COALESCE(returned_at,clock_timestamp()),outcome=$3 WHERE run_id=$1 AND native_id=$2",[id,returnedId,media&&media.pageId!==run.page_id?"wrong_page":"no_media"]);
       if(media&&media.pageId===run.page_id&&(run.phase==="page"||(run.requested_ids||run.target_ids).includes(media.adId))){
         const official=await client.query(`SELECT 1 FROM ad_observations o JOIN public_ads a USING(platform,native_id) JOIN collection_runs r ON r.id=o.run_id WHERE o.workspace_id=$1 AND a.platform='Meta' AND a.native_id=$2 AND a.advertiser_id=$3 AND r.watchlist_id=$4 AND r.config->>'revision'=$5 LIMIT 1`,[run.workspace_id,media.adId,run.page_id,run.watchlist_id,String(run.revision)]);
         if(official.rowCount){
           const prior=(await client.query("SELECT assets,error_kind FROM ad_media_creatives WHERE run_id=$1 AND native_id=$2",[id,media.adId])).rows[0];
           const eligible=run.download_videos||run.priority_ids.includes(media.adId);
           const kept=prior?{assets:prior.assets,error:prior.error_kind}:(run.download_videos?options.existingVideoIds:options.existingIds)?.has(media.adId)?{assets:[],error:null}:await storage.retain(run.workspace_id,media,eligible);
+          if(kept.assets.length)await client.query(`INSERT INTO ad_media_file_checks(workspace_id,artifact_id,available) SELECT $1,unnest($2::text[]),true ON CONFLICT(workspace_id,artifact_id) DO UPDATE SET available=true,checked_at=now()`,[run.workspace_id,[...new Set(kept.assets.map((a:{ref:{artifactId:string}})=>a.ref.artifactId))]]);
           if(kept.error)await client.query("UPDATE ad_media_runs SET error_kind=COALESCE(error_kind,$2) WHERE id=$1",[id,kept.error]);
           await client.query(`INSERT INTO ad_media_creatives(id,run_id,workspace_id,brand_key,native_id,page_id,format,assets,video_eligible,error_kind,complete,expected_videos) VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12) ON CONFLICT(run_id,native_id) DO NOTHING`,[randomUUID(),id,run.workspace_id,run.brand_key,media.adId,run.page_id,media.format,JSON.stringify(kept.assets),eligible,kept.error,kept.assets.length>0&&!kept.error&&kept.assets.length>=media.images.length+media.posters.length+(eligible?media.videos.length:0),media.videos.length]);
-          const outcome=kept.assets.some((a:{role:string})=>a.role==="image"||a.role==="poster")?"stored":["expired","unsupported","disk","provider"].includes(kept.error||"")?kept.error:"unsupported";
+          const outcome=!media.images.length&&!media.posters.length&&!media.videos.length?"no_media":kept.assets.some((a:{role:string})=>a.role==="image"||a.role==="poster")?"stored":["expired","unsupported","disk","provider"].includes(kept.error||"")?kept.error:"no_media";
           await client.query("UPDATE ad_media_requests SET matched_at=COALESCE(matched_at,clock_timestamp()),outcome=$3 WHERE run_id=$1 AND native_id=$2",[id,media.adId,outcome]);
         }
       }
