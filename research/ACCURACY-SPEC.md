@@ -144,3 +144,26 @@ Record computation versions and immutable snapshots, not a caller-supplied pass
 flag or summary AUC. Import offline prediction cases, then calculate metrics on
 the server. Sample mode is read-only and cannot release real gates. Preserve
 existing data, collection, official reach/dates, budgets, tokens and live gates.
+
+## Creator discovery validation
+
+The owner-authorised UK creator workflow has two separate checks: good-fit
+precision and UK precision. Both use TP / (TP + FP) against independent owner
+labels in research/creator-briefs/test-set.csv. Target >=85% each, at least 20
+predicted positives per field, all labels matched to current workspace results,
+and the same frozen brief/rule version. Report TP/FP/FN, coverage gaps, sample,
+check time and Wilson 95% intervals. Twenty positives is an initial measurement
+safeguard, not proof of broad accuracy. Missing predictions do not count as correct.
+Fixtures never open a client gate; refresh, deletion or a changed brief invalidates
+validation. These creator gates do not lower the ad-tag or prediction gates above.
+
+Good fit is a six-part Estimated research checklist, not a sales prediction.
+Initial component maxima are niche 30, engagement 20, UK 20, style 10,
+authenticity 10 and seed similarity 10. Show earned points, assessed points,
+coverage and Provisional when incomplete. The skill reference defines the initial
+rules and provisional tier guides. Official numbers require Business Discovery;
+unsupported accounts remain Unverified. UK signals describe the creator's likely
+base, never the followers' location. The labelled UK prediction is High confidence;
+the labelled good-fit prediction requires no exclusions/review gaps, 12 officially
+counted posts, >=80 assessed points and >=70 normalised fit. This initial classifier
+needs validation; it makes no claim about commercial outcomes or fraud.

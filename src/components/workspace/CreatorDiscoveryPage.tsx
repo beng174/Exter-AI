@@ -1,0 +1,94 @@
+import { useEffect, useState } from "react";
+import { ImageIcon, Search, Download } from "lucide-react";
+import { CREATOR_STYLES, emptyDiscovery, matchesCreator, type CreatorBrief, type CreatorFilters, type DiscoveryCreator, type DiscoveryQuote, type DiscoverySnapshot } from "../../../shared/creator-discovery";
+import { api } from "../../lib/api";
+import { ukDate } from "../../../shared/creative-presentation";
+import { SectionCard, DataTable, DataLabel, StatusChip } from "../ui";
+import { Caveat } from "../ui/Caveat";
+import type { ActionProps } from "./ActionWorkspace";
+import "./CreatorDiscoveryPage.css";
+const n = (v: number | null) => v === null ? "Unverified" : v.toLocaleString("en-GB", { maximumFractionDigits: 1 });
+const pct = (v: number | null) => v === null ? "Unverified" : `${(v * 100).toFixed(1)}%`;
+const list = (value: string) => [...new Set(value.split(/[,\n]+/).map(v => v.trim()).filter(Boolean))];
+const defaultBrief = (category: string): CreatorBrief => ({ category, keywords: [], hashtags: [], competitors: [], country: "GB", minFollowers: 1000, maxFollowers: 100000, seeds: [], exclusions: [], styles: [], target: 100 });
+export function CreatorDiscoveryPage({ data, header }: ActionProps) {
+  const id = data.base.library.brand.id;
+  const [snapshot, setSnapshot] = useState<DiscoverySnapshot>(emptyDiscovery()), [brief, setBrief] = useState<CreatorBrief>(() => defaultBrief(data.base.brand?.category || ""));
+  const [filters, setFilters] = useState<CreatorFilters>({ uk: "High" }), [quote, setQuote] = useState<DiscoveryQuote | null>(null), [layout, setLayout] = useState("cards"), [segmentName, setSegmentName] = useState("");
+  const [busy, setBusy] = useState(""), [error, setError] = useState(""), [loading, setLoading] = useState(true), [notice, setNotice] = useState("");
+  const load = async () => { const value = await api<DiscoverySnapshot>(`/api/creator-discovery?workspaceId=${encodeURIComponent(id)}`); setSnapshot(value); return value; };
+  useEffect(() => {
+    const controller = new AbortController(); setLoading(true); setSnapshot(emptyDiscovery()); setQuote(null); setError("");
+    api<DiscoverySnapshot>(`/api/creator-discovery?workspaceId=${encodeURIComponent(id)}`, undefined, { signal: controller.signal }).then(v => { setSnapshot(v); setBrief(v.brief || defaultBrief(data.base.brand?.category || "")); }).catch(e => { if (!controller.signal.aborted) setError(e.message); }).finally(() => { if (!controller.signal.aborted) setLoading(false); });
+    return () => controller.abort();
+  }, [id]);
+  const running = snapshot.runs.some(r => ["queued", "running"].includes(r.status));
+  useEffect(() => { if (!running) return; const timer = setInterval(() => { void load().catch(() => setError("Creator progress could not be read. Refresh to retry.")); }, 10000); return () => clearInterval(timer); }, [running, id]);
+  const act = async (name: string, path: string, body: unknown) => { setBusy(name); setError(""); try { await api(path, { workspaceId: id, ...body as object }); await load(); return true; } catch (e) { setError((e as Error).message); return false; } finally { setBusy(""); } };
+  const update = <K extends keyof CreatorBrief>(key: K, value: CreatorBrief[K]) => { setBrief(b => ({ ...b, [key]: value })); setQuote(null); };
+  const filter = <K extends keyof CreatorFilters>(key: K, value: CreatorFilters[K]) => setFilters(f => ({ ...f, [key]: value }));
+  const rows = snapshot.creators.filter(c => matchesCreator(c, filters));
+  const exportUrl = `/api/creator-discovery/export?${new URLSearchParams({ workspaceId: id, filters: JSON.stringify(filters) })}`;
+  return <>{header(<><button className="button secondary" disabled={Boolean(busy) || running || !snapshot.verificationConfigured} title="Checks saved creators whose monthly refresh is due." onClick={() => void act("refresh", "/api/creator-discovery/refresh", {})}>Refresh saved creators</button><a className="button secondary" href={exportUrl}><Download size={16} />Export research CSV</a></>)}
+    <Caveat>Public searches find candidates. Official account checks supply follower, media, like and comment counts. Unsupported accounts stay Unverified. Engagement uses the median of (likes + comments) / followers across the latest 12 posts. Fit, location and content styles are estimates. Tier guides are provisional. Location describes creators, never their followers. Comment patterns cannot prove fraud. CSV exports are internal research. Both accuracy checks must pass 85% before client use. No messages are sent.</Caveat>
+    {error && <p role="alert">{error}</p>}{notice && <p role="status">{notice}</p>}
+    <SectionCard title="Find creators" actions={<StatusChip status={snapshot.clientReady ? "Validated for this brief" : "Internal research"} />}>
+      <details className="creator-search-brief" open={!snapshot.creators.length}><summary>Edit search brief</summary><form onSubmit={async e => { e.preventDefault(); setBusy("quote"); setError(""); try { setQuote(await api<DiscoveryQuote>("/api/creator-discovery/quote", { workspaceId: id, brief })); } catch (e) { setError((e as Error).message); } finally { setBusy(""); } }}>
+        <div className="creator-discovery-fields">
+          <label>Category<input required maxLength={160} value={brief.category} onChange={e => update("category", e.target.value)} /></label>
+          <label>Country<select value={brief.country} onChange={e => { update("country", e.target.value); filter("uk", e.target.value === "GB" ? "High" : ""); }}><option value="GB">United Kingdom</option><option value="ALL">All countries</option></select></label>
+          <label>Minimum followers<input type="number" min={0} max={100000000} value={brief.minFollowers} onChange={e => update("minFollowers", Number(e.target.value))} /></label>
+          <label>Maximum followers<input type="number" min={1} max={100000000} value={brief.maxFollowers} onChange={e => update("maxFollowers", Number(e.target.value))} /></label>
+          <ListInput label="Niche keywords" value={brief.keywords} placeholder="Separate phrases with commas" onEdit={()=>setQuote(null)} onChange={v=>update("keywords",v)}/>
+          <ListInput label="Hashtags" value={brief.hashtags} placeholder="10 to 20 niche hashtags" onEdit={()=>setQuote(null)} onChange={v=>update("hashtags",v)}/>
+          <ListInput label="Competitor handles" value={brief.competitors} placeholder="" onEdit={()=>setQuote(null)} onChange={v=>update("competitors",v)}/>
+          <ListInput label="Seed creators" value={brief.seeds} placeholder="20 to 30 approved handles" onEdit={()=>setQuote(null)} onChange={v=>update("seeds",v)}/>
+          <ListInput label="Excluded handles or topics" value={brief.exclusions} placeholder="" onEdit={()=>setQuote(null)} onChange={v=>update("exclusions",v)}/>
+          <label>Target count<input type="number" min={1} max={1000} value={brief.target} onChange={e => update("target", Number(e.target.value))} /></label>
+        </div>
+        <fieldset className="creator-style-choices"><legend>Content styles</legend>{CREATOR_STYLES.map(s => <label key={s}><input type="checkbox" checked={brief.styles.includes(s)} onChange={e => update("styles", e.target.checked ? [...brief.styles, s] : brief.styles.filter(v => v !== s))} />{s}</label>)}</fieldset>
+        <div className="reference-actions"><button className="button secondary" type="submit" disabled={Boolean(busy) || running || !snapshot.configured}><Search size={16} />Estimate cost</button>{quote && <><span role="status">Up to £{quote.maxCostGbp.toFixed(2)} reserved · {quote.batches} bounded lookups</span><button type="button" className="button primary" disabled={Boolean(busy) || !quote.available || running} onClick={async () => { if (await act("run", "/api/creator-discovery/run", { quoteId: quote.id })) { setQuote(null); setNotice("Search queued. Results and official checks update in the background."); } }}>Find creators</button></>}</div>
+        {quote && <p className="reference-muted">{quote.reason}</p>}
+        {!snapshot.configured && <p className="reference-muted">{snapshot.reason}</p>}
+      </form></details>
+      {snapshot.runs.length > 0 && <details className="creator-run-history"><summary>Search progress</summary><DataTable caption="Creator search runs" basis="Observed" showBasis={false} rows={snapshot.runs} rowKey={r => r.id} columns={[{ key: "date", label: "Started", value: r => ukDate(r.createdAt) }, { key: "status", label: "Status", value: r => r.status, render: r => <><StatusChip status={r.status.charAt(0).toUpperCase() + r.status.slice(1)} />{r.error && <small className="accuracy-detail">{r.error}</small>}</> }, { key: "found", label: "Found", align: "number", value: r => r.found }, { key: "verified", label: "Verified", align: "number", value: r => r.verified }, { key: "cost", label: "Reserved", align: "number", value: r => `£${r.reservedGbp.toFixed(2)}` }]} /></details>}
+    </SectionCard>
+    <SectionCard title="Results" actions={<label>View<select value={layout} onChange={e => setLayout(e.target.value)}><option value="cards">Cards</option><option value="table">Table</option></select></label>}>
+      <div className="creator-result-filters">
+        <Select label="Follower tier" value={filters.tier} options={["Nano", "Micro", "Mid", "Macro"]} onChange={v => filter("tier", v)} />
+        <Select label="Niche" value={filters.niche} options={[...new Set(snapshot.creators.flatMap(c => c.evaluation.niches))]} onChange={v => filter("niche", v)} />
+        <Select label="Engagement" value={filters.engagement} options={["Under 1%", "1 to 3%", "3% or more"]} onChange={v => filter("engagement", v)} />
+        <Select label="UK confidence" value={filters.uk} options={["High", "Medium", "Low", "Unknown"]} onChange={v => filter("uk", v)} />
+        <Select label="Content style" value={filters.style} options={[...CREATOR_STYLES]} onChange={v => filter("style", v)} />
+        <label>Minimum fit<input type="number" min={0} max={100} value={filters.minFit ?? ""} onChange={e => filter("minFit", e.target.value ? Number(e.target.value) : undefined)} /></label>
+        {([["worked", "Worked with competitors"], ["ads", "Appears in competitor ads"], ["saved", "Saved creators"], ["review", "Needs review"]] as const).map(([key, label]) => <label className="creator-checkbox" key={key}><input type="checkbox" checked={Boolean(filters[key])} onChange={e => filter(key, e.target.checked)} />{label}</label>)}
+      </div>
+      <p className="reference-muted">{loading ? "Reading saved creators…" : `${rows.length.toLocaleString("en-GB")} shown of ${snapshot.creators.length.toLocaleString("en-GB")} candidates`}{!loading && !snapshot.clientReady ? " · Internal research" : ""}</p>
+      {!rows.length ? <p className="reference-muted">No creators match. Adjust filters or start a search.</p> : layout === "table" ? <DataTable caption="Creator results" basis="Estimated" showBasis={false} rows={rows} rowKey={r => r.profile.handle} columns={[
+        { key: "creator", label: "Creator", value: r => r.profile.name, sortable: true, render: r => <a href={`https://www.instagram.com/${r.profile.handle}/`} target="_blank" rel="noopener noreferrer">{r.profile.name}<small className="accuracy-detail">@{r.profile.handle}</small></a> },
+        { key: "followers", label: "Followers", align: "number", value: r => r.profile.verification === "Verified" ? r.profile.followers : null, sortable: true, missing: r => <span title={r.profile.verificationReason}>Unverified</span>, render: r => <>{n(r.profile.followers)} <DataLabel basis="Observed" /></> },
+        { key: "engagement", label: "Engagement", align: "number", value: r => r.evaluation.engagement, sortable: true, missing: r => <span title={r.profile.verificationReason}>Unverified</span>, render: r => <>{pct(r.evaluation.engagement)} <small>{r.evaluation.assessedPosts}/12 posts</small></> },
+        { key: "uk", label: "UK confidence", value: r => r.evaluation.uk.band, render: r => <span title={r.evaluation.uk.reasons.join(" ")}>{r.evaluation.uk.band}</span>, sortable: true },
+        { key: "fit", label: "Fit", align: "number", value: r => r.evaluation.fit, sortable: true, render: r => <span>{n(r.evaluation.fit)} · {r.evaluation.assessedPoints}% coverage{r.evaluation.provisional ? " · Provisional" : ""}</span> },
+        { key: "actions", label: "Actions", value: r => r.profile.handle, render: r => <CreatorActions row={r} busy={Boolean(busy)} act={act} /> }
+      ]} /> : <div className="creator-discovery-grid">{rows.slice(0, 60).map(row => <CreatorResearchCard workspaceId={id} key={row.profile.handle} row={row} busy={Boolean(busy)} act={act} />)}</div>}
+      {layout === "cards" && rows.length > 60 && <p className="reference-muted">Showing 60 cards. Use the table to see every match.</p>}
+    </SectionCard>
+    <SectionCard title="Segments" actions={<div className="reference-actions"><label>Segment name<input maxLength={100} value={segmentName} onChange={e => setSegmentName(e.target.value)} /></label><button className="button secondary" disabled={!segmentName.trim() || Boolean(busy)} onClick={async () => { if (await act("segment", "/api/creator-discovery/segments", { name: segmentName, filters })) setSegmentName(""); }}>Save current filters</button></div>}>
+      {snapshot.segments.length ? <DataTable caption="Saved creator segments" basis="Observed" showBasis={false} rows={snapshot.segments} rowKey={s => s.id} columns={[{ key: "name", label: "Segment", value: s => s.name, sortable: true, render: s => <button className="creator-text-button" onClick={() => setFilters(s.filters)}>{s.name}</button> }, { key: "count", label: "Creators", align: "number", value: s => s.count, sortable: true }, { key: "actions", label: "Actions", value: s => s.id, render: s => <button className="button secondary" disabled={Boolean(busy)} onClick={() => void act("remove-segment", "/api/creator-discovery/segments/delete", { segmentId: s.id })}>Delete segment</button> }]} /> : <p className="reference-muted">Save a filter set to track its matching creators.</p>}
+    </SectionCard>
+  </>;
+}
+function Select({ label, value, options, onChange }: { label: string; value?: string; options: string[]; onChange: (v: string) => void }) { return <label>{label}<select value={value || ""} onChange={e => onChange(e.target.value)}><option value="">All</option>{options.map(v => <option key={v}>{v}</option>)}</select></label>; }
+function CreatorActions({ row, busy, act }: { row: DiscoveryCreator; busy: boolean; act: (name: string, path: string, body: unknown) => Promise<boolean> }) { return <div className="reference-actions"><button className="button secondary" disabled={busy} aria-pressed={row.saved} onClick={() => void act("save", "/api/creator-discovery/save", { handle: row.profile.handle, saved: !row.saved })}>{row.saved ? "Saved" : "Save creator"}</button><button className="creator-text-button" disabled={busy} onClick={() => void act("delete", "/api/creator-discovery/delete", { handle: row.profile.handle })}>Delete creator</button></div>; }
+export function CreatorResearchCard({ row, busy, act, workspaceId }: { workspaceId: string; row: DiscoveryCreator; busy: boolean; act: (name: string, path: string, body: unknown) => Promise<boolean> }) {
+  const p = row.profile, e = row.evaluation;
+  return <article className="creator-research-card"><header><span className="creator-discovery-avatar" aria-hidden="true">{p.name.charAt(0)}</span><div><h3><a href={`https://www.instagram.com/${p.handle}/`} target="_blank" rel="noopener noreferrer">{p.name}</a></h3><p>@{p.handle} · {e.tier || "Unverified tier"}</p></div></header>
+    <div className="creator-research-summary"><strong>{e.fit === null ? "Fit not assessed" : `${e.fit} · ${e.assessedPoints}% assessed${e.provisional ? " · Provisional" : ""}`}</strong><DataLabel basis="Estimated" /></div>
+    <div className="creator-discovery-fit">{e.parts.map(part => <div key={part.key}><span>{part.label}</span>{part.points===null?<span className="creator-unassessed-bar" aria-hidden="true"/>:<progress max={part.max} value={part.points} aria-label={`${part.label} ${part.points.toFixed(1)} of ${part.max}`} />}<span title={part.reason}>{part.points === null ? "Not assessed" : `${part.points.toFixed(1)}/${part.max}`}</span></div>)}</div>
+    <div className="creator-discovery-metrics"><div><span>Followers</span><strong title={p.verificationReason}>{p.verification === "Verified" ? n(p.followers) : "Unverified"}</strong>{p.verification === "Verified" && <DataLabel basis="Observed" />}</div><div><span>Median engagement</span><strong>{pct(e.engagement)}</strong>{e.engagement!==null&&<DataLabel basis="Observed"/>}<small>{e.assessedPosts}/12 posts assessed</small></div><div><span>Posts per week</span><strong>{n(e.frequency)}</strong>{e.frequency!==null&&<DataLabel basis="Observed"/>}<small>Recent-post window</small></div></div>
+    <div className="creator-research-proof"><span title={e.uk.reasons.join(" ")}>UK: {e.uk.band} <DataLabel basis="Estimated" /></span><span>Risk: {e.risk.status}</span><div className="creator-discovery-posts">{p.posts.slice(0, 3).map(post => <a key={post.id} href={post.url} target="_blank" rel="noopener noreferrer" title={post.caption || "Open recent post"}>{post.thumbnail?.startsWith("/api/creator-discovery/preview?") ? <img src={post.thumbnail} alt="" loading="lazy" /> : <ImageIcon size={20} />}<span className="sr-only">Open recent post</span></a>)}</div><details><summary>Why this fit</summary>{e.parts.map(part => <p key={part.key}><strong>{part.label}: </strong>{part.reason}</p>)}{e.review.map(r => <p key={r}>{r}</p>)}<p>{e.risk.reasons.join(" ")}</p>{e.collaborations.length > 0 && <p>{e.collaborations.length} disclosed collaborations in this sample.</p>}{p.appearsInAds.map(ad => <a key={ad} href={`/?view=creative&brandId=${encodeURIComponent(workspaceId)}&id=${encodeURIComponent(ad.startsWith("public:")?ad:`public:Meta:${ad}`)}`}>Open attributed ad</a>)}</details>{p.checkedAt && <small>Official check {ukDate(p.checkedAt)}{e.from&&e.to?` · ${ukDate(e.from)} to ${ukDate(e.to)}`:""}</small>}</div>
+    <footer><CreatorActions row={row} busy={busy} act={act} /></footer></article>;
+}
+
+function ListInput({label,value,placeholder,onEdit,onChange}:{label:string;value:string[];placeholder:string;onEdit:()=>void;onChange:(v:string[])=>void}){const [text,setText]=useState(value.join(", "));useEffect(()=>setText(value.join(", ")),[JSON.stringify(value)]);return <label>{label}<textarea value={text} placeholder={placeholder} onChange={e=>{setText(e.target.value);onEdit();}} onBlur={()=>onChange(list(text))}/></label>;}

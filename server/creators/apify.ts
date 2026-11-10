@@ -156,6 +156,7 @@ export class ApifyCreatorProvider implements CreatorDiscoveryProvider {
       await response.body?.cancel().catch(() => {});
       throw new CreatorProviderError([401, 403].includes(response.status) ? "authentication" : response.status === 429 ? "rate_limited" : "unavailable", response.status >= 300 && response.status < 400 ? "Apify redirected the request; credentials were not forwarded." : `Apify request failed (HTTP ${response.status}). Check actor access and the provider account. The conservative reserve is retained; no paid retry was started.`);
     }
+    if (response.status === 204) return {};
     if (Number(response.headers.get("content-length")) > MAX_BODY_BYTES) { await response.body?.cancel().catch(() => {}); throw new CreatorProviderError("invalid_output", "Apify response exceeded the supported size limit."); }
     const reader = response.body?.getReader(); const chunks: Uint8Array[] = []; let bytes = 0;
     if (!reader) throw new CreatorProviderError("invalid_output", "Apify returned an empty response.");
@@ -173,6 +174,50 @@ export class ApifyCreatorProvider implements CreatorDiscoveryProvider {
       function abort() { clearTimeout(timer); signal?.removeEventListener("abort", abort); reject(new CreatorProviderError("cancelled", "Creator discovery was cancelled.")); }
       signal?.addEventListener("abort", abort, { once: true });
     });
+  }
+  researchConfiguration() {
+    const reserve = this.reserveAmount();
+    const conversion = Number(this.env.EXTER_AD_MEDIA_GBP_PER_USD || "0.8");
+    const configured = this.status().configured && actorId(this.env.APIFY_INSTAGRAM_ACTOR_ID) === "apify~instagram-scraper" && Number.isFinite(conversion) && conversion > 0 && conversion <= 2 && reserve !== null && reserve / conversion >= .01;
+    return { configured, reserveGbp: reserve, conversion, reason: configured ? "Public creator discovery is configured." : "Set up creator discovery, its actor and a conservative cost reserve." };
+  }
+  /** Bounded public research through the same authenticated transport and budget ledger. */
+  async collectPublic(input: Record<string, unknown>, maximum: number, signal?: AbortSignal): Promise<{rows: unknown[]; accounting: CreatorProviderAccounting}> {
+    const config = this.researchConfiguration(), actor = actorId(this.env.APIFY_INSTAGRAM_ACTOR_ID);
+    if (!config.configured || config.reserveGbp === null || !actor || !Number.isInteger(maximum) || maximum < 1 || maximum > 199) throw new CreatorProviderError("configuration", config.reason);
+    const accounting: CreatorProviderAccounting = {reservedCostGbp:null,billedCostGbp:null,requestAttempts:0,runIds:[]};
+    let runId: string | null = null, dataset: string | null = null, completed = false;
+    assertProxySupport(Boolean(this.options.fetch), this.env);
+    const operationSignal = signal ? AbortSignal.any([signal,AbortSignal.timeout(180000)]) : AbortSignal.timeout(180000);
+    try {
+      try {
+        const reserve = this.options.reserve ? await this.options.reserve(config.reserveGbp,{platform:"instagram",actorId:actor}) : {reservationId:await reserveProviderCost(infrastructureDatabase(),"data_providers","apify",config.reserveGbp),reservedGbp:config.reserveGbp};
+        if (!reserve.reservationId || reserve.reservedGbp < config.reserveGbp) throw new Error();
+        accounting.reservedCostGbp=reserve.reservedGbp;
+      } catch { throw new CreatorProviderError("budget_paused","Creator research stopped at the data-provider budget.",accounting); }
+      const charge = Math.floor(config.reserveGbp / config.conversion * 100) / 100;
+      accounting.requestAttempts++;
+      let run=record(record(await this.json(`/v2/acts/${actor}/runs?timeout=120&maxItems=${maximum}&maxTotalChargeUsd=${charge}&restartOnError=false`,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(input)},operationSignal)).data);
+      if (!validId(run.id)) throw new Error();
+      runId=run.id;accounting.runIds.push(runId);
+      for(let poll=0;run.status!=="SUCCEEDED"&&poll<this.maxPolls;poll++){
+        if(["FAILED","ABORTED","TIMED-OUT"].includes(run.status)) throw new CreatorProviderError("unavailable","Public creator lookup did not finish.",accounting);
+        await this.pause(operationSignal);run=record(record(await this.json(`/v2/actor-runs/${runId}`,{},operationSignal)).data);
+        if(run.id!==runId)throw new Error();
+      }
+      if(run.status!=="SUCCEEDED"||!validId(run.defaultDatasetId))throw new Error();
+      completed=true;dataset=run.defaultDatasetId;
+      const rows:unknown[]=[];
+      for(let offset=0;offset<maximum;offset+=100){
+        const limit=Math.min(100,maximum-offset),items=await this.json(`/v2/datasets/${dataset}/items?clean=true&format=json&limit=${limit}&offset=${offset}`,{},operationSignal);
+        if(!Array.isArray(items)||items.length>limit)throw new Error();rows.push(...items);if(items.length<limit)break;
+      }
+      return {rows,accounting};
+    } catch(error){if(error instanceof CreatorProviderError){error.accounting=accounting;throw error;}throw new CreatorProviderError("unavailable","Public creator lookup could not finish. Earlier profiles are unchanged.",accounting);}
+    finally {
+      if(runId&&!completed){try{await this.json(`/v2/actor-runs/${runId}/abort?gracefully=true`,{method:"POST"});}catch{/* Unknown paid work retains its reserve. */}}
+      if(dataset){try{await this.json(`/v2/datasets/${dataset}`,{method:"DELETE"});}catch{/* Provider retention policy also expires raw datasets. */}}
+    }
   }
   async search(input: CreatorSearchInput): Promise<CreatorSearchResult> {
     const accounting: CreatorProviderAccounting = { reservedCostGbp: null, billedCostGbp: null, requestAttempts: 0, runIds: [] };

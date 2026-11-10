@@ -1,3 +1,5 @@
+import { workCreatorDiscoveryOnce } from "../creators/discovery-jobs.js";
+import { retainCreatorPreviews } from "../creators/discovery-previews.js";
 import {workAdMediaOnce} from "../ad-media/api.js";
 import {workPublicCategoriesOnce} from "../public-categories/jobs.js";
 import { infrastructureDatabase, migrate, initialiseInfrastructure, migrationDiagnostic, MigrationError } from "./database.js";
@@ -23,9 +25,10 @@ try {
       const collected = await workOnce(pool);
       const owned = !stopping ? await workOwnedOnce(pool) : false;
       const media = !stopping ? await workAdMediaOnce(pool) : false;
+      const creators = !stopping ? await workCreatorDiscoveryOnce(pool, {thumbnail:(workspace,profile)=>retainCreatorPreviews(pool,workspace,profile)}) : false;
       const categories = !stopping ? await workPublicCategoriesOnce(pool) : false;
       const staged = artifactClient && !stopping ? await workKernelOnce(pool, artifactClient, { signal: shutdown.signal }) : false;
-      if (!collected && !owned && !media && !categories && !staged && !stopping) await new Promise(resolve => setTimeout(resolve,1000));
+      if (!collected && !owned && !media && !categories && !creators && !staged && !stopping) await new Promise(resolve => setTimeout(resolve,1000));
     }
   } else throw new Error("Unknown runtime role.");
 } catch (error) {
