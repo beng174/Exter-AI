@@ -1,5 +1,6 @@
+import { screenCreator, type CreatorScreen, type PublicCreatorScreening } from "./creator-screening.js";
 /** Creator research is a checklist, never a sales prediction. */
-export const CREATOR_RULE_VERSION = "creator-discovery-v1";
+export const CREATOR_RULE_VERSION = "creator-discovery-v2-strict";
 export const CREATOR_STYLES = ["UGC", "Talking to camera", "Tutorial", "Aesthetic", "Lifestyle"] as const;
 export type CreatorStyle = typeof CREATOR_STYLES[number];
 export type FollowerTier = "Nano" | "Micro" | "Mid" | "Macro";
@@ -11,14 +12,15 @@ export interface CreatorBrief {
 export interface DiscoveryPost {
   id: string; url: string; caption: string; at: string | null;
   likes: number | null; comments: number | null; thumbnail: string | null;
-  location?: string; paidPartnership?: boolean;
+  location?: string; paidPartnership?: boolean; altText?: string; personPresent?: boolean | null; productOnly?: boolean | null;
 }
 export interface DiscoveryProfile {
   handle: string; name: string; bio: string; website: string | null; businessEmail: string | null;
-  private: boolean; accountKind: "creator" | "brand" | "repost" | "reseller" | "unknown";
+  screening?: PublicCreatorScreening;
+  private: boolean | null; accountKind: "creator" | "brand" | "repost" | "reseller" | "unknown";
   posts: DiscoveryPost[]; related: string[]; appearsInAds: string[];
   growth?: { from: string; to: string; previousFollowers: number; followers: number };
-  audit: { sampledPosts: number; comments: number; repeatedFraction: number } | null;
+  audit: { observedAt?: string; postIds?: string[]; sampledPosts: number; comments: number; repeatedFraction: number; genericFraction?: number; emojiFraction?: number } | null;
   followers: number | null; mediaCount: number | null;
   verification: "Verified" | "Unverified"; verificationReason: string;
   checkedAt: string | null; discoveredAt: string;
@@ -27,11 +29,11 @@ export interface FitPart { key: string; label: string; points: number | null; ma
 export interface CreatorEvaluation {
   handle: string; tier: FollowerTier | null; engagement: number | null; assessedPosts: number;
   frequency: number | null; from: string | null; to: string | null;
-  uk: { confidence: number | null; band: "High" | "Medium" | "Low" | "Unknown"; reasons: string[]; foreign: boolean };
+  uk: { confidence: number | null; band: "High" | "Medium" | "Low" | "Unknown"; reasons: string[]; foreign: boolean; signalCount: number };
   niches: string[]; styles: CreatorStyle[]; collaborations: string[]; workedWithCompetitors: string[];
   risk: { status: "Review" | "No sampled flags" | "Not assessed"; reasons: string[] };
   excluded: string[]; review: string[]; fit: number | null; assessedPoints: number;
-  provisional: boolean; parts: FitPart[]; goodFit: boolean; ruleVersion: string;
+  provisional: boolean; parts: FitPart[]; goodFit: boolean; ruleVersion: string; screen: CreatorScreen;
 }
 export interface DiscoveryCreator { profile: DiscoveryProfile; evaluation: CreatorEvaluation; saved: boolean; briefVersion: string; nextRefreshAt: string }
 export interface CreatorFilters {
@@ -42,16 +44,19 @@ export interface CreatorSegment { id: string; name: string; filters: CreatorFilt
 export interface DiscoveryQuote { id: string; maxCostGbp: number; batches: number; expiresAt: string; available: boolean; reason: string }
 export interface DiscoveryRun { id: string; kind: string; status: string; found: number; verified: number; step: number; totalSteps: number; reservedGbp: number; error: string | null; createdAt: string }
 export interface CreatorPrecision {
-  field: "Good fit" | "UK"; tp: number; fp: number; fn: number; precision: number | null;
+  field: "Individual creator" | "Good fit" | "UK"; tp: number; fp: number; fn: number; precision: number | null;
   interval: [number, number] | null; labelled: number; matched: number; missing: number;
+  negativeCoverage?: { business: number; repost: number };
   clientReady: boolean; checkedAt: string; ruleVersion: string; briefVersion: string; fixture: boolean;
 }
 export interface DiscoverySnapshot {
   configured: boolean; verificationConfigured: boolean; reason: string; brief: CreatorBrief | null;
   briefVersion: string | null; creators: DiscoveryCreator[]; segments: CreatorSegment[];
+  rejected: RejectedCreator[];
   runs: DiscoveryRun[]; precision: CreatorPrecision[]; clientReady: boolean;
 }
-export const emptyDiscovery = (): DiscoverySnapshot => ({ configured: false, verificationConfigured: false, reason: "Creator research needs its data source and budget configured.", brief: null, briefVersion: null, creators: [], segments: [], runs: [], precision: [], clientReady: false });
+export interface RejectedCreator { handle: string; name: string; profileUrl: string; evaluation: CreatorEvaluation; briefVersion: string; checkedAt: string }
+export const emptyDiscovery = (): DiscoverySnapshot => ({ configured: false, verificationConfigured: false, reason: "Creator research needs its data source and budget configured.", brief: null, briefVersion: null, creators: [], segments: [], rejected: [], runs: [], precision: [], clientReady: false });
 export function creatorHandle(value: unknown): string | null {
   if (typeof value !== "string") return null;
   const handle = value.trim().replace(/^@/, "").toLowerCase();
@@ -107,11 +112,12 @@ export function ukCreatorSignals(profile: DiscoveryProfile): CreatorEvaluation["
   if (foreign) reasons.push("Public bio says they are based outside the UK.");
   let confidence: number | null = base ? Math.min(1, .8 + Number(repeated) * .1 + Number(domain) * .05 + Number(spelling) * .05) : repeated || domain || spelling ? Math.min(.7, Number(repeated) * .5 + Number(domain) * .1 + Number(spelling) * .1) : null;
   if (foreign) confidence = base || repeated ? .2 : 0;
-  return { confidence, band: confidence === null ? "Unknown" : confidence >= .8 ? "High" : confidence >= .5 ? "Medium" : "Low", reasons, foreign };
+  const signalCount=Number(base)+Number(repeated)+Number(domain)+Number(spelling);
+  return { confidence, band: confidence === null ? "Unknown" : confidence >= .8 && signalCount>=2 ? "High" : confidence >= .5 ? "Medium" : "Low", reasons, foreign, signalCount };
 }
 function words(text: string) { return new Set(text.toLowerCase().match(/[a-z]{3,}/g)?.filter(w => !["the", "and", "for", "with", "this", "that", "from"].includes(w)) ?? []); }
 function similarity(a: string, b: string) { const x = words(a), y = words(b), union = new Set([...x, ...y]).size; return union ? [...x].filter(w => y.has(w)).length / union : null; }
-export function evaluateCreator(profile: DiscoveryProfile, brief: CreatorBrief, seeds: DiscoveryProfile[] = []): CreatorEvaluation {
+export function evaluateCreator(profile: DiscoveryProfile, brief: CreatorBrief, seeds: DiscoveryProfile[] = [], now = new Date()): CreatorEvaluation {
   const metrics = engagementMetrics(profile), uk = ukCreatorSignals(profile), tier = followerTier(profile.followers);
   const text = `${profile.bio} ${profile.posts.map(p => p.caption).join(" ")}`.toLowerCase();
   const terms = [...new Set([brief.category, ...brief.keywords].map(v => v.trim().toLowerCase()).filter(Boolean))];
@@ -124,19 +130,8 @@ export function evaluateCreator(profile: DiscoveryProfile, brief: CreatorBrief, 
   const audited = Boolean(profile.audit && profile.audit.sampledPosts >= 3 && profile.audit.comments >= 10);
   const growthDays=profile.growth?(Date.parse(profile.growth.to)-Date.parse(profile.growth.from))/86400000:0;
   const growthFlag=Boolean(profile.growth&&growthDays>=7&&growthDays<=35&&profile.growth.previousFollowers>0&&profile.growth.followers/profile.growth.previousFollowers>=1.5);
-  const flagged = growthFlag || audited && profile.audit!.repeatedFraction >= .5;
-  const risk: CreatorEvaluation["risk"] = { status: flagged ? "Review" : audited ? "No sampled flags" : "Not assessed", reasons: growthFlag ? ["Followers rose at least 50% between recent monthly checks. Review the change."] : audited ? [flagged ? "Many sampled comments repeat across posts." : "No repeated-comment pattern in this small sample."] : ["Comment and follower-history checks are incomplete."] };
-  const excluded: string[] = [], review: string[] = [];
-  if (profile.private) excluded.push("Private account.");
-  if (["brand", "repost", "reseller"].includes(profile.accountKind)) excluded.push(`Account is a ${profile.accountKind === "brand" ? "brand or shop" : profile.accountKind === "repost" ? "meme or repost page" : "reseller"}.`);
-  if (/\b(?:i am|i'm|age|aged)\s*(?:1[0-7]|[0-9])\b/i.test(profile.bio)) excluded.push("Profile states an age under 18.");
-  if (brief.exclusions.some(v => creatorHandle(v) === profile.handle || (v.length >= 3 && text.includes(v.toLowerCase())))) excluded.push("Matches the brief's exclusions.");
-  if (validCount(profile.followers) && (profile.followers < brief.minFollowers || profile.followers > brief.maxFollowers)) excluded.push("Outside the chosen follower range.");
-  if (brief.country === "GB") {
-    if (uk.foreign && uk.confidence === 0) excluded.push("Public bio states a base outside the UK.");
-    else if (uk.band !== "High") review.push("UK location needs review.");
-  }
-  if (profile.verification !== "Verified") review.push("Official numbers are unverified.");
+  const flagged = growthFlag || audited && (profile.audit!.repeatedFraction >= .5 || (profile.audit!.genericFraction??0)>=.5 || (profile.audit!.emojiFraction??0)>=.5);
+  const risk: CreatorEvaluation["risk"] = { status: flagged ? "Review" : audited ? "No sampled flags" : "Not assessed", reasons: growthFlag ? ["Followers rose at least 50% between recent monthly checks. Review the change."] : audited ? [flagged ? "Most sampled comments are generic, emoji-only or repeated." : "No repeated-comment pattern in this small sample."] : ["Comment and follower-history checks are incomplete."] };
   const benchmarks: Record<FollowerTier, number> = { Nano: .03, Micro: .02, Mid: .015, Macro: .01 };
   const seedValues = seeds.filter(s => brief.seeds.includes(s.handle) && s.handle !== profile.handle).map(s => similarity(text, `${s.bio} ${s.posts.map(p => p.caption).join(" ")}`)).filter((v): v is number => v !== null);
   const parts: FitPart[] = [
@@ -148,19 +143,20 @@ export function evaluateCreator(profile: DiscoveryProfile, brief: CreatorBrief, 
     { key: "seeds", label: "Seed similarity", points: seedValues.length ? Math.max(...seedValues) * 10 : null, max: 10, reason: seedValues.length ? "Public topic overlap with fetched seed profiles." : "No comparable seed profiles fetched." },
   ];
   const assessedPoints = parts.reduce((n, p) => n + (p.points === null ? 0 : p.max), 0);
+  const screen=screenCreator(profile,brief,{...metrics,uk,tier,styles},now);
   const fit = assessedPoints ? Math.round(100 * parts.reduce((n, p) => n + (p.points ?? 0), 0) / assessedPoints) : null;
-  return { handle: profile.handle, ...metrics, uk, tier, niches, styles, collaborations, workedWithCompetitors, risk, excluded, review, fit, assessedPoints, provisional: assessedPoints < 100,
-    parts, goodFit: !excluded.length && !review.length && metrics.assessedPosts === 12 && assessedPoints >= 80 && fit !== null && fit >= 70, ruleVersion: CREATOR_RULE_VERSION };
+  return { handle: profile.handle, ...metrics, uk, tier, niches, styles, collaborations, workedWithCompetitors, risk, excluded: screen.rules.filter(r=>r.state==="fail").map(r=>r.reason), review: screen.rules.filter(r=>r.state==="review").map(r=>r.reason), fit, assessedPoints, provisional: assessedPoints < 100,
+    parts, screen, goodFit: screen.disposition === "Results" && assessedPoints >= 80 && fit !== null && fit >= 70, ruleVersion: CREATOR_RULE_VERSION };
 }
-export function matchesCreator(row: DiscoveryCreator, f: CreatorFilters): boolean {
+export function matchesCreator(row: DiscoveryCreator, f: CreatorFilters, disposition: "Results" | "Needs review" = "Results", now = new Date()): boolean {
   const e = row.evaluation;
-  return !e.excluded.length && (!f.review || e.review.length > 0) && (!f.tier || e.tier === f.tier) && (!f.niche || e.niches.includes(f.niche)) && (!f.uk || e.uk.band === f.uk) && (!f.style || e.styles.includes(f.style as CreatorStyle)) && (!f.worked || e.workedWithCompetitors.length > 0) && (!f.ads || row.profile.appearsInAds.length > 0) && (!f.saved || row.saved) && (f.minFit == null || e.fit !== null && e.fit >= f.minFit) && (!f.engagement || e.engagement !== null && (f.engagement === "Under 1%" ? e.engagement < .01 : f.engagement === "1 to 3%" ? e.engagement >= .01 && e.engagement < .03 : e.engagement >= .03));
+  return e.ruleVersion===CREATOR_RULE_VERSION && e.screen?.disposition===disposition && (disposition!=="Results" || e.screen.rules.length===9 && e.screen.rules.every(r=>r.state==="pass")) && !(disposition==="Results" && e.screen.activeUntil && Date.parse(e.screen.activeUntil)<now.getTime()) && !f.review && (!f.tier || e.tier === f.tier) && (!f.niche || e.niches.includes(f.niche)) && (!f.uk || e.uk.band === f.uk) && (!f.style || e.styles.includes(f.style as CreatorStyle)) && (!f.worked || e.workedWithCompetitors.length > 0) && (!f.ads || row.profile.appearsInAds.length > 0) && (!f.saved || row.saved) && (f.minFit == null || e.fit !== null && e.fit >= f.minFit) && (!f.engagement || e.engagement !== null && (f.engagement === "Under 1%" ? e.engagement < .01 : f.engagement === "1 to 3%" ? e.engagement >= .01 && e.engagement < .03 : e.engagement >= .03));
 }
 export function nextCreatorRefresh(at: string): string {
   const date = new Date(at), day = date.getUTCDate(); date.setUTCDate(1); date.setUTCMonth(date.getUTCMonth() + 1);
   const last = new Date(Date.UTC(date.getUTCFullYear(), date.getUTCMonth() + 1, 0)).getUTCDate(); date.setUTCDate(Math.min(day, last)); return date.toISOString();
 }
-export interface CreatorLabel { handle: string; good_fit: boolean; is_uk: boolean }
+export interface CreatorLabel { handle: string; good_fit: boolean; is_uk: boolean; is_individual?: boolean; account_type?: "individual" | "business" | "repost" | "unknown" }
 export function parseCreatorLabels(csv: string): CreatorLabel[] {
   if (BufferByteLength(csv) > 200000) throw new Error("Label file is too large.");
   const rows: string[][] = [], row: string[] = []; let field = "", quoted = false;
@@ -173,29 +169,37 @@ export function parseCreatorLabels(csv: string): CreatorLabel[] {
   }
   if (quoted) throw new Error("Unclosed CSV quote.");
   if (field || row.length) { row.push(field); rows.push(row); }
-  if (rows.shift()?.map(v => v.trim().replace(/^\uFEFF/, "")).join(",") !== "handle,good_fit,is_uk,notes") throw new Error("Use handle,good_fit,is_uk,notes columns.");
+  const header = rows.shift()?.map(v => v.trim().replace(/^\uFEFF/, "")).join(",");
+  const legacy = header === "handle,good_fit,is_uk,notes";
+  if (!legacy && header !== "handle,good_fit,is_uk,is_individual,account_type,notes") throw new Error("Use handle,good_fit,is_uk,is_individual,account_type,notes columns.");
   const seen = new Set<string>();
-  return rows.map(r => { const h = creatorHandle(r[0]), good = r[1]?.trim().toLowerCase(), uk = r[2]?.trim().toLowerCase(); if (r.length !== 4 || !h || seen.has(h) || !["yes", "no"].includes(good) || !["yes", "no"].includes(uk)) throw new Error("Each handle needs one yes/no label per field."); seen.add(h); return { handle: h, good_fit: good === "yes", is_uk: uk === "yes" }; });
+  return rows.map(r => {
+    const h = creatorHandle(r[0]), good = r[1]?.trim().toLowerCase(), uk = r[2]?.trim().toLowerCase(), individual=r[3]?.trim().toLowerCase(), kind=r[4]?.trim().toLowerCase();
+    if (r.length !== (legacy?4:6) || !h || seen.has(h) || !["yes", "no"].includes(good) || !["yes", "no"].includes(uk) || !legacy && (!["yes","no"].includes(individual) || !["individual","business","repost","unknown"].includes(kind))) throw new Error("Each handle needs one yes/no label per field and an account type.");
+    if(!legacy && ["business","repost"].includes(kind) && (individual!=="no" || good!=="no")) throw new Error("Business and repost negatives must be labelled no for individual and good fit.");
+    seen.add(h); return { handle:h, good_fit:good==="yes", is_uk:uk==="yes", ...(!legacy?{is_individual:individual==="yes",account_type:kind as CreatorLabel["account_type"]}:{}) };
+  });
 }
 function BufferByteLength(value: string) { return new TextEncoder().encode(value).length; }
-export function creatorPrecision(labels: CreatorLabel[], creators: DiscoveryCreator[], briefVersion: string, at: string, fixture = true): CreatorPrecision[] {
+export function creatorPrecision(labels: CreatorLabel[], creators: (DiscoveryCreator | RejectedCreator)[], briefVersion: string, at: string, fixture = true): CreatorPrecision[] {
   const matching = creators.filter(c => c.briefVersion === briefVersion && c.evaluation.ruleVersion === CREATOR_RULE_VERSION);
-  const byHandle = new Map(matching.map(c => [c.profile.handle, c]));
-  return (["Good fit", "UK"] as const).map(field => {
+  const byHandle = new Map(matching.map(c => ["profile" in c ? c.profile.handle : c.handle, c]));
+  return (["Good fit", "UK", "Individual creator"] as const).map(field => {
     let tp = 0, fp = 0, fn = 0, matched = 0;
     for (const label of labels) {
-      const row = byHandle.get(label.handle); if (!row) continue; matched++;
-      const actual = field === "Good fit" ? label.good_fit : label.is_uk;
-      const predicted = field === "Good fit" ? row.evaluation.goodFit : row.evaluation.uk.band === "High";
+      const row = byHandle.get(label.handle); if (!row || field === "Individual creator" && label.is_individual === undefined) continue; matched++;
+      const actual = field === "Good fit" ? label.good_fit : field === "UK" ? label.is_uk : label.is_individual;
+      const predicted = field === "Good fit" ? row.evaluation.goodFit : field === "UK" ? row.evaluation.uk.band === "High" : row.evaluation.screen.individual.state === "pass";
       if (predicted && actual) tp++; if (predicted && !actual) fp++; if (!predicted && actual) fn++;
     }
+    const negativeCoverage = {business:labels.filter(l=>l.account_type==="business" && l.is_individual===false && byHandle.has(l.handle)).length,repost:labels.filter(l=>l.account_type==="repost" && l.is_individual===false && byHandle.has(l.handle)).length};
     const n = tp + fp, precision = n ? tp / n : null, z = 1.96, d = 1 + z * z / Math.max(1, n), centre = precision === null ? 0 : (precision + z * z / (2 * n)) / d, half = precision === null ? 0 : z * Math.sqrt((precision * (1 - precision) + z * z / (4 * n)) / n) / d;
     return { field, tp, fp, fn, precision, interval: precision === null ? null : [centre - half, centre + half], labelled: labels.length, matched, missing: labels.length - matched,
-      clientReady: !fixture && matched === labels.length && n >= 20 && precision !== null && precision >= .85, checkedAt: at, ruleVersion: CREATOR_RULE_VERSION, briefVersion, fixture };
+      negativeCoverage, clientReady: !fixture && negativeCoverage.business>0 && negativeCoverage.repost>0 && matched === labels.length && n >= 20 && precision !== null && precision >= .85, checkedAt: at, ruleVersion: CREATOR_RULE_VERSION, briefVersion, fixture };
   });
 }
 export function creatorCsv(rows: DiscoveryCreator[]) {
   const cell = (v: unknown) => '"' + String(v ?? "Unverified").replace(/^[=+\-@\t\r]/, "'$&").replaceAll('"', '""') + '"';
   const header = ["Handle", "Name", "Followers", "Media count", "Engagement percent", "Posts assessed", "Posts per week", "UK confidence", "Niche", "Style", "Fit", "Fit coverage", "Verification", "Last checked", "Business email"];
-  return [header, ...rows.map(r => [r.profile.handle, r.profile.name, r.profile.followers, r.profile.mediaCount, r.evaluation.engagement === null ? null : 100 * r.evaluation.engagement, r.evaluation.assessedPosts, r.evaluation.frequency, r.evaluation.uk.band, r.evaluation.niches.join("; "), r.evaluation.styles.join("; "), r.evaluation.fit, r.evaluation.assessedPoints, r.profile.verification, r.profile.checkedAt, r.profile.businessEmail])].map(r => r.map(cell).join(",")).join("\r\n");
+  return [header, ...rows.filter(r=>matchesCreator(r,{})).map(r => [r.profile.handle, r.profile.name, r.profile.followers, r.profile.mediaCount, r.evaluation.engagement === null ? null : 100 * r.evaluation.engagement, r.evaluation.assessedPosts, r.evaluation.frequency, r.evaluation.uk.band, r.evaluation.niches.join("; "), r.evaluation.styles.join("; "), r.evaluation.fit, r.evaluation.assessedPoints, r.profile.verification, r.profile.checkedAt, r.profile.businessEmail])].map(r => r.map(cell).join(",")).join("\r\n");
 }

@@ -116,4 +116,4 @@ benchmarks and scoring rules are proposals until validated against outcomes.
 Creator discovery follows `.agents/skills/exter-creator-discovery/SKILL.md`.
 Official creator counts require the dedicated professional-account token.
 Public scraping supplies candidates only; monthly refresh runs in the worker.
-Both creator precision checks need real owner labels before client use.
+All three creator precision checks need real owner labels before client use.

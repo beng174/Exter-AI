@@ -15,7 +15,8 @@ not measured industry facts or validated thresholds. A brand brief overrides the
 | Macro | 1% |
 
 Compare like platform, tier, niche, post type and dates. Recalibrate from labelled
-UK cohorts. Low engagement alone is neither an exclusion nor proof of fraud.
+UK cohorts. The later owner instruction makes implausible engagement a shortlist
+exclusion. It remains a warning signal, never proof of fraud.
 
 ## UK location
 
@@ -31,7 +32,8 @@ Initial deterministic rule: explicit UK base = 0.8; add 0.1 for repeated UK plac
 repeated UK places = 0.5, domain/spelling add 0.1 each, capped at 0.7. No signal
 means unknown, not zero confidence. Explicit foreign base with UK travel means
 conflict/low confidence; do not let weak UK signals override it. High >=0.8,
-medium >=0.5, low below0.5. Default UK shortlist requires high; others await review.
+medium >=0.5, low below0.5. High also requires at least two independent UK signal families. An explicit foreign
+base fails a UK brief; uncertain UK location awaits review.
 These confidence numbers are heuristics, not calibrated probabilities.
 
 ## Niche, style and authenticity
@@ -45,7 +47,8 @@ Text-only classification is Estimated; do not imply visual inspection occurred.
 Possible risk signals: abrupt follower changes across dated snapshots; repeated
 near-identical short comments from the same group across several posts; extreme
 like/comment imbalance; copied content; repeated irrelevant promotional comments.
-One signal is a review flag, not fake-follower percentage or a fraud finding.
+A known hard failure excludes the account from Results. Missing checks require
+review. These signals never establish a fake-follower percentage or fraud finding.
 Comment-pod checks require cross-post comment samples; growth checks require at
 least two dated snapshots. If these are absent, say authenticity is not assessed.
 Do not penalise language, age, identity, camera cost or editing polish.
@@ -67,6 +70,40 @@ implementation assumptions needing validation, not borrowed performance guarante
 Show earned points, assessed maximum and coverage. Normalise only assessed points
 for the displayed score and always say Provisional below full coverage. Never give
 missing authenticity or an unfetched seed free points. Exclusions override the score.
-Good-fit prediction for validation requires non-excluded, UK high (when applicable),
+Good-fit prediction for validation requires every strict rule passed, UK high (when applicable),
 verified 12-post metrics, at least 80 assessed points and score >=70. This is not
-client-ready until both owner-labelled precision gates pass. Do not predict sales.
+client-ready until all three owner-labelled precision gates pass. Do not predict sales.
+
+## Strict shortlist rules (owner update, 10 November 2026)
+
+Every hard rule must pass. A fail means Rejected; any unknown means Needs review.
+Results, saves, exports and segment counts share this gate. Cards show passed
+rules and remaining reasons. Never substitute a high fit score for a missing rule.
+
+Identity requires two distinct personal signals: creator category or personal
+account, personal name, first-person bio, a person described in recent posts,
+or public collaboration signs. Exclude business categories, commercial name/bio
+wording, shop links, shop addresses/hours, majority product-only feeds, agencies,
+management, brands and repost/meme/quote/fan/aggregator/feature pages. Preserve
+only coarse address/hour flags, never an address. A genuine personal creator
+who also owns a shop needs human review. Unknown link destinations or insufficient
+recent post descriptions need review; do not add a crawl or image-model call.
+
+Official followers must be within the inclusive brief bounds. UK briefs require
+High and two independent signals. Niche requires a matching bio or at least three
+of the latest twelve posts. At least one selected content style must match.
+The account must be public, outside exclusions, have at least twelve official
+posts and a post within thirty days. Missing data does not count as a pass.
+
+Provisional plausible median engagement bands (fractions of followers): nano
+0.3–20%, micro 0.2–15%, mid 0.15–10%, macro 0.1–8%. These are explicit screening
+assumptions, **not cited industry estimates**, and need owner-labelled validation.
+Outside the band fails with possible low-quality audience/coordinated activity
+wording. Do not state that an account bought followers or used a pod.
+
+Follower history needs two official checks 7–35 days apart, latest within 35 days.
+An absolute change of at least 50% fails as a sudden-change signal. Comment checks
+need at least ten comments across three of the latest twelve posts, checked within
+35 days. At least half generic, emoji-only or repeated comments fails. Keep only
+aggregate fractions and post IDs, not commenters or their text. Missing history,
+post descriptions or comment samples goes to Needs review, not Results.

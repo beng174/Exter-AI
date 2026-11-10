@@ -971,3 +971,20 @@ Accuracy checks are included. No ad reach, dates, formulas or collection schedul
 changed. Creator precision gates remain open pending independent owner labels and
 85% precision for both good fit and UK. No live provider access or client readiness
 was established by fixtures. Existing owned-account live gates remain open.
+
+
+## Strict creator results, 10 November 2026
+
+Results require every individual-creator and brief rule to pass. Uncertain
+accounts go to Needs review; known failures go to Rejected with per-rule reasons
+and counts. Genuine shop-owning creators need review. Fit cannot override gates.
+Official count, activity, niche/style, UK, comment and follower-history checks
+share the same gate for Results, saves, exports and segments. No new paid calls
+or collection changes. New rejection diagnostics are minimal and expire in 90 days;
+existing profiles are preserved. Recheck old rules without calling providers.
+Individual-creator precision joins good fit and UK at 85%, with known business
+and repost negatives required. Real owner labels are still needed. Fixtures are
+not live verification; no client gate is claimed. Owned live gates remain open
+and kernel work stays paused. Local Postgres/API fixtures and responsive browser checks pass. Screenshots are
+in docs/review/strict-creators/. npm run check, npm test (574 passed), npm run build and npm run secrets:check
+pass, plus the isolated Postgres/API fixture. Client gates remain closed.

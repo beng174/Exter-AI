@@ -218,3 +218,12 @@ CREATE TABLE IF NOT EXISTS creator_discovery_ad_handles (
 );
 
 ALTER TABLE creator_discovery_runs ADD COLUMN IF NOT EXISTS handles jsonb NOT NULL DEFAULT '[]';
+
+-- Minimal diagnostics for new candidates rejected by strict creator screening.
+CREATE TABLE IF NOT EXISTS creator_discovery_rejected (
+  workspace_id text NOT NULL, handle text NOT NULL, name text NOT NULL,
+  evaluation jsonb NOT NULL, brief_version text NOT NULL, checked_at timestamptz NOT NULL,
+  official_followers bigint, official_checked_at timestamptz,
+  PRIMARY KEY(workspace_id,handle)
+);
+CREATE INDEX IF NOT EXISTS creator_discovery_rejected_checked ON creator_discovery_rejected(checked_at);

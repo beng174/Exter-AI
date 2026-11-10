@@ -4,7 +4,7 @@ import { creatorHandle, evaluateCreator, nextCreatorRefresh, type CreatorBrief, 
 import { ApifyCreatorProvider } from "./apify.js";
 import { CreatorProviderError } from "./types.js";
 import { CreatorVerificationError, InstagramCreatorVerifier, discoveryProfile, publicCreatorUrl } from "./discovery-provider.js";
-import { actorDiscoveryInput, discoverySteps, upsertDiscoveryProfile, type DiscoveryStep } from "./discovery-store.js";
+import { recordCreatorRejection, actorDiscoveryInput, discoverySteps, upsertDiscoveryProfile, type DiscoveryStep } from "./discovery-store.js";
 import { claimMetaRequest, delayMetaRequests } from "../infrastructure/meta-rate.js";
 export interface CreatorJobOptions {
   env?: Record<string, string | undefined>; now?: () => Date;
@@ -17,6 +17,7 @@ const providerFor = (o: CreatorJobOptions) => o.discovery ?? new ApifyCreatorPro
 const verifierFor = (o: CreatorJobOptions) => o.verifier ?? new InstagramCreatorVerifier({ env: o.env, now: o.now });
 export async function scheduleCreatorRefresh(pool: pg.Pool, now = new Date(), env: Record<string, string | undefined> = process.env) {
   // Expired unsaved discoveries are no longer needed for the research purpose.
+  await pool.query("DELETE FROM creator_discovery_rejected WHERE checked_at<$1::timestamptz-interval '90 days'",[now]);
   await pool.query("DELETE FROM creator_discovery_results WHERE NOT saved AND used_at<$1::timestamptz-interval '90 days'", [now]);
   if (!new InstagramCreatorVerifier({ env }).configured()) return;
   const workspaces = (await pool.query(`SELECT DISTINCT r.workspace_id FROM creator_discovery_results r JOIN creator_discovery_settings s USING(workspace_id)
@@ -138,9 +139,13 @@ export async function workCreatorDiscoveryOnce(pool: pg.Pool, options: CreatorJo
     found=$9,handles=$11,available_at=now()+($10*interval '1 millisecond'),lease_owner=NULL,lease_until=NULL
     WHERE id=$1 AND lease_owner=$2 AND status='running' RETURNING id`, [job.id, owner, status, error, nextStep, JSON.stringify(steps), phase, reserved, handles.size, delay, JSON.stringify([...handles])]);
   if (status === "complete" && committed.rowCount) {
-    const rows = (await pool.query("SELECT handle,profile FROM creator_discovery_results WHERE workspace_id=$1 AND handle=ANY($2::text[]) ORDER BY handle", [workspace,[...handles]])).rows;
+    const rows = (await pool.query("SELECT handle,profile FROM creator_discovery_results WHERE workspace_id=$1 AND handle=ANY($2::text[]) AND evaluation->'screen'->>'disposition' IS DISTINCT FROM 'Rejected' ORDER BY handle", [workspace,[...handles]])).rows;
     const seeds = (await pool.query("SELECT profile FROM creator_discovery_results WHERE workspace_id=$1 AND handle=ANY($2::text[])",[workspace,brief.seeds])).rows.map(r=>r.profile as DiscoveryProfile);
-    for (const row of rows) await pool.query("UPDATE creator_discovery_results SET evaluation=$3,brief_version=$4 WHERE workspace_id=$1 AND handle=$2 AND EXISTS(SELECT 1 FROM creator_discovery_settings WHERE workspace_id=$1 AND brief_version=$4)", [workspace, row.handle, JSON.stringify(evaluateCreator(row.profile, brief, seeds)), job.brief_version]);
+    for (const row of rows) {
+      const evaluation=evaluateCreator(row.profile,brief,seeds);
+      const updated=await pool.query("UPDATE creator_discovery_results SET evaluation=$3,brief_version=$4 WHERE workspace_id=$1 AND handle=$2 AND EXISTS(SELECT 1 FROM creator_discovery_settings WHERE workspace_id=$1 AND brief_version=$4)", [workspace,row.handle,JSON.stringify(evaluation),job.brief_version]);
+      if(updated.rowCount)await recordCreatorRejection(pool,workspace,row.profile,evaluation,job.brief_version,new Date());
+    }
   }
   return true;
 }

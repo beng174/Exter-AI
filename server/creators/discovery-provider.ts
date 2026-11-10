@@ -1,3 +1,4 @@
+import { linkKind, commentQuality, type PublicCreatorScreening } from "../../shared/creator-screening.js";
 import { creatorHandle, scrubCreatorText, businessEmail, coarseCreatorLocation, type DiscoveryProfile, type DiscoveryPost } from "../../shared/creator-discovery.js";
 import { assertProxySupport } from "../connectors/http.js";
 const object = (v: unknown): Record<string, any> => v && typeof v === "object" && !Array.isArray(v) ? v as Record<string, any> : {};
@@ -10,6 +11,16 @@ export function creatorImageUrl(value: unknown): string | null {
   if (typeof value !== "string" || value.length > 4000) return null;
   try { const u = new URL(value); return u.protocol === "https:" && !u.username && !u.password && !u.port && ["cdninstagram.com", "fbcdn.net"].some(h => u.hostname === h || u.hostname.endsWith("." + h)) ? u.href : null; } catch { return null; }
 }
+export function publicScreening(row: Record<string, any>, at: string, prior?: PublicCreatorScreening): PublicCreatorScreening {
+  const hasBio=typeof row.biography==="string" || typeof row.bio==="string";
+  const bio = String(row.biography ?? row.bio ?? ""), link=row.externalUrl ?? row.website;
+  return {version:1, category:typeof (row.businessCategoryName ?? row.categoryName ?? row.category)==="string" ? scrubCreatorText(row.businessCategoryName ?? row.categoryName ?? row.category,100) : prior?.category ?? null,
+    personalAccount:typeof row.isPersonalAccount==="boolean"?row.isPersonalAccount:row.accountType==="Personal"?true:prior?.personalAccount??null,
+    linkKind:link!==undefined?linkKind(link):prior?.linkKind??"unknown",
+    businessAddress:Boolean(!hasBio && prior?.businessAddress || row.businessAddress || row.businessAddressJson || /\b\d{1,5}\s+(?:[A-Z][a-z]+\s+){0,3}(?:Street|Road|Lane|Avenue|Close|Drive|St\b|Rd\b)/i.test(bio)),
+    openingHours:Boolean(!hasBio && prior?.openingHours || row.openingHours || /\b(?:open(?:ing)? (?:hours|daily|mon|tue|wed|thu|fri|sat|sun)|\d{1,2}(?::\d{2})?\s*(?:am|pm)\s*(?:to|-)\s*\d{1,2})/i.test(bio)),
+    shopOwner:!hasBio && prior?.shopOwner || /\b(?:founder|co[ -]?founder|owner|i own|my (?:shop|store|business|brand))\b/i.test(bio), observedAt:at};
+}
 export function discoveryProfile(raw: unknown, at: string, secret = ""): DiscoveryProfile | null {
   if(secret && JSON.stringify(raw)?.includes(secret))return null;
   const row = object(raw), handle = creatorHandle(row.username ?? row.ownerUsername ?? object(row.owner).username);
@@ -17,22 +28,22 @@ export function discoveryProfile(raw: unknown, at: string, secret = ""): Discove
   const clean = (v: unknown, n?: number) => scrubCreatorText(typeof v === "string" && secret ? v.split(secret).join("") : v, n);
   const bio = typeof row.biography === "string" ? row.biography : typeof row.bio === "string" ? row.bio : "";
   const rawPosts: unknown[] = Array.isArray(row.latestPosts) ? row.latestPosts : Array.isArray(row.posts) ? row.posts : row.ownerUsername ? [row] : [];
-  const comments: string[] = []; let commentPosts = 0;
+  const comments: string[] = [], commentIds:string[]=[]; let commentPosts = 0;
   const posts = rawPosts.slice(0, 12).flatMap((value): DiscoveryPost[] => {
     const p = object(value), url = publicCreatorUrl(p.url ?? p.permalink ?? (p.shortCode ? `https://www.instagram.com/p/${p.shortCode}/` : null), true);
     if (!url) return [];
     const sample = Array.isArray(p.latestComments) ? p.latestComments.slice(0, 20).map((c: unknown) => clean(object(c).text, 200).toLowerCase()).filter(Boolean) : [];
-    if (sample.length) commentPosts++; comments.push(...sample);
+    if (sample.length) {commentPosts++;commentIds.push(String(p.id ?? p.shortCode ?? url).slice(0,150));} comments.push(...sample);
     const date = new Date(p.timestamp ?? p.takenAtTimestamp * 1000);
     return [{ id: String(p.id ?? p.shortCode ?? url).slice(0, 150), url, caption: clean(p.caption), at: Number.isFinite(date.getTime()) ? date.toISOString() : null,
-      likes: null, comments: null, thumbnail: creatorImageUrl(p.displayUrl ?? p.thumbnailUrl), location: coarseCreatorLocation(p.locationName ?? object(p.location).name), paidPartnership: p.isSponsored === true || p.isPaidPartnership === true }];
+      likes: null, comments: null, thumbnail: creatorImageUrl(p.displayUrl ?? p.thumbnailUrl), location: coarseCreatorLocation(p.locationName ?? object(p.location).name), altText: clean(p.alt ?? p.altText ?? p.accessibilityCaption,800), personPresent:typeof p.personPresent==="boolean"?p.personPresent:null, productOnly:typeof p.productOnly==="boolean"?p.productOnly:null, paidPartnership: p.isSponsored === true || p.isPaidPartnership === true }];
   });
   const text = (bio + " " + String(row.businessCategoryName ?? "")).toLowerCase();
   const kind = /\breseller\b|we resell/.test(text) ? "reseller" : /\bmeme page\b|repost page|reposting/.test(text) ? "repost" : row.isBusinessAccount === true && /shopping|retail|product\/service|brand|shop/.test(text) ? "brand" : /\bcreator\b|\bblogger\b|\bugc\b|personal blog/.test(text) ? "creator" : "unknown";
   let website: string | null = null; try { const u = new URL(row.externalUrl ?? row.website); if (u.protocol === "https:" && !u.username && !u.password) website = u.origin; } catch { /* No saved link. */ }
-  return { handle, name: clean(row.fullName ?? row.name, 100) || handle, bio: clean(bio), website, businessEmail: businessEmail(bio), private: row.private === true || row.isPrivate === true, accountKind: kind,
+  return { handle, name: clean(row.fullName ?? row.name, 100) || handle, bio: clean(bio), website, businessEmail: businessEmail(bio), screening:publicScreening(row,at), private:typeof (row.private ?? row.isPrivate)==="boolean" ? (row.private ?? row.isPrivate) : null, accountKind: kind,
     posts, related: (Array.isArray(row.relatedProfiles) ? row.relatedProfiles : []).slice(0, 100).map((p: unknown) => creatorHandle(typeof p === "string" ? p : object(p).username)).filter((p: string | null): p is string => p !== null), appearsInAds: [],
-    audit: comments.length ? { sampledPosts: commentPosts, comments: comments.length, repeatedFraction: 1 - new Set(comments).size / comments.length } : null,
+    audit: comments.length ? { observedAt:at,postIds:commentIds,...commentQuality(comments),sampledPosts: commentPosts, comments: comments.length, repeatedFraction: 1 - new Set(comments).size / comments.length } : null,
     followers: null, mediaCount: null, verification: "Unverified", verificationReason: "Official numbers have not been checked.", checkedAt: null, discoveredAt: at };
 }
 export class CreatorVerificationError extends Error {
@@ -71,9 +82,11 @@ export class InstagramCreatorVerifier {
       const p = object(value), url = publicCreatorUrl(p.permalink, true), date = typeof p.timestamp === "string" ? new Date(p.timestamp) : null;
       if (!url || !/^\d{1,50}$/.test(String(p.id))) return [];
       const earlier = profile.posts.find(e => e.id === String(p.id) || e.url.replace(/\/$/, "") === url.replace(/\/$/, ""));
-      return [{ id: String(p.id), url, caption: clean(p.caption), at: date && Number.isFinite(date.getTime()) ? date.toISOString() : null, likes: count(p.like_count), comments: count(p.comments_count), thumbnail: creatorImageUrl(p.thumbnail_url ?? (p.media_type !== "VIDEO" ? p.media_url : null)) ?? earlier?.thumbnail ?? null, location: earlier?.location, paidPartnership: earlier?.paidPartnership }];
+      return [{ id: String(p.id), url, caption: clean(p.caption), at: date && Number.isFinite(date.getTime()) ? date.toISOString() : null, likes: count(p.like_count), comments: count(p.comments_count), thumbnail: creatorImageUrl(p.thumbnail_url ?? (p.media_type !== "VIDEO" ? p.media_url : null)) ?? earlier?.thumbnail ?? null, location: earlier?.location, paidPartnership: earlier?.paidPartnership,altText:earlier?.altText,personPresent:earlier?.personPresent,productOnly:earlier?.productOnly }];
     });
-    return { ...profile, name: clean(data.name).slice(0, 100) || profile.name, bio: clean(data.biography) || profile.bio,
-      followers: count(data.followers_count), mediaCount: count(data.media_count), posts, verification: "Verified", verificationReason: "Numbers checked through the official API.", checkedAt: (this.options.now?.() ?? new Date()).toISOString() };
+    let website=profile.website; if(data.website!==undefined){website=null;try{const u=new URL(data.website);if(u.protocol==="https:"&&!u.username&&!u.password)website=u.origin;}catch{ /* Keep an absent official link absent. */ }}
+    const checkedAt=(this.options.now?.() ?? new Date()).toISOString();
+    return { ...profile, website,private:false,screening:publicScreening(data,checkedAt,profile.screening), name: clean(data.name).slice(0, 100) || profile.name, bio: typeof data.biography==="string"?clean(data.biography):profile.bio,
+      followers: count(data.followers_count), mediaCount: count(data.media_count), posts, verification: "Verified", verificationReason: "Numbers checked through the official API.", checkedAt };
   }
 }

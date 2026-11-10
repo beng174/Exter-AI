@@ -8,10 +8,10 @@ import { readBrand } from "../db.js";
 import { protectSettingsMutation } from "../request-guard.js";
 import { infrastructureDatabase } from "../infrastructure/database.js";
 import { budgetStatus } from "../infrastructure/budget.js";
-import { creatorCsv, creatorHandle, creatorPrecision, emptyDiscovery, matchesCreator, parseCreatorLabels } from "../../shared/creator-discovery.js";
+import { CREATOR_RULE_VERSION, creatorCsv, creatorHandle, creatorPrecision, emptyDiscovery, matchesCreator, parseCreatorLabels } from "../../shared/creator-discovery.js";
 import { ApifyCreatorProvider } from "./apify.js";
 import { InstagramCreatorVerifier, publicCreatorUrl } from "./discovery-provider.js";
-import { briefDigest, briefSchema, deleteDiscoveryCreator, discoveryBatchCount, discoverySnapshot, filtersSchema, readDiscoveryCreators, saveCreatorSegment, suppressionHash } from "./discovery-store.js";
+import { briefDigest, briefSchema, deleteDiscoveryCreator, discoveryBatchCount, discoverySnapshot, filtersSchema, readDiscoveryCreators, readCreatorRejections, rescreenCreatorRules, saveCreatorSegment, suppressionHash } from "./discovery-store.js";
 import { enqueueCreatorDiscovery, enqueueCreatorRefresh } from "./discovery-jobs.js";
 export interface CreatorApiOptions {
   pool?: pg.Pool; env?: Record<string, string | undefined>; now?: () => Date;
@@ -28,7 +28,7 @@ export function attachCreatorDiscovery(app: Express, db: DatabaseSync, options: 
   };
   app.get("/api/creator-discovery", (req, res) => {
     res.setHeader("Cache-Control", "private, no-store");
-    Promise.resolve().then(async () => { const id = workspace(req), p = pool(); const value = p ? await discoverySnapshot(p, id) : emptyDiscovery(), config = provider.researchConfiguration(); value.configured = Boolean(p && config.configured); value.verificationConfigured = verifier.configured(); value.reason = value.configured ? value.verificationConfigured ? "Internal research until both accuracy checks pass." : "Official account checks need their access configured." : config.reason; res.json(value); }).catch(() => res.status(422).json({ error: "Saved creator research could not be read." }));
+    Promise.resolve().then(async () => { const id = workspace(req), p = pool(); const value = p ? await discoverySnapshot(p, id,now()) : emptyDiscovery(), config = provider.researchConfiguration(); value.configured = Boolean(p && config.configured); value.verificationConfigured = verifier.configured(); value.reason = value.configured ? value.verificationConfigured ? "Internal research until all three accuracy checks pass." : "Official account checks need their access configured." : config.reason; res.json(value); }).catch(() => res.status(422).json({ error: "Saved creator research could not be read." }));
   });
   app.post("/api/creator-discovery/quote", route(async (req, res, id, p) => {
     const brief = briefSchema.parse(req.body?.brief);
@@ -51,13 +51,16 @@ export function attachCreatorDiscovery(app: Express, db: DatabaseSync, options: 
   }));
   app.post("/api/creator-discovery/save", route(async (req, res, id, p) => {
     const handle = creatorHandle(req.body?.handle), saved = z.boolean().parse(req.body?.saved); if (!handle) throw new Error();
-    const result = await p.query("UPDATE creator_discovery_results SET saved=$3,used_at=now() WHERE workspace_id=$1 AND handle=$2 RETURNING handle", [id, handle, saved]); if (!result.rowCount) throw new Error(); res.json({ saved });
+    await rescreenCreatorRules(p,id,now());
+    if(saved){const row=(await readDiscoveryCreators(p,id)).find(r=>r.profile.handle===handle);if(!row||!matchesCreator(row,{},"Results",now())){res.status(409).json({error:"Only creators who pass every brief rule can be saved."});return;}}
+    const result = await p.query("UPDATE creator_discovery_results SET saved=$3,used_at=now() WHERE workspace_id=$1 AND handle=$2 AND (NOT $3 OR (evaluation->'screen'->>'disposition'='Results' AND evaluation->>'ruleVersion'=$4 AND brief_version=(SELECT brief_version FROM creator_discovery_settings WHERE workspace_id=$1) AND (evaluation->'screen'->>'activeUntil')::timestamptz>=$5)) RETURNING handle", [id, handle, saved,CREATOR_RULE_VERSION,now()]); if (!result.rowCount) throw new Error(); res.json({ saved });
   }));
   app.post("/api/creator-discovery/delete", route(async (req, res, id, p) => { const handle = creatorHandle(req.body?.handle); if (!handle) throw new Error(); await deleteDiscoveryCreator(p, id, handle); res.json({ deleted: true }); }));
   app.post("/api/creator-discovery/refresh", route(async (_req, res, id, p) => { if (!verifier.configured()) throw new Error(); res.status(202).json({ id: await enqueueCreatorRefresh(p, id, now()) }); }));
   app.post("/api/creator-discovery/segments", route(async (req, res, id, p) => { const name = z.string().trim().min(1).max(100).parse(req.body?.name), filters = filtersSchema.parse(req.body?.filters); res.status(201).json({ id: await saveCreatorSegment(p, id, name, filters) }); }));
   app.post("/api/creator-discovery/segments/delete", route(async (req, res, id, p) => { const segment = z.string().uuid().parse(req.body?.segmentId); await p.query("DELETE FROM creator_discovery_segments WHERE workspace_id=$1 AND id=$2", [id, segment]); res.json({ deleted: true }); }));
   app.get("/api/creator-discovery/export", route(async (req, res, id, p) => {
+    await rescreenCreatorRules(p,id,now());
     const filters = filtersSchema.parse(req.query.filters ? JSON.parse(String(req.query.filters)) : {}), rows = await readDiscoveryCreators(p, id);
     res.setHeader("Content-Disposition", 'attachment; filename="internal-creator-research.csv"'); res.type("text/csv").send(creatorCsv(rows.filter(r => matchesCreator(r, filters))));
   }));
@@ -67,9 +70,10 @@ export function attachCreatorDiscovery(app: Express, db: DatabaseSync, options: 
     res.setHeader("X-Content-Type-Options", "nosniff"); res.type("image/png").send(row.image);
   }));
   app.post("/api/creator-discovery/validate", route(async (_req, res, id, p) => {
+    await rescreenCreatorRules(p,id,now());
     const csv = await (options.labels ? options.labels() : readFile(new URL("../../research/creator-briefs/test-set.csv", import.meta.url), "utf8")), labels = parseCreatorLabels(csv);
     const setting = (await p.query("SELECT brief_version FROM creator_discovery_settings WHERE workspace_id=$1", [id])).rows[0]; if (!setting) throw new Error();
-    const results = creatorPrecision(labels, await readDiscoveryCreators(p, id), setting.brief_version, now().toISOString(), options.fixtureLabels ?? false);
+    const results = creatorPrecision(labels, [...await readDiscoveryCreators(p, id),...await readCreatorRejections(p,id)], setting.brief_version, now().toISOString(), options.fixtureLabels ?? false);
     await p.query("INSERT INTO creator_discovery_validation(workspace_id,brief_version,input_hash,results,checked_at) VALUES($1,$2,$3,$4,$5) ON CONFLICT(workspace_id) DO UPDATE SET brief_version=excluded.brief_version,input_hash=excluded.input_hash,results=excluded.results,checked_at=excluded.checked_at", [id, setting.brief_version, createHash("sha256").update(csv).digest("hex"), JSON.stringify(results), now()]); res.json(results);
   }));
 }

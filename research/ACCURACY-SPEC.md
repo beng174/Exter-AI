@@ -147,8 +147,8 @@ existing data, collection, official reach/dates, budgets, tokens and live gates.
 
 ## Creator discovery validation
 
-The owner-authorised UK creator workflow has two separate checks: good-fit
-precision and UK precision. Both use TP / (TP + FP) against independent owner
+The owner-authorised UK creator workflow has three separate checks: individual-creator, good-fit
+precision and UK precision. All use TP / (TP + FP) against independent owner
 labels in research/creator-briefs/test-set.csv. Target >=85% each, at least 20
 predicted positives per field, all labels matched to current workspace results,
 and the same frozen brief/rule version. Report TP/FP/FN, coverage gaps, sample,
@@ -164,6 +164,28 @@ coverage and Provisional when incomplete. The skill reference defines the initia
 rules and provisional tier guides. Official numbers require Business Discovery;
 unsupported accounts remain Unverified. UK signals describe the creator's likely
 base, never the followers' location. The labelled UK prediction is High confidence;
-the labelled good-fit prediction requires no exclusions/review gaps, 12 officially
+the labelled good-fit prediction requires every strict screening rule passed, 12 officially
 counted posts, >=80 assessed points and >=70 normalised fit. This initial classifier
 needs validation; it makes no claim about commercial outcomes or fraud.
+
+### Strict creator qualification and negative coverage
+
+Version `creator-discovery-v2-strict` separates Results, Needs review and Rejected.
+Results require all hard brief rules to pass; a high checklist score cannot
+compensate for unknown identity, activity, official counts, location, niche/style,
+public status, exclusions, comment quality or follower history. Missing inputs
+remain review, including genuine shop-owning creators with business cues.
+
+Individual-creator precision measures identity pass against `is_individual` owner
+labels. The CSV now uses `handle,good_fit,is_uk,is_individual,account_type,notes`.
+Account type is individual/business/repost/unknown. Business and repost known
+negatives must have individual=no and good_fit=no. All three client gates also
+require at least one matched known negative of each type. Twenty predicted
+positives per check, >=85% precision, complete matching and real owner labels
+remain mandatory. Report negative coverage beside denominators and Wilson ranges.
+Legacy labels cannot release the new gate. Unknown identity never counts as a
+predicted individual. Changing these rules invalidates earlier validation.
+
+Strict screening bands and comment/growth cutoffs are provisional assumptions
+listed in the discovery skill. They identify screening concerns, not proven fraud.
+This update changes no ad-tag, model, or recommendation-validation gate.
