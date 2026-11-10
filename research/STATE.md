@@ -1040,3 +1040,5 @@ Checks: all 605 unit tests and 40 isolated Postgres fixture tests passed, includ
 passed. Browser fixtures passed at 390/1280/1440/1920px with zero external requests.
 See docs/review/automatic-onboarding/README.md for screenshots and reference pairs.
 PR #32 is still open; this branch builds on its verified fixes. Merge it first.
+PR #33: https://github.com/beng174/Exter-AI/pull/33 (feat/automatic-brand-onboarding,
+base exter-test-drive). Deploy only after merging PR #32 then PR #33 and migrating.

@@ -13,7 +13,7 @@ Keep budgets, official facts, manual overrides, sample isolation and live switch
 - [x] 2026-11-10 UTC: Add rate-limited Page/discovery lookups, multi-Page watchlists and manual overrides.
 - [x] 2026-11-10 UTC: Connect downstream jobs, monthly suggestions, progress and two-field onboarding UI.
 - [x] 2026-11-10 UTC: All four checks, 605 unit tests, 40 Postgres fixtures and four browser widths passed.
-- [ ] Open the onboarding PR against exter-test-drive after pushing.
+- [x] 2026-11-10 UTC: Opened PR #33 against exter-test-drive. Merge dependency: PR #32.
 
 ## Surprises and discoveries
 PR #32 is open and the current exter-test-drive base is e2b36c7. This branch
@@ -53,7 +53,8 @@ Screenshots and reference comparisons: docs/review/automatic-onboarding/README.m
 Fixtures cannot verify live identity, real match accuracy, costs, coverage or
 prediction gates. Batch completion can take 24 hours. Blocked sites pause honestly;
 weak matches need a click and missing media retains existing retries/reasons.
-PR creation remains the final milestone; this branch depends on open PR #32.
+PR #33: https://github.com/beng174/Exter-AI/pull/33 targets exter-test-drive.
+It depends on open PR #32; merge #32 first. Neither PR was merged or deployed.
 
 ## Context and orientation
 server/brand-research.ts supplies bounded same-domain public HTML fetches.
