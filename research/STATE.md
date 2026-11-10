@@ -956,3 +956,7 @@ and blockers below remain unchanged.
 - Validation for the startup repair: npm run check, npm test (549 passed),
   npm run build and the disposable Postgres integration passed. The build keeps
   its existing bundle-size warning; no UI or dependency changes were needed.
+
+- Secret scan passed after staging every repair file. PR #27 targets
+  exter-test-drive: https://github.com/beng174/Exter-AI/pull/27. The PR preserves
+  the current port/auth gate and records exact web/worker/scheduler rollout steps.
