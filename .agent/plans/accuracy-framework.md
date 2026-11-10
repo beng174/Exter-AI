@@ -15,7 +15,9 @@ dependencies.
 - [x] 2026-11-10 UTC: additive history, scoped APIs and five UI surfaces verified.
 - [x] 2026-11-10 UTC: check, 540 tests, build and secret scan passed before base refresh.
 - [x] 2026-11-10 UTC: five screens verified at 1280/1440/1920/390; sample isolation passed.
-- [ ] Merge latest base uploads, repeat required checks and open PR against exter-test-drive.
+- [x] 2026-11-10 UTC: merged latest base 0a34daf with reference uploads preserved.
+- [x] 2026-11-10 UTC: all four checks passed after final owned-product fix; 541 tests passed.
+- [x] 2026-11-10 UTC: opened PR #26 against exter-test-drive.
 
 ## Surprises and discoveries
 The main spec still says 85% tag agreement and AUC 0.65. The owner's new 90%
@@ -32,15 +34,19 @@ analyses. Freeze thresholds at launch. Primary metric is locked before launch,
 ROAS default, CPA or hook rate optional, per owner's confirmed answer. Calibrate
 thresholds within account/category/format/product; default values are labelled.
 Latest base discovery: two owner upload commits (2ac4d36, 0a34daf) add reference
-documents only; preserve them verbatim. The later request permits internal experimental outputs labelled Estimated, not
+documents only; preserve them verbatim. The final review found prepared owned IDs were not matched to synced rows.
+Scoring now requires a confirmed six-part account/product cohort, verifies actual
+owned days and hides cached predictions after product regrouping; fixtures cover
+this path. The later request permits internal experimental outputs labelled Estimated, not
 yet validated. Only passed models may appear in client reports. Sample results
 never pass real gates. Never invent a public outcome where Working Score is absent.
 
 ## Outcomes and retrospective
 Implemented measurement and the subsequently authorised experimental model.
-540 fixture tests passed before the final base refresh. Browser assertions passed
+541 fixture tests passed after the final base refresh and owned-product fix. Browser assertions passed
 for Accuracy, Scores, Creative detail, Creatives and Winners at four widths.
-No external request was attempted. No real model has been validated. Drafts
+No external request was attempted. PR: https://github.com/beng174/Exter-AI/pull/26.
+No real model has been validated. Drafts
 require analysed feature JSON, and multimodal neighbours require saved,
 version-matched embeddings and mature outcome labels. Automatic previews are
 conservative and always experimental without those inputs. No provider calls,

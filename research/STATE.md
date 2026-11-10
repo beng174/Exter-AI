@@ -927,3 +927,8 @@ and blockers below remain unchanged.
   methods are unchanged. Kernel remains paused. Both owned-account live gates
   remain open. Fixtures are not live verification. See docs/ACCURACY.md and
   .agent/plans/accuracy-framework.md for validation evidence and limitations.
+
+- Final accuracy validation: npm run check, npm test (541 passed), npm run build
+  and npm run secrets:check passed on latest exter-test-drive plus this feature.
+  Fixture browser checks passed at four widths. PR #26 targets exter-test-drive:
+  https://github.com/beng174/Exter-AI/pull/26. No real model is validated.
