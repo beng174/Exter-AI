@@ -1045,3 +1045,28 @@ base exter-test-drive). Deploy only after merging PR #32 then PR #33 and migrati
 The CI integration command now includes onboarding, ad-media and public-media
 fixtures. Its full clean local run passed all 74 infrastructure tests (including
 the 40 targeted source/media/onboarding cases); no live providers were called.
+
+### 10 Nov 2026: continuous preview recovery and Winners (UI-02, UI-10, UI-16)
+
+Initial media batches now continue directly from completion and put longest-running
+leaders before fresh/newest ads. Legacy unpaid plans are retained and reordered;
+failed retries stay daily. Existing paid datasets can repair missing previews
+without another scrape; unresolved IDs get a budgeted, single-ID detail fallback
+across countries with strict official UK/Page/workspace matching. Scraper summaries
+no longer inflate the minimum billable-ad count. Unknown charges stay held.
+WebP/AVIF/HEIC conversion, product/carousel image aliases, poster generation and
+controlled MIME/HTTP/file diagnostics improve coverage without changing source
+reach, dates or copy. HEIC adds system decoder tools to Docker and CI. Images retain
+size/type/host guards; full videos follow previews and stop at the 80% disk limit.
+Winners defaults to previews only. Catalogue templates use product-card titles;
+missing previews show loading states/reasons. Shared saved logos and two-line
+row/card titles remain aligned. Manual collection starts the full enabled backlog.
+The UK date loop reuses one formatter; the 15,000-ad fixture fell from 76s to 15s.
+No production database, live provider call or backfill was used for verification.
+The real six-ad causes and >=95% per-brand result remain for the deployed run to
+establish. See docs/review/media-backfill/README.md for code causes, reported counts,
+fixture screenshots and expected-coverage limits. Own-account and model gates stay open.
+Validation: all 614 unit tests and 79 isolated infrastructure fixture tests passed.
+TypeScript, production build and secrets scan passed. Browser checks passed at
+390/1280/1440/1920px with zero provider traffic. Screenshots use supplied IDs with
+fictional copy/media/logos, never production measurements. All live gates remain open.

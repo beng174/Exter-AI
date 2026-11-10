@@ -88,7 +88,15 @@ Search works by keyword (up to 50 characters) with filters for publish date (fro
 
 Owner-authorised extension to public collection; official reach and dates do not change.
 Target an image, video poster or catalogue product image for every collected ad.
-Hand new ads to the existing media queue after each successful collection. Retry
+Hand new ads to the existing media queue after each successful collection.
+Initial preview backfills continue in consecutive budgeted batches, without a daily
+cap, prioritising longest-running leaders and high UK reach before new ads. Daily
+limits apply to failed retries. Recover from existing paid datasets before buying
+another lookup. Unreturned ads can use exact-ID detail lookup across countries,
+while the original official UK record and Page remain mandatory. The client target
+is at least 95% preview coverage per brand, with one controlled reason for the rest.
+Winners defaults to ads with previews; a toggle reveals loading states. Catalogue
+templates use stored product-card titles/images without altering official copy. Retry
 missing previews daily, with controlled reasons. Show “No preview from Meta” only
 after seven distinct failed UK days with a recorded reason. Budget/configuration
 pauses do not count as failed media days. Show public image/video coverage on Creatives.

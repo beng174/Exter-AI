@@ -106,7 +106,7 @@ function Detail({row,data,filtered,onOpen,onRefresh}:DetailProps&{row:BrowserCre
             {history("Placements",row.placements.length?row.placements.map(plainEnum).join(", "):null)}{history("Source CTA",null)}
           </dl>
           {row.daysRunningBasis&&ukDate(row.daysRunningAsOf)&&<Caveat>Days since the source-listed start, as of {ukDate(row.daysRunningAsOf)}. Status reflects the last saved capture, not verified continuous delivery.</Caveat>}
-          <h3>Ad copy <DataLabel basis="Observed"/></h3><ExpandableCopy text={row.copy} truncated={row.copyTruncated} sourceUrl={row.sourceUrl}/>
+          <h3>Ad copy <DataLabel basis="Observed"/></h3><ExpandableCopy text={/\{\{|\}\}/.test(row.copy)?row.catalogueProduct?.description||row.catalogueProduct?.title||'Catalogue ad · product details loading':row.copy} truncated={row.copyTruncated} sourceUrl={row.sourceUrl}/>
         </SectionCard></div>
       </div>
       <div className="creative-detail-evidence-column">

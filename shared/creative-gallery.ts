@@ -18,6 +18,7 @@ export interface DemoGalleryCreative {
   copy: string;
   copyTruncated?: boolean;
   sourceUrl: string | null;
+  catalogueProduct?:{title:string;description:string}|null;
   adFormat?:"video"|"static_image"|"carousel"|"catalogue"|null;
   mediaKind: GalleryMediaKind;
   durationSeconds: number | null;

@@ -286,3 +286,12 @@ CREATE UNIQUE INDEX watchlists_workspace_brand_page ON watchlists(workspace_id,b
 ALTER TABLE public_category_batches ADD COLUMN IF NOT EXISTS vocabulary jsonb NOT NULL DEFAULT '[]';
 
 ALTER TABLE public_category_batches ADD COLUMN IF NOT EXISTS estimate_gbp numeric CHECK(estimate_gbp>=0);
+
+-- Preview recovery keeps paid dataset references, never temporary media URLs.
+ALTER TABLE ad_media_runs ADD COLUMN IF NOT EXISTS lookup_mode text NOT NULL DEFAULT 'backfill';
+ALTER TABLE ad_media_runs ADD COLUMN IF NOT EXISTS source_run_id text REFERENCES ad_media_runs;
+ALTER TABLE ad_media_requests ADD COLUMN IF NOT EXISTS dataset_offset integer;
+ALTER TABLE ad_media_requests ADD COLUMN IF NOT EXISTS reprocess_version text;
+ALTER TABLE ad_media_creatives ADD COLUMN IF NOT EXISTS product jsonb;
+ALTER TABLE ad_media_creatives ADD COLUMN IF NOT EXISTS diagnostics jsonb NOT NULL DEFAULT '[]';
+ALTER TABLE ad_media_runs ADD COLUMN IF NOT EXISTS preview_policy text NOT NULL DEFAULT 'legacy';

@@ -8,7 +8,7 @@ export function missingMediaReason(request:CoverageAttempt|undefined,file:Covera
  if(request?.queued)return budget?"budget":"queued";
  if(file?.missingFile)return "file_missing";
  if(budget&&!request)return "budget";
- if(!request)return file?.legacy?"provider":"not_requested";
+ if(!request)return file?.error&&["expired","unsupported","disk","provider"].includes(file.error)?file.error as MediaMissingReason:file?.legacy?"provider":"not_requested";
  if(["expired","unsupported","wrong_page","disk","provider","no_media","not_returned","budget"].includes(request.outcome))return request.outcome as MediaMissingReason;
  return !request.returned?"not_returned":"no_media";
 }
@@ -37,7 +37,7 @@ async function readCoverageData(pool:pg.Pool,workspace:string){
   pool.query(`SELECT DISTINCT ON(r.brand_key,q.native_id) r.brand_key AS "brandKey",q.native_id AS "nativeId",bool_or(q.returned_at IS NOT NULL) OVER(PARTITION BY r.brand_key,q.native_id) AS returned,bool_or(q.matched_at IS NOT NULL) OVER(PARTITION BY r.brand_key,q.native_id) AS matched,q.outcome,q.requested_at AS "lastAttemptAt"
    FROM ad_media_requests q JOIN ad_media_runs r ON r.id=q.run_id JOIN watchlists w ON w.id=r.watchlist_id AND w.page_ids->>0=r.page_id
    WHERE r.workspace_id=$1 ORDER BY r.brand_key,q.native_id,q.requested_at DESC,r.id DESC`,[workspace]),
-  pool.query(`SELECT c.brand_key AS "brandKey",c.native_id AS "nativeId",true AS legacy,
+  pool.query(`SELECT c.brand_key AS "brandKey",c.native_id AS "nativeId",true AS legacy,(array_agg(c.error_kind ORDER BY c.created_at DESC))[1] AS error,
    bool_or(EXISTS(SELECT 1 FROM jsonb_array_elements(c.assets) a WHERE a->>'role' IN ('image','poster') AND NOT EXISTS(SELECT 1 FROM ad_media_file_checks f WHERE f.workspace_id=c.workspace_id AND f.artifact_id=a->'ref'->>'artifactId' AND NOT f.available))) AS image,
    bool_or(EXISTS(SELECT 1 FROM jsonb_array_elements(c.assets) a WHERE a->>'role'='video' AND NOT EXISTS(SELECT 1 FROM ad_media_file_checks f WHERE f.workspace_id=c.workspace_id AND f.artifact_id=a->'ref'->>'artifactId' AND NOT f.available))) AS video,
    bool_or(EXISTS(SELECT 1 FROM jsonb_array_elements(c.assets) a JOIN ad_media_file_checks f ON f.workspace_id=c.workspace_id AND f.artifact_id=a->'ref'->>'artifactId' WHERE a->>'role' IN ('image','poster') AND NOT f.available)) AS "missingFile"
@@ -54,17 +54,21 @@ async function readCoverageData(pool:pg.Pool,workspace:string){
 export async function readMediaCoverage(pool:pg.Pool,workspace:string):Promise<MediaCoverage[]>{
  const data=await readCoverageData(pool,workspace);return mediaCoverage(data.official,data.requests,data.files,data.brands);
 }
-export async function readMissingMedia(pool:pg.Pool,workspace:string,options:{brand?:string;reason?:string;offset?:number}={}):Promise<MissingMediaPage>{
+export async function readMissingMedia(pool:pg.Pool,workspace:string,options:{brand?:string;reason?:string;offset?:number;adId?:string}={}):Promise<MissingMediaPage>{
  const data=await readCoverageData(pool,workspace),requests=new Map(data.requests.map(row=>[identity(row),row])),files=new Map(data.files.map(row=>[identity(row),row]));
- const missing=data.official.filter(row=>!files.get(identity(row))?.image).map(row=>({...row,reason:missingMediaReason(requests.get(identity(row)),files.get(identity(row)),data.brands.find(b=>b.brandKey===row.brandKey)?.budget)})).filter(row=>(!options.brand||row.brandKey===options.brand)&&(!options.reason||row.reason===options.reason)).sort((a,b)=>a.brandKey.localeCompare(b.brandKey)||a.nativeId.localeCompare(b.nativeId));
+ const missing=data.official.filter(row=>!files.get(identity(row))?.image).map(row=>({...row,reason:missingMediaReason(requests.get(identity(row)),files.get(identity(row)),data.brands.find(b=>b.brandKey===row.brandKey)?.budget)})).filter(row=>(!options.adId||row.nativeId===options.adId.trim())&&(!options.brand||row.brandKey===options.brand)&&(!options.reason||row.reason===options.reason)).sort((a,b)=>a.brandKey.localeCompare(b.brandKey)||a.nativeId.localeCompare(b.nativeId));
  const offset=Math.max(0,Math.floor(options.offset||0)),limit=50,page=missing.slice(offset,offset+limit);
+ const attempts=page.length?(await pool.query(`SELECT DISTINCT ON(r.brand_key,q.native_id) r.brand_key,q.native_id,r.page_id,r.lookup_mode,q.returned_at,q.matched_at,
+  COALESCE(c.diagnostics,'[]'::jsonb) AS diagnostics FROM ad_media_requests q JOIN ad_media_runs r ON r.id=q.run_id
+  LEFT JOIN ad_media_creatives c ON c.run_id=r.id AND c.native_id=q.native_id WHERE r.workspace_id=$1 AND q.native_id=ANY($2::text[]) ORDER BY r.brand_key,q.native_id,q.requested_at DESC,r.id DESC`,[workspace,page.map(row=>row.nativeId)])).rows:[];
+
  const metadata=page.length?await pool.query(`SELECT DISTINCT ON(w.brand_key,o.native_id) w.brand_key,o.native_id,a.start_time,
   left(COALESCE(o.raw_payload,p.raw_payload)->'ad_creative_bodies'->>0,500) AS copy
   FROM ad_observations o JOIN public_ads a USING(platform,native_id) JOIN collection_runs r ON r.id=o.run_id JOIN watchlists w ON w.id=r.watchlist_id
   LEFT JOIN ad_observations p ON p.workspace_id=o.workspace_id AND p.platform=o.platform AND p.native_id=o.native_id AND p.run_id=o.raw_payload_run_id
   WHERE o.workspace_id=$1 AND w.workspace_id=$1 AND r.config->>'revision'=w.revision::text AND a.advertiser_id=w.page_ids->>0 AND o.native_id=ANY($2::text[])
   ORDER BY w.brand_key,o.native_id,o.observed_at DESC,o.run_id DESC`,[workspace,page.map(row=>row.nativeId)]):{rows:[]};
- return {total:missing.length,offset,limit,ads:page.map(row=>{const meta=metadata.rows.find(m=>m.brand_key===row.brandKey&&m.native_id===row.nativeId),when=requests.get(identity(row))?.lastAttemptAt;return {...row,copy:meta?.copy||'',startAt:meta?.start_time?new Date(meta.start_time).toISOString():null,lastAttemptAt:when?new Date(when).toISOString():null};})};
+ return {total:missing.length,offset,limit,ads:page.map(row=>{const meta=metadata.rows.find(m=>m.brand_key===row.brandKey&&m.native_id===row.nativeId),when=requests.get(identity(row))?.lastAttemptAt;const attempt=attempts.find(a=>a.brand_key===row.brandKey&&a.native_id===row.nativeId);return {...row,diagnostics:attempt?.diagnostics||[],pageId:attempt?.page_id||null,lookupMode:attempt?.lookup_mode||null,returned:Boolean(attempt?.returned_at),matched:Boolean(attempt?.matched_at),copy:meta?.copy||'',startAt:meta?.start_time?new Date(meta.start_time).toISOString():null,lastAttemptAt:when?new Date(when).toISOString():null};})};
 }
 
 export async function readMissingReasons(pool:pg.Pool,workspace:string){

@@ -10,12 +10,12 @@ export function BrandIdentityProvider({brands,brandId,children}:{brands:Identity
   const all=[...loaded,...brands.filter(b=>!loaded.some(item=>item.id===b.id))];
   return <Context.Provider value={{brands:all,current:all.find(b=>b.id===brandId),version,changed:()=>setVersion(v=>v+1)}}>{children}</Context.Provider>;
 }
-export function useBrandIdentity(name:string){const context=useContext(Context);const alias=/^(?:You|Yours|Your brand)$/i.test(name.trim());const known=alias?context.current:context.brands.find(b=>b.id===name||b.name.toLowerCase()===name.toLowerCase());return {brand:known||{id:"",name,domain:"",color:brandColour(name),initials:brandInitials(name),mode:"imported" as const},...context};}
+export function useBrandIdentity(name:string){const context=useContext(Context);const alias=/^(?:You|Yours|Your brand)$/i.test(name.trim());const clean=name.replace(/^You\s*·\s*/i,"").trim();const known=alias?context.current:context.brands.find(b=>b.id===clean||b.name.toLowerCase()===clean.toLowerCase());return {brand:known||{id:"",name,domain:"",color:brandColour(name),initials:brandInitials(name),mode:"imported" as const},...context};}
 export function BrandMark({name,size=20,nameBeside=false}:{name:string;size?:16|20|32;nameBeside?:boolean}){
- const {brand,version,current}=useBrandIdentity(name),[loaded,setLoaded]=useState(false);
+ const {brand,version,current}=useBrandIdentity(name),[loadedSrc,setLoadedSrc]=useState<string|null>(null);
  const src=brand.id&&brand.mode!=="demo"?`/api/brand-logos/${encodeURIComponent(brand.id)}?v=${version}&workspaceId=${encodeURIComponent(current?.id||"")}`:null;
- useEffect(()=>setLoaded(false),[src]);
- return <span className="brand-mark" data-size={size} style={{"--brand-size":`${size}px`,"--brand-colour":brand.color,"--brand-ink":brandInk(brand.color)} as CSSProperties} role={!nameBeside&&!loaded?"img":undefined} aria-label={!nameBeside&&!loaded?brand.name:undefined} aria-hidden={nameBeside?true:undefined}><span className="brand-monogram" aria-hidden="true">{brandInitials(brand.name)}</span>{src&&<img key={src} src={src} alt={logoAlt(brand.name,nameBeside)} style={{opacity:loaded?1:0}} onLoad={()=>setLoaded(true)} onError={()=>setLoaded(false)}/>}</span>;
+ const loaded=Boolean(src&&loadedSrc===src);
+ return <span className="brand-mark" data-size={size} style={{"--brand-size":`${size}px`,"--brand-colour":brand.color,"--brand-ink":brandInk(brand.color)} as CSSProperties} role={!nameBeside&&!loaded?"img":undefined} aria-label={!nameBeside&&!loaded?brand.name:undefined} aria-hidden={nameBeside?true:undefined}><span className="brand-monogram" aria-hidden="true">{brandInitials(brand.name)}</span>{src&&<img key={src} src={src} alt={logoAlt(brand.name,nameBeside)} style={{opacity:loaded?1:0}} onLoad={()=>setLoadedSrc(src)} onError={()=>setLoadedSrc(null)}/>}</span>;
 }
 export function BrandName({name,size=20,children}:{name:string;size?:16|20|32;children?:ReactNode}){return <span className="brand-name"><BrandMark name={name} size={size} nameBeside/><span>{children||name}</span></span>;}
 /** Decorates known brand mentions in shared content without touching controls or attributes. */

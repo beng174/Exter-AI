@@ -26,6 +26,8 @@ export interface ImageMediaRequest {
 }
 export interface ImageMediaOptions {
   root?: string;
+  normalisePreview?: boolean;
+  inspect?: (type:string)=>void;
   allowedHosts?: string[];
   maxBytes?: number;
   timeoutMs?: number;
@@ -49,11 +51,15 @@ function publicAddress(address: string) {
   }
   return isIP(address) === 6 && /^[23][0-9a-f]{0,3}:/i.test(address) && !/^2001:db8:/i.test(address);
 }
-function sniff(bytes: Uint8Array): Mime | null {
+function sniff(bytes: Uint8Array): Mime | "image/avif" | "image/heic" | null {
   const value = Buffer.from(bytes);
   if (value.length >= 8 && value.subarray(0,8).equals(Buffer.from([137,80,78,71,13,10,26,10]))) return "image/png";
   if (value.length >= 3 && value[0] === 0xff && value[1] === 0xd8 && value[2] === 0xff) return "image/jpeg";
   if (value.length >= 16 && value.toString("ascii",0,4) === "RIFF" && value.toString("ascii",8,12) === "WEBP" && ["VP8 ","VP8L","VP8X"].includes(value.toString("ascii",12,16))) return "image/webp";
+  if(value.length>=16&&value.toString('ascii',4,8)==='ftyp'){
+    const brands=value.toString('ascii',8,32);if(/avif|avis/.test(brands))return 'image/avif';
+    if(/heic|heix|hevc|hevx|mif1/.test(brands))return 'image/heic';
+  }
   return null;
 }
 function httpError(status: number): MediaStorageError {
@@ -153,7 +159,7 @@ export class LocalImageMediaStore implements ImageMediaStore {
     let url = await this.checkedUrl(raw);
     let response: Response | undefined;
     for (let redirects=0;redirects<=3;redirects++) {
-      try { response = await (this.options.fetch || fetch)(url,{redirect:"manual",signal:combined,headers:{Accept:"image/jpeg,image/png,image/webp,application/octet-stream"}}); }
+      try { response = await (this.options.fetch || fetch)(url,{redirect:"manual",signal:combined,headers:{Accept:"image/jpeg,image/png,image/webp,image/avif,image/heic,application/octet-stream"}}); }
       catch { throw combined.aborted ? timeoutError() : new MediaStorageError("The public image source could not be reached.",502,"media_source_unavailable"); }
       if (response.status >= 300 && response.status < 400) {
         const location = response.headers.get("location"); await response.body?.cancel().catch(()=>{});
@@ -166,8 +172,9 @@ export class LocalImageMediaStore implements ImageMediaStore {
     }
     if (!response?.ok) { await response?.body?.cancel().catch(()=>{}); throw httpError(response?.status || 502); }
     if (!response.body) throw new MediaStorageError("The image source returned no content.",422,"media_not_image");
-    const declared = (response.headers.get("content-type") || "").split(";")[0].trim().toLowerCase();
-    if (![...Object.keys(TYPES),"application/octet-stream"].includes(declared)) { await response.body.cancel().catch(()=>{}); throw new MediaStorageError("The source did not return an accepted image content type.",422,"media_not_image"); }
+    const declared = (response.headers.get("content-type") || "").split(";")[0].trim().toLowerCase().replace("image/jpg","image/jpeg").replace("image/heif","image/heic");
+    this.options.inspect?.([...Object.keys(TYPES),"image/avif","image/heic"].includes(declared)?declared:"other");
+    if (![...Object.keys(TYPES),"application/octet-stream",...(this.options.normalisePreview?["image/avif","image/heic"]:[])].includes(declared)) { await response.body.cancel().catch(()=>{}); throw new MediaStorageError("The source did not return an accepted image content type.",422,"media_not_image"); }
     if (Number(response.headers.get("content-length")) > this.maxBytes) { await response.body.cancel().catch(()=>{}); throw new MediaStorageError("Image exceeds the 8 MiB media limit.",413,"media_too_large"); }
     await mkdir(resolve(this.root,"image-objects"),{recursive:true,mode:0o700});
     const temporary = resolve(this.root,"image-objects",`.download-${randomUUID()}.tmp`);
@@ -175,7 +182,7 @@ export class LocalImageMediaStore implements ImageMediaStore {
     let handle: Awaited<ReturnType<typeof open>> | undefined;
     try {
       handle = await open(temporary,"wx",0o600);
-      let bytes=0; const hash=createHash("sha256"); const prefix: Uint8Array[]=[]; let prefixBytes=0;
+      let bytes=0; let hash=createHash("sha256"); const prefix: Uint8Array[]=[]; let prefixBytes=0;
       while (true) {
         if (combined.aborted) throw timeoutError();
         const part = await reader.read(); if (part.done) break;
@@ -185,9 +192,26 @@ export class LocalImageMediaStore implements ImageMediaStore {
         hash.update(part.value); await handle.writeFile(part.value);
       }
       await handle.sync(); await handle.close(); handle=undefined;
-      const mimeType = sniff(Buffer.concat(prefix));
+      let mimeType = sniff(Buffer.concat(prefix));
       if (!bytes || !mimeType || (declared !== "application/octet-stream" && declared !== mimeType)) throw new MediaStorageError("Downloaded content does not match a supported image container.",422,"media_not_image");
-      const size = await (this.options.probe || probeImageFile)(temporary);
+      let size:{width:number;height:number};
+      if(this.options.normalisePreview&&(mimeType==='image/avif'||mimeType==='image/heic'||mimeType==='image/webp')){
+        let decodeInput=temporary;
+        if(mimeType==='image/heic'){
+          const {stdout}=await run('heif-info',[temporary],{timeout:10000,maxBuffer:256*1024,signal:combined}).catch(()=>{throw new MediaStorageError('HEIC preview decoder is unavailable.',503,'media_image_probe_failed');});
+          const dims=[...stdout.matchAll(/image: (\d+)x(\d+)/g)];if(!dims.length||dims.some(d=>Number(d[1])*Number(d[2])>40_000_000))throw new MediaStorageError('HEIC dimensions exceed the preview limit.',422,'media_not_image');
+          decodeInput=temporary+'.heic.jpg';
+          await run('heif-convert',['-q','85',temporary,decodeInput],{timeout:20000,maxBuffer:256*1024,signal:combined}).catch(()=>{throw new MediaStorageError('HEIC preview could not be decoded.',422,'media_image_probe_failed');});
+        }
+        const decoded=await run('ffprobe',['-v','error','-protocol_whitelist','file,pipe','-select_streams','v:0','-show_entries','stream=width,height','-of','json',decodeInput],{timeout:15000,maxBuffer:256*1024,signal:combined}).catch(()=>{throw new MediaStorageError('Preview decoder could not read this image.',422,'media_image_probe_failed');});
+        const stream=JSON.parse(decoded.stdout).streams?.[0];if(!stream?.width||!stream.height||stream.width*stream.height>40_000_000)throw new MediaStorageError('Image dimensions exceed the preview limit.',422,'media_not_image');
+        const output=temporary+'.jpg';try{
+          await run('ffmpeg',['-v','error','-nostdin','-protocol_whitelist','file,pipe','-i',decodeInput,'-frames:v','1','-vf','scale=1600:1600:force_original_aspect_ratio=decrease','-c:v','mjpeg','-threads','1','-q:v','3','-map_metadata','-1','-y',output],{timeout:20000,maxBuffer:256*1024,signal:combined});
+          const converted=await readFile(output);if(!converted.length||converted.length>this.maxBytes)throw new MediaStorageError('Converted image exceeds the preview limit.',413,'media_too_large');
+          await writeFile(temporary,converted);bytes=converted.length;hash=createHash('sha256').update(converted);mimeType='image/jpeg';
+        }catch(failure){if(failure instanceof MediaStorageError)throw failure;throw new MediaStorageError('Preview conversion could not finish.',422,'media_image_probe_failed');}finally{await unlink(output).catch(()=>{});if(decodeInput!==temporary)await unlink(decodeInput).catch(()=>{});}
+        size=await probeImageFile(temporary);
+      }else{if(mimeType==='image/avif'||mimeType==='image/heic')throw new MediaStorageError('Image requires preview conversion.',422,'media_not_image');size=await (this.options.probe || probeImageFile)(temporary);}
       if (!Number.isSafeInteger(size.width) || !Number.isSafeInteger(size.height) || size.width < 1 || size.height < 1 || size.width*size.height > 40_000_000) throw new MediaStorageError("Image dimensions are invalid or exceed 40 million pixels.",422,"media_not_image");
       const sha256=hash.digest("hex"); const relativePath=`image-objects/${sha256}.${TYPES[mimeType]}`; const absolutePath=resolve(this.root,relativePath);
       try { await link(temporary,absolutePath); }
@@ -198,6 +222,7 @@ export class LocalImageMediaStore implements ImageMediaStore {
       }
       return {absolutePath,relativePath,mimeType,sha256,bytes};
     } catch (error) {
+      await unlink(temporary+'.heic.jpg').catch(()=>{});
       await reader.cancel().catch(()=>{});
       if (error instanceof MediaStorageError) throw error;
       throw combined.aborted ? timeoutError() : new MediaStorageError("The image could not be stored safely; previous media was preserved.",500,"media_storage_failed");

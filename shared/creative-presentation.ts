@@ -2,9 +2,15 @@ import type { DemoGalleryCreative } from "./creative-gallery.js";
 import { ANGLE_OPTIONS, AUDIO_TYPE_OPTIONS, CLAIM_TYPE_OPTIONS, CREATIVE_BOOLEAN_TAG_OPTIONS, FORMAT_OPTIONS, HOOK_TYPE_OPTIONS, OFFER_TYPE_OPTIONS } from "./creative-taxonomy.js";
 
 /** UI-02/UI-03 presentation only. Saved source text remains immutable. */
-type CreativeIdentityInput=Pick<DemoGalleryCreative,"title"|"copy"|"nativeId"|"adId">&Partial<Pick<DemoGalleryCreative,"brandName"|"creativeFormat"|"angle">>;
+type CreativeIdentityInput=Pick<DemoGalleryCreative,"title"|"copy"|"nativeId"|"adId">&Partial<Pick<DemoGalleryCreative,"brandName"|"creativeFormat"|"angle"|"adFormat"|"catalogueProduct">>;
 const visibleLabel=(value:string|null|undefined)=>Boolean(value?.trim())&&!/{{|}}/.test(value!)&&!/^(unknown|unavailable|unsure|none)$/i.test(value!.trim());
 export function creativeIdentity(row:CreativeIdentityInput):{title:string;secondary:string|null} {
+  if(/{{|}}/.test(row.copy||'')||row.adFormat==='catalogue'&&!row.copy?.trim()){
+    const product=row.catalogueProduct;
+    if(visibleLabel(product?.title))return {title:product!.title,secondary:null};
+    if(visibleLabel(product?.description))return {title:product!.description,secondary:null};
+    if(/{{|}}/.test(row.copy||'')||row.adFormat==='catalogue')return {title:'Catalogue ad · product details loading',secondary:`Ad ${row.nativeId||row.adId}`};
+  }
   const firstLine=row.copy?.split(/\r?\n/).find(line=>line.trim())?.trim();
   if(visibleLabel(firstLine))return {title:firstLine!,secondary:null};
   const shortFormats:Record<string,string>={UGC:"UGC",studio:"Studio",static:"Static image","founder-led":"Founder led",animation:"Animation",mixed:"Mixed formats"};

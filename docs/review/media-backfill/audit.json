@@ -1,0 +1,32 @@
+{
+  "checks": [
+    {
+      "width": 1280,
+      "noOverflow": true,
+      "titlesTwoLines": true,
+      "savedLogosVisible": true
+    },
+    {
+      "width": 1440,
+      "noOverflow": true,
+      "titlesTwoLines": true,
+      "savedLogosVisible": true
+    },
+    {
+      "width": 1920,
+      "noOverflow": true,
+      "titlesTwoLines": true,
+      "savedLogosVisible": true
+    },
+    {
+      "width": 390,
+      "noOverflow": true,
+      "titlesTwoLines": true,
+      "savedLogosVisible": true
+    }
+  ],
+  "providerCalls": 0,
+  "externalRequests": [],
+  "pageErrors": [],
+  "note": "Supplied IDs, fictional media/copy/logo fixtures. No production trace."
+}
