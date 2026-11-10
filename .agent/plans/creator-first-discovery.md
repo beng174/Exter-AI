@@ -13,7 +13,7 @@ another paid scrape. Preserve budgets, privacy, saved research and accuracy gate
 - [x] Preserve observed public counts/provenance and enforce strict identity/follower rules.
 - [x] Recheck existing stored results without paid/provider calls; show rejection summaries.
 - [x] Run fixture/browser checks and all four project checks.
-- [ ] Commit, push and open PR against exter-test-drive.
+- [x] Commit, push and open PR #35 against exter-test-drive.
 
 ## Surprises and discoveries
 The default source plan explicitly falls back to category as an account search.
@@ -39,7 +39,7 @@ versioned no-cost saved-profile rechecks and durable stop/partial-result billing
 Affected PG fixtures pass, full infrastructure suite passes 80 tests, browser
 checks pass at all four widths with zero external requests. All four requested checks pass: check, 627 unit tests, build and secrets scan.
 The final creator-specific Postgres rerun also passes after the qualification update. Fixtures are not live validation or a production
-rescreen claim.
+rescreen claim. PR: https://github.com/beng174/Exter-AI/pull/35.
 
 ## Context and orientation
 shared/creator-discovery.ts owns metrics/filters; creator-screening.ts owns strict
