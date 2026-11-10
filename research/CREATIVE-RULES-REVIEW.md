@@ -1,5 +1,10 @@
 # Creative rules review
 
+Current gates are now 90% tag agreement and AUC 0.70 on 3,000 resolved ads.
+See [ACCURACY-SPEC.md](ACCURACY-SPEC.md). Older thresholds below describe the
+review at its original date; they are not the active release gates.
+
+
 Reviewed 9 November 2026. Research proposals only: **no product code, formula,
 weight, prompt, model, collection or UI behaviour changes in this PR**.
 

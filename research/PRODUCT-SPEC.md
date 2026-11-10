@@ -168,7 +168,7 @@ Exter analyses each unique creative once. Free open-source tools extract what is
 - Comparative and superlative claims ("8x stronger than other reed diffusers", "UK's best") get a flag: may need substantiation under ASA rules.
 - Background song lyrics are never treated as a voiceover.
 - Unsure means "unknown", never a guess.
-- A field is shown to clients only after it matches human labels on at least 85% of a 200-ad test set.
+- A field is shown to clients only after it matches human labels on at least 90% of a 200-ad test set.
 
 **How a video is analysed**
 
@@ -217,7 +217,7 @@ Public data never shows sales, so Exter infers performance from what advertisers
 | Opportunity score | How often customers raise a need, against how few competitors address it | Estimated | Reviews plus AI analysis |
 | Creator fit | Relevance, tone, language, location and engagement consistency, each shown separately | Estimated | Creator posts |
 
-**The predictive score ships only when it earns it:** trained on older ads, tested on newer ones, beating simple baselines (AUC of at least 0.65). Until then the screen shows the rules-based proven-ad signal, labelled as such.
+**The predictive score ships only when it earns it:** trained on older ads, tested on newer ones, beating simple baselines (AUC of at least 0.70). Until then the screen shows the rules-based proven-ad signal, labelled as such.
 
 ## Which ads are working: the Working Score
 
@@ -405,7 +405,7 @@ Working Score, gap analysis and the weekly report are still to build. Survival a
 3. **Week 3, 17 to 23 Nov: TikTok live (once approved).** TikTok connector: search by brand, full ad details, video files saved. TikTok reach and targeting feed the Working Score and comparisons. Weekly data pack every Monday: Excel, CSV and charts.
 4. **Week 4, 24 to 30 Nov: Meta API live (once activated).** Activation day: 12-month backfill, then daily collection at 3am. Reach velocity, share of voice and spend ranges switch on. Working Score confidence rises to High; client report links.
 
-**Gate:** AI fields must match 200 human labels on 85% before clients see them. Meta and TikTok dates depend on their approvals; each connector ships the day access arrives.
+**Gate:** AI fields must match 200 human labels on 90% before clients see them. Meta and TikTok dates depend on their approvals; each connector ships the day access arrives.
 
 Week 1 comes first because nothing else can be shown until real ads appear in the pages; the TikTok and Meta weeks move earlier if either approval comes sooner.
 
@@ -418,3 +418,11 @@ Motion (motionapp.com) already covers own-account creative analytics, own-ad sco
 3. Customer voice from reviews, linked to angles and briefs.
 
 Owned results and own-ad scores stay as they are; do not expand them until the three items above are live.
+
+## Accuracy gates
+
+Follow [ACCURACY-SPEC.md](ACCURACY-SPEC.md) for field-level measurements,
+3,000 resolved time-holdout outcomes, AUC 0.70, calibration and recommendation
+tests. Internal experimental likelihoods are labelled Estimated, not yet
+validated; client reports exclude them until their exact model/cohort passes.
+Public winner likelihood never claims competitor conversions.

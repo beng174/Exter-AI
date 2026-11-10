@@ -1,6 +1,7 @@
 import {scorecardCohorts,comparedGroups,tableGroup,creativeGroup,longestByFormat,FormatSwitch,chartData,cohortSelection} from "./comparison";
 import {navigateHref} from "../../navigation";
 import {reachScorecard,audienceReachTable} from "../../../shared/meta-research";
+import {LikelihoodValue} from "../ui/Likelihood";
 import {REACH_SHARE_NOTE} from "../../../shared/meta-public";
 import { BrandText } from "../ui/BrandIdentity";
 import { CompetitorsReadModel, FormatsReadModel, PatternsReadModel, AudienceReadModel, WinnersReadModel } from "./ResearchReadModels";
@@ -140,12 +141,15 @@ export function AudienceScreen({data,selection}:ScreenProps) {
 }
 export function WinnersScreen({data,selection}:ScreenProps) {
   if(data.library.presentation)return <WinnersReadModel library={data.library} model={data.library.presentation}/>;
-  const rows=longestByFormat(data,selection);
+  const likelihoodSort=typeof window!=="undefined"&&new URLSearchParams(window.location.search).get("sort")==="likelihood";
+  const rows=likelihoodSort?(data.comparison?data.comparison.groups.flatMap(group=>selectResearchAds(group.rows,selection)):selectResearchAds(data.library.creatives,selection)).filter(row=>row.likelihood):longestByFormat(data,selection);
+  if(likelihoodSort){const formats=[...new Set(rows.map(r=>r.adFormat||r.mediaKind))];rows.sort((a,b)=>formats.indexOf(a.adFormat||a.mediaKind)-formats.indexOf(b.adFormat||b.mediaKind)||(b.likelihood?.probability??-1)-(a.likelihood?.probability??-1));}
   return <>
-    <SectionCard title="Longest running" help="Working Score, labels, confidence and public signal scores are not available yet. Longest running is shown instead." empty={!rows.length&&{reason:"No supported source running durations are saved.",href:`/?view=settings&brandId=${encodeURIComponent(data.library.brand.id)}#demo-collection`,linkLabel:"Review collection"}}>
-      <DataTable caption="Longest-running saved creatives" basis="Observed" meta={metadata(data,{...selection,kind:"running"})} rows={rows} rowKey={row=>row.adId} groupBy={row=>creativeGroup(row,data)} onRow={row=>navigateHref(evidenceUrl(data.library.brand.id,{...selection,ad:row.adId}))} columns={[
+    <SectionCard title={likelihoodSort?"Winner likelihood":"Longest running"} help={likelihoodSort?"Experimental estimates, with uncertainty and model validation for each ad.":"Working Score, labels, confidence and public signal scores are not available yet. Longest running is shown instead."} empty={!rows.length&&{reason:likelihoodSort?"No estimates are ready for these comparable ads.":"No supported source running durations are saved.",href:likelihoodSort?analysisUrl(data.library.brand.id):`/?view=settings&brandId=${encodeURIComponent(data.library.brand.id)}#demo-collection`,linkLabel:likelihoodSort?"Run analysis":"Review collection"}}>
+      <DataTable caption={likelihoodSort?"Experimental winner estimates":"Longest-running saved creatives"} basis="Observed" rowBasis={row=>row.likelihood?row.likelihood.label==="Modelled"?"Modelled":"Estimated":"Observed"} meta={likelihoodSort?{sampleSize:rows.length,from:data.window.from,to:data.window.to,lastChecked:data.window.asOf}:metadata(data,{...selection,kind:"running"})} rows={rows} rowKey={row=>row.adId} groupBy={row=>creativeGroup(row,data)} onRow={row=>navigateHref(evidenceUrl(data.library.brand.id,{...selection,ad:row.adId}))} columns={[
         {key:"creative",label:"Creative",value:row=>creativeTitle(row),render:row=><CreativeRow row={row} showId/>},{key:"brand",label:"Brand",value:row=>row.brandName},{key:"format",label:"Format",value:row=>row.creativeFormat?plainEnum(row.creativeFormat):null,basis:()=>"Modelled"},
-        {key:"days",label:"Days running",value:row=>row.daysRunning,render:row=><EvidenceNumber data={data} value={row.daysRunning} selection={{...selection,ad:row.adId}}/>}
+        {key:"days",label:"Days running",value:row=>row.daysRunning,render:row=><EvidenceNumber data={data} value={row.daysRunning} selection={{...selection,ad:row.adId}}/>},
+        {key:"likelihood",label:"Winner likelihood",align:"number",value:row=>row.likelihood?.probability??null,render:row=><LikelihoodValue estimate={row.likelihood!}/>,basis:()=>"Estimated"}
       ]}/>
     </SectionCard>
     <SectionCard title="Your account winners" empty={{reason:"Your own winners appear once your ad account is connected and synced and winner comparisons are available.",href:`/?view=data&brandId=${encodeURIComponent(data.library.brand.id)}`,linkLabel:"Review owned sources"}}/>

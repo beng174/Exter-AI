@@ -27,6 +27,7 @@ export type Page =
   | "sources"
   | "settings"
   | "demo"
+  | "accuracy"
   | "labelling"
   | "patterns"
   | "winners"

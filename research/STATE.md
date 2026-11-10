@@ -897,3 +897,38 @@ and blockers below remain unchanged.
   exter-test-drive; deployment is pending.
   Kernel work stays paused; Phase 0 and Phase 1 owned-account live gates stay open.
   See docs/DEPLOY.md for the additive migration and web, worker, scheduler order.
+
+## Accuracy framework and experimental likelihood (10 Nov 2026)
+
+- Owner authorised AC-01..05 measurement, followed by AC-06 experimental model
+  work. ACCURACY-SPEC.md supersedes the old 85% tag and 0.65 AUC gates with 90%
+  per field and AUC 0.70, calibration and 3,000 resolved time-holdout ads. Public
+  outcomes are advertiser-backing winner signals, never competitor sales.
+- Added Settings Accuracy, source-integrity/formula/human-label checks, temporal
+  AUC/calibration evaluation, immutable measurement/test/result snapshots and
+  account/product/category/format threshold overrides. Test metric and thresholds
+  lock before launch. Owned results show ROAS, CPA, hook rate, uncertainty and
+  the 20% CPA guardrail; restatements preserve earlier snapshots.
+- Thresholds use comparable account history from the preceding 90 days. Missing
+  history uses labelled defaults. Longer purchase cycles require a scoped brand
+  override. Product/price-tier membership is confirmed by the owner against IDs
+  actually present in that owned account, not inferred from competitor data.
+- The experimental model pools weak theory, earlier resolved multimodal
+  neighbours and historical category momentum. Prior weight falls with samples.
+  The seven proposed review weights do not change the current five-check
+  Creative score or Working Score. Features/embeddings and outcome labels must
+  be prepared offline; no provider/model calls or downloads were added.
+- No connected resolved model dataset is claimed. Missing category, format,
+  analysis, embeddings or mature labels stays missing. Conservative theory-only
+  previews are always unvalidated. Offline fixtures cannot release a model.
+  Internal estimates show their uncertainty and validation; reports exclude
+  unpassed estimates. Draft scoring uses the identical function on analysed JSON.
+- Collection, official reach/dates, budgets, tokens, Render switches and provider
+  methods are unchanged. Kernel remains paused. Both owned-account live gates
+  remain open. Fixtures are not live verification. See docs/ACCURACY.md and
+  .agent/plans/accuracy-framework.md for validation evidence and limitations.
+
+- Final accuracy validation: npm run check, npm test (541 passed), npm run build
+  and npm run secrets:check passed on latest exter-test-drive plus this feature.
+  Fixture browser checks passed at four widths. PR #26 targets exter-test-drive:
+  https://github.com/beng174/Exter-AI/pull/26. No real model is validated.

@@ -1,7 +1,7 @@
 import { House, Building2, Eye, Grid2X2, Layers2, MessageSquare, Gauge, Database, UserRound, BarChart3, ClipboardCheck, Compass, FileChartColumnIncreasing, Globe2, Layers, MessageSquareText, Settings2, Sparkles, Target, Trophy, UsersRound } from "lucide-react";
 import type { Page } from "../shared/types";
 
-export type ViewId = "overview" | "brands" | "competitors" | "creatives" | "creative" | "formats" | "patterns" | "audience" | "winners" | "briefs" | "creators" | "scores" | "reports" | "ask" | "demo" | "data" | "settings" | "labelling";
+export type ViewId = "overview" | "brands" | "competitors" | "creatives" | "creative" | "formats" | "patterns" | "audience" | "winners" | "briefs" | "creators" | "scores" | "reports" | "ask" | "demo" | "data" | "settings" | "labelling" | "accuracy";
 export type NavigationGroup = "Overview" | "Research" | "Act" | "Share" | "Settings";
 export interface NavigationItem {
   id: ViewId; label: string; group: NavigationGroup; icon: typeof Compass;
@@ -27,6 +27,7 @@ export const navigation: readonly NavigationItem[] = [
   { id:"demo", label:"Brand demo", group:"Share", icon:FileChartColumnIncreasing, ready:true, screen:"demo", demoOnly:true },
   { id:"data", label:"Data sources", group:"Settings", icon:Database, ready:true, screen:"sources", rebuilt:"UI-16", aliases:["sources"] },
   { id:"settings", label:"Tests and preparation", group:"Settings", icon:Settings2, ready:true, screen:"settings" },
+  { id:"accuracy", label:"Accuracy", group:"Settings", icon:ClipboardCheck, ready:true, screen:"accuracy" },
   { id:"labelling", label:"Labelling", group:"Settings", icon:ClipboardCheck, ready:true, screen:"labelling" },
 ];
 export const navigationGroups: readonly NavigationGroup[] = ["Overview","Research","Act","Share","Settings"];

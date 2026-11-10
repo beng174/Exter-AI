@@ -8,6 +8,8 @@ import { createElement as h } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { browserCreative, ownedDay } from "./fixtures/creative-browser.js";
 import { ownedMetrics } from "../shared/owned-metrics.js";
+import { estimateLikelihood } from "../shared/likelihood.js";
+import { featuresFixture } from "./fixtures/accuracy.js";
 import type { BrowserCreative, CreativeBrowserResponse } from "../shared/creative-browser.js";
 await mkdir(resolve("work"), { recursive: true });
 const dir = await mkdtemp(resolve("work/detail-render-"));
@@ -30,6 +32,10 @@ function render(row: BrowserCreative) {
             Reflect.deleteProperty(globalThis, "window");
     }
 }
+test("AC-06 every shown likelihood carries uncertainty, sample, model validation and an experimental label",()=>{
+  const estimate=estimateLikelihood(featuresFixture(),[],[]),html=render(browserCreative({likelihood:estimate}));
+  assert.match(html,/Estimated, not yet validated/);assert.match(html,/95% uncertainty range/);assert.match(html,/0 similar ads/);assert.match(html,/validation AUC not checked/);assert.match(html,/likelihood-v1/);assert.match(html,/does not estimate sales/);assert.match(html,/Product appears late, 0:09/);
+});
 test("UI-03 missing evidence renders reasons/unlocks, never invented outcomes, scenes or scores", () => {
     const html = render(browserCreative({ daysRunning: null, durationSeconds: null, angle: null, creativeFormat: null }));
     assert.match(html, /Ad copy preview/);
