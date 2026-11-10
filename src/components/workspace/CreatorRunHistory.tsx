@@ -4,13 +4,13 @@ import {ukDate} from "../../../shared/creative-presentation";
 import type {DiscoveryRun,CreatorProviderRunView} from "../../../shared/creator-discovery";
 type Act=(name:string,path:string,body:unknown)=>Promise<boolean>;
 const actorLink=(r:CreatorProviderRunView)=>r.runId?<a href={`https://console.apify.com/actors/runs/${r.runId}`} target="_blank" rel="noopener noreferrer">{r.runId}</a>:<span title="The earlier request did not save its provider run ID.">Run ID not saved</span>;
-const records=(run:DiscoveryRun)=>{const values=run.providerRuns?.map(p=>p.found)??[];return values.some(v=>v!==null)?values.reduce<number>((n,v)=>n+(v??0),0):null;};
+const records=(run:DiscoveryRun)=>run.providerRuns?.at(-1)?.found??null;
 export function CreatorRunHistory({runs,busy,act}:{runs:DiscoveryRun[];busy:boolean;act:Act}){
  return <><DataTable caption="Creator search runs" basis="Observed" showBasis={false} rows={runs} rowKey={r=>r.id} columns={[
  {key:"date",label:"Started",value:r=>ukDate(r.createdAt,true)},
  {key:"status",label:"Status",value:r=>r.status,render:r=><><StatusChip status={r.status.charAt(0).toUpperCase()+r.status.slice(1)}/>{r.error&&<small className="accuracy-detail">{r.error}</small>}</>},
  {key:"found",label:"Creators found",align:"number",value:r=>r.found},
- {key:"records",label:"Records found",align:"number",value:records,render:r=><span title="Live dataset records, which may include posts and repeated creators.">{records(r)?.toLocaleString("en-GB")} <DataLabel basis="Observed"/></span>},
+ {key:"records",label:"Latest run records",align:"number",value:records,render:r=><span title="The linked run’s live dataset records. Posts and repeated creators can count.">{records(r)?.toLocaleString("en-GB")} <DataLabel basis="Observed"/></span>},
  {key:"verified",label:"Verified",align:"number",value:r=>r.verified},
  {key:"provider",label:"Apify run",value:r=>r.providerRuns?.at(-1)?.runId??null,missing:()=> <span title="Confirm the earlier run ID in Details to check its charge.">Run ID not saved</span>,render:r=>actorLink(r.providerRuns!.at(-1)!)},
  {key:"action",label:"Action",value:r=>r.id,render:r=><button className="button secondary" disabled={busy||r.reconcilePending||r.kind==="refresh"} onClick={()=>void act("reconcile","/api/creator-discovery/reconcile",{searchId:r.id})}>{r.reconcilePending?"Checking charges":"Reconcile"}</button>}
