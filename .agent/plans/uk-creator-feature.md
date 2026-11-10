@@ -13,7 +13,7 @@ both against exter-test-drive. No outreach, live tests or changed ad calculation
 - [x] 2026-11-10 UTC: existing Creators now hosts Find creators, Results and Segments; Accuracy shows both precision checks.
 - [x] 2026-11-10 UTC: provider/unit/render fixtures and isolated Postgres API/queue integration passed. Visual fixtures passed 1280/1440/1920/390px with no page overflow.
 - [x] 2026-11-10 02:55 UTC: npm run check, npm test (561 passed), npm run build and npm run secrets:check passed. Isolated Postgres integration passed.
-- [ ] Open the checked feature PR against exter-test-drive.
+- [x] 2026-11-10 02:55 UTC: opened feature PR #29 against exter-test-drive; docs-only prerequisite is PR #28.
 
 ## Surprises and discoveries
 Uploaded source directories use different case and flattened filenames; requested
@@ -82,3 +82,5 @@ Graph access, a missing budget and a crash after paid dispatch. Candidate limits
 are per run. Current result reads and validation are bound to the current brief;
 historical profiles stay saved. The new isolated-schema integration fixture also
 runs in the existing test:infrastructure CI job. No new dependency or CI service.
+
+Review links: https://github.com/beng174/Exter-AI/pull/28 and https://github.com/beng174/Exter-AI/pull/29. No live provider or production configuration changes were made.
