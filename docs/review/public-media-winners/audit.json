@@ -1,0 +1,37 @@
+{
+  "checks": [
+    {
+      "screen": "Cards",
+      "width": 1440,
+      "noOverflow": true
+    },
+    {
+      "screen": "Winners",
+      "width": 1440,
+      "noOverflow": true
+    },
+    {
+      "screen": "DataSources",
+      "width": 1440,
+      "noOverflow": true
+    },
+    {
+      "screen": "Cards",
+      "width": 390,
+      "noOverflow": true
+    },
+    {
+      "screen": "Winners",
+      "width": 390,
+      "noOverflow": true
+    },
+    {
+      "screen": "DataSources",
+      "width": 390,
+      "noOverflow": true
+    }
+  ],
+  "providerCalls": 0,
+  "externalRequests": [],
+  "pageErrors": []
+}

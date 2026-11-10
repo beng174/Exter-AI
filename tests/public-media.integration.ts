@@ -110,3 +110,19 @@ test('completing an official collection automatically hands its new ads to the m
  assert(await workOnce(pool,connector,{env:{...env,EXTER_META_LIBRARY_ENABLED:'true'},paceMs:0}));assert.equal(calls,1);assert.equal((await pool.query('SELECT status FROM collection_runs WHERE id=$1',[run])).rows[0].status,'complete');
  const queued=(await pool.query('SELECT status,target_ids FROM ad_media_runs')).rows;assert.equal(queued.length,1);assert.equal(queued[0].status,'queued');assert.equal(queued[0].target_ids[0],'9999');assert.equal((await pool.query("SELECT count(*)::integer AS n FROM cost_ledger WHERE provider='apify_ad_media'")).rows[0].n,0);
 }));
+
+test('text tagging runs independently of the media switch, quotes one bounded batch and never exceeds its reviewed reserve',async()=>fixture(async pool=>{
+ const {categoryQuote,workPublicCategoriesOnce}=await import('../server/public-categories/jobs.js');
+ const configured={...env,EXTER_AD_MEDIA_ENABLED:'false'},quote=await categoryQuote(pool,'workspace',configured);assert.equal(quote.ads,12);assert(quote.estimatedGbp>0);assert(quote.reserveGbp>=quote.estimatedGbp);
+ const id=await enqueueCategoryBatch(pool,'workspace',new Date(),{hash:quote.hash,env:configured});assert(id);assert.equal(Number((await pool.query('SELECT max_cost_gbp FROM public_category_batches WHERE id=$1',[id])).rows[0].max_cost_gbp),quote.reserveGbp);
+ let starts=0;const provider=categoryProvider(()=>starts++);
+ await workPublicCategoriesOnce(pool,{env:configured,provider});assert.equal(starts,1);await pool.query('UPDATE public_category_batches SET available_at=now()');await workPublicCategoriesOnce(pool,{env:configured,provider});
+ assert.equal((await pool.query('SELECT count(*)::integer AS n FROM public_ad_categories')).rows[0].n,12);assert.equal((await pool.query('SELECT status FROM public_category_batches WHERE id=$1',[id])).rows[0].status,'complete');
+ await assert.rejects(()=>enqueueCategoryBatch(pool,'workspace',new Date(),{hash:quote.hash,env:configured}));assert.equal(starts,1);
+}));
+test('a paused tagging batch can be resumed from a fresh quote without holding another reserve',async()=>fixture(async pool=>{
+ const {categoryQuote}=await import('../server/public-categories/jobs.js'),id=await enqueueCategoryBatch(pool,'workspace');
+ await pool.query("UPDATE public_category_batches SET status='paused',error_kind='configuration' WHERE id=$1",[id]);
+ const quote=await categoryQuote(pool,'workspace',env);assert.equal(quote.ads,12);assert.equal('resume' in quote&&quote.resume,true);
+ assert.equal(await enqueueCategoryBatch(pool,'workspace',new Date(),{hash:quote.hash,env}),id);assert.equal((await pool.query('SELECT status FROM public_category_batches WHERE id=$1',[id])).rows[0].status,'queued');assert.equal((await pool.query('SELECT count(*)::integer AS n FROM cost_ledger')).rows[0].n,0);
+}));

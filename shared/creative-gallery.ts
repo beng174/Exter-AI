@@ -17,6 +17,7 @@ export interface DemoGalleryCreative {
   copy: string;
   copyTruncated?: boolean;
   sourceUrl: string | null;
+  adFormat?:"video"|"static_image"|"carousel"|"catalogue"|null;
   mediaKind: GalleryMediaKind;
   durationSeconds: number | null;
   thumbnailUrl: string | null;

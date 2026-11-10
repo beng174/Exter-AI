@@ -47,3 +47,9 @@ test("Scorecards never label unsupported share of voice Observed, and keep genui
  assert.equal(unknown,undefined);assert.match(talking!,/data-label="Basis"><span[^>]*>Modelled</);
  const audience=render("AudienceScreen",source),pending=audience.match(/<tr[^>]*><td[^>]*>Pending advertiser<\/td>.*?<\/tr>/)?.[0];assert.equal(pending,undefined);
 });
+
+test("Winners recovers the unfiltered library when no comparison qualifies and links to the real gap fixes",()=>{
+ const source=data(),original=source.library;original.brand.primaryCategories=['candles'];original.creatives=original.creatives.map(row=>({...row,productCategories:[],adFormat:null,mediaAvailable:false,thumbnailUrl:null,imageUrls:[],videoUrl:null,publicEvidence:true}));
+ source.library={...original,creatives:[]};source.comparison={originalLibrary:original,groups:[],hidden:[],primary:['candles'],filter:{},chartFormat:null};
+ const html=render('WinnersScreen',source);assert.match(html,/Not yet like-for-like/);assert.match(html,/Coverage/);assert.match(html,/0% tagged/);assert.match(html,/ads need a category tag/);assert.match(html,/ads have unknown format/);assert.match(html,/First line/);assert.match(html,/#public-category-status/);assert.match(html,/#ads-without-media/);assert.doesNotMatch(html,/No supported source running durations|Review collection/);
+});

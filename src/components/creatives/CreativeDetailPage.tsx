@@ -25,7 +25,7 @@ import "./CreativeDetailPage.css";
 type EvidenceField=VideoField<string|boolean>|ImageField<string|boolean>;
 interface DetailProps {data:CreativeBrowserResponse;filtered:BrowserCreative[];onOpen:(row:BrowserCreative)=>void;onRefresh?:()=>void}
 export function CreativeDetailPage({data,adId,filtered,onOpen,onRefresh}:DetailProps&{adId:string}) {
-  const row=data.creatives.find(item=>item.adId===adId);
+  const row=data.creatives.find(item=>item.adId===adId||item.nativeId===adId);
   if(!row)return <div className="creative-browser"><PageHeader title="Creative detail"/><SectionCard title="Saved creative" empty={{reason:"This creative is not in the workspace's saved evidence.",href:creativeUrl(window.location.href,data.brand.id),linkLabel:"Back to Creatives"}}/></div>;
   if(data.presentation)return <CreativeDetailReadModel key={row.adId} row={row} data={data} filtered={filtered} onOpen={onOpen}/>;
   return <Detail key={row.adId} row={row} data={data} filtered={filtered} onOpen={onOpen} onRefresh={onRefresh}/>;

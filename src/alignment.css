@@ -129,7 +129,7 @@ body,input,select,textarea,button,table { font-variant-numeric:tabular-nums; }
 
 @media(min-width:720px) {
  .reference-shell .reference-ui :is(.creative-browser-grid,.research-creative-grid,.creative-similar-grid) { display:grid;gap:16px;align-items:stretch; }
- .reference-shell .reference-ui .ui-creative-card { display:grid;grid-template-rows:subgrid;grid-row:span 8;gap:0; }
+ .reference-shell .reference-ui .ui-creative-card { display:grid;grid-template-rows:subgrid;grid-row:span 10;gap:0; }
  .reference-shell .reference-ui .ui-creative-open { display:grid;grid-template-rows:subgrid;grid-row:span 6;gap:0; }
  .reference-shell .reference-ui .ui-creative-body { display:grid;grid-template-rows:subgrid;grid-row:span 5;gap:8px;padding:16px; }
  .reference-shell .reference-ui .ui-creative-body h3 { grid-row:1; }
@@ -186,3 +186,13 @@ body,input,select,textarea,button,table { font-variant-numeric:tabular-nums; }
 .reference-shell .reference-ui .research-competitor-card .ui-creative-card :is(.ui-creative-body,dl,.ui-card-source-link) { display:none; }
 .reference-shell .reference-ui .research-competitor-card .ui-ad-preview { min-height:100px;padding:4px;gap:4px;font-size:8px; }
 .reference-shell .reference-ui .research-competitor-card .ui-ad-preview :is(.brand-name,.ui-ad-preview-platform,small) { font-size:8px; }
+
+/* The source action has its own row after the metrics, at every card width. */
+.reference-shell .reference-ui .ui-creative-card>.ui-card-source-link { grid-row:9;min-height:44px;display:flex;align-items:center;padding:8px 16px;align-self:end; }
+.reference-shell .reference-ui .ui-creative-card>.ui-card-likelihood { grid-row:10; }
+.reference-shell .reference-ui .ui-creative-card dd button { display:flex;align-items:center;justify-content:flex-start;flex-wrap:wrap;white-space:normal;gap:4px;max-width:100%; }
+.reference-shell .reference-ui .ui-creative-card dd button>span:first-child { white-space:nowrap; }
+.reference-shell .reference-ui .ui-creative-card dd .ui-data-label { flex:none;white-space:nowrap; }
+.reference-shell .reference-ui .ui-creative-card dl { grid-template-columns:repeat(auto-fit,minmax(min(100%,112px),1fr))!important; }
+.reference-shell .reference-ui .ui-creative-poster .ui-ad-preview img { width:16px;height:16px;object-fit:contain; }
+.reference-shell .reference-ui .ui-creative-poster .brand-mark img { width:100%;height:100%; }

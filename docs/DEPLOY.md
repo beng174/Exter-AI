@@ -1287,3 +1287,31 @@ are not live billing verification and this change does not refund provider fees.
 Provider contract checked 10 November 2026:
 https://docs.apify.com/api/client/js/reference/next/interface/Run
 The documented authenticated usageTotalUsd represents the run's total real cost.
+
+## Public media recovery (10 Nov 2026)
+
+Deploy this revision to exter-ai, exter-worker and exter-scheduler; run
+`npm run db:migrate` once. Schema additions preserve all existing records/files.
+Keep existing switches, limits and model settings unchanged.
+
+Data sources > Ad Library media > Ads without media shows each ad's reason,
+archive ID and start date. Coverage checks actual files on the web disk, with
+bounded concurrency and a short presence cache. File serving still hashes content.
+Exact-ID batches omit date filters so older inactive ads remain eligible.
+Transient downloads retry three times against the same result, without paid
+restarts. Expired or unsupported files retain their daily retry reason.
+
+Text-only tagging now runs in the worker independently of media downloads.
+Configure existing GEMINI_API_KEY, GEMINI_REQUEST_RESERVE_GBP and
+EXTER_AD_MEDIA_GBP_PER_USD on exter-worker and exter-ai. No new secret names,
+model settings or budget limits. Data sources > Category tagging shows the cost
+estimate and reserve before Tag ads now / Resume tagging. Stale quotes are rejected.
+Unclear text stays untagged; this patch starts no visual analysis automatically.
+
+Winners falls back to saved longest-running ads, labelled Not yet like-for-like,
+with exact missing-category/format counts and coverage. Qualified comparisons
+still need ten matching ads on at least one side. Reach and dates are unchanged.
+
+The owner cancelled production verification of the three historical ads. After
+deploy, check their brand/start dates in Ads without media and report the reasons.
+Fixtures do not verify those ads or guarantee that archived previews still exist.

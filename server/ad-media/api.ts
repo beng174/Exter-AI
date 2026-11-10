@@ -1,4 +1,6 @@
-import {readMediaCoverage} from "./coverage.js";
+import {checkedRetainedMedia} from "./file-health.js";
+import {readRetainedMedia} from "./read.js";
+import {readMediaCoverage,readMissingMedia} from "./coverage.js";
 import {actorCounts,mediaInputDetails} from "./apify.js";
 import {diagnosticNumber} from "../../shared/meta-collection.js";
 import {createHash,randomUUID,timingSafeEqual} from "node:crypto";
@@ -76,15 +78,26 @@ export async function workAdMediaOnce(pool:pg.Pool,options:{env?:Record<string,s
   }catch{/* Reclaim the same checkpoint; never automatically start another paid run. */}
   await pool.query("UPDATE ad_media_runs SET lease_owner=NULL,lease_until=NULL,available_at=CASE WHEN $3 THEN available_at ELSE now()+interval '60 seconds' END WHERE id=$1 AND lease_owner=$2",[run.id,owner,worked]);
   const current=(await pool.query("SELECT status FROM ad_media_runs WHERE id=$1",[run.id])).rows[0];
-  if(current?.status==="complete")await refillMediaQueue(pool,env,true);
+  if(["complete","failed"].includes(current?.status))await refillMediaQueue(pool,env,true);
   return true;
 }
 export function attachAdMedia(app:Express,db:DatabaseSync,getPool=infrastructureDatabase){
+  app.get("/api/ad-media/missing",async(req,res)=>{
+    res.setHeader("Cache-Control","private, no-store");
+    const brand=typeof req.query.workspaceId==="string"?readBrand(db,req.query.workspaceId):null;
+    if(!brand||brand.mode==="demo"){res.status(404).json({error:"Real workspace not found."});return;}
+    const offset=Number(req.query.offset||0);if(!Number.isSafeInteger(offset)||offset<0){res.status(400).json({error:"Choose a valid page."});return;}
+    try{const pool=getPool();await checkedRetainedMedia(pool,await readRetainedMedia(pool,brand.id));res.json(await readMissingMedia(pool,brand.id,{brand:typeof req.query.brand==="string"?req.query.brand:undefined,reason:typeof req.query.reason==="string"?req.query.reason:undefined,offset}));}
+    catch{res.status(503).json({error:"Missing media could not be read."});}
+  });
   app.get("/api/ad-media/status",async(req,res)=>{
+    res.setHeader("Cache-Control","private, no-store");
     const brand=typeof req.query.workspaceId==="string"?readBrand(db,req.query.workspaceId):null;
     if(!brand||brand.mode==="demo"){res.status(404).json({error:"Real workspace not found."});return;}
     try{
-      const pool=process.env.DATABASE_URL?getPool():null,coverage=pool?await readMediaCoverage(pool,brand.id):[];
+      const pool=process.env.DATABASE_URL?getPool():null;
+      if(pool)await checkedRetainedMedia(pool,await readRetainedMedia(pool,brand.id));
+      const coverage=pool?await readMediaCoverage(pool,brand.id):[];
       const targets=[{key:brand.id,name:brand.name},...configuredCreativeCompetitors(db,brand,app.locals.demoCollection).map(c=>({key:c.brandId||c.key,name:c.name}))];
       res.json({enabled:mediaEnabled(),configured:Boolean(process.env.APIFY_TOKEN?.trim()&&mediaGbpRate(process.env)!==null),disk:await mediaDiskHealth(),runs:pool?await adMediaRuns(pool,brand.id):[],coverage:coverage.map(c=>({...c,brandName:targets.find(t=>t.key===c.brandKey)?.name||"Watchlist brand"}))});
     }catch{res.status(503).json({error:"Saved media health could not be read."});}
@@ -109,7 +122,7 @@ export function attachAdMedia(app:Express,db:DatabaseSync,getPool=infrastructure
       const result=await getPool().query("SELECT assets FROM ad_media_creatives WHERE workspace_id=$1 AND brand_key=$2 AND native_id=$3 ORDER BY created_at DESC",[workspaceId,req.params.brandKey,req.params.nativeId]);
       const asset=result.rows.flatMap(r=>r.assets).find(a=>a.ref?.artifactId===req.params.artifactId);
       if(!asset||asset.ref.workspaceId!==workspaceId){res.status(404).end();return;}
-      const file=await new AdMediaStorage().store.load(asset.ref);if(!file){res.status(404).end();return;}
+      const file=await new AdMediaStorage().store.load(asset.ref);if(!file){await getPool().query("INSERT INTO ad_media_file_checks(workspace_id,artifact_id,available) VALUES($1,$2,false) ON CONFLICT(workspace_id,artifact_id) DO UPDATE SET available=false,checked_at=now()",[workspaceId,asset.ref.artifactId]);res.status(404).end();return;}
       res.setHeader("Content-Type",file.ref.mimeType);res.sendFile(file.absolutePath,{acceptRanges:true,cacheControl:false,dotfiles:"deny"},error=>{if(error&&!res.headersSent)res.status(404).end();});
     }catch{if(!res.headersSent)res.status(503).json({error:"Retained media could not be verified."});}
   });

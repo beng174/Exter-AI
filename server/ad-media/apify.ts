@@ -16,7 +16,7 @@ export function finalMediaCostUsd(run:Record<string,any>,results:number,cap:numb
 }
 export function mediaActorInput(scope:ActorScope,now=new Date()){
   if(!/^\d{1,30}$/.test(scope.pageId)||!Number.isSafeInteger(scope.cap)||scope.cap<1||scope.cap>500||scope.ids.length>500||scope.ids.some(id=>!/^\d{1,40}$/.test(id))||![scope.from,scope.to].every(v=>/^\d{4}-\d{2}-\d{2}$/.test(v))||scope.from>scope.to)throw new AdMediaError("configuration");
-  return {...(scope.ids.length?{adArchiveIds:scope.ids}:{pageIds:[scope.pageId]}),countries:["GB"],adType:"all",activeStatus:"all",deliveredAfter:scope.from,deliveredBefore:providerEndDate(scope.to,now),maxAds:scope.cap,maxAdsPerQuery:scope.cap,fetchAdDetails:false,resolveLandingPages:false,fetchPageDetails:false,includePageMatches:false,onlyTotalCount:false,maxConcurrency:1};
+  return {...(scope.ids.length?{adArchiveIds:scope.ids}:{pageIds:[scope.pageId]}),countries:["GB"],adType:"all",activeStatus:"all",...(!scope.ids.length?{deliveredAfter:scope.from,deliveredBefore:providerEndDate(scope.to,now)}:{}),maxAds:scope.cap,maxAdsPerQuery:scope.cap,fetchAdDetails:false,resolveLandingPages:false,fetchPageDetails:false,includePageMatches:false,onlyTotalCount:false,maxConcurrency:1};
 }
 const count=(v:unknown)=>typeof v==="number"&&Number.isSafeInteger(v)&&v>=0&&v<=2147483647?v:null;
 const STOP_REASONS=new Set(["cap","end_of_results","thin_pages","blocked","work_allowance","known_pages","empty","complete"]);

@@ -1005,3 +1005,15 @@ Validation: npm run check, npm test (588 passed), npm run build and
 npm run secrets:check pass, plus both isolated Postgres/API fixtures. Browser
 checks pass at 1280/1440/1920/390px; fixture screenshots are in
 docs/review/creator-run-recovery/. No live billing reconciliation was performed.
+
+### 10 Nov 2026: missing-media diagnostics and Winners recovery
+
+Controlled per-ad reasons and disk-aware coverage are available in Data sources.
+Exact-ID requests include historical ads; transient downloads retry three times
+without paid restarts. Copy tiles fill posters and source links follow metrics.
+Source formats work without downloads. Winners retains a clearly labelled
+longest-running fallback and reports category, format and media coverage.
+Text-only tagging has a quoted action and runs independently of media collection.
+The owner cancelled production tracing of the three historical Valentte ads;
+no live cause is claimed. The owner will check their displayed reasons after deploy.
+Verification uses fictional fixtures, never live provider calls.

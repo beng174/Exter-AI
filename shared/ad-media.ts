@@ -21,10 +21,13 @@ export function priorityVideoIds(rows:readonly PriorityAd[],now:Date):Set<string
 }
 export interface MediaDiskHealth{status:"available"|"unavailable";usedBytes:number|null;remainingBytes:number|null;totalBytes:number|null;videoDownloadsPaused:boolean;measuredAt:string|null}
 export interface AdMediaRunSummary{diagnostics?:MediaRunDiagnostics;id:string;brandKey:string;status:string;startedAt:string;finishedAt:string|null;results:number;adsWithMedia:number;costGbp:number;reservedGbp:number|null;costStatus:string;gbpPerUsd:number|null;error:string|null}
-export type MediaMissingReason="not_requested"|"not_returned"|"expired"|"unsupported"|"wrong_page"|"budget"|"disk"|"provider";
+export type MediaMissingReason="not_requested"|"not_returned"|"expired"|"unsupported"|"wrong_page"|"budget"|"disk"|"provider"|"queued"|"no_media"|"file_missing";
 export interface MediaCoverage{brandKey:string;brandName?:string;official:number;images:number;videos:number;requested:number;returned:number;matched:number;missing:number;reasons:Record<MediaMissingReason,number>;historyIncomplete:boolean}
 export interface MediaRunDiagnostics{plan?:{pageId:string;from:string;to:string;cap:number;mode:string}|null;requested:number|null;returned:number|null;matched:number|null;actorRequested:number|null;actorInput:number|null;actorReturned:number|null;actorQueries:number|null;stopReasons:string[];input:{pageId:string;countries:string[];from:string;to:string;activeStatus:string;adType:string;maxAds:number;maxAdsPerQuery:number;mode:string;requested:number}|null}
 export interface AdMediaHealth{coverage?:MediaCoverage[];enabled:boolean;configured:boolean;disk:MediaDiskHealth;runs:AdMediaRunSummary[]}
+export const MEDIA_REASON_LABELS:Record<MediaMissingReason,string>={not_requested:"Never requested",queued:"In queue",no_media:"Scraper returned no media",not_returned:"Ad not found by the media scraper",expired:"Download failed: temporary file expired",unsupported:"Unsupported media file",wrong_page:"Returned ad belongs to another Page",budget:"Waiting for the media budget",disk:"Waiting for storage space",provider:"Download failed",file_missing:"File missing from disk"};
+export interface MissingMediaAd {brandKey:string;nativeId:string;copy:string;startAt:string|null;reason:MediaMissingReason;lastAttemptAt:string|null}
+export interface MissingMediaPage {ads:MissingMediaAd[];total:number;offset:number;limit:number}
 export interface PreviewState {failedDays:number;reason:string|null;lastAttemptAt:string|null}
 export function previewMessage(state?:PreviewState){return state&&state.failedDays>=7&&state.reason?"No preview from Meta":state?.failedDays?"Preview being retried":"Preview pending";}
 export function publicMediaCoverage(rows:readonly BrowserCreative[]){

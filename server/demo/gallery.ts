@@ -1,3 +1,4 @@
+import {sourceAdFormat} from "../../shared/source-ad-format.js";
 import type { Express, Response } from "express";
 import type { DatabaseSync } from "node:sqlite";
 import { lstat } from "node:fs/promises";
@@ -170,6 +171,7 @@ export class CreativeGalleryService {
     const partner = ad.brandedContentPartner;
     return {
       adId: ad.id, nativeId: ad.providerAdId || ad.id, brandId: ad.brandId, brandName: ad.brand,
+      adFormat:sourceAdFormat({mediaType:ad.mediaType||ad.format}),
       title: ad.title, copy: ad.copy || "", copyTruncated:ad.copyTruncated===true, sourceUrl: sourceUrl(ad), mediaKind: kind,
       durationSeconds: media?.kind === "video" ? media.video.durationSeconds : result?.kind === "video" ? (result.value as VideoAnalysisResult).coverage?.durationSeconds ?? null : null,
       thumbnailUrl: videoUrl ? `${base}/poster` : imageUrls[0] || null,

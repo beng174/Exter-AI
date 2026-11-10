@@ -14,7 +14,7 @@ const attempts=[{...official[0],returned:false,matched:false,outcome:"requested"
 const coverage=mediaCoverage([...official,official[0],{brandKey:"budget",nativeId:"1"}],attempts,[{...official[4],image:true,video:true}],[{brandKey:"candle",budget:false},{brandKey:"budget",budget:true}]);
 test("coverage counts distinct official ads, actual requests, matching and files; missing reasons add up",()=>{
  const row=coverage[0];assert.equal(row.official,8);assert.equal(row.requested,5);assert.equal(row.returned,4);assert.equal(row.matched,3);assert.equal(row.images,1);assert.equal(row.videos,1);assert.equal(row.missing,7);
- assert.deepEqual(row.reasons,{not_requested:3,not_returned:1,expired:1,unsupported:1,wrong_page:1,budget:0,disk:0,provider:0});assert.equal(Object.values(row.reasons).reduce((a,b)=>a+b),row.missing);assert.equal(coverage[1].reasons.budget,1);
+ assert.deepEqual(row.reasons,{not_requested:3,not_returned:1,expired:1,unsupported:1,wrong_page:1,budget:0,disk:0,provider:0,queued:0,no_media:0,file_missing:0});assert.equal(Object.values(row.reasons).reduce((a,b)=>a+b),row.missing);assert.equal(coverage[1].reasons.budget,1);
  const legacy=mediaCoverage([official[0]],[],[{...official[0],image:true,video:false,legacy:true}],[{brandKey:"candle",budget:false,historyIncomplete:true}])[0];assert.equal(legacy.requested,1);assert.equal(legacy.matched,1);assert.equal(legacy.missing,0);assert.equal(legacy.historyIncomplete,true);
 });
 test("actor summaries keep recognised own counts only, with unknowns left unknown",async()=>{
@@ -27,7 +27,7 @@ await mkdir(resolve("work"),{recursive:true});const dir=await mkdtemp(resolve("w
 const bundle=await build({entryPoints:["src/components/workspace/AdMediaRuns.tsx"],bundle:true,format:"esm",platform:"node",write:false,external:["react","react-dom","lucide-react"],loader:{".css":"empty"}});
 const file=join(dir,"components.mjs");await writeFile(file,bundle.outputFiles[0].contents);const ui=await import(pathToFileURL(file).href);after(()=>rm(dir,{recursive:true,force:true}));
 test("coverage and run Details render counts, gap reasons, safe input and unknown actor counts",()=>{
- const html=renderToStaticMarkup(createElement(ui.MediaCoverageLines,{coverage}));for(const label of ["Official ads","Image or poster","Video","Requested","Returned","Matched","Still missing","3 not requested yet","1 wrong Page","1 budget"])assert(html.includes(label),label);
+ const html=renderToStaticMarkup(createElement(ui.MediaCoverageLines,{coverage}));for(const label of ["Official ads","Image or poster","Video","Requested","Returned","Matched","Still missing","3 Never requested","1 Returned ad belongs to another Page","1 Waiting for the media budget"])assert(html.includes(label),label);
  const details=renderToStaticMarkup(createElement(ui.MediaRunDetails,{run:{brandKey:"candle",startedAt:"2026-11-06T12:00:00Z",error:null,diagnostics:{requested:500,returned:20,matched:20,actorInput:500,actorRequested:null,actorReturned:20,actorQueries:500,stopReasons:["end_of_results"],input:{pageId:"12001",countries:["GB"],from:"2025-11-06",to:"2026-11-06",maxAds:500,maxAdsPerQuery:500}}}}));for(const value of ["Details","Actor input IDs","Actor reported returned","Not recorded","Page 12001","GB","maximum 500","all ads, active and inactive"])assert(details.includes(value),value);
 });
 
