@@ -165,3 +165,25 @@ test("legacy optional research preparation failure leaves the production server 
     assert.doesNotMatch(fixture.stderr(), /Cannot read properties|\.map|TypeError/, "Only a sanitised preparation status should be logged.");
   } finally { await fixture.close(); }
 });
+
+test("production startup diagnoses a stalled database handshake before Render's port-scan timeout", { timeout: 40000 }, async () => {
+  const root=mkdtempSync(join(tmpdir(),"exter-startup-handshake-")),path=join(root,"workspace.db");
+  preparedDatabase(path).close();
+  const sockets=new Set<import("node:net").Socket>();let accepted=0;
+  const stalled=createServer(socket=>{accepted++;sockets.add(socket);socket.on("error",()=>{});socket.on("close",()=>sockets.delete(socket));socket.on("data",()=>{});});
+  await new Promise<void>(r=>stalled.listen(0,"127.0.0.1",r));
+  const databasePort=(stalled.address() as {port:number}).port,port=await availablePort(),env={...process.env};
+  for(const name of ["GEMINI_API_KEY","META_ACCESS_TOKEN","APIFY_TOKEN","YOUTUBE_API_KEY"])delete env[name];
+  const marker="startup-fixture-private-marker";
+  Object.assign(env,{NODE_ENV:"production",EXTER_ADMIN_USER:"startup-fixture",EXTER_ADMIN_PASSWORD:"startup-fixture-only",PORT:String(port),EXTER_DB_PATH:path,EXTER_BACKUPS_ENABLED:"false",DATABASE_URL:`postgresql://fixture:${marker}@127.0.0.1:${databasePort}/fixture?sslmode=disable`});
+  const child=spawn(process.execPath,["--import","tsx","server/index.ts"],{cwd:repository,env,stdio:["ignore","pipe","pipe"]});
+  let output="";child.stdout?.on("data",c=>output+=String(c));child.stderr?.on("data",c=>output+=String(c));
+  const start=Date.now();
+  try{
+    const code=await new Promise<number|null>((resolve,reject)=>{child.once("exit",resolve);child.once("error",reject);});
+    assert.equal(code,1);assert.equal(accepted,2);assert.ok(Date.now()-start<35000);
+    assert.match(output,/Database initialisation: connect/);assert.match(output,/database_unavailable; phase=connect/);
+    assert.doesNotMatch(output,/Exter AI available on port/);assert.ok(!output.includes(marker));assert.doesNotMatch(output,/postgresql:\/\//);
+    const db=new DatabaseSync(path,{readOnly:true});try{assert.equal(db.prepare("SELECT value FROM metadata WHERE key='seeded'").get()!.value,"startup-fixture");}finally{db.close();}
+  }finally{await stop(child);for(const socket of sockets)socket.destroy();await new Promise<void>(r=>stalled.close(()=>r()));rmSync(root,{recursive:true,force:true});}
+});
