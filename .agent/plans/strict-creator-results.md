@@ -11,7 +11,7 @@ Add the individual-creator precision check without relaxing existing client gate
 - [x] 2026-11-10 UTC: enforce dispositions across storage, results, segments, exports and accuracy.
 - [x] 2026-11-10 UTC: add review/rejection views and rule explanations; update skill/spec guidance.
 - [x] 2026-11-10 UTC: fixture/database/browser verification and all four checks pass.
-- [ ] Publish the reviewed changes as a PR against exter-test-drive.
+- [x] 2026-11-10 UTC: publish PR #30 against exter-test-drive.
 
 ## Surprises and discoveries
 PRs #28 and #29 are merged into exter-test-drive at 6649ea0. Existing Results
@@ -43,7 +43,9 @@ uncertain account in Results. Screenshots are in docs/review/strict-creators/.
 npm test passes 574 tests. npm run check, npm run build and npm run
 secrets:check pass. The separate Postgres integration passes, including the
 actual Accuracy endpoint and newer rejection/older profile regression.
-Final publication verification is repeated after staging.
+All four checks were repeated against the final staged implementation and passed.
+PR: https://github.com/beng174/Exter-AI/pull/30.
+No live provider calls, deployment or client validation was performed.
 Fixture success never establishes live precision or proves authenticity.
 
 ## Context and orientation
