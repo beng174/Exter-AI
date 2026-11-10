@@ -12,7 +12,7 @@ Target 95% per brand without claiming unverified live coverage.
 - [x] 2026-11-10 UTC: WebP/AVIF/HEIC fixtures decode to JPEG; controlled MIME/HTTP/host diagnostics retained.
 - [x] 2026-11-10 UTC: Added catalogue product presentation, shared logos, two-line titles and preview-only Winners; browser fixtures pass.
 - [x] 2026-11-10 UTC: All four checks passed: 614 unit tests, 79 infrastructure tests; browser fixtures at four widths and before/after captures.
-- [ ] Push one PR against exter-test-drive with causes, limitations and deployment steps.
+- [x] 2026-11-10 UTC: PR #34 opened against exter-test-drive with causes, coverage limits, screenshots and rollout.
 
 ## Surprises and discoveries
 The latest base already refills the queue after terminal worker steps and requests
@@ -42,7 +42,8 @@ previews without new paid starts; missing/expired datasets fall back safely.
 Validation passed: npm run check, npm test (614), npm run build, npm run
 secrets:check and npm run test:infrastructure (79). Browser fixtures passed at
 390/1280/1440/1920px with zero external/provider requests. Before/after and reference
-comparisons are in docs/review/media-backfill. PR publication remains pending. Real six-ad failure histories and 95%
+comparisons are in docs/review/media-backfill. PR #34: https://github.com/beng174/Exter-AI/pull/34 targets exter-test-drive.
+No merge, deploy or live backfill was performed. Real six-ad failure histories and 95%
 coverage are not claimed: no production credentials are attached and verification
 is fixture-only. docs/review/media-backfill/README.md records code findings and
 arithmetic from supplied counts without pretending they are live measurements.

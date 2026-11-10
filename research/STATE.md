@@ -1070,3 +1070,5 @@ Validation: all 614 unit tests and 79 isolated infrastructure fixture tests pass
 TypeScript, production build and secrets scan passed. Browser checks passed at
 390/1280/1440/1920px with zero provider traffic. Screenshots use supplied IDs with
 fictional copy/media/logos, never production measurements. All live gates remain open.
+PR #34: https://github.com/beng174/Exter-AI/pull/34 (fix/media-backfill-coverage,
+base exter-test-drive). Migration and a rebuilt Docker image are required before rollout.
