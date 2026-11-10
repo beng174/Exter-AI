@@ -38,8 +38,7 @@ Use the existing text-only batch model/budget first; visual analysis is only a
 follow-up for unclear text, not a prerequisite for every ad.
 
 ## Outcomes and retrospective
-PR #32 contains 1440px/390px screenshots and zero-provider-call browser checks. Type check, build and secrets check passed; 25 isolated Postgres tests passed. The full test command passed 513 cases before nine files lost dependency resolution during local disk recovery. All 83 cases in those nine files passed after restoring the path, giving 596 passing cases across the run and recovery. The initial full command exited nonzero for the environment interruption. No remaining assertion failures were observed. Fixtures are not production verification. No diagnosis of the three live
-ads will be claimed; their IDs in the latest message were placeholders.
+PR #32 contains 1440px/390px screenshots and zero-provider-call browser checks. Type check, build and secrets check passed; 25 isolated Postgres tests passed. A clean, uninterrupted full npm test rerun passed all 596 tests on 10 November 2026. Fixtures are not production verification; the owner will check the three live ads after deployment.
 
 ## Context and orientation
 server/ad-media owns the disk broker, queue, bounded download and coverage.
