@@ -19,7 +19,7 @@ export interface Saved<T>{value:T|null;failed:boolean}
 export interface ActionData {base:ResearchData;drafts:Saved<BrandDemoReport>;creators:Saved<CreatorResearchSnapshot>;reports:Saved<Report[]>;owned:Saved<{accounts:OwnedAccount[];liveDispatchEnabled:boolean}>}
 export interface ActionProps {data:ActionData;refresh:()=>void;header:(actions?:ReactNode)=>ReactNode}
 const titles:Record<string,string>={briefs:"Opportunities and briefs",creators:"Creators",scores:"Scores",ask:"Ask Exter",reports:"Reports",data:"Data sources"};
-const subtitles:Record<string,string>={briefs:"Ranked angles with their evidence, and a ready brief for each one.",creators:"Creators who fit the brand and the brief. Each fit measure is shown on its own, never blended into one number.",scores:"Score a draft before it goes live, and see which checks each creative misses.",ask:"Questions answered only from your stored evidence. Every statement links to the ads, reviews or numbers behind it.",reports:"The Monday data pack your team writes the client report from, and the read-only view clients see.",data:"Where every number comes from, whether it is working, and the rules applied to it."};
+const subtitles:Record<string,string>={briefs:"Ranked angles with their evidence, and a ready brief for each one.",creators:"Discover UK creators. Check their numbers and see what makes them fit.",scores:"Score a draft before it goes live, and see which checks each creative misses.",ask:"Questions answered only from your stored evidence. Every statement links to the ads, reviews or numbers behind it.",reports:"The Monday data pack your team writes the client report from, and the read-only view clients see.",data:"Where every number comes from, whether it is working, and the rules applied to it."};
 export function ActionWorkspace({brandId,brand,route}:{brandId:string;brand?:Brand;route:ReturnType<typeof resolveNavigation>}) {
   const [revision,setRevision]=useState(0),[loadedExtras,setExtras]=useState<{key:string;data:Omit<ActionData,"base">}|null>(null);
   const {data:base,error,loading}=useResearchData(brandId,brand?[brand]:[],undefined,undefined,revision);
@@ -29,7 +29,7 @@ export function ActionWorkspace({brandId,brand,route}:{brandId:string;brand?:Bra
   useEffect(()=>{let active=true;setExtras(null);const id=extrasId;
     const paths:Partial<Record<keyof Omit<ActionData,"base">,string>>={
       ...(view==="briefs"?{drafts:`/api/brands/${encodeURIComponent(id)}/demo`}:{}),
-      ...(view==="creators"?{creators:`/api/creator-research?${new URLSearchParams({brandId:id})}`} :{}),
+
       ...(view==="reports"?{reports:`/api/reports?${new URLSearchParams({brandId:id})}`} :{}),
       ...(view==="data"?{owned:`/api/owned/accounts?${new URLSearchParams({workspaceId:id})}`} :{})
     };

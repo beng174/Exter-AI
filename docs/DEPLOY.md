@@ -1119,3 +1119,90 @@ local database handshake exits with a controlled error after two attempts. Local
 PostgreSQL fixtures verify cache hits under held relation/advisory locks, failed
 DDL rollback, transient lock recovery, preserved ads/budgets and explicit repair
 replay. Fixtures are not a diagnosis or verification of the live database.
+
+## UK Instagram creator research
+
+Merge the creator skill/brief PR before the creator feature PR. This adds isolated
+Postgres creator tables; existing ad history and collection schedules are unchanged.
+Run `npm run db:migrate` once, then deploy exter-ai, exter-worker and exter-scheduler
+from exter-test-drive. No new service, dependency, model or Render plan is needed.
+The web service quotes and queues; workers perform bounded lookups. The scheduler
+queues saved creators whose calendar-month refresh is due. No provider work runs
+on web startup or a page read. Creator thumbnails are bounded small PNGs in
+Postgres, so workers never need the web service disk.
+
+Configure these **Render secrets/settings**, never .env committed to Git:
+
+| Variable | Services | Purpose |
+| --- | --- | --- |
+| APIFY_TOKEN | exter-ai, exter-worker | Existing server-side client. Do not expose it to the browser. |
+| APIFY_INSTAGRAM_ACTOR_ID | exter-ai, exter-worker | `apify/instagram-scraper`, the maintained actor whose details/posts/mentions/search schema is supported. |
+| APIFY_REQUEST_RESERVE_GBP | exter-ai, exter-worker | Existing positive conservative per-batch maximum. Review current actor prices before setting; no limit was raised by this PR. |
+| EXTER_AD_MEDIA_GBP_PER_USD | exter-ai, exter-worker | Existing conversion used to turn the GBP reservation into a provider USD ceiling; existing fallback 0.8. |
+| EXTER_INSTAGRAM_ACCOUNT_ID | all three | Numeric ID of Exter's own linked Instagram professional account, not a username or Page ID. |
+| EXTER_INSTAGRAM_ACCESS_TOKEN | all three | Dedicated Facebook Login user token with the approved professional-account permissions. Store only in Render secrets. |
+| META_API_VERSION | exter-ai, exter-worker | Existing optional Graph version override; v26.0 by default. |
+
+Official Business Discovery setup:
+1. Use an Instagram Business account linked to a Facebook Page you manage.
+2. Add the Instagram API with Facebook Login to the app. Grant the user access
+   to that Page and professional account. Locate its `instagram_business_account.id`
+   through the Page. Business Discovery uses this account as the querying account.
+3. Request `instagram_basic`, `instagram_manage_insights` and
+   `pages_read_engagement`. `pages_show_list` is needed when locating the Page.
+   Complete App Review/Advanced Access and business verification where required
+   for accounts outside the app's assigned roles. Confirm scopes and supported
+   fields for the app's current API version in the official documentation.
+4. Generate and renew a suitable long-lived user token through the approved app
+   flow, then set the two EXTER_INSTAGRAM values on Render. An ads_archive token
+   does not establish these permissions. No target creator credentials are used.
+5. Make a separate authorised smoke check against a known public professional
+   account before client rollout. Unsupported personal/private accounts and
+   hidden counts remain Unverified. Fixtures did not verify live app access.
+
+The existing client now has a separate research operation with bounded dataset
+pages, <=199 projected records per actor run, 20-profile enrichment batches,
+`maxItems`, `maxTotalChargeUsd`, a 120-second actor timeout and no automatic paid
+restart. The estimate reserves all planned source and possible enrichment batches
+at the configured maximum. Each batch rechecks the existing 90% data-provider
+budget gate. Unknown bills keep their full hold. Currency conversion and provider
+pricing are operational assumptions, not an invoice. Changing provider settings
+invalidates a queued quote. A crash after paid dispatch stops that run; reconcile
+its charge before requesting another estimate. Raw result datasets are deleted
+after projection where accessible; configure short provider retention too.
+
+Official refreshes use the shared Graph pacing gate and have no paid scraping
+step. The scheduler needs the Instagram account configuration to enqueue them;
+only the worker sends requests. Failures preserve prior successful counts and
+check times, and show the current verification failure. Unshortlisted discoveries
+expire after 90 days. Saved profiles require a continuing-purpose review every
+90 days. Delete creator also removes previews and validation and suppresses
+recollection by a workspace-scoped handle hash. The hash is still personal data.
+
+Privacy before client use: record the UK GDPR purpose/lawful basis and any
+legitimate-interests assessment, provide the applicable Article 14 notice, check
+processor/transfer terms, and provide access, objection, deletion and human-review
+routes. No follower lists, personal emails, phone numbers or home addresses are
+kept. Only explicitly declared public business email is exported. No outreach is
+implemented; public contact details do not establish PECR consent. Profile/post
+previews do not grant content reuse rights.
+
+Fill `research/creator-briefs/test-set.csv` with independent yes/no judgements,
+then use Settings > Accuracy > Score creator test set. Both good-fit and UK
+precision need 85%, at least 20 predicted positives each and complete label
+matching for the current brief/rule version. Any refreshed or changed profile
+invalidates that result. Empty labels, fixtures and sample workspaces cannot open
+a client gate. Research CSVs remain labelled internal and are not client reports.
+
+Documentation inspected 10 November 2026:
+- https://apify.com/apify/instagram-scraper/input-schema
+- https://docs.apify.com/api/v2/actors-runs-post
+- https://developers.facebook.com/docs/instagram-platform/instagram-api-with-facebook-login/business-discovery/
+
+The official documentation endpoint rate-limited this review. Permission/setup
+instructions above follow the Facebook Login Business Discovery contract; a live
+permission check remains required. No paid actor or official account call was made.
+
+Creator queue/API integration is part of `npm run test:infrastructure`. It creates
+and drops only its own random schema in the dedicated TEST_DATABASE_URL database;
+all provider, official account and image calls in it use fixtures.

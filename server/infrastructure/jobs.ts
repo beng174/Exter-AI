@@ -1,3 +1,4 @@
+import { scheduleCreatorRefresh } from "../creators/discovery-jobs.js";
 import {schedulePublicCategories} from "../public-categories/jobs.js";
 import {scheduleAdMedia,enqueueAdMedia} from "../ad-media/jobs.js";
 import { scheduleOwnedSync } from "../owned/jobs.js";
@@ -147,6 +148,7 @@ export function metaScheduleDay(now:Date):string|null {
 }
 export async function schedule(pool: pg.Pool, now = new Date(), env:Record<string,string|undefined>=process.env) {
   await scheduleOwnedSync(pool,now);
+  await scheduleCreatorRefresh(pool,now,env);
   const day=metaScheduleDay(now);
   if(day){await scheduleAdMedia(pool,env,now);await schedulePublicCategories(pool,env);}
   if(!metaLibraryEnabled(env)||!day)return;

@@ -171,3 +171,50 @@ ALTER TABLE ad_media_runs ADD COLUMN IF NOT EXISTS actor_input_checked boolean N
 
 CREATE TABLE IF NOT EXISTS ad_media_refill_gate(id integer PRIMARY KEY CHECK(id=1),next_check timestamptz NOT NULL);
 ALTER TABLE ad_media_runs ADD COLUMN IF NOT EXISTS known_media_ids jsonb NOT NULL DEFAULT '[]';
+
+-- Public creator research is isolated by workspace; no tokens or raw provider datasets.
+CREATE TABLE IF NOT EXISTS creator_discovery_settings (
+ workspace_id text PRIMARY KEY, brief jsonb NOT NULL, brief_version text NOT NULL,
+ updated_at timestamptz NOT NULL DEFAULT now()
+);
+CREATE TABLE IF NOT EXISTS creator_discovery_quotes (
+ id text PRIMARY KEY, workspace_id text NOT NULL, brief jsonb NOT NULL, brief_version text NOT NULL,
+ max_cost_gbp numeric NOT NULL, per_batch_gbp numeric NOT NULL, conversion numeric NOT NULL,
+ batches integer NOT NULL, expires_at timestamptz NOT NULL, used boolean NOT NULL DEFAULT false
+);
+CREATE TABLE IF NOT EXISTS creator_discovery_runs (
+ id text PRIMARY KEY, workspace_id text NOT NULL, kind text NOT NULL,
+ status text NOT NULL DEFAULT 'queued', brief jsonb NOT NULL, brief_version text NOT NULL,
+ steps jsonb NOT NULL, step integer NOT NULL DEFAULT 0, phase text NOT NULL DEFAULT 'discover',
+ max_cost_gbp numeric NOT NULL DEFAULT 0, per_batch_gbp numeric NOT NULL DEFAULT 0, conversion numeric NOT NULL DEFAULT .8,
+ reserved_gbp numeric NOT NULL DEFAULT 0, found integer NOT NULL DEFAULT 0, verified integer NOT NULL DEFAULT 0,
+ error text, created_at timestamptz NOT NULL DEFAULT now(), available_at timestamptz NOT NULL DEFAULT now(),
+ lease_owner text, lease_until timestamptz, dispatch_started boolean NOT NULL DEFAULT false
+);
+CREATE UNIQUE INDEX IF NOT EXISTS creator_discovery_active ON creator_discovery_runs(workspace_id) WHERE status IN ('queued','running');
+CREATE INDEX IF NOT EXISTS creator_discovery_queue ON creator_discovery_runs(status,available_at);
+CREATE TABLE IF NOT EXISTS creator_discovery_results (
+ workspace_id text NOT NULL, handle text NOT NULL, profile jsonb NOT NULL, evaluation jsonb NOT NULL,
+ brief_version text NOT NULL, saved boolean NOT NULL DEFAULT false, needs_enrichment boolean NOT NULL DEFAULT true,
+ verification_due boolean NOT NULL DEFAULT true, next_refresh_at timestamptz NOT NULL DEFAULT now(),
+ used_at timestamptz NOT NULL DEFAULT now(), PRIMARY KEY(workspace_id,handle)
+);
+CREATE INDEX IF NOT EXISTS creator_discovery_refresh ON creator_discovery_results(next_refresh_at) WHERE saved;
+CREATE TABLE IF NOT EXISTS creator_discovery_segments (
+ id text PRIMARY KEY, workspace_id text NOT NULL, name text NOT NULL, filters jsonb NOT NULL, created_at timestamptz NOT NULL DEFAULT now()
+);
+CREATE TABLE IF NOT EXISTS creator_discovery_suppression (
+ workspace_id text NOT NULL, handle_hash text NOT NULL, created_at timestamptz NOT NULL DEFAULT now(), PRIMARY KEY(workspace_id,handle_hash)
+);
+CREATE TABLE IF NOT EXISTS creator_discovery_previews (
+ workspace_id text NOT NULL, handle text NOT NULL, post_id text NOT NULL, image bytea NOT NULL CHECK(octet_length(image)<=200000),
+ PRIMARY KEY(workspace_id,handle,post_id), FOREIGN KEY(workspace_id,handle) REFERENCES creator_discovery_results ON DELETE CASCADE
+);
+CREATE TABLE IF NOT EXISTS creator_discovery_validation (
+ workspace_id text PRIMARY KEY, brief_version text NOT NULL, input_hash text NOT NULL, results jsonb NOT NULL, checked_at timestamptz NOT NULL
+);
+CREATE TABLE IF NOT EXISTS creator_discovery_ad_handles (
+ workspace_id text NOT NULL, handle text NOT NULL, ad_ids jsonb NOT NULL, PRIMARY KEY(workspace_id,handle)
+);
+
+ALTER TABLE creator_discovery_runs ADD COLUMN IF NOT EXISTS handles jsonb NOT NULL DEFAULT '[]';

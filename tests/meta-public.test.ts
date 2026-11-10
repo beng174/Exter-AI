@@ -36,9 +36,9 @@ test("public collection switch defaults off before any database access; UK daily
  const pool={query(){throw new Error("must not read database");},connect(){throw new Error("must not enqueue");}} as unknown as pg.Pool;
  assert.equal(metaLibraryEnabled({}),false);assert.equal(metaLibraryEnabled({EXTER_META_LIBRARY_ENABLED:"TRUE"}),false);assert.equal(metaLibraryEnabled({EXTER_META_LIBRARY_ENABLED:"true"}),true);
  assert.equal(await workOnce(pool,undefined,{env:{}}),false);
- // Owned scheduling remains independent; no public watchlist SQL is allowed.
+ // Owned scheduling and creator retention are independent; no public watchlist SQL is allowed.
  const previous=process.env.EXTER_OWNED_SYNC_ENABLED;delete process.env.EXTER_OWNED_SYNC_ENABLED;
- try{await schedule({query:async(sql:string)=>{assert.match(sql,/^SELECT id FROM owned_accounts/);return {rows:[]};}} as unknown as pg.Pool,new Date("2026-11-05T03:00:00Z"),{});}finally{if(previous!==undefined)process.env.EXTER_OWNED_SYNC_ENABLED=previous;}
+ try{await schedule({query:async(sql:string)=>{if(sql.startsWith("DELETE FROM creator_discovery_results"))assert.match(sql,/^DELETE FROM creator_discovery_results WHERE NOT saved AND used_at<\$1::timestamptz-interval '90 days'$/);else assert.match(sql,/^SELECT id FROM owned_accounts/);return {rows:[]};}} as unknown as pg.Pool,new Date("2026-11-05T03:00:00Z"),{});}finally{if(previous!==undefined)process.env.EXTER_OWNED_SYNC_ENABLED=previous;}
  for(const [time,day] of [["2026-03-29T01:59:00Z",null],["2026-03-29T02:00:00Z","2026-03-29"],["2026-10-25T02:00:00Z",null],["2026-10-25T03:00:00Z","2026-10-25"],["2026-07-01T02:00:00Z","2026-07-01"]])assert.equal(metaScheduleDay(new Date(time!)),day);
  assert.equal(rollingYearStart("2026-11-05"),"2025-11-05");assert.equal(rollingYearStart("2024-02-29"),"2023-02-28");
 });

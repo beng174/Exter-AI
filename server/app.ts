@@ -1,3 +1,4 @@
+import { attachCreatorDiscovery } from "./creators/discovery-api.js";
 import { attachAccuracy } from "./accuracy/api.js";
 import {attachAdMedia,attachMediaStep} from "./ad-media/api.js";
 import {attachCategoryStep,attachPrimaryCategories} from "./public-categories/api.js";
@@ -286,6 +287,7 @@ export function createApp(db: DatabaseSync = openDatabase()) {
   attachDemoCollection(app, db, video);
   attachCreativeBrowser(app,db);
   attachCreatorResearch(app, db);
+  attachCreatorDiscovery(app, db);
   attachDemoReadiness(app, db);
   attachBrain(app, db);
   attachBrandResearch(app, db);

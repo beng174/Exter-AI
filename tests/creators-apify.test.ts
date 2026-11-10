@@ -103,3 +103,21 @@ test("cancelled searches and invalid input cannot reserve funds or dispatch",asy
   const provider=new ApifyCreatorProvider({env,reserve:async()=>{reserves++;return{reservationId:"never",reservedGbp:0.75};},fetch:async()=>{calls++;return json({});}});
   await assert.rejects(()=>provider.search({...query,signal:cancelled.signal}),/cancelled before dispatch/);await assert.rejects(()=>provider.search({...query,seedHandles:["https://evil.example"]}),/valid explicit seed handles/);assert.equal(reserves,0);assert.equal(calls,0);
 });
+
+test("creator research batches use the existing client, reserve first and enforce provider charge/result caps",async()=>{
+ let reserved=false,starts=0,deleted=false;const researchEnv={...env,APIFY_INSTAGRAM_ACTOR_ID:"apify/instagram-scraper",EXTER_AD_MEDIA_GBP_PER_USD:"0.8"};
+ const provider=new ApifyCreatorProvider({env:researchEnv,reserve:async(amount)=>{reserved=true;assert.equal(amount,.75);return{reservationId:"fixture-hold",reservedGbp:amount};},fetch:async(input,init)=>{
+  const url=new URL(String(input));assert.ok(!url.href.includes(token));assert.equal(new Headers(init?.headers).get("Authorization"),`Bearer ${token}`);
+  if(url.pathname.endsWith("/runs")){starts++;assert.ok(reserved);assert.equal(url.searchParams.get("maxItems"),"199");assert.equal(url.searchParams.get("maxTotalChargeUsd"),"0.93");assert.equal(url.searchParams.get("restartOnError"),"false");return json({data:{id:"research-run",status:"SUCCEEDED",defaultDatasetId:"research-dataset"}});}
+  if(init?.method==="DELETE"){deleted=true;return new Response(null,{status:204});}
+  assert.ok(url.pathname.endsWith("/items"));const offset=Number(url.searchParams.get("offset")),limit=Number(url.searchParams.get("limit"));assert.ok(limit<=100);return json(Array.from({length:limit},(_,i)=>({username:`fixture${offset+i}`})));
+ }});
+ const result=await provider.collectPublic({resultsType:"details",search:"fixture"},199);assert.equal(result.rows.length,199);assert.equal(starts,1);assert.equal(deleted,true);assert.equal(result.accounting.reservedCostGbp,.75);
+});
+test("creator research cannot dispatch after a budget refusal and never retries an ambiguous paid call",async()=>{
+ const researchEnv={...env,APIFY_INSTAGRAM_ACTOR_ID:"apify/instagram-scraper"};let calls=0;
+ const blocked=new ApifyCreatorProvider({env:researchEnv,reserve:async()=>{throw new Error(token);},fetch:async()=>{calls++;throw new Error();}});
+ await assert.rejects(blocked.collectPublic({},20),(e:unknown)=>e instanceof CreatorProviderError&&e.code==="budget_paused");assert.equal(calls,0);
+ const ambiguous=new ApifyCreatorProvider({env:researchEnv,reserve:async()=>({reservationId:"fixture-hold",reservedGbp:.75}),fetch:async()=>{calls++;throw new Error(token);}});
+ await assert.rejects(ambiguous.collectPublic({},20),(e:unknown)=>e instanceof CreatorProviderError&&e.accounting?.reservedCostGbp===.75&&!e.message.includes(token));assert.equal(calls,1);
+});

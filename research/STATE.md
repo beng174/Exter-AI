@@ -960,3 +960,14 @@ and blockers below remain unchanged.
 - Secret scan passed after staging every repair file. PR #27 targets
   exter-test-drive: https://github.com/beng174/Exter-AI/pull/27. The PR preserves
   the current port/auth gate and records exact web/worker/scheduler rollout steps.
+
+## UK creator discovery, 10 November 2026
+
+Two-PR delivery: consolidated internal skill and owner-check briefs first; creator
+feature second. The feature uses the existing Creators view, budget guard and
+worker/scheduler, with separate public discovery and official metric verification.
+Saved segments, internal CSVs, monthly refresh, deletion/suppression and per-field
+Accuracy checks are included. No ad reach, dates, formulas or collection schedule
+changed. Creator precision gates remain open pending independent owner labels and
+85% precision for both good fit and UK. No live provider access or client readiness
+was established by fixtures. Existing owned-account live gates remain open.
