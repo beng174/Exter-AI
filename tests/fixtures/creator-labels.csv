@@ -1,0 +1,5 @@
+handle,good_fit,is_uk,is_individual,account_type,notes
+fixture_creator,yes,yes,yes,individual,Fictional genuine individual fixture
+fixture_business,no,yes,no,business,Fictional shop known negative
+fixture_repost,no,yes,no,repost,Fictional repost page known negative
+fixture_owner,no,yes,yes,individual,Fictional shop-owning creator needing review

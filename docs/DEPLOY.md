@@ -1188,8 +1188,8 @@ implemented; public contact details do not establish PECR consent. Profile/post
 previews do not grant content reuse rights.
 
 Fill `research/creator-briefs/test-set.csv` with independent yes/no judgements,
-then use Settings > Accuracy > Score creator test set. Both good-fit and UK
-precision need 85%, at least 20 predicted positives each and complete label
+then use Settings > Accuracy > Score creator test set. Individual-creator, good-fit and UK
+precision each need 85%, at least 20 predicted positives each and complete label
 matching for the current brief/rule version. Any refreshed or changed profile
 invalidates that result. Empty labels, fixtures and sample workspaces cannot open
 a client gate. Research CSVs remain labelled internal and are not client reports.
@@ -1206,3 +1206,32 @@ permission check remains required. No paid actor or official account call was ma
 Creator queue/API integration is part of `npm run test:infrastructure`. It creates
 and drops only its own random schema in the dedicated TEST_DATABASE_URL database;
 all provider, official account and image calls in it use fixtures.
+
+### Strict creator screening rollout
+
+Run `npm run db:migrate` against the existing infrastructure Postgres database
+once before deploying this update. It adds only `creator_discovery_rejected` and
+its time index. Redeploy exter-ai, exter-worker and exter-scheduler from the same
+commit. No new secrets, switches, models or budget settings are needed.
+
+The first creator read rechecks existing full profiles in bounded batches under
+the workspace lock, without calling a provider. Old-rule jobs are cancelled and
+old accuracy results are invalidated. Paid profile history stays in place.
+New rejected candidates keep minimal decision diagnostics, not raw posts/bios.
+They include official follower checkpoints for the next growth check, without
+replacing older profile history. These expire after 90 days; deleting a creator
+also removes its diagnostics. A newer rejection cannot be restored to Results
+from an older retained profile; it requires a fresh complete check.
+
+Results, saving, CSV exports and segments require every brief rule passed.
+Unknown inputs stay in Needs review. New creators without follower history or
+comment samples will therefore remain there until checks are available. Refresh
+keeps the existing official-check schedule and budget; no automatic paid retry
+was added. No fixture or empty label set establishes client readiness.
+
+The label header is now
+`handle,good_fit,is_uk,is_individual,account_type,notes`. Include independently
+reviewed business and repost negatives with `good_fit=no,is_individual=no`.
+All three precision checks need 85%, twenty predicted positives, complete label
+matching and both negative groups. The repository file stays header-only for the
+owner to label; fixture handles must not be copied into it as real verification.

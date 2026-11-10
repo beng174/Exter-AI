@@ -2,7 +2,7 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import { creatorHandle, followerTier, engagementMetrics, evaluateCreator, ukCreatorSignals, creatorPrecision, parseCreatorLabels, nextCreatorRefresh, matchesCreator, creatorCsv, scrubCreatorText, businessEmail } from "../shared/creator-discovery.js";
 import { discoveryProfile, InstagramCreatorVerifier, CreatorVerificationError } from "../server/creators/discovery-provider.js";
-import { briefSchema, discoverySteps, actorDiscoveryInput, discoveryBatchCount } from "../server/creators/discovery-store.js";
+import { briefDigest, briefSchema, discoverySteps, actorDiscoveryInput, discoveryBatchCount } from "../server/creators/discovery-store.js";
 import { creatorBrief, creatorProfile, creatorRow } from "./fixtures/creator-discovery.js";
 test("creator median uses latest 12 unique dated official posts and preserves unknown and genuine zero", () => {
   const profile=creatorProfile(), m=engagementMetrics(profile); assert.equal(m.engagement,.0265);assert.equal(m.assessedPosts,12);assert.equal(m.frequency,3.5);
@@ -63,10 +63,22 @@ test("segments cover all requested filters, calendar refresh clamps month ends, 
 });
 test("owner CSV precision is separate by field, version-bound and fixtures cannot release the 85% gate",()=>{
   assert.deepEqual(parseCreatorLabels("handle,good_fit,is_uk,notes\n"),[]);
-  const rows=Array.from({length:20},(_,i)=>creatorRow({handle:`fixture${i}`})), csv="handle,good_fit,is_uk,notes\n"+rows.map(r=>`${r.profile.handle},yes,yes,"Owner, checked"`).join("\n"),labels=parseCreatorLabels(csv);
-  const checks=creatorPrecision(labels,rows,"fixture-brief","2026-11-10",false);assert.ok(checks.every(c=>c.precision===1&&c.clientReady&&c.interval));
+  const rows=Array.from({length:20},(_,i)=>creatorRow({handle:`fixture${i}`}));
+  rows.push(creatorRow({handle:"fixture_business",accountKind:"brand"}),creatorRow({handle:"fixture_repost",accountKind:"repost"}));
+  const csv="handle,good_fit,is_uk,is_individual,account_type,notes\n"+rows.map((r,i)=>`${r.profile.handle},${i<20?"yes":"no"},yes,${i<20?"yes":"no"},${i<20?"individual":i===20?"business":"repost"},"Owner, checked"`).join("\n"),labels=parseCreatorLabels(csv);
+  const checks=creatorPrecision(labels,rows,"fixture-brief","2026-11-10",false);assert.equal(checks.length,3);assert.ok(checks.every(c=>c.precision===1&&c.clientReady&&c.interval));
   assert.ok(creatorPrecision(labels,rows,"fixture-brief","2026-11-10",true).every(c=>!c.clientReady));
-  assert.ok(creatorPrecision(labels,rows,"other-version","2026-11-10",false).every(c=>!c.clientReady&&c.missing===20));
+  assert.ok(creatorPrecision(labels,rows,"other-version","2026-11-10",false).every(c=>!c.clientReady&&c.missing===22));
   labels[0].good_fit=false;assert.equal(creatorPrecision(labels,rows,"fixture-brief","2026-11-10")[0].precision,.95);
   assert.throws(()=>parseCreatorLabels("handle,good_fit,is_uk,notes\na,yes,yes,\n@A,no,no,"));
+});
+
+test("strict brief versions survive database JSON key ordering",()=>{
+  const reversed=Object.fromEntries(Object.entries(creatorBrief).reverse()) as unknown as typeof creatorBrief;
+  assert.equal(briefDigest(creatorBrief),briefDigest(reversed));
+});
+
+test("official empty bio removes older claims instead of reusing them",async()=>{
+  const verifier=new InstagramCreatorVerifier({env:{EXTER_INSTAGRAM_ACCESS_TOKEN:"fixture-official-counts",EXTER_INSTAGRAM_ACCOUNT_ID:"123"},fetch:async()=>Response.json({business_discovery:{username:"fixture_creator",biography:"",website:null,followers_count:10000,media_count:40,media:{data:[]}}})});
+  const p=await verifier.verify(creatorProfile());assert.equal(p.bio,"");assert.equal(p.website,null);assert.equal(p.screening?.linkKind,"none");
 });

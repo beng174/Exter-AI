@@ -30,12 +30,12 @@ recollection after an objection. Suppression is still personal data; no marketin
 use. Delete provider datasets after projection where supported. Never log content,
 credentials, dataset URLs or provider error messages.
 
-The owner labels `research/creator-briefs/test-set.csv`: handle,good_fit,is_uk,notes,
-with yes/no labels only. Keep it header-only until real independent labels exist.
+The owner labels `research/creator-briefs/test-set.csv`: handle,good_fit,is_uk,is_individual,account_type,notes,
+with yes/no labels and account_type individual/business/repost/unknown. Keep it header-only until real independent labels exist.
 Match each label to the current frozen brief, rule version and saved creator result.
-Unknown/missing predictions stay visible as coverage gaps. Report good-fit and UK
+Unknown/missing predictions stay visible as coverage gaps. Report individual-creator, good-fit and UK
 precision separately on Accuracy, with denominators and 95% Wilson intervals.
-Both require >=85%, at least 20 predicted positives each, complete matched labels
+All three require >=85%, at least 20 predicted positives each, complete matched labels
 and a real-owner source before client use. The 20-positive minimum is an initial
 measurement safeguard, not evidence of statistical certainty. Report it explicitly.
 Fixtures/sample data never open that gate. Changing rules or the brief requires a
@@ -47,3 +47,12 @@ Primary guidance to check before client rollout:
 - https://ico.org.uk/for-organisations/direct-marketing-and-privacy-and-electronic-communications/direct-marketing-guidance/collect-information-and-generate-leads/
 - https://ico.org.uk/for-organisations/direct-marketing-and-privacy-and-electronic-communications/business-to-business-marketing/
 - https://www.asa.org.uk/resource/influencers-guide.html
+
+Include independently checked business and repost pages as known negatives:
+`good_fit=no,is_individual=no`, with the matching account type. Keep the actual
+owner label file header-only until genuine independent labels exist. Synthetic
+negative fixtures only test code. Unknown identity is not a positive prediction.
+New rejected candidates keep only handle, name, controlled screening decisions,
+brief/rule version and check time for diagnosis and negative validation, for at
+most 90 days. Previously stored profile history is preserved until its existing
+retention/deletion rules apply. Delete creator removes rejection diagnostics too.

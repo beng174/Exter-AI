@@ -1,6 +1,6 @@
 # Measurements
 
-Version: creator-discovery-v1. Do not change ad metrics or existing Creative score.
+Version: creator-discovery-v2-strict. Do not change ad metrics or existing Creative score.
 
 - **Engagement rate:** take the latest 12 unique, dated posts ordered by publication
   time, not pinned order. For each post with official likes and comments and a
@@ -19,10 +19,17 @@ Version: creator-discovery-v1. Do not change ad metrics or existing Creative sco
 - **Partnerships:** #ad, sponsored or paid-partnership labels show a declared
   commercial relationship. Name the competitor only when that same post identifies
   it. Ordinary tagging is a mention. Appearance in an ad needs stored direct proof.
-- **Precision:** TP / (TP + FP), separately for good fit and UK. No predicted
+- **Precision:** TP / (TP + FP), separately for individual creator, good fit and UK. No predicted
   positives means Not enough data. Show TP/FP/FN, labelled sample, date, version,
   exclusions and missing predictions; never substitute agreement or recall.
 
 Source dates and post URLs are field-level provenance. Keep scraper text and
 verified official numbers separate. A failed refresh cannot overwrite good earlier
 numbers with zero or silently renew their check time.
+
+Individual-creator prediction means the identity check passed, even if another
+brief rule failed. Validation therefore includes minimal rejected-account decisions.
+The owner-labelled test set must contain business and repost pages labelled as
+known negatives. No gate opens without both groups, complete matching, twenty
+predicted positives per field and precision at least 85%. Legacy four-column
+labels remain readable but cannot open the individual-creator gate.

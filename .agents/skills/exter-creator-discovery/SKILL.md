@@ -31,9 +31,12 @@ and the complete source inventory are in
    exporting, refreshing or deleting. Refresh monthly within the budget; expired
    official numbers remain dated and do not become current through a failed refresh.
 6. Show Find creators, Results and Segments inside the existing Creators view.
+   Results contain only individuals passing every hard brief rule. Put uncertain
+   accounts in Needs review and failures in Rejected, with counts by reason.
+   A genuine creator who owns a shop needs review. Fit cannot override screening.
    Keep unknown values unknown, reasons accessible, source/check time visible,
    source failures distinct from empty searches, and sample records isolated.
-7. Evaluate the owner-labelled CSV on Accuracy. Good-fit and UK precision must
+7. Evaluate the owner-labelled CSV on Accuracy. Individual-creator, good-fit and UK precision must
    each reach 85% before client use. Fixtures do not open a real gate. Discovery
    authorises no email, DM, contract, content reuse or spend on advertising.
 

@@ -1,3 +1,5 @@
+import { evaluateCreator } from "../shared/creator-discovery.js";
+import { creatorBrief } from "./fixtures/creator-discovery.js";
 import test,{after} from "node:test";
 import assert from "node:assert/strict";
 import { build } from "esbuild";
@@ -19,8 +21,8 @@ test("UI-E/F all six pages preserve designed sections and hide unsupported score
 });
 test("UI-12 creator discovery separates unverified discovery from the official research card",()=>{
  const shell=render("CreatorsPage");for(const title of ["Find creators","Results","Segments"])assert.match(shell,new RegExp(title));assert.doesNotMatch(shell,/50[kK] followers|Over 40K/);
- const row=creatorRow(),html=renderToStaticMarkup(h(components.CreatorResearchCard,{workspaceId:"fixture",row,busy:false,act:async()=>true}));assert.match(html,/Fictional creator/);assert.match(html,/10,000/);assert.match(html,/Observed/);assert.match(html,/Why this fit/);assert.match(html,/12\/12 posts/);
- row.profile.verification="Unverified";row.evaluation.engagement=null;const missing=renderToStaticMarkup(h(components.CreatorResearchCard,{workspaceId:"fixture",row,busy:false,act:async()=>true}));assert.match(missing,/Unverified/);assert.ok(!missing.includes("10,000"));
+ const row=creatorRow(),html=renderToStaticMarkup(h(components.CreatorResearchCard,{workspaceId:"fixture",row,busy:false,act:async()=>true}));assert.match(html,/Harper Rowan/);assert.match(html,/10,000/);assert.match(html,/Observed/);assert.match(html,/Why this fit/);assert.match(html,/12\/12 posts/);
+ row.profile.verification="Unverified";row.evaluation=evaluateCreator(row.profile,creatorBrief);const missing=renderToStaticMarkup(h(components.CreatorResearchCard,{workspaceId:"fixture",row,busy:false,act:async()=>true}));assert.match(missing,/Unverified/);assert.ok(!missing.includes("10,000"));
 });
 test("UI-13 saved checklist results remain Estimated and unknown Working Score columns disappear",()=>{const html=render("ScoresPage");assert.match(html,/Hook in 2 seconds/);assert.match(html,/Estimated/);assert.match(html,/call to action/i);assert.ok(!html.includes('data-label="Working Score"'));});
 test("UI-14/15 no invented Ask history or weekly packs; saved markdown download remains available",()=>{assert.match(render("AskPage"),/No earlier questions in this session/);const report=render("ReportsPage");assert.match(report,/\/api\/reports\/fixture-report\/download/);assert.match(report,/Saved source-backed report text/);for(let n=1;n<=8;n++)assert.ok(report.includes(`${n}. `));assert.match(report,/Weekly packs are not available yet/);});
