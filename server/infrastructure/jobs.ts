@@ -1,3 +1,4 @@
+import {scheduleOnboarding} from "../onboarding/queue.js";
 import { scheduleCreatorRefresh } from "../creators/discovery-jobs.js";
 import {schedulePublicCategories,enqueueCategoryBatch,categoryConfigured} from "../public-categories/jobs.js";
 import {scheduleAdMedia,enqueueAdMedia} from "../ad-media/jobs.js";
@@ -152,6 +153,7 @@ export function metaScheduleDay(now:Date):string|null {
   return Number(get("hour"))>=3?`${get("year")}-${get("month")}-${get("day")}`:null;
 }
 export async function schedule(pool: pg.Pool, now = new Date(), env:Record<string,string|undefined>=process.env) {
+  await scheduleOnboarding(pool,now,env);
   await scheduleOwnedSync(pool,now);
   await scheduleCreatorRefresh(pool,now,env);
   const day=metaScheduleDay(now);

@@ -1,3 +1,4 @@
+import {workOnboardingOnce} from "../onboarding/worker.js";
 import { workCreatorDiscoveryOnce } from "../creators/discovery-jobs.js";
 import { retainCreatorPreviews } from "../creators/discovery-previews.js";
 import {workAdMediaOnce} from "../ad-media/api.js";
@@ -22,13 +23,14 @@ try {
     process.once("SIGTERM", () => { stopping = true; shutdown.abort(); });
     process.once("SIGINT", () => { stopping = true; shutdown.abort(); });
     while (!stopping) {
+      const onboarding = await workOnboardingOnce(pool);
       const collected = await workOnce(pool);
       const owned = !stopping ? await workOwnedOnce(pool) : false;
       const media = !stopping ? await workAdMediaOnce(pool) : false;
       const creators = !stopping ? await workCreatorDiscoveryOnce(pool, {thumbnail:(workspace,profile)=>retainCreatorPreviews(pool,workspace,profile)}) : false;
       const categories = !stopping ? await workPublicCategoriesOnce(pool) : false;
       const staged = artifactClient && !stopping ? await workKernelOnce(pool, artifactClient, { signal: shutdown.signal }) : false;
-      if (!collected && !owned && !media && !categories && !creators && !staged && !stopping) await new Promise(resolve => setTimeout(resolve,1000));
+      if (!onboarding && !collected && !owned && !media && !categories && !creators && !staged && !stopping) await new Promise(resolve => setTimeout(resolve,1000));
     }
   } else throw new Error("Unknown runtime role.");
 } catch (error) {

@@ -39,7 +39,6 @@ function BrandModal({
 }) {
   const [name, setName] = useState(""),
     [domain, setDomain] = useState(""),
-    [category, setCategory] = useState<Category>("Beauty & skincare"),
     [busy, setBusy] = useState(false),
     [error, setError] = useState("");
   async function create(e: React.FormEvent) {
@@ -48,11 +47,7 @@ function BrandModal({
     setError("");
     try {
       onCreated(
-        await api<Brand>("/api/brands", {
-          name: name.trim(),
-          domain: domain.trim(),
-          category,
-        }),
+        (await api<{brand:Brand}>("/api/onboarding/start", {name:name.trim(),website:domain.trim()})).brand,
       );
     } catch (e) {
       setError((e as Error).message);
@@ -78,7 +73,7 @@ function BrandModal({
         </button>
         <span className="eyebrow">YOUR WORKSPACES</span>
         <h2>A new perspective starts here.</h2>
-        <p>Choose a brand or create a workspace for retained evidence.</p>
+        <p>Choose a brand or start automatic setup.</p>
         <div className="brand-options">
           {brands.map((b) => (
             <button key={b.id} onClick={() => onSelect(b)}>
@@ -87,7 +82,7 @@ function BrandModal({
                 <strong>{b.name}</strong>
                 <small>
                   {b.category} ·{" "}
-                  {b.mode === "demo" ? "Sample data" : "Imported data"}
+                  {b.mode === "demo" ? "Sample data" : "Real workspace"}
                 </small>
               </span>
               {b.id === current ? (
@@ -112,36 +107,17 @@ function BrandModal({
               />
             </label>
             <label>
-              Website <span className="muted">(optional)</span>
+              Website
               <input
                 value={domain}
                 onChange={(e) => setDomain(e.target.value)}
                 placeholder="yourbrand.com"
+                required
                 maxLength={180}
               />
             </label>
           </div>
-          <label>
-            Category
-            <select
-              value={category}
-              onChange={(e) => setCategory(e.target.value as Category)}
-            >
-              {[
-                "Beauty & skincare",
-                "Fashion",
-                "Wellness",
-                "Food & beverage",
-                "Home fragrance & gifting",
-              ].map((c) => (
-                <option key={c}>{c}</option>
-              ))}
-            </select>
-          </label>
-          <p className="form-hint">
-            A new brand starts with an empty workspace. Import real ad data to
-            build its competitive landscape.
-          </p>
+          <p className="form-hint">Exter reads your website, finds matching Pages and competitors, then collects and tags ads. Paid steps use your existing budgets. Costs and progress appear in Brand research.</p>
           {error && (
             <p className="error-text" role="alert">
               {error}
@@ -150,14 +126,14 @@ function BrandModal({
           <button
             className="button primary"
             type="submit"
-            disabled={busy || !name.trim()}
+            disabled={busy || !name.trim() || !domain.trim()}
           >
             {busy ? (
               <LoaderCircle className="spin" size={16} />
             ) : (
               <Plus size={16} />
             )}{" "}
-            Create workspace
+            Start automatic setup
           </button>
         </fieldset></form>
       </section>
@@ -178,6 +154,7 @@ function WorkspaceApp() {
     api<unknown>("/api/brands").then(value=>{if(!active)return;const result=workspaceBrands(value,demoEnabled);setBrands(result.brands);setError(result.unavailable?"Some brand details are unavailable.":"");const preferred=preferredWorkspace(result.brands,brandId);if(preferred)setBrandId(preferred.id);}).catch(()=>{if(active)setError("Brand list is unavailable. Your current page is still available.");}).finally(()=>{if(active)setBrandBusy(false);});
     return()=>{active=false;};
   },[demoEnabled,brandRevision]);
+  useEffect(()=>{const update=()=>setBrandRevision(value=>value+1);window.addEventListener("exter:onboarding-updated",update);return()=>window.removeEventListener("exter:onboarding-updated",update);},[]);
   useEffect(()=>{if(!isSampleId(brandId))localStorage.setItem("exter-brand",brandId);const url=new URL(window.location.href);if(url.searchParams.get("brandId")!==brandId){url.searchParams.set("brandId",brandId);window.history.replaceState({},"",url);setRoute(resolveNavigation(url.href));}},[brandId]);
   useEffect(()=>{const key=(event:KeyboardEvent)=>{if(event.key==="Escape"){setBrandOpen(false);setHelpOpen(false);setMenuOpen(false);}};window.addEventListener("keydown",key);return()=>window.removeEventListener("keydown",key);},[]);
   const modalIsOpen=brandOpen||helpOpen;

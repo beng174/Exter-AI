@@ -14,7 +14,8 @@ export type Category =
   | "Fashion"
   | "Wellness"
   | "Food & beverage"
-  | "Home fragrance & gifting";
+  | "Home fragrance & gifting"
+  | (string & {});
 export type Page =
   | "overview"
   | "brand"
@@ -36,6 +37,9 @@ export type Page =
   | "ask";
 export interface Brand {
   primaryCategories?:string[];
+  primaryCategoriesSource?:"manual"|"onboarding";
+  discoveryKeywords?:string[];
+  competitorProfiles?:import("./onboarding/types").CompetitorChoice[];
   id: string;
   metaPageId?: string;
   name: string;

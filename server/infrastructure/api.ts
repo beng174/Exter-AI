@@ -78,7 +78,7 @@ export function attachInfrastructure(app: Express, db: DatabaseSync, getPool:()=
       await client.query("BEGIN");
       await client.query("SELECT pg_advisory_xact_lock(hashtext($1))",[brand.id]);
       const key=purpose==="brand"?brandKey:null;
-      const existing=await client.query("SELECT * FROM watchlists WHERE id=$1 OR (workspace_id=$2 AND brand_key=$3) FOR UPDATE",[req.params.id,brand.id,key]);
+      const existing=await client.query("SELECT * FROM watchlists WHERE id=$1 OR (workspace_id=$2 AND brand_key=$3 AND $4<>'' AND COALESCE(page_ids->>0,'')=$4) FOR UPDATE",[req.params.id,brand.id,key,pageIds[0]||'']);
       if(existing.rows.some(w=>w.workspace_id!==brand.id)){await client.query("ROLLBACK");res.status(409).json({error:"This watchlist belongs to another workspace."});return;}
       if(existing.rows.length>1||existing.rows.some(w=>w.brand_key&&w.brand_key!==key||w.purpose!==purpose)){await client.query("ROLLBACK");res.status(409).json({error:"Choose the saved watchlist for this brand or category."});return;}
       const old=existing.rows[0],id=old?.id||String(req.params.id)||randomUUID(),enabled=purpose==="discovery"?searchTerms.length>0:pageIds.length>0;
@@ -89,7 +89,7 @@ export function attachInfrastructure(app: Express, db: DatabaseSync, getPool:()=
         await client.query("UPDATE collection_jobs j SET status='superseded',lease_until=NULL,lease_owner=NULL FROM collection_runs r WHERE r.id=j.id AND r.watchlist_id=$1 AND r.status='superseded'",[id]);
       }
       await client.query(`INSERT INTO watchlists(id,workspace_id,brand_key,purpose,page_ids,search_terms,countries,enabled) VALUES($1,$2,$3,$4,$5,$6,$7,$8)
-        ON CONFLICT(id) DO UPDATE SET brand_key=excluded.brand_key,purpose=excluded.purpose,page_ids=excluded.page_ids,search_terms=excluded.search_terms,countries=excluded.countries,enabled=excluded.enabled,revision=watchlists.revision+$9`,[id,brand.id,key,purpose,JSON.stringify(pageIds),JSON.stringify(searchTerms),JSON.stringify(countries),enabled,changed?1:0]);
+        ON CONFLICT(id) DO UPDATE SET brand_key=excluded.brand_key,purpose=excluded.purpose,page_ids=excluded.page_ids,search_terms=excluded.search_terms,countries=excluded.countries,enabled=excluded.enabled,revision=watchlists.revision+$9,managed_by='manual'`,[id,brand.id,key,purpose,JSON.stringify(pageIds),JSON.stringify(searchTerms),JSON.stringify(countries),enabled,changed?1:0]);
       await client.query("COMMIT");res.json({saved:true,id});
     }catch(error){await client.query("ROLLBACK");if((error as {code?:string}).code==="23505")res.status(409).json({error:"This Page ID is already assigned to a watchlist brand in this workspace."});else res.status(503).json({error:"The watchlist could not be saved. Earlier collection history is retained."});}finally{client.release();}
   });

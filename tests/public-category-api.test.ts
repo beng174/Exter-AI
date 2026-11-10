@@ -12,8 +12,8 @@ test('primary categories preserve brand settings, validate choices, reject forei
  const app=express();app.use(express.json());attachPrimaryCategories(app,db);const server=createServer(app);await new Promise<void>(resolve=>server.listen(0,'127.0.0.1',resolve));const origin=`http://127.0.0.1:${(server.address() as AddressInfo).port}`;
  const save=(id:string,categories:unknown,extra:Record<string,string>={})=>fetch(`${origin}/api/brands/${id}/primary-categories`,{method:'POST',headers:{'content-type':'application/json',origin,...extra},body:JSON.stringify({categories})});
  try{
-  assert.equal((await save(brand.id,['fashion'],{origin:'https://elsewhere.example'})).status,403);assert.equal((await save(sampleBrands[0].id,['fashion'])).status,404);assert.equal((await save(brand.id,['made up'])).status,400);
-  assert.equal((await save(brand.id,['candles','candles','gifting'])).status,200);assert.deepEqual(readBrand(db,brand.id),{...brand,primaryCategories:['candles','gifting']});
+  assert.equal((await save(brand.id,['fashion'],{origin:'https://elsewhere.example'})).status,403);assert.equal((await save(sampleBrands[0].id,['fashion'])).status,404);assert.equal((await save(brand.id,[''])).status,400);
+  assert.equal((await save(brand.id,['candles','candles','gifting'])).status,200);assert.deepEqual(readBrand(db,brand.id),{...brand,primaryCategories:['candles','gifting'],primaryCategoriesSource:'manual'});
   assert.equal((await save(brand.id,[])).status,200);assert.deepEqual(readBrand(db,brand.id)?.primaryCategories,[]);assert.deepEqual(readBrand(db,sampleBrands[0].id),sampleBrands[0]);
  }finally{await new Promise<void>(resolve=>server.close(()=>resolve()));db.close();}
 });

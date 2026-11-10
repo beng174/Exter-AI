@@ -99,10 +99,9 @@ Public Meta collection stays off unless EXTER_META_LIBRARY_ENABLED=true in both
 scheduler and worker. Collect watchlist brands by Page ID; keywords are category
 discovery only. Public commercial reach is Observed, never private spend or impressions.
 
-Name-based Meta searches may suggest Page IDs before the live-collection switch
-is enabled, only when META_ACCESS_TOKEN is configured. Keep suggestions separate
-from watchlists and collected ads, use the same request gate, and save a Page ID
-only after explicit Confirm or manual save. Sample mode never starts a lookup.
+Meta Page discovery requires META_ACCESS_TOKEN and the shared request gate.
+Save identities after Confirm/manual save, or a high-confidence onboarding domain
+match under research/AUTOMATIC-ONBOARDING-SPEC.md. Samples never start lookups.
 
 ## Marketing skill references
 

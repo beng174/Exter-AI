@@ -1,3 +1,5 @@
+import type pg from "pg";
+import {categoryList} from "../../shared/onboarding/rules.js";
 import {createHash,timingSafeEqual} from "node:crypto";
 import type {Express} from "express";
 import type {DatabaseSync} from "node:sqlite";
@@ -39,11 +41,16 @@ export function attachPrimaryCategories(app:Express,db:DatabaseSync,getPool=infr
    res.json({enabled:categoryConfigured(env),configured:categoryConfigured(env),quote:await categoryQuote(getPool(),brand.id,env),batches:result.rows.map(r=>({id:r.id,status:r.status,error:r.error_kind,createdAt:r.created_at,finishedAt:r.finished_at,ads:r.ads,costGbp:r.cost_gbp??null,costStatus:r.cost_status||null}))});
   }catch{res.status(503).json({error:'Category tagging status could not be read.'});}
  });
- app.post('/api/brands/:brandId/primary-categories',protectSettingsMutation,(req,res)=>{
+ app.post('/api/brands/:brandId/primary-categories',protectSettingsMutation,async(req,res)=>{
   const brand=readBrand(db,String(req.params.brandId)),categories=req.body?.categories;
   if(!brand||brand.mode==='demo'){res.status(404).json({error:'Real workspace not found.'});return;}
-  if(!Array.isArray(categories)||categories.length>PRODUCT_CATEGORIES.length||categories.some(v=>typeof v!=='string'||!PRODUCT_CATEGORIES.includes(v as typeof PRODUCT_CATEGORIES[number]))){res.status(400).json({error:'Choose supported product categories.'});return;}
-  const updated={...brand,primaryCategories:[...new Set<string>(categories)]};db.prepare('UPDATE brands SET data=? WHERE id=?').run(JSON.stringify(updated),brand.id);
-  res.json({brandId:brand.id,primaryCategories:primaryCategories(updated)});
+  if(!Array.isArray(categories)||categories.length>16||categories.some(v=>typeof v!=='string'||v.length<3||v.length>80)||categoryList(categories).length!==new Set(categories).size){res.status(400).json({error:'Choose supported product categories.'});return;}
+  let client:pg.PoolClient|null=null;
+  try{if(process.env.DATABASE_URL||getPool!==infrastructureDatabase){client=await getPool().connect();await client.query('BEGIN');await client.query('SELECT pg_advisory_xact_lock(hashtext($1))',[`public-categories:${brand.id}`]);}
+   const updated={...readBrand(db,brand.id)!,primaryCategories:categoryList(categories),primaryCategoriesSource:'manual' as const};
+   if(client)await client.query('INSERT INTO workspace_category_vocabularies(workspace_id,categories) VALUES($1,$2) ON CONFLICT(workspace_id) DO UPDATE SET categories=excluded.categories,updated_at=now()',[brand.id,JSON.stringify(updated.primaryCategories)]);
+   db.prepare('UPDATE brands SET data=? WHERE id=?').run(JSON.stringify(updated),brand.id);if(client)await client.query('COMMIT');
+  }catch{if(client)await client.query('ROLLBACK');res.status(503).json({error:'Categories could not be saved. Please retry.'});return;}finally{client?.release();}
+  res.json({brandId:brand.id,primaryCategories:primaryCategories(readBrand(db,brand.id)!)});
  });
 }

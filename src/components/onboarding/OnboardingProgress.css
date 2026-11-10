@@ -1,0 +1,24 @@
+.onboarding-progress { margin:24px 0;min-width:0; }
+.onboarding-checklist { display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,260px),1fr));gap:16px;padding:0;list-style:none; }
+.onboarding-checklist>li { display:grid;grid-template-rows:subgrid;grid-row:span 3;gap:8px;padding:16px;border:1px solid var(--line-soft);border-radius:12px;min-width:0; }
+.onboarding-checklist>li>p { grid-row:2; }.onboarding-checklist>li>.onboarding-costs { grid-row:3; }
+.onboarding-step-name { grid-row:1; display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px; }
+.onboarding-progress p { margin:8px 0;font-size:14px;line-height:1.5;overflow-wrap:anywhere; }
+.onboarding-costs { display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;margin:8px 0 0; }
+.onboarding-progress dt { color:var(--muted);font-size:12px; }.onboarding-progress dd { margin:4px 0 0;display:flex;align-items:center;flex-wrap:wrap;gap:4px; }
+.onboarding-progress .ui-data-label { flex:none; }
+.onboarding-understanding { padding:16px 0; }.onboarding-progress summary { min-height:44px;cursor:pointer; }
+.onboarding-page-list>div { display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;padding:12px 0; }
+.onboarding-review,.onboarding-competitors { display:grid;gap:16px;margin-top:24px; }
+.onboarding-review article,.onboarding-competitors article { display:grid;grid-template-columns:minmax(0,1fr) auto;gap:8px 16px;border:1px solid var(--line-soft);padding:16px;border-radius:12px;align-items:center;min-width:0; }
+.onboarding-review article>p,.onboarding-competitors article>p { grid-column:1/-1; }
+.onboarding-actions,.onboarding-choice-actions { display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin:16px 0; }
+.onboarding-choice-actions { grid-column:1/-1; }.onboarding-choice-actions label { display:grid;gap:4px; }
+.onboarding-progress :is(button,select) { min-height:44px; }.onboarding-actions>a { display:flex;align-items:center;min-height:44px; }
+.onboarding-coverage { font-variant-numeric:tabular-nums; }
+@media(max-width:719px) { .onboarding-review article,.onboarding-competitors article { grid-template-columns:minmax(0,1fr); } }
+
+.onboarding-step-name>strong { display:flex;align-items:baseline;gap:8px; }
+.onboarding-count { color:var(--exter-blue);font-variant-numeric:tabular-nums; }
+
+.onboarding-page-logo { width:20px;height:20px;object-fit:contain;border:1px solid var(--line);border-radius:4px;background:#fff;flex:none; }

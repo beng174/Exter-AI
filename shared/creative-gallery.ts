@@ -11,6 +11,7 @@ export type DemoGalleryAnalysis =
 export interface DemoGalleryCreative {
   adId: string;
   nativeId: string;
+  advertiserPageId?:string;
   brandId: string;
   brandName: string;
   title: string;

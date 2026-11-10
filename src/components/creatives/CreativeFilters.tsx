@@ -35,7 +35,7 @@ export function CreativeFilters({ creatives, filters, onChange, datesOpen, onDat
             </details>
             {select("brand", "Brand", [...new Map(creatives.map(row => [row.brandId, { value: row.brandId, label: row.brandName }])).values()])}
             {select("adFormat", "Format", AD_FORMATS.map(value=>({value,label:formatName(value)})))}
-            {select("category","Category",[{value:"mine",label:"My categories"},...PRODUCT_CATEGORIES.map(value=>({value,label:value}))])}
+            {select("category","Category",[{value:"mine",label:"My categories"},...[...new Set([...creatives.flatMap(row=>row.productCategories||[]),...PRODUCT_CATEGORIES])].map(value=>({value,label:value}))])}
             {filters.format&&select("format","Creative style",values("creativeFormat"))}
             {select("hook", "Hook", values("hookType"))}
             {select("angle", "Angle", values("angle"))}

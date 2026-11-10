@@ -251,6 +251,10 @@ When a signal is missing (no reach yet, no matching organic post), its weight is
 
 **Calibration:** for Exter Media clients who connect their ad account, compare the score with real ROAS and CPA every month and adjust the weights. The score is never described as sales or ROAS.
 
+Automatic brand setup follows [AUTOMATIC-ONBOARDING-SPEC.md](AUTOMATIC-ONBOARDING-SPEC.md)
+(BO-01 to BO-07): website understanding, domain-backed Page confirmation, verified
+UK competitors and budgeted collection/enrichment. Manual overrides remain authoritative.
+
 ## Brand vs competitors: what is missing and what to work on
 
 Exter compares the brand with its competitors on the same fields, then turns the differences into a ranked list of what to test, scale, fix or stop.

@@ -146,7 +146,7 @@ function Detail({row,data,filtered,onOpen,onRefresh}:DetailProps&{row:BrowserCre
         </SectionCard>
         <div id="creative-market"><SectionCard title="In the market" help="Competitor ads in the same category and media format" meta={{sampleSize:unknownMatch?null:similar.length,from:data.dateRange.from,to:data.dateRange.to,lastChecked:data.lastChecked}} empty={false}>
           {marketGap&&<Unavailable {...marketGap}/>}
-          <ComparisonFilters filter={comparisonFilter} fixedFormat={mediaFormat(row)} onChange={changeComparison}/>
+          <ComparisonFilters categories={data.brand.primaryCategories} filter={comparisonFilter} fixedFormat={mediaFormat(row)} onChange={changeComparison}/>
           {!unknownMatch&&<p className="creative-market-count">{mediaFormat(row)&&formatName(mediaFormat(row)!)} · <button className="creative-evidence-value" onClick={openMarket}>{similar.length.toLocaleString("en-GB")} similar {similar.length===1?"ad":"ads"}</button> <DataLabel basis="Modelled"/></p>}
           <div className="creative-similar-grid">{similar.slice(0,3).map(item=><CreativeCard creative={item} key={item.adId} title={creativeTitle(item)} secondary={creativeSecondary(item)} thumbnail={item.thumbnailUrl} source={item.brandName} duration={item.durationSeconds} format={item.creativeFormat?plainEnum(item.creativeFormat):null} tags={[item.hookType,item.angle].filter((value):value is string=>Boolean(value)).map(plainEnum)} metrics={cardMetrics(item)} meta={creativeMeta(item)} onOpen={()=>onOpen(item)}/>)}</div>
         </SectionCard></div>

@@ -37,7 +37,7 @@ function graphFailure(error: unknown, status: number) {
     return withDiagnostics(new MetaCollectionError("unavailable", `Meta collection is temporarily unavailable (HTTP ${status}).`));
   return withDiagnostics(status >= 400 ? httpFailure(status) : new MetaCollectionError("schema", "Meta returned an unsupported application error."));
 }
-export interface MetaQuery { pageIds?: string[]; searchTerm?: string; countries: string[]; after?: string | null; from?:string;to?:string;pageSize?:MetaPageSize }
+export interface MetaQuery {activeStatus?:"ALL"|"ACTIVE"; pageIds?: string[]; searchTerm?: string; countries: string[]; after?: string | null; from?:string;to?:string;pageSize?:MetaPageSize }
 export class MetaLibraryConnector {
   constructor(private readonly options: { token?: string; version?: string; fetch?: typeof fetch } = {}) {}
   async page(query: MetaQuery) {
@@ -57,7 +57,8 @@ export class MetaLibraryConnector {
     const url = new URL(`https://graph.facebook.com/${version}/ads_archive`);
     url.searchParams.set("fields", META_FIELDS);
     url.searchParams.set("ad_reached_countries", JSON.stringify(query.countries));
-    url.searchParams.set("ad_active_status", "ALL");
+    if(query.activeStatus!==undefined&&!["ALL","ACTIVE"].includes(query.activeStatus))throw new MetaCollectionError("schema","Invalid discovery status.");
+    url.searchParams.set("ad_active_status", query.activeStatus||"ALL");
     url.searchParams.set("ad_type", "ALL");
     url.searchParams.set("limit", String(pageSize));
     if (query.pageIds?.length) url.searchParams.set("search_page_ids", JSON.stringify(query.pageIds));

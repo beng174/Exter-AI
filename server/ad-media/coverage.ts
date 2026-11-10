@@ -29,9 +29,9 @@ export function mediaCoverage(official:CoverageAd[],attempts:CoverageAttempt[],f
 }
 async function readCoverageData(pool:pg.Pool,workspace:string){
  const [brands,official,requests,files]=await Promise.all([
-  pool.query(`SELECT w.brand_key AS "brandKey",EXISTS(SELECT 1 FROM ad_media_runs r WHERE r.watchlist_id=w.id AND r.status='paused' AND r.error_kind='budget') AS budget,
-   EXISTS(SELECT 1 FROM ad_media_runs r WHERE r.watchlist_id=w.id AND r.actor_run_id IS NOT NULL AND r.requested_ids IS NULL) AS "historyIncomplete"
-   FROM watchlists w WHERE w.workspace_id=$1 AND w.purpose='brand' AND w.brand_key IS NOT NULL AND jsonb_array_length(w.page_ids)=1`,[workspace]),
+  pool.query(`SELECT w.brand_key AS "brandKey",bool_or(EXISTS(SELECT 1 FROM ad_media_runs r WHERE r.watchlist_id=w.id AND r.status='paused' AND r.error_kind='budget')) AS budget,
+   bool_or(EXISTS(SELECT 1 FROM ad_media_runs r WHERE r.watchlist_id=w.id AND r.actor_run_id IS NOT NULL AND r.requested_ids IS NULL)) AS "historyIncomplete"
+   FROM watchlists w WHERE w.workspace_id=$1 AND w.purpose='brand' AND w.brand_key IS NOT NULL AND jsonb_array_length(w.page_ids)=1 GROUP BY w.brand_key`,[workspace]),
   pool.query(`SELECT DISTINCT w.brand_key AS "brandKey",o.native_id AS "nativeId" FROM watchlists w JOIN collection_runs r ON r.watchlist_id=w.id JOIN ad_observations o ON o.run_id=r.id JOIN public_ads a USING(platform,native_id)
    WHERE w.workspace_id=$1 AND o.workspace_id=$1 AND w.purpose='brand' AND r.config->>'revision'=w.revision::text AND a.advertiser_id=w.page_ids->>0`,[workspace]),
   pool.query(`SELECT DISTINCT ON(r.brand_key,q.native_id) r.brand_key AS "brandKey",q.native_id AS "nativeId",bool_or(q.returned_at IS NOT NULL) OVER(PARTITION BY r.brand_key,q.native_id) AS returned,bool_or(q.matched_at IS NOT NULL) OVER(PARTITION BY r.brand_key,q.native_id) AS matched,q.outcome,q.requested_at AS "lastAttemptAt"

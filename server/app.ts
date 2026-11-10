@@ -1,3 +1,4 @@
+import {attachOnboarding,attachOnboardingStep} from "./onboarding/api.js";
 import { attachCreatorDiscovery } from "./creators/discovery-api.js";
 import { attachAccuracy } from "./accuracy/api.js";
 import {attachAdMedia,attachMediaStep} from "./ad-media/api.js";
@@ -253,6 +254,7 @@ export function createApp(db: DatabaseSync = openDatabase()) {
   attachKernelArtifactDownload(app, broker);
   attachMediaStep(app,db);
   attachCategoryStep(app,db);
+  attachOnboardingStep(app,db);
   app.use(authenticate);
   app.disable("x-powered-by");
   app.use(express.json({ limit: "20mb" }));
@@ -269,6 +271,7 @@ export function createApp(db: DatabaseSync = openDatabase()) {
   });
   attachSampleWorkspace(app);
   attachAdMedia(app,db);
+  attachOnboarding(app,db);
   attachPrimaryCategories(app,db);
   app.use(["/api/public/meta", "/api/budgets", "/api/gemini-smoke", "/api/labelling", "/api/creator-research", "/api/brands", "/api/brand-research", "/api/brand-logos"], protectSettingsMutation);
   attachBrandLogos(app,db);
