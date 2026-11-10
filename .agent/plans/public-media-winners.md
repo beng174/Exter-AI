@@ -12,7 +12,7 @@ while category/format coverage is incomplete. Add cheap text tagging controls.
 - [x] 2026-11-10 UTC: Repair card/preview layout and add responsive fixture screenshots.
 - [x] 2026-11-10 UTC: Infer source formats, explain coverage and add honest Winners fallback.
 - [x] 2026-11-10 UTC: Run tagging after collection and add an estimated-cost Tag ads now action.
-- [ ] Run all four checks and database/browser fixtures; open a PR against exter-test-drive.
+- [x] 2026-11-10 UTC: Ran all four checks, database/browser fixtures and opened PR #32 against exter-test-drive.
 
 ## Surprises and discoveries
 Base e2b36c7 includes PR #31. Retained asset metadata is currently counted as a
@@ -38,7 +38,7 @@ Use the existing text-only batch model/budget first; visual analysis is only a
 follow-up for unclear text, not a prerequisite for every ad.
 
 ## Outcomes and retrospective
-Pending. Fixtures are not production verification. No diagnosis of the three live
+PR #32 contains 1440px/390px screenshots and zero-provider-call browser checks. Type check, build and secrets check passed; 25 isolated Postgres tests passed. The full test command passed 513 cases before nine files lost dependency resolution during local disk recovery. All 83 cases in those nine files passed after restoring the path, giving 596 passing cases across the run and recovery. The initial full command exited nonzero for the environment interruption. No remaining assertion failures were observed. Fixtures are not production verification. No diagnosis of the three live
 ads will be claimed; their IDs in the latest message were placeholders.
 
 ## Context and orientation
