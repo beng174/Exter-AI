@@ -5,6 +5,8 @@ import type { DatabaseSync } from "node:sqlite";
 import type pg from "pg";
 import { z } from "zod";
 import { readBrand } from "../db.js";
+import { readBrandResearch } from "../brand-research.js";
+import { creatorSourceSuggestions } from "../../shared/creator-sources.js";
 import { protectSettingsMutation } from "../request-guard.js";
 import { infrastructureDatabase } from "../infrastructure/database.js";
 import { budgetStatus } from "../infrastructure/budget.js";
@@ -28,8 +30,18 @@ export function attachCreatorDiscovery(app: Express, db: DatabaseSync, options: 
   };
   app.get("/api/creator-discovery", (req, res) => {
     res.setHeader("Cache-Control", "private, no-store");
-    Promise.resolve().then(async () => { const id = workspace(req), p = pool(); const value = p ? await discoverySnapshot(p, id,now()) : emptyDiscovery(), config = provider.researchConfiguration(); value.configured = Boolean(p && config.configured); value.verificationConfigured = verifier.configured(); value.reason = value.configured ? value.verificationConfigured ? "Internal research until all three accuracy checks pass." : "Official account checks need their access configured." : config.reason; res.json(value); }).catch(() => res.status(422).json({ error: "Saved creator research could not be read." }));
+    Promise.resolve().then(async () => { const id = workspace(req), p = pool(); const value = p ? await discoverySnapshot(p, id,now()) : emptyDiscovery(), config = provider.researchConfiguration(); value.configured = Boolean(p && config.configured); value.verificationConfigured = verifier.configured(); value.reason = value.configured ? value.verificationConfigured ? "Internal research until all three accuracy checks pass." : "Public counts are usable. Official checks need their access configured." : config.reason;
+      const brand=readBrand(db,id)!, known:string[]=[];
+      for(const name of brand.competitors??[]){const competitor=(db.prepare("SELECT id FROM brands WHERE json_extract(data,'$.name')=? AND json_extract(data,'$.mode')<>'demo' LIMIT 1").get(name) as {id:string}|undefined);if(!competitor)continue;for(const social of readBrandResearch(db,competitor.id)?.socialProfiles??[]){const url=publicCreatorUrl(social.url);if(url)known.push(new URL(url).pathname.replaceAll("/",""));}}
+      value.suggestions=creatorSourceSuggestions({...brand,competitors:brand.competitors??[]},known);res.json(value); }).catch(() => res.status(422).json({ error: "Saved creator research could not be read." }));
   });
+  app.post("/api/creator-discovery/rescreen",route(async (_req,res,id,p)=>{await rescreenCreatorRules(p,id,now(),true);res.json({rechecked:true});}));
+  app.post("/api/creator-discovery/stop",route(async(req,res,id,p)=>{
+    const searchId=z.string().uuid().parse(req.body?.searchId);
+    const result=await p.query("UPDATE creator_discovery_runs SET stop_requested=true,available_at=now() WHERE id=$1 AND workspace_id=$2 AND status IN ('queued','running') RETURNING id",[searchId,id]);
+    if(!result.rowCount){const prior=await p.query("SELECT id FROM creator_discovery_runs WHERE id=$1 AND workspace_id=$2 AND stop_requested",[searchId,id]);if(!prior.rowCount)throw new Error();}
+    res.status(202).json({stopping:true});
+  }));
   app.post("/api/creator-discovery/quote", route(async (req, res, id, p) => {
     const brief = briefSchema.parse(req.body?.brief);
     if([env.APIFY_TOKEN,env.EXTER_INSTAGRAM_ACCESS_TOKEN].some(secret=>secret&&JSON.stringify(brief).includes(secret)))throw new Error();

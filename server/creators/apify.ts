@@ -120,7 +120,7 @@ export function normaliseApifyCreators(rows: unknown[], platform: CreatorPlatfor
 }
 
 class CreatorRequestError extends CreatorProviderError {constructor(code:ConstructorParameters<typeof CreatorProviderError>[0],message:string,readonly temporary=false,readonly retryAfterMs=0){super(code,message);}}
-export interface CreatorRunHooks {scope?:CreatorRunScope;progress?:(run:CreatorActorRun)=>Promise<void>}
+export interface CreatorRunHooks {scope?:CreatorRunScope;progress?:(run:CreatorActorRun)=>Promise<void>; source?:"hashtag"; shouldStop?:()=>Promise<boolean>}
 /** Paid starts are never retried. Only authenticated reads may retry. */
 export class ApifyCreatorProvider implements CreatorDiscoveryProvider {
  private readonly env:Record<string,string|undefined>;private readonly token:string;private readonly timeout:number;
@@ -177,7 +177,7 @@ export class ApifyCreatorProvider implements CreatorDiscoveryProvider {
   return this.execute(input,maximum,"instagram",signal,hooks);
  }
  private async execute(input:Record<string,unknown>,maximum:number,platform:CreatorPlatform,signal?:AbortSignal,hooks:CreatorRunHooks={}){
-  const actor=actorId(this.env[`APIFY_${platform.toUpperCase()}_ACTOR_ID`]),reserve=this.reserveAmount(),conversion=Number(this.env.EXTER_AD_MEDIA_GBP_PER_USD||"0.8");
+  const actor=platform==="instagram" && hooks.source==="hashtag" ? "apify~instagram-hashtag-analytics-scraper" : actorId(this.env[`APIFY_${platform.toUpperCase()}_ACTOR_ID`]),reserve=this.reserveAmount(),conversion=Number(this.env.EXTER_AD_MEDIA_GBP_PER_USD||"0.8");
   const accounting:CreatorProviderAccounting={reservedCostGbp:null,billedCostGbp:null,requestAttempts:0,runIds:[]};
   if(signal?.aborted)throw new CreatorProviderError("cancelled","Creator discovery was cancelled before dispatch.",accounting);
   if(!this.token.trim()||!actor||reserve===null||!Number.isFinite(conversion)||conversion<=0||conversion>2)throw new CreatorProviderError("configuration","Check the provider and cost settings.",accounting);
@@ -186,6 +186,7 @@ export class ApifyCreatorProvider implements CreatorDiscoveryProvider {
   const account=()=>{if(!row)return;accounting.reservedCostGbp=row.reservedGbp;accounting.reservationId=row.reservationId;accounting.runIds=row.runId?[row.runId]:[];accounting.runStatus=row.status;accounting.billedCostUsd=row.usageUsd;accounting.billedCostGbp=row.usageUsd===null?null:Math.round(row.usageUsd*row.conversion*1e6)/1e6;};
   try{
    if(!row){
+    if(await hooks.shouldStop?.())throw new CreatorProviderError("cancelled","Search stopped before another paid lookup.");
     let hold:{reservationId:string;reservedGbp:number};try{hold=this.options.reserve?await this.options.reserve(reserve,{platform,actorId:actor}):{reservationId:await reserveProviderCost(this.pool(),"data_providers","apify",reserve),reservedGbp:reserve};if(!hold.reservationId||!Number.isFinite(hold.reservedGbp)||hold.reservedGbp<reserve)throw new Error();}catch{throw new CreatorProviderError("budget_paused","Creator research stopped at the data-provider budget.",accounting);}
     row={...hold,conversion,runId:null,datasetId:null,status:"STARTING",found:null,usageUsd:null,startedAt:(this.options.now?.()??new Date()).toISOString()};account();
     if(this.tracking())await trackCreatorReservation(this.pool(),hooks.scope??{},row,actor);
@@ -194,6 +195,13 @@ export class ApifyCreatorProvider implements CreatorDiscoveryProvider {
     row=this.state(await this.json(`/v2/acts/${actor}/runs?timeout=${platform==="instagram"?900:120}&maxItems=${maximum}&maxTotalChargeUsd=${charge}&restartOnError=false`,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(input)},signal),row);
    }else if(!row.runId)throw new CreatorProviderError("pending","The earlier paid start needs its run ID before it can continue.",accounting);
    else row=this.state(await this.read(`/v2/actor-runs/${row.runId}`,signal),row);
+   let abortSent=false;
+   const honourStop=async()=>{
+    if(!row || finalActorStatus(row.status) || abortSent || !await hooks.shouldStop?.())return;
+    try{row=this.state(await this.json(`/v2/actor-runs/${row.runId}/abort`,{method:"POST"},signal),row);abortSent=true;}
+    catch{throw new CreatorProviderError("pending","The stop is requested. Waiting for the provider to confirm it.");}
+   };
+   await honourStop();
    const window=this.options.pollWindowMs??1200000,started=Date.parse(row.startedAt),now=()=>Math.max(0,(this.options.now?.()??new Date()).getTime()-started);
    let waited=now(),polls=0;
    const waitSignal=signal?AbortSignal.any([signal,AbortSignal.timeout(Math.max(1,window-now()))]):AbortSignal.timeout(Math.max(1,window-now()));
@@ -201,6 +209,7 @@ export class ApifyCreatorProvider implements CreatorDiscoveryProvider {
    try{while(!finalActorStatus(row.status)&&Math.max(now(),waited)<window&&polls<(this.options.maxPolls??Infinity)){
     const elapsed=Math.max(now(),waited),delay=this.options.pollIntervalMs??(elapsed<60000?5000:elapsed<120000?10000:15000);
     await this.pause(Math.min(delay,window-elapsed),waitSignal);waited+=delay;polls++;
+    await honourStop();
     row=this.state(await this.read(`/v2/actor-runs/${row.runId}`,waitSignal),row);account();await this.progress(row,hooks,waitSignal);
    }}catch(e){if(!waitSignal.aborted || signal?.aborted)throw e;}
    if(finalActorStatus(row.status)&&row.usageUsd===null)try{row=this.state(await this.read(`/v2/actor-runs/${row.runId}`,signal),row);account();await this.progress(row,hooks);}catch{/* Unknown real charges retain their hold. */}
@@ -214,7 +223,7 @@ export class ApifyCreatorProvider implements CreatorDiscoveryProvider {
    error.accounting=accounting;error.partialRows=rows;throw error;
   }
  }
- async inspectActor(){return this.read(`/v2/acts/${actorId(this.env.APIFY_INSTAGRAM_ACTOR_ID)}`);}
+ async inspectActor(source?:"hashtag"){return this.read(`/v2/acts/${source==="hashtag"?"apify~instagram-hashtag-analytics-scraper":actorId(this.env.APIFY_INSTAGRAM_ACTOR_ID)}`);}
  async inspectRun(id:string){if(!this.id(id))throw new CreatorProviderError("configuration","Check the provider run ID.");return this.read(`/v2/actor-runs/${id}`);}
  async inspectInput(storeId:string){if(!this.id(storeId))throw new CreatorProviderError("configuration","The run input could not be checked.");return this.read(`/v2/key-value-stores/${storeId}/records/INPUT`);}
  async acknowledge(reservationId:string){

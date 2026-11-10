@@ -1072,3 +1072,23 @@ TypeScript, production build and secrets scan passed. Browser checks passed at
 fictional copy/media/logos, never production measurements. All live gates remain open.
 PR #34: https://github.com/beng174/Exter-AI/pull/34 (fix/media-backfill-coverage,
 base exter-test-drive). Migration and a rebuilt Docker image are required before rollout.
+
+## Creator-first discovery and public counts (10 Nov 2026)
+
+Implemented on a branch from exter-test-drive: remove category-name account search,
+discover post authors, suggest editable brief sources, retain dated public counts
+for strict follower and tier filters, reject business identities, and rescreen
+saved profiles without paid calls. The old parser discarded public counts, so
+rescreening cannot recreate them. Preserve unknowns and official provenance.
+The final Results checklist and all three 85% precision gates remain. Known
+suspicious comments/history reject; missing optional history remains unassessed.
+Stop search durably aborts the current run, saves partial results, settles real
+usage and skips later steps. Queued stops make no provider calls. An additive
+stop_requested column requires db:migrate. Fixture results are
+not live validation; no production rescreen or provider lookup has run here.
+
+Validation: npm run check, npm test (627 tests), npm run build and npm run
+secrets:check pass. The infrastructure suite passes 80 tests; all three affected
+creator database fixtures were rerun after the final qualification update. Browser
+fixtures pass at 390, 1280, 1440 and 1920 pixels, including source edits, rejected
+counts, rechecks and Stop search. No external browser/provider requests were made.

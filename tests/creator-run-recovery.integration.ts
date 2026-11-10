@@ -34,9 +34,9 @@ test("durable runs resume without a paid restart, save partial data, settle usag
   if(u.pathname.endsWith("/runs")){starts++;assert.equal(u.searchParams.get("timeout"),"900");return Response.json({data:{id:`fixture-run-${starts}`,status:"RUNNING",defaultDatasetId:`fixture-data-${starts}`}});}
   if(init?.method==="DELETE"){deletes++;return new Response(null,{status:204});}
   if(u.pathname==="/v2/acts/apify~instagram-scraper")return Response.json({data:{id:"fixture-actor"}});
-  if(u.pathname.includes("key-value-stores"))return Response.json(actorDiscoveryInput(discoverySteps(creatorBrief)[0],"GB",8));
+  if(u.pathname.includes("key-value-stores"))return Response.json(actorDiscoveryInput(discoverySteps(creatorBrief)[0],"GB",Math.ceil(creatorBrief.target/discoverySteps(creatorBrief).filter(s=>!["ads","competitor"].includes(s.kind)).length)));
   if(u.pathname.includes("actor-runs")){const id=u.pathname.split("/").at(-1)!;if(legacyRuns.has(id))return Response.json({data:legacyRuns.get(id)});statusReads++;if(temporary)return Response.json({},{status:500});return Response.json({data:{id,status:pendingOnly?"RUNNING":"TIMED-OUT",defaultDatasetId:id.replace("run","data"),usageTotalUsd:id.endsWith("1")?.125:.25}});}
-  if(u.pathname.endsWith("/items"))return Response.json([{username:"fixture_partial_one",private:false},{username:"fixture_partial_two",private:false}]);
+  if(u.pathname.endsWith("/items"))return Response.json([{ownerUsername:"fixture_partial_one",caption:"Candles",shortCode:"partialone"},{ownerUsername:"fixture_partial_two",caption:"Candles",shortCode:"partialtwo"}]);
   return Response.json({data:{itemCount:2}});
  }});
  try{
@@ -53,8 +53,8 @@ test("durable runs resume without a paid restart, save partial data, settle usag
   pendingOnly=false;await pool.query("UPDATE creator_discovery_runs SET available_at=now() WHERE id=$1",[searchId]);await workCreatorDiscoveryOnce(pool,{env,discovery:provider});
   row=(await pool.query("SELECT * FROM creator_discovery_runs WHERE id=$1",[searchId])).rows[0];assert.equal(row.step,1);assert.equal(starts,1);assert.equal(deletes,1);
   let cost=(await pool.query("SELECT * FROM cost_ledger WHERE id=$1",[hold.id])).rows[0];assert.equal(Number(cost.cost_gbp),.1);assert.equal(Number(cost.initial_reserved_gbp),.75);assert.equal(cost.status,"settled");assert.equal(cost.cost_basis,"observed");
-  assert.equal((await discoverySnapshot(pool,"recover")).creators.length,2);
-  await workCreatorDiscoveryOnce(pool,{env,discovery:provider});assert.equal(starts,2,"the next step can run after partial results are saved");
+  assert.equal((await pool.query("SELECT count(*)::int AS n FROM creator_discovery_results WHERE workspace_id='recover'")).rows[0].n,2);
+  await workCreatorDiscoveryOnce(pool,{env,discovery:provider});await workCreatorDiscoveryOnce(pool,{env,discovery:provider});assert.equal(starts,2,"the next step can run after partial results are saved");
   for(let n=0;n<2;n++){assert.equal((await call("/api/creator-discovery/reconcile",{workspaceId:"recover",searchId})).status,202);await workCreatorDiscoveryOnce(pool,{env,discovery:provider});}
   assert.equal(starts,2);assert.equal((await pool.query("SELECT count(*)::int AS n FROM cost_ledger WHERE provider='apify'")).rows[0].n,2);
   assert.equal((await call("/api/creator-discovery/reconcile",{workspaceId:"sample",searchId})).status,409);

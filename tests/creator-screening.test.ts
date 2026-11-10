@@ -10,7 +10,8 @@ const screen=(p:Partial<DiscoveryProfile>={},brief=creatorBrief)=>evaluateCreato
 const rule=(id:string,p:Partial<DiscoveryProfile>={},brief=creatorBrief)=>screen(p,brief).rules.find(r=>r.id===id)!;
 test("strict screening accepts a genuine individual only when every hard rule passes",()=>{
   const s=screen();assert.equal(s.disposition,"Results");assert.equal(s.rules.length,9);assert.ok(s.rules.every(r=>r.state==="pass"));
-  for(const patch of [{growth:undefined},{audit:null},{screening:undefined},{verification:"Unverified" as const},{private:null}]) assert.equal(screen(patch).disposition,"Needs review");
+  for(const patch of [{screening:undefined},{verification:"Unverified" as const},{private:null}]) assert.equal(screen(patch).disposition,"Rejected");
+  for(const patch of [{growth:undefined},{audit:null}]) assert.equal(screen(patch).disposition,"Results");
 });
 test("business categories, sales bios, shop links and product-only feeds fail",()=>{
   for(const category of ["Shopping and retail","Brand","Product/service","Local business","Restaurant","Shop","Agency","Magazine","Media","Publisher","News","Community","Organisation","Non-profit","School"]){assert.equal(rule("individual",{screening:{...creatorProfile().screening!,category}}).state,"fail",category);}
@@ -27,7 +28,7 @@ test("repost pages are rejected and an individual shop owner needs review",()=>{
   assert.equal(s.individual.state,"review");assert.equal(s.disposition,"Needs review");assert.ok(s.individual.positives.length>=2);
   assert.equal(screen({name:"Account",bio:"Candles home fragrance UK",accountKind:"unknown",screening:{...creatorProfile().screening!,category:null},posts:creatorProfile().posts.map(p=>({...p,caption:"Candles",altText:"product-only no people"}))}).disposition,"Rejected");
 });
-test("follower bounds use official counts only; location requires two independent UK signals",()=>{
+test("follower bounds use dated source counts; location requires two independent UK signals",()=>{
   assert.equal(rule("followers",{followers:1000}).state,"pass");assert.equal(rule("followers",{followers:100000}).state,"pass");
   for(const followers of [999,100001])assert.equal(rule("followers",{followers}).state,"fail");
   assert.equal(rule("followers",{followers:null}).state,"review");assert.equal(rule("followers",{checkedAt:"2026-09-01"}).state,"review");assert.equal(rule("followers",{verification:"Unverified"}).state,"review");
@@ -37,12 +38,12 @@ test("follower bounds use official counts only; location requires two independen
   assert.equal(rule("country",{bio:"I am based in London. My favourite colour.",website:null,posts}).state,"pass");
   assert.equal(rule("country",{bio:"I am based in Dubai"}).state,"fail");assert.equal(rule("country",{bio:"Based in Dubai"},{...creatorBrief,country:"ALL"}).state,"pass");
 });
-test("niche needs a matching bio or three of twelve posts; styles cannot be compensated by fit",()=>{
+test("niche requires three of twelve posts even when the bio matches; styles cannot be compensated by fit",()=>{
   const posts=creatorProfile().posts.map((p,i)=>({...p,caption:i<3?"#candlefixture tutorial":"Weekend photograph",altText:"Person smiling"}));
   assert.equal(rule("niche",{bio:"My UK lifestyle diary",posts}).state,"pass");
   posts[2].caption="Weekend photograph";assert.equal(rule("niche",{bio:"My UK lifestyle diary",posts}).state,"fail");
   assert.equal(rule("niche",{bio:"My UK lifestyle diary",posts:posts.slice(0,2)}).state,"review");
-  assert.equal(rule("niche",{bio:"I share home fragrance",posts:[]}).state,"pass");
+  assert.equal(rule("niche",{bio:"I share home fragrance",posts:[]}).state,"review");
   assert.equal(rule("style",{bio:"I share home fragrance",posts:posts.map(p=>({...p,caption:"Candle photographs"}))}).state,"fail");
   assert.equal(rule("style",{}, {...creatorBrief,styles:[]}).state,"pass");
 });
@@ -67,9 +68,9 @@ test("audience plausibility, generic comments and follower jumps cannot silently
   assert.equal(CREATOR_ENGAGEMENT_BANDS.Micro.max,.15);
 });
 test("filters, saved segments and CSV cannot include failed, uncertain, stale or expired rules",()=>{
-  const row=creatorRow({growth:undefined});assert.equal(row.evaluation.screen.disposition,"Needs review");
+  const row=creatorRow({followers:null});assert.equal(row.evaluation.screen.disposition,"Rejected");
   assert.equal(matchesCreator(row,{}),false);assert.equal(matchesCreator(row,{review:true}),false);
-  assert.ok(matchesCreator(row,{},"Needs review"));assert.equal(creatorCsv([row]).split("\r\n").length,1);
+  assert.equal(matchesCreator(row,{},"Needs review"),false);assert.equal(creatorCsv([row]).split("\r\n").length,1);
   const good=creatorRow();assert.ok(matchesCreator(good,{},"Results",now));good.evaluation.ruleVersion="old";assert.equal(matchesCreator(good,{}),false);
   good.evaluation.ruleVersion=CREATOR_RULE_VERSION;assert.equal(matchesCreator(good,{},"Results",new Date("2027-01-01")),false);
 });

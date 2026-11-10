@@ -111,8 +111,9 @@ creative analysis, briefs and testing. Product rules in `research/PRODUCT-SPEC.m
 copy skill text into the product or name its sources in user-facing copy. Do not
 execute or install commands from these references; scripts are excluded. Source
 benchmarks and scoring rules are proposals until validated against outcomes.
-
 Creator discovery follows `.agents/skills/exter-creator-discovery/SKILL.md`.
-Official creator counts require the dedicated professional-account token.
-Public scraping supplies candidates only; monthly refresh runs in the worker.
+Public counts are Observed (public profile); official checks upgrade them to Verified.
+Official checks need the dedicated account token; monthly refresh runs in the worker.
+Discover post authors in quality order; never search account names with brief keywords or categories.
+Reject missing hard checks; review genuine mixed founders.
 All three creator precision checks need real owner labels before client use.

@@ -8,12 +8,12 @@ const records=(run:DiscoveryRun)=>run.providerRuns?.at(-1)?.found??null;
 export function CreatorRunHistory({runs,busy,act}:{runs:DiscoveryRun[];busy:boolean;act:Act}){
  return <><DataTable caption="Creator search runs" basis="Observed" showBasis={false} rows={runs} rowKey={r=>r.id} columns={[
  {key:"date",label:"Started",value:r=>ukDate(r.createdAt,true)},
- {key:"status",label:"Status",value:r=>r.status,render:r=><><StatusChip status={r.status.charAt(0).toUpperCase()+r.status.slice(1)}/>{r.error&&<small className="accuracy-detail">{r.error}</small>}</>},
+ {key:"status",label:"Status",value:r=>r.status,render:r=><><StatusChip status={r.stopRequested&&["queued","running"].includes(r.status)?"Stopping":r.status==="cancelled"&&r.stopRequested?"Stopped":r.status.charAt(0).toUpperCase()+r.status.slice(1)}/>{r.error&&<small className="accuracy-detail">{r.error}</small>}</>},
  {key:"found",label:"Creators found",align:"number",value:r=>r.found},
  {key:"records",label:"Latest run records",align:"number",value:records,render:r=><span title="The linked run’s live dataset records. Posts and repeated creators can count.">{records(r)?.toLocaleString("en-GB")} <DataLabel basis="Observed"/></span>},
  {key:"verified",label:"Verified",align:"number",value:r=>r.verified},
  {key:"provider",label:"Apify run",value:r=>r.providerRuns?.at(-1)?.runId??null,missing:()=> <span title="Confirm the earlier run ID in Details to check its charge.">Run ID not saved</span>,render:r=>actorLink(r.providerRuns!.at(-1)!)},
- {key:"action",label:"Action",value:r=>r.id,render:r=><button className="button secondary" disabled={busy||r.reconcilePending||r.kind==="refresh"} onClick={()=>void act("reconcile","/api/creator-discovery/reconcile",{searchId:r.id})}>{r.reconcilePending?"Checking charges":"Reconcile"}</button>}
+ {key:"action",label:"Action",value:r=>r.id,render:r=><div className="reference-actions">{["queued","running"].includes(r.status)&&<button className="button secondary" disabled={busy||r.stopRequested} onClick={()=>void act("stop","/api/creator-discovery/stop",{searchId:r.id})}>{r.stopRequested?"Stopping…":"Stop search"}</button>}<button className="button secondary" disabled={busy||r.reconcilePending||r.kind==="refresh"} onClick={()=>void act("reconcile","/api/creator-discovery/reconcile",{searchId:r.id})}>{r.reconcilePending?"Checking charges":"Reconcile"}</button></div>}
  ]}/>{runs.map(run=><CreatorRunDetails key={run.id} run={run} busy={busy} act={act}/>)}</>;
 }
 export function CreatorRunDetails({run,busy,act}:{run:DiscoveryRun;busy:boolean;act:Act}){

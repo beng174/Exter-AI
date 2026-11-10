@@ -10,6 +10,38 @@ const json=(v:unknown,status=200)=>Response.json(v,{status});
 const running={id:"fixture-run",status:"RUNNING",defaultDatasetId:"fixture-data"};
 const final=(status="SUCCEEDED",usageTotalUsd:number|null=.125)=>({...running,status,usageTotalUsd});
 const base:ApifyCreatorOptions={env,reserve:async()=>({reservationId:"fixture-hold",reservedGbp:.75}),sleep:async()=>{}};
+test("an explicit stop aborts the current run, returns partial rows and settles its actual charge",async()=>{
+ let stopping=false,starts=0,aborts=0,settled=0;
+ const provider=new ApifyCreatorProvider({...base,progress:async()=>{stopping=true;},settle:async r=>{settled++;assert.equal(r.usageUsd,.125);},fetch:async(input,init)=>{
+  const u=new URL(String(input));if(u.pathname.endsWith("/runs")){starts++;return json({data:running});}
+  if(u.pathname.endsWith("/abort")){aborts++;assert.equal(init?.method,"POST");return json({data:final("ABORTED")});}
+  if(u.pathname.includes("actor-runs"))return json({data:final("ABORTED")});
+  if(u.pathname.endsWith("/items"))return json([{username:"fixture_partial"}]);return json({data:{itemCount:1}});
+ }});
+ const result=await provider.collectPublic({},20,undefined,{shouldStop:async()=>stopping});
+ assert.equal(starts,1);assert.equal(aborts,1);assert.equal(result.rows.length,1);assert.equal(settled,1);assert.equal(result.accounting.billedCostGbp,.1);
+});
+test("a queued stop cannot reserve or start another paid lookup",async()=>{
+ const provider=new ApifyCreatorProvider({...base,reserve:async()=>{throw new Error("No reserve allowed");},fetch:async()=>{throw new Error("No request allowed");}});
+ await assert.rejects(provider.collectPublic({},20,undefined,{shouldStop:async()=>true}),(e:unknown)=>e instanceof CreatorProviderError && e.code==="cancelled" && e.accounting?.requestAttempts===0);
+});
+test("an unconfirmed abort keeps the same run and hold; a later check drains it without a paid restart",async()=>{
+ const resume={reservationId:"fixture-hold",reservedGbp:.75,conversion:.8,runId:"fixture-run",datasetId:"fixture-data",status:"RUNNING",found:1,startedAt:new Date().toISOString(),usageUsd:null};
+ let starts=0;
+ const provider=new ApifyCreatorProvider({...base,resume,fetch:async input=>{const u=new URL(String(input));if(u.pathname.endsWith("/runs"))starts++;if(u.pathname.endsWith("/abort"))return json({},503);return json({data:running});}});
+ await assert.rejects(provider.collectPublic({},20,undefined,{shouldStop:async()=>true}),(e:unknown)=>e instanceof CreatorProviderError && e.code==="pending" && e.accounting?.runIds[0]==="fixture-run" && e.accounting.billedCostGbp===null);
+ const retry=new ApifyCreatorProvider({...base,resume,reserve:async()=>{throw new Error("No new reserve allowed");},fetch:async input=>{const u=new URL(String(input));if(u.pathname.endsWith("/runs"))starts++;return u.pathname.endsWith("/items")?json([{username:"fixture_partial"}]):json({data:final("ABORTED")});}});
+ const result=await retry.collectPublic({},20,undefined,{shouldStop:async()=>true});assert.equal(result.rows.length,1);assert.equal(result.accounting.billedCostGbp,.1);assert.equal(starts,0);
+});
+test("a stopped run with unknown usage cannot claim its reserve was released",async()=>{
+ let settlements=0;
+ const provider=new ApifyCreatorProvider({...base,settle:async()=>{settlements++;},fetch:async input=>new URL(String(input)).pathname.endsWith("/items")?json([{username:"fixture_partial"}]):json({data:final("ABORTED",null)})});
+ const result=await provider.collectPublic({},20,undefined,{shouldStop:async()=>false});assert.equal(result.accounting.billedCostGbp,null);assert.equal(result.rows.length,1);assert.equal(settlements,0);
+});
+test("top and recent hashtag posts use the bounded actor path with the existing reserve",async()=>{
+ let starts=0;const provider=new ApifyCreatorProvider({...base,fetch:async(input)=>{const u=new URL(String(input));if(u.pathname.endsWith("/runs")){starts++;assert.equal(u.pathname,"/v2/acts/apify~instagram-hashtag-analytics-scraper/runs");assert.equal(u.searchParams.get("maxItems"),"1");assert.equal(u.searchParams.get("maxTotalChargeUsd"),"0.93");return json({data:final()});}return json([{topPosts:[],latestPosts:[]}]);}});
+ await provider.collectPublic({hashtags:["fixture"],includeTopPosts:true,includeLatestPosts:true},1,undefined,{source:"hashtag"});assert.equal(starts,1);
+});
 test("Instagram runs can finish at fifteen minutes with 5s polling backed off to 15s and live counts",async()=>{
  let time=Date.parse("2026-11-10T12:00:00Z"),polls=0,starts=0,settled=0;const sleeps:number[]=[],counts:number[]=[];
  const provider=new ApifyCreatorProvider({...base,now:()=>new Date(time),sleep:async ms=>{sleeps.push(ms);time+=ms;},progress:async r=>{if(r.found!==null)counts.push(r.found);},settle:async r=>{settled++;assert.equal(r.usageUsd,.125);},fetch:async(input,init)=>{const u=new URL(String(input));assert.equal(new Headers(init?.headers).get("Authorization"),`Bearer ${env.APIFY_TOKEN}`);assert.ok(!u.href.includes(env.APIFY_TOKEN));if(u.pathname.endsWith("/runs")){starts++;assert.equal(u.searchParams.get("timeout"),"900");assert.equal(u.searchParams.get("maxTotalChargeUsd"),"0.93");return json({data:running});}if(u.pathname.includes("actor-runs")){polls++;return json({data:polls===70?final():running});}if(u.pathname.endsWith("/items"))return json([{username:"fixture_creator"}]);return json({data:{itemCount:polls}});}});

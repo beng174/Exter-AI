@@ -38,9 +38,9 @@ test("collaboration requires disclosure plus competitor mention; comment pattern
   assert.equal(evaluateCreator({...p,audit:null,growth:{from:"2026-10-10",to:"2026-11-10",previousFollowers:4000,followers:10000}},creatorBrief).risk.status,"Review");
   assert.equal(evaluateCreator({...p,audit:{sampledPosts:3,comments:20,repeatedFraction:.8}},creatorBrief).risk.status,"Review");
 });
-test("public projections discard scraped numbers, private contact details and unknown images",()=>{
+test("public projections keep observed counts and discard private contact details and unknown images",()=>{
   const p=discoveryProfile({username:"Fixture_Creator",followersCount:10000,postsCount:200,biography:"Creator. Personal: person@example.org +44 7700 123456. Business: work@example.org",externalUrl:"https://site.co.uk/?access_token=redacted",latestPosts:[{id:"1",url:"https://www.instagram.com/p/fixture/?token=hidden",timestamp:"2026-11-10",caption:"call +44 7700 123456",locationName:"51.5072,-0.1276",likesCount:500,commentsCount:30,displayUrl:"https://evil.example/image"}]},"2026-11-10")!;
-  assert.equal(p.followers,null);assert.equal(p.mediaCount,null);assert.equal(p.posts[0].likes,null);assert.equal(p.posts[0].thumbnail,null);assert.equal(p.posts[0].location,"");assert.equal(p.businessEmail,"work@example.org");assert.equal(p.website,"https://site.co.uk");assert.ok(!JSON.stringify(p).includes("person@example.org"));assert.ok(!JSON.stringify(p).includes("7700"));assert.ok(!JSON.stringify(p).includes("token=hidden"));
+  assert.equal(p.followers,10000);assert.equal(p.mediaCount,200);assert.equal(p.posts[0].likes,500);assert.equal(p.verification,"Observed (public profile)");assert.equal(p.checkedAt,"2026-11-10");assert.equal(p.posts[0].thumbnail,null);assert.equal(p.posts[0].location,"");assert.equal(p.businessEmail,"work@example.org");assert.equal(p.website,"https://site.co.uk");assert.ok(!JSON.stringify(p).includes("person@example.org"));assert.ok(!JSON.stringify(p).includes("7700"));assert.ok(!JSON.stringify(p).includes("token=hidden"));
   assert.equal(discoveryProfile({username:"fixture_creator",biography:"Business: fixture-secret@example.org"},"2026-11-10","fixture-secret"),null);
   assert.equal(businessEmail("personal: person@example.org"),null);assert.ok(!scrubCreatorText("14 Example Road, AA1 1AA").includes("Example Road"));
 });
@@ -51,9 +51,9 @@ test("official verification uses dedicated secret in header, latest 12 counts an
   for(const [code,status,expected] of [[190,400,"permissions"],[4,200,"rate_limited"],[100,400,"unsupported"],[1,500,"unavailable"]] as const){const v=new InstagramCreatorVerifier({env,fetch:async()=>Response.json({error:{code,message:"must never persist this",access_token:env.EXTER_INSTAGRAM_ACCESS_TOKEN}},{status})});await assert.rejects(v.verify(creatorProfile()),(e:unknown)=>e instanceof CreatorVerificationError&&e.reason===expected&&!e.message.includes("persist"));}
   await assert.rejects(new InstagramCreatorVerifier({env:{},fetch:async()=>{throw new Error("no request");}}).verify(creatorProfile()),CreatorVerificationError);
 });
-test("all five discovery channels use bounded supported inputs, and cost quote covers profile enrichment",()=>{
-  const steps=discoverySteps(creatorBrief);assert.deepEqual(steps.map(s=>s.kind),["hashtag","keyword","keyword","competitor","seed"]);
-  assert.equal(discoveryBatchCount(creatorBrief),8);assert.equal(actorDiscoveryInput(steps[0],"GB",1000).resultsLimit,100);assert.equal(actorDiscoveryInput(steps[3],"GB",1000).resultsType,"mentions");assert.equal(actorDiscoveryInput(steps[4],"GB",1000).resultsType,"details");
+test("post discovery uses top and recent sources, and the quote covers profile enrichment",()=>{
+  const steps=discoverySteps(creatorBrief);assert.deepEqual(steps.map(s=>s.kind),["partnership","ads","seed","competitor","hashtag"]);
+  assert.equal(discoveryBatchCount(creatorBrief),6);assert.deepEqual(actorDiscoveryInput(steps[4],"GB",1000),{hashtags:["candlefixture"],includeLatestPosts:true,includeTopPosts:true});assert.equal(actorDiscoveryInput(steps[0],"GB",1000).resultsType,"mentions");assert.equal(actorDiscoveryInput(steps[2],"GB",1000).resultsType,"details");
 });
 test("segments cover all requested filters, calendar refresh clamps month ends, CSV cannot execute formulae",()=>{
   const row=creatorRow();row.profile.appearsInAds=["123"];row.saved=true;

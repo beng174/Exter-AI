@@ -13,7 +13,7 @@ export function creatorImageUrl(value: unknown): string | null {
 }
 export function publicScreening(row: Record<string, any>, at: string, prior?: PublicCreatorScreening): PublicCreatorScreening {
   const hasBio=typeof row.biography==="string" || typeof row.bio==="string";
-  const bio = String(row.biography ?? row.bio ?? ""), link=row.externalUrl ?? row.website;
+  const bio = String(row.biography ?? row.bio ?? ""), link=row.externalUrl !== undefined ? row.externalUrl : row.website;
   return {version:1, category:typeof (row.businessCategoryName ?? row.categoryName ?? row.category)==="string" ? scrubCreatorText(row.businessCategoryName ?? row.categoryName ?? row.category,100) : prior?.category ?? null,
     personalAccount:typeof row.isPersonalAccount==="boolean"?row.isPersonalAccount:row.accountType==="Personal"?true:prior?.personalAccount??null,
     linkKind:link!==undefined?linkKind(link):prior?.linkKind??"unknown",
@@ -23,28 +23,54 @@ export function publicScreening(row: Record<string, any>, at: string, prior?: Pu
 }
 export function discoveryProfile(raw: unknown, at: string, secret = ""): DiscoveryProfile | null {
   if(secret && JSON.stringify(raw)?.includes(secret))return null;
-  const row = object(raw), handle = creatorHandle(row.username ?? row.ownerUsername ?? object(row.owner).username);
+  const item = object(raw), isPost=Boolean(item.ownerUsername || object(item.owner).username) && Boolean(item.shortCode || item.caption !== undefined || item.timestamp);
+  const row = isPost ? {...object(item.owner),username:item.ownerUsername ?? object(item.owner).username,fullName:item.ownerFullName ?? object(item.owner).fullName,latestPosts:[item]} : item;
+  const handle = creatorHandle(row.username);
   if (!handle) return null;
   const clean = (v: unknown, n?: number) => scrubCreatorText(typeof v === "string" && secret ? v.split(secret).join("") : v, n);
   const bio = typeof row.biography === "string" ? row.biography : typeof row.bio === "string" ? row.bio : "";
   const rawPosts: unknown[] = Array.isArray(row.latestPosts) ? row.latestPosts : Array.isArray(row.posts) ? row.posts : row.ownerUsername ? [row] : [];
   const comments: string[] = [], commentIds:string[]=[]; let commentPosts = 0;
-  const posts = rawPosts.slice(0, 12).flatMap((value): DiscoveryPost[] => {
+  const orderedPosts=[...new Map(rawPosts.map(value=>{const p=object(value);return [String(p.id??p.shortCode??p.url),value] as const;})).values()].sort((a,b)=>{const date=(v:unknown)=>{const p=object(v);return new Date(p.timestamp??p.takenAtTimestamp*1000).getTime()||0;};return date(b)-date(a);});
+  const posts = orderedPosts.slice(0, 12).flatMap((value): DiscoveryPost[] => {
     const p = object(value), url = publicCreatorUrl(p.url ?? p.permalink ?? (p.shortCode ? `https://www.instagram.com/p/${p.shortCode}/` : null), true);
     if (!url) return [];
     const sample = Array.isArray(p.latestComments) ? p.latestComments.slice(0, 20).map((c: unknown) => clean(object(c).text, 200).toLowerCase()).filter(Boolean) : [];
     if (sample.length) {commentPosts++;commentIds.push(String(p.id ?? p.shortCode ?? url).slice(0,150));} comments.push(...sample);
     const date = new Date(p.timestamp ?? p.takenAtTimestamp * 1000);
     return [{ id: String(p.id ?? p.shortCode ?? url).slice(0, 150), url, caption: clean(p.caption), at: Number.isFinite(date.getTime()) ? date.toISOString() : null,
-      likes: null, comments: null, thumbnail: creatorImageUrl(p.displayUrl ?? p.thumbnailUrl), location: coarseCreatorLocation(p.locationName ?? object(p.location).name), altText: clean(p.alt ?? p.altText ?? p.accessibilityCaption,800), personPresent:typeof p.personPresent==="boolean"?p.personPresent:null, productOnly:typeof p.productOnly==="boolean"?p.productOnly:null, paidPartnership: p.isSponsored === true || p.isPaidPartnership === true }];
+      likes: count(p.likesCount ?? p.likeCount ?? p.like_count), comments: count(p.commentsCount ?? p.commentCount ?? p.comments_count), thumbnail: creatorImageUrl(p.displayUrl ?? p.thumbnailUrl), location: coarseCreatorLocation(p.locationName ?? object(p.location).name), altText: clean(p.alt ?? p.altText ?? p.accessibilityCaption,800), personPresent:typeof p.personPresent==="boolean"?p.personPresent:null, productOnly:typeof p.productOnly==="boolean"?p.productOnly:null, paidPartnership: p.isSponsored === true || p.isPaidPartnership === true }];
   });
   const text = (bio + " " + String(row.businessCategoryName ?? "")).toLowerCase();
   const kind = /\breseller\b|we resell/.test(text) ? "reseller" : /\bmeme page\b|repost page|reposting/.test(text) ? "repost" : row.isBusinessAccount === true && /shopping|retail|product\/service|brand|shop/.test(text) ? "brand" : /\bcreator\b|\bblogger\b|\bugc\b|personal blog/.test(text) ? "creator" : "unknown";
   let website: string | null = null; try { const u = new URL(row.externalUrl ?? row.website); if (u.protocol === "https:" && !u.username && !u.password) website = u.origin; } catch { /* No saved link. */ }
+  const followers=count(row.followersCount ?? row.followers ?? row.followers_count), mediaCount=count(row.postsCount ?? row.mediaCount ?? row.media_count);
+  const observed=followers!==null || mediaCount!==null;
   return { handle, name: clean(row.fullName ?? row.name, 100) || handle, bio: clean(bio), website, businessEmail: businessEmail(bio), screening:publicScreening(row,at), private:typeof (row.private ?? row.isPrivate)==="boolean" ? (row.private ?? row.isPrivate) : null, accountKind: kind,
     posts, related: (Array.isArray(row.relatedProfiles) ? row.relatedProfiles : []).slice(0, 100).map((p: unknown) => creatorHandle(typeof p === "string" ? p : object(p).username)).filter((p: string | null): p is string => p !== null), appearsInAds: [],
     audit: comments.length ? { observedAt:at,postIds:commentIds,...commentQuality(comments),sampledPosts: commentPosts, comments: comments.length, repeatedFraction: 1 - new Set(comments).size / comments.length } : null,
-    followers: null, mediaCount: null, verification: "Unverified", verificationReason: "Official numbers have not been checked.", checkedAt: null, discoveredAt: at };
+    followers, mediaCount, verification: observed ? "Observed (public profile)" : "Unverified", verificationReason: observed ? "Public profile counts; the official check is separate." : "Public profile counts were not returned.", checkedAt: observed ? at : null, discoveredAt: at };
+}
+
+/** Extract authors, never tagged profiles. Hashtag datasets contain top and recent posts. */
+export function discoveryProfiles(rows: unknown[], at: string, secret = "", includePost?: (post: Record<string, any>) => boolean): DiscoveryProfile[] {
+  const authors = new Map<string,Record<string,any>>();
+  const visit = (raw: unknown, depth=0) => {
+    if(depth>2)return;
+    if(secret && JSON.stringify(raw)?.includes(secret))return;
+    const row=object(raw), nested=[row.topPosts,row.latestPosts,row.recentPosts].filter(Array.isArray);
+    if(!row.username && !row.ownerUsername && !object(row.owner).username && nested.length){for(const posts of nested)for(const post of posts.slice(0,100))visit(post,depth+1);return;}
+    if(includePost && !includePost(row))return;
+    const isPost=Boolean(row.ownerUsername || object(row.owner).username) && Boolean(row.shortCode || row.caption!==undefined || row.timestamp);
+    const owner=isPost ? {...object(row.owner),username:row.ownerUsername??object(row.owner).username,fullName:row.ownerFullName??object(row.owner).fullName} : row;
+    const handle=creatorHandle(owner.username);if(!handle)return;
+    const prior=authors.get(handle), posts=isPost?[row]:Array.isArray(row.latestPosts)?row.latestPosts:Array.isArray(row.posts)?row.posts:[];
+    const unique=new Map<string,any>();
+    for(const post of [...(prior?.latestPosts??[]),...posts]){const key=post.id??post.shortCode??post.url;if(key)unique.set(String(key),post);}
+    authors.set(handle,{...prior,...owner,latestPosts:[...unique.values()].sort((a,b)=>Date.parse(b.timestamp??"")-Date.parse(a.timestamp??"")).slice(0,12)});
+  };
+  for(const row of rows)visit(row);
+  return [...authors.values()].flatMap(row=>{const p=discoveryProfile(row,at,secret);return p?[p]:[];});
 }
 export class CreatorVerificationError extends Error {
   constructor(readonly reason: "configuration" | "permissions" | "rate_limited" | "unavailable" | "unsupported") {

@@ -161,20 +161,23 @@ Good fit is a six-part Estimated research checklist, not a sales prediction.
 Initial component maxima are niche 30, engagement 20, UK 20, style 10,
 authenticity 10 and seed similarity 10. Show earned points, assessed points,
 coverage and Provisional when incomplete. The skill reference defines the initial
-rules and provisional tier guides. Official numbers require Business Discovery;
-unsupported accounts remain Unverified. UK signals describe the creator's likely
+rules and provisional tier guides. Dated public-profile counts are Observed (public profile) and can drive filters,
+tiers and engagement. Business Discovery upgrades its returned fields to Verified;
+missing numbers remain Unverified. Keep source and original check time. UK signals describe the creator's likely
 base, never the followers' location. The labelled UK prediction is High confidence;
-the labelled good-fit prediction requires every strict screening rule passed, 12 officially
+the labelled good-fit prediction requires every strict screening rule passed, 12 public or officially
 counted posts, >=80 assessed points and >=70 normalised fit. This initial classifier
 needs validation; it makes no claim about commercial outcomes or fraud.
 
 ### Strict creator qualification and negative coverage
 
-Version `creator-discovery-v2-strict` separates Results, Needs review and Rejected.
+Version `creator-discovery-v3-public-people` separates Results, Needs review and Rejected.
 Results require all hard brief rules to pass; a high checklist score cannot
-compensate for unknown identity, activity, official counts, location, niche/style,
-public status, exclusions, comment quality or follower history. Missing inputs
-remain review, including genuine shop-owning creators with business cues.
+compensate for unknown identity, activity, public or verified counts, location, niche/style,
+public status, exclusions or plausible twelve-post engagement. Known suspicious
+comments or follower changes also reject. Missing required inputs
+reject as incomplete checks. Only genuine shop-owning creators whose other hard
+requirements pass remain Needs review.
 
 Individual-creator precision measures identity pass against `is_individual` owner
 labels. The CSV now uses `handle,good_fit,is_uk,is_individual,account_type,notes`.
@@ -189,3 +192,23 @@ predicted individual. Changing these rules invalidates earlier validation.
 Strict screening bands and comment/growth cutoffs are provisional assumptions
 listed in the discovery skill. They identify screening concerns, not proven fraud.
 This update changes no ad-tag, model, or recommendation-validation gate.
+
+Creator source correction, 10 Nov 2026: category names never become account
+searches. Discover authors of top/recent niche posts, competitor mentions and
+niche-matching disclosed collaborations. Brief keywords only check niche in bios and captions; they never search accounts. Business/product identities and known
+followers outside the inclusive range reject. Genuine mixed creator-founders whose other requirements pass remain review. Versioned saved-profile rescreening uses no paid requests and
+invalidates previous precision. All three 85% gates remain unchanged.
+
+Final qualification clarification: Results need at least three niche-matching
+posts among the latest twelve; matching the bio cannot substitute. Source order
+is disclosed competitor posts, collected ad identities, seed lookalikes, other
+competitor mentions and hashtags. Missing hard requirements reject; only genuine
+mixed creator-founders passing the other rules need review. These stricter rules
+remain subject to the unchanged real owner-labelled precision gates.
+
+The latest Results criteria require plausible twelve-post engagement. Missing
+historical follower checks stay Not assessed; do not invent a passed history
+check. Missing comment audits leave the Authenticity fit component unassessed.
+When those observations exist, suspicious jumps or comments still reject.
+This permits a genuinely qualified public creator on the first search, without
+pretending their historical audience was audited. The 85% client gates remain.

@@ -103,3 +103,17 @@ contact handling. Source wording/frameworks are internal provenance, not product
 | `.agents/skills/apify-ultimate-scraper/gotchas.md` | `e8b487223243428cb10f6952b800068bafc22a0f0b354387ccdfa76c85a14b7c` |
 | `.agents/skills/apify-ultimate-scraper/influencer-vetting.md` | `1398d70a85e495e8043e6bcce46a4bcedfd1570e397d87fd4c76301e6eacb8a1` |
 | `.agents/skills/apify-ultimate-scraper/social-media-analytics.md` | `0afc1e1c200e9f65b84386f760701187c468f59a6749fc0d61389cc5f14507f0` |
+
+### Owner updates, 10 Nov 2026
+
+The owner's current request overrides the earlier official-only filter decision:
+public-profile counts are Observed (public profile), used for strict follower
+ranges, tiers, post activity and median engagement. Official responses alone
+upgrade fields to Verified. Preserve source and check dates; missing counts stay
+unknown. Keywords only check niche; never use them as account-name searches.
+Discover disclosed competitor-post authors first, then collected-ad identities,
+seed lookalikes, other competitor mentions and hashtags. Three of the latest
+twelve posts must match the niche; a bio alone does not qualify. Missing hard
+checks reject; review is only for genuine mixed creator-founders. Precision gates
+and existing checklist weights do not change. Explicit Stop search authorises
+aborting that run, preserving partial results and reconciling final usage.

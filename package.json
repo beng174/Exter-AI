@@ -21,7 +21,7 @@
     "scheduler": "NODE_USE_ENV_PROXY=1 node --env-file-if-exists=.env --import tsx server/infrastructure/runtime.ts scheduler",
     "db:migrate": "node --env-file-if-exists=.env --import tsx server/infrastructure/runtime.ts migrate",
     "secrets:check": "node scripts/check-secrets.mjs",
-    "test:infrastructure": "tsx --test --test-concurrency=1 tests/infrastructure.integration.ts tests/meta-activation.integration.ts tests/meta-observation-storage.integration.ts tests/meta-recovery.integration.ts tests/ad-media.integration.ts tests/public-media.integration.ts tests/media-backfill.integration.ts tests/onboarding.integration.ts tests/creator-discovery.integration.ts tests/creator-run-recovery.integration.ts tests/kernel-*.integration.ts",
+    "test:infrastructure": "tsx --test --test-concurrency=1 tests/infrastructure.integration.ts tests/meta-activation.integration.ts tests/meta-observation-storage.integration.ts tests/meta-recovery.integration.ts tests/ad-media.integration.ts tests/public-media.integration.ts tests/media-backfill.integration.ts tests/onboarding.integration.ts tests/creator-discovery.integration.ts tests/creator-first.integration.ts tests/creator-run-recovery.integration.ts tests/kernel-*.integration.ts",
     "kernel:next": "node scripts/kernel-backlog.mjs next",
     "kernel:task": "node scripts/kernel-backlog.mjs show",
     "kernel:skills:verify": "node --import tsx --test tests/kernel-skills.test.ts",

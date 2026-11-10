@@ -5,7 +5,7 @@ import type pg from "pg";
 import { creatorHandle, evaluateCreator, nextCreatorRefresh, type CreatorBrief, type DiscoveryProfile } from "../../shared/creator-discovery.js";
 import { ApifyCreatorProvider } from "./apify.js";
 import { CreatorProviderError } from "./types.js";
-import { CreatorVerificationError, InstagramCreatorVerifier, discoveryProfile, publicCreatorUrl } from "./discovery-provider.js";
+import { CreatorVerificationError, InstagramCreatorVerifier, discoveryProfile, discoveryProfiles, publicCreatorUrl } from "./discovery-provider.js";
 import { recordCreatorRejection, actorDiscoveryInput, discoverySteps, upsertDiscoveryProfile, type DiscoveryStep } from "./discovery-store.js";
 import { claimMetaRequest, delayMetaRequests } from "../infrastructure/meta-rate.js";
 export interface CreatorJobOptions {
@@ -66,16 +66,20 @@ export async function workCreatorDiscoveryOnce(pool: pg.Pool, options: CreatorJo
   const handles = new Set<string>(Array.isArray(job.handles)?job.handles:[]);
   let status = "queued", error: string | null = null, delay = 0, nextStep = job.step, steps = job.steps as DiscoveryStep[], phase = job.phase, reserved = Number(job.reserved_gbp);
   const brief = job.brief as CreatorBrief, workspace = job.workspace_id as string;
+  const shouldStop=async()=>Boolean((await pool.query("SELECT stop_requested FROM creator_discovery_runs WHERE id=$1 AND lease_owner=$2",[job.id,owner])).rows[0]?.stop_requested);
   try {
     const currentRun=await storedCreatorRun(pool,{searchId:job.id,phase:job.phase,step:job.step});
-    if (job.dispatch_started && !currentRun?.runId) throw new CreatorProviderError("unavailable", "The previous paid lookup stopped unexpectedly. Check its charge before starting another search.");
-    if (nextStep >= steps.length) {
+    const stopping=await shouldStop();
+    if(stopping){const latest=(await pool.query("SELECT brief,brief_version FROM creator_discovery_settings WHERE workspace_id=$1",[workspace])).rows[0];if(latest){Object.assign(brief,latest.brief);job.brief_version=latest.brief_version;}}
+    if (job.dispatch_started && !currentRun?.runId && !stopping) throw new CreatorProviderError("unavailable", "The previous paid lookup stopped unexpectedly. Check its charge before starting another search.");
+    if(stopping && !currentRun?.runId){status="cancelled";error="Search stopped. Earlier results are kept.";}
+    else if (nextStep >= steps.length) {
       if (phase === "discover") {
         const enrichHandles = (await pool.query("SELECT handle FROM creator_discovery_results WHERE workspace_id=$1 AND needs_enrichment AND handle=ANY($2::text[]) ORDER BY handle", [workspace, [...handles]])).rows.map(r => r.handle as string);
         steps = []; for (let i = 0; i < enrichHandles.length; i += 20) steps.push({ kind: "enrich", value: "", handles: enrichHandles.slice(i, i + 20) });
         phase = "enrich"; nextStep = 0;
       } else if (phase === "enrich") {
-        const verifyHandles = (await pool.query("SELECT handle FROM creator_discovery_results WHERE workspace_id=$1 AND verification_due AND handle=ANY($2::text[]) ORDER BY handle", [workspace, [...handles]])).rows;
+        const verifyHandles = verifier.configured() ? (await pool.query("SELECT handle FROM creator_discovery_results WHERE workspace_id=$1 AND verification_due AND handle=ANY($2::text[]) ORDER BY handle", [workspace, [...handles]])).rows : [];
         steps = verifyHandles.map(r => ({ kind: "verify", value: r.handle })); phase = "verify"; nextStep = 0;
       } else status = "complete";
       if (!steps.length && phase === "verify") status = "complete";
@@ -92,10 +96,10 @@ export async function workCreatorDiscoveryOnce(pool: pg.Pool, options: CreatorJo
             catch (e) {
               if (!(e instanceof CreatorVerificationError)) throw e;
               if (["configuration", "permissions", "rate_limited"].includes(e.reason)) {
-                await upsertDiscoveryProfile(pool,workspace,{...prior,verification:"Unverified",verificationReason:e.message},brief,job.brief_version,true,now.toISOString());
+                await upsertDiscoveryProfile(pool,workspace,{...prior,verificationReason:e.message},brief,job.brief_version,true,now.toISOString());
                 throw e;
               }
-              profile = { ...prior, verification: "Unverified", verificationReason: e.message };
+              profile = { ...prior, verificationReason: e.message };
             }
             if (successful && options.thumbnail) profile = await options.thumbnail(workspace, profile);
             const due = nextCreatorRefresh(now.toISOString());
@@ -105,6 +109,11 @@ export async function workCreatorDiscoveryOnce(pool: pg.Pool, options: CreatorJo
           }
           nextStep++;
         }
+      } else if(step.kind==="ads" || step.kind==="competitor") {
+        const ads=step.kind==="ads"?await adCreatorHandles(pool,workspace):new Map<string,string[]>();
+        const profiles=step.kind==="ads" ? discoveryProfiles([...ads.keys()].map(username=>({username})),now.toISOString()).map(p=>({...p,appearsInAds:ads.get(p.handle)!,sources:[{kind:"collected-ad" as const,query:""}]})) : (await pool.query("SELECT profile FROM creator_discovery_results WHERE workspace_id=$1 AND profile->'sources' @> $2::jsonb ORDER BY handle LIMIT 199",[workspace,JSON.stringify([{kind:"competitor-mention",query:step.value}])])).rows.map(r=>r.profile as DiscoveryProfile);
+        for(const profile of profiles){if(!handles.has(profile.handle) && handles.size>=brief.target+brief.seeds.length)break;if(await upsertDiscoveryProfile(pool,workspace,profile,brief,job.brief_version,false,now.toISOString()))handles.add(profile.handle);}
+        nextStep++;
       } else {
         const config = discovery.researchConfiguration();
         if (!currentRun && (!config.configured || config.reserveGbp !== Number(job.per_batch_gbp) || config.conversion !== Number(job.conversion))) throw new CreatorProviderError("configuration", "Creator provider settings changed. Request a fresh cost estimate.");
@@ -113,33 +122,42 @@ export async function workCreatorDiscoveryOnce(pool: pg.Pool, options: CreatorJo
         const intent=await pool.query("UPDATE creator_discovery_runs SET dispatch_started=true,reserved_gbp=$3 WHERE id=$1 AND lease_owner=$2 AND status='running' RETURNING id", [job.id, owner, reserved+(currentRun?0:config.reserveGbp!)]);
         if(!intent.rowCount)throw new CreatorProviderError("cancelled","This search no longer holds its worker lease.");
         let result;let pending:CreatorProviderError|undefined;
-        const sourceTarget = Math.min(199, Math.max(1, Math.ceil(brief.target / Math.max(1,discoverySteps(brief).length))));
-        try { result = await discovery.collectPublic(actorDiscoveryInput(step, brief.country, sourceTarget), step.kind === "seed" || step.kind === "enrich" ? 20 : sourceTarget,controller.signal,{scope:{workspaceId:workspace,searchId:job.id,phase,step:nextStep}}); }
+        const sourceTarget = Math.min(199, Math.max(1, Math.ceil(brief.target / Math.max(1,discoverySteps(brief).filter(s=>!["ads","competitor"].includes(s.kind)).length))));
+        const hashtag = step.kind === "hashtag";
+        try { result = await discovery.collectPublic(stopping && currentRun ? {} : actorDiscoveryInput(step, brief.country, sourceTarget), stopping && currentRun ? 199 : hashtag ? 1 : step.kind === "seed" || step.kind === "enrich" ? 20 : sourceTarget,controller.signal,{scope:{workspaceId:workspace,searchId:job.id,phase,step:nextStep},shouldStop,...(hashtag?{source:"hashtag" as const}:{})}); }
         catch (e) {if(e instanceof CreatorProviderError && e.partialRows?.length){pending=e;result={rows:e.partialRows,accounting:e.accounting!};}else{if(e instanceof CreatorProviderError && !currentRun)reserved+=e.accounting?.reservedCostGbp??0;throw e;}}
         if(!currentRun)reserved += result.accounting.reservedCostGbp ?? config.reserveGbp!;
+        if(await shouldStop()){const latest=(await pool.query("SELECT brief,brief_version FROM creator_discovery_settings WHERE workspace_id=$1",[workspace])).rows[0];if(latest){Object.assign(brief,latest.brief);job.brief_version=latest.brief_version;}}
         previewDeadline=Date.now()+60000;
         let remaining = Math.max(0, brief.target + brief.seeds.length - handles.size);
-        const ads = nextStep === 0 && phase === "discover" ? await adCreatorHandles(pool, workspace) : new Map<string, string[]>();
-        const rows: unknown[] = [...[...ads.keys()].map(username => ({ username })), ...result.rows];
-        for (const raw of rows) {
-          const profile = discoveryProfile(raw, now.toISOString(), (options.env ?? process.env).APIFY_TOKEN);
-          if (!profile) continue;
-          if (ads.has(profile.handle)) profile.appearsInAds = ads.get(profile.handle)!;
+        const observedAt=currentRun?.startedAt ?? now.toISOString();
+        const postSource=hashtag || step.kind==="partnership";
+        const sourceRows=discoveryProfiles(result.rows,observedAt,(options.env ?? process.env).APIFY_TOKEN,postSource ? post=>Boolean(post.ownerUsername || post.owner?.username) : undefined);
+        const disclosed=(p:DiscoveryProfile)=>p.posts.some(post=>post.paidPartnership || /(?:^|\s)#(?:ad|gifted|sponsored)\b|paid partnership/i.test(post.caption));
+        if(step.kind==="partnership")sourceRows.sort((a,b)=>Number(disclosed(b))-Number(disclosed(a)));
+        for (const profile of sourceRows) {
+          if(["partnership","seed","hashtag"].includes(step.kind))profile.sources=[{kind:step.kind==="partnership" ? disclosed(profile)?"disclosed-competitor":"competitor-mention" : step.kind==="seed"?"seed":"hashtag",query:step.kind==="seed"?(step.handles??[]).join(","):step.value}];
           const existing = handles.has(profile.handle);
           if (!existing && remaining <= 0) continue;
-          const enriched = ["enrich", "seed", "keyword"].includes(step.kind);
+          const enriched = ["enrich", "seed"].includes(step.kind);
           const safe = { ...profile, posts: profile.posts.map(p => ({ ...p, thumbnail: null })) };
           if (await upsertDiscoveryProfile(pool, workspace, safe, brief, job.brief_version, enriched, now.toISOString())) {
+            // Reuse ordinary mentions later, after direct ad identities and seed lookalikes.
+            if(step.kind==="partnership" && !disclosed(profile))continue;
             if (!existing) {remaining--;handles.add(profile.handle);}
             if (options.thumbnail && enriched && Date.now()<=previewDeadline-45000) { const retained = await options.thumbnail(workspace, profile); await upsertDiscoveryProfile(pool,workspace,retained,brief,job.brief_version,true,now.toISOString()); }
           }
           if (step.kind === "seed") for (const handle of profile.related) {
             if (remaining <= 0) break;
-            const related = discoveryProfile({ username: handle }, now.toISOString())!;
+            const related = {...discoveryProfile({ username: handle }, now.toISOString())!,sources:[{kind:"seed" as const,query:profile.handle}]};
             if (await upsertDiscoveryProfile(pool, workspace, related, brief, job.brief_version, false, now.toISOString())&&!handles.has(handle)){remaining--;handles.add(handle);}
           }
         }
         if(pending)throw pending;
+        if(await shouldStop()){
+          if(result.accounting.billedCostGbp===null || !["SUCCEEDED","FAILED","ABORTED","TIMED-OUT"].includes(result.accounting.runStatus??""))throw new CreatorProviderError("pending","Search stopped. Waiting for its final charge.");
+          status="cancelled";error="Search stopped. Partial results and the actual charge are saved.";
+        }
         acknowledgement=result.accounting.reservationId;
         nextStep++;
       }
@@ -151,6 +169,7 @@ export async function workCreatorDiscoveryOnce(pool: pg.Pool, options: CreatorJo
     if (e instanceof CreatorVerificationError && e.reason === "rate_limited") await delayMetaRequests(pool, 3600000);
   }
   clearInterval(heartbeat);
+  if(status!=="queued" && await shouldStop())status="cancelled";
   // Fence completion; a cancellation/deletion cannot be undone by the worker.
   const committed=await pool.query(`UPDATE creator_discovery_runs SET status=$3,error=$4,step=$5,steps=$6,phase=$7,reserved_gbp=$8,dispatch_started=false,
     found=$9,handles=$11,available_at=now()+($10*interval '1 millisecond'),lease_owner=NULL,lease_until=NULL

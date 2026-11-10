@@ -242,6 +242,7 @@ ALTER TABLE creator_discovery_runs ADD COLUMN IF NOT EXISTS reconcile_note text;
 ALTER TABLE creator_discovery_runs ADD COLUMN IF NOT EXISTS reconciled_at timestamptz;
 ALTER TABLE creator_discovery_runs ADD COLUMN IF NOT EXISTS reconcile_mappings jsonb NOT NULL DEFAULT '[]';
 ALTER TABLE creator_discovery_runs ADD COLUMN IF NOT EXISTS reconcile_window_end timestamptz;
+ALTER TABLE creator_discovery_runs ADD COLUMN IF NOT EXISTS stop_requested boolean NOT NULL DEFAULT false;
 
 -- Web disk checks contain only scoped file identities and controlled availability.
 CREATE TABLE IF NOT EXISTS ad_media_file_checks (

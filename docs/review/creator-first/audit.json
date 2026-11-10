@@ -1,0 +1,41 @@
+{
+  "checks": [
+    {
+      "width": 1280,
+      "noOverflow": true,
+      "observedCounts": true,
+      "strictResults": true,
+      "stopVisible": true
+    },
+    {
+      "width": 1440,
+      "noOverflow": true,
+      "observedCounts": true,
+      "strictResults": true,
+      "stopVisible": true
+    },
+    {
+      "width": 1920,
+      "noOverflow": true,
+      "observedCounts": true,
+      "strictResults": true,
+      "stopVisible": true
+    },
+    {
+      "width": 390,
+      "noOverflow": true,
+      "observedCounts": true,
+      "strictResults": true,
+      "stopVisible": true
+    }
+  ],
+  "actions": [
+    "stop",
+    "rescreen",
+    "quote"
+  ],
+  "externalRequests": [],
+  "pageErrors": [],
+  "providerCalls": 0,
+  "note": "Fixtures only. No production rescreen or client-accuracy validation."
+}
