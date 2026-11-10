@@ -11,6 +11,9 @@ import { accuracyScope, featuresFixture, ownedFixture } from "./fixtures/accurac
 import type { RecommendationTest, TestThresholds } from "../shared/recommendation-tests.js";
 import type { AccuracyWorkspace } from "../shared/accuracy-workspace.js";
 import { evaluateLikelihoodFile } from "../scripts/evaluate-likelihood.js";
+import { enrichLikelihood } from "../server/accuracy/predictions.js";
+import { browserCreative } from "./fixtures/creative-browser.js";
+import { ownedMetrics } from "../shared/owned-metrics.js";
 
 async function fixture() {
  const db=openDatabase(":memory:",false);for(const id of ["willow","other"])db.prepare("INSERT INTO brands VALUES(?,?)").run(id,JSON.stringify({id,name:"Willow Candle Studio",domain:"willow.example",mode:"imported"}));
@@ -19,6 +22,7 @@ async function fixture() {
  const pool={query:async(sql:string,params:unknown[])=>{queries++;assert.equal(params[0]==="willow"||params[0]==="account-db",true,"all reads are scoped");
    if(sql.includes("DISTINCT ad_id"))return {rows:(params[1] as string[]).filter(id=>["variant","control"].includes(id)).map(ad_id=>({ad_id}))};
    if(sql.includes("FROM owned_accounts")&&!sql.includes("JOIN"))return {rows:[{id:"account-db",...accuracyScope}]};
+   if(sql.startsWith("SELECT 1 FROM owned_ad_days"))return {rows:[{}],rowCount:["variant","control"].includes(String(params[1]))?1:0};
    if(sql.includes("FROM owned_ad_days"))return {rows:days.filter(d=>d.day>=String(params[2])&&d.day<=String(params[3])).map(data=>({data}))};
    if(sql.includes("FROM ad_observations"))return {rows:[]};throw new Error("Unexpected fixture query");
  }} as unknown as pg.Pool;
@@ -68,5 +72,18 @@ test("AC-06 offline evaluator produces actual model predictions and fixture impo
   const estimate=await f.call("/api/accuracy/estimate",{workspaceId:"willow",features:featuresFixture()});assert.equal(estimate.value.neighbourCount,1);assert.equal(estimate.value.reportEligible,false);
   assert.equal((await f.call("/api/accuracy/models",{...artifact,evaluation:{...artifact.evaluation,status:"Live"}})).status,400);
   const other=await f.call("/api/accuracy/estimate",{workspaceId:"other",features:featuresFixture()});assert.equal(other.value.neighbourCount,0);
+ }finally{await f.close();}
+});
+test("AC-06 synced owned estimates require their actual account and product group, then invalidate after regrouping",async()=>{
+ const f=await fixture();try{
+  const cohort=JSON.stringify(["Meta","11","GBP","7d_click","purchase","candle-200g"]),features=featuresFixture({adId:"owned:willow:Meta:11:variant",target:"owned-benchmark",accountCohort:cohort});
+  assert.equal((await f.call("/api/accuracy/score-ads",{workspaceId:"willow",features:[features]})).status,422);
+  await f.call("/api/accuracy/ad-scopes",{workspaceId:"willow",scope:accuracyScope,adIds:["variant"]});
+  const response=await f.call("/api/accuracy/score-ads",{workspaceId:"willow",features:[features]});assert.equal(response.status,200,JSON.stringify(response.value));assert.equal(response.value[0].estimate.target,"owned-benchmark");
+  const metrics=ownedMetrics([ownedFixture()]),row=browserCreative({adId:features.adId,nativeId:"variant",brandId:"willow",owned:true,workspaceBrand:true,mediaKind:"unknown",performance:[{id:"own",accountId:"11",platform:"Meta",currency:"GBP",attribution:"7d_click",conversionEvent:"purchase",from:"2026-11-11",to:"2026-11-17",lastChecked:null,benchmarkSampleSize:1,metrics,benchmark:metrics}]});
+  assert.equal(enrichLikelihood(f.db,"willow",[row],"2026-11-10T00:00:00Z")[0].likelihood?.target,"owned-benchmark");
+  await f.call("/api/accuracy/ad-scopes",{workspaceId:"willow",scope:{...accuracyScope,product:"gift-set-200"},adIds:["variant"]});
+  assert.equal(enrichLikelihood(f.db,"willow",[row],"2026-11-10T00:00:00Z")[0].likelihood,undefined);
+  const wrong={...features,accountCohort:JSON.stringify(["Meta","11","GBP","7d_click","purchase"])};assert.equal((await f.call("/api/accuracy/estimate",{workspaceId:"willow",features:wrong})).status,400);
  }finally{await f.close();}
 });

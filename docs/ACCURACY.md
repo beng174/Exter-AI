@@ -60,7 +60,11 @@ Reference entries are `{features,outcome,resolvedAt}`; holdout entries add
 `baseline` (the predeclared simple baseline's probability). `outcome` is 0 or 1,
 not a reach-derived sales claim. `features` follows `LikelihoodFeatures` in
 shared/likelihood.ts and the strict schema in server/accuracy/schemas.ts. Use
-ISO UTC timestamps and one target/category/format/owned cohort per file. All
+ISO UTC timestamps and one target/category/format/owned cohort per file.
+Owned `accountCohort` is JSON text containing exactly `[platform, accountId,
+currency, attribution, conversionEvent, productOrPriceTier]`. Confirm the owned
+ad group first; saved owned IDs use `owned:<workspace>:<platform>:<account>:<ad>`.
+Public features use a null owned cohort. Unknown product groups cannot validate. All
 reference outcomes resolve before the untouched holdout starts. Group creative
 families before splitting; holdout families must not occur in reference data.
 

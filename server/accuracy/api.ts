@@ -17,7 +17,7 @@ import { featuresSchema, launchSchema, modelSchema, overrideSchema, scopeSchema 
 interface AccuracyOptions {getPool?:()=>pg.Pool|null;now?:()=>Date}
 interface Override {key:string;scope:TestScope;values:ThresholdOverride;version:string}
 class AccuracyInputError extends Error {}
-const scopeKey=(s:TestScope)=>JSON.stringify(s);
+const scopeKey=(s:TestScope)=>JSON.stringify([s.accountId,s.platform,s.currency,s.attribution,s.conversionEvent,s.category,s.format,s.product]);
 export function attachAccuracy(app:Express,db:DatabaseSync,options:AccuracyOptions={}) {
   ensureAccuracy(db);app.use("/api/accuracy",protectSettingsMutation);
   const now=()=>options.now?.()||new Date(),pool=()=>options.getPool?options.getPool():process.env.DATABASE_URL?infrastructureDatabase():null;
@@ -99,6 +99,16 @@ export function attachAccuracy(app:Express,db:DatabaseSync,options:AccuracyOptio
     const model=readModel(db,id,likelihoodCohort(features[0])),output=[];
     for(const f of features){
       let exists=Boolean(db.prepare("SELECT id FROM ads WHERE id=? AND brand_id=? AND source!='sample'").get(f.adId,id));
+      if(f.target==="owned-benchmark"){
+        const c=JSON.parse(f.accountCohort!),[platform,accountId,currency,attribution,conversionEvent,product]=c;
+        const prefix=`owned:${id}:${platform}:${accountId}:`,adId=f.adId.startsWith(prefix)?f.adId.slice(prefix.length):null;
+        const scope={platform,accountId,currency,attribution,conversionEvent,product,category:f.category,format:f.format} as TestScope;
+        const mapping=latestRecords<{adId:string;scope:TestScope}>(db,id,"ad-scope",100000).find(m=>m.adId===adId&&scopeKey(m.scope)===scopeKey(scope));
+        if(!adId||!mapping||f.advertiserId!==id)throw new AccuracyInputError("Owned estimates need a confirmed product, format and account group.");
+        const account=(await accounts(id)).find(a=>a.platform===platform&&a.accountId===accountId&&a.currency===currency&&a.attribution===attribution&&a.conversionEvent===conversionEvent),p=pool();
+        exists=Boolean(account&&p&&(await p.query("SELECT 1 FROM owned_ad_days WHERE owned_account_id=$1 AND ad_id=$2 LIMIT 1",[account.id,adId])).rowCount);
+      }
+
       const native=/^public:Meta:(\d+)$/.exec(f.adId)?.[1];
       if(!exists&&native){const p=pool();exists=Boolean(p&&(await p.query("SELECT 1 FROM ad_observations WHERE workspace_id=$1 AND platform='Meta' AND native_id=$2 LIMIT 1",[id,native])).rowCount);}
       if(!exists)throw new AccuracyInputError("Every scored ad must belong to this workspace. Use draft scoring for drafts.");
