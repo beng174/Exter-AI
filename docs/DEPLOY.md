@@ -1067,3 +1067,55 @@ sync starts here. Models remain unvalidated until an audited real outcome run
 passes every gate. Fixtures are not live verification. See
 [accuracy operations](ACCURACY.md) for offline evaluation, analysed draft files,
 scoped threshold overrides and immutable recommendation results.
+
+## Database startup deadlines and migration receipts
+
+A build can succeed while the process never binds its port. The 10 Nov 2026 log
+for commit 6db19f5 ended after credential-presence messages, before the listener.
+The old database connection, migration lock and schema queries had no deadline.
+Those logs alone cannot identify which wait blocked, or prove a live database
+lock. Render's later SIGTERM was cleanup after the deployment timeout.
+
+Startup now logs trusted phase names: read_schema, connect, begin, check_receipt,
+advisory_lock, public_schema, kernel_schema, owned_schema, record_receipt and
+commit. Local database, route construction, recovery and listening phases follow.
+Only controlled failure codes and five-character SQLSTATE codes are logged;
+connection strings, credentials, SQL and database message text stay out of logs.
+
+- Connection/pool acquisition has a 10-second timeout. Startup tries an unavailable
+  connection at most twice, normally failing in roughly 21 seconds.
+- Database lock waits have a five-second limit and individual SQL statements a
+  60-second limit. The entire startup migration/retry sequence has a 90-second
+  deadline. Transient lock/deadlock failures retry only within that deadline.
+- Failed migrations discard their own connection, rolling back its transaction
+  and cancelling outstanding work. They do not terminate other database sessions.
+- Successful migrations record the SHA-256 of the three schema files in the
+  additive exter_schema_migrations table, inside the same transaction. An unchanged
+  web/worker/scheduler startup reads its receipt and skips repeated ALTER/index
+  work. Concurrent migrators recheck after obtaining the existing advisory lock.
+- Explicit npm run db:migrate still replays the SQL, including safe historical
+  data repairs. It records its receipt only after successful commit. Receipts
+  and original application records are preserved.
+
+After merging this repair into exter-test-drive, use Render > exter-ai > Manual
+Deploy > Deploy latest commit. Watch for Database initialisation complete, then
+Exter AI available on port. Wait for Live and check /api/health with the existing
+Basic Auth login. Then deploy the same revision on exter-worker and exter-scheduler. Keep the
+scheduler's normal 03:00 UK schedule; a manual job run is not needed for rollout. No new environment settings,
+port, plan, provider switch, budget or health-check configuration is needed.
+Keep the current persistent disk and PostgreSQL database.
+
+If it still fails, use its controlled phase/code: database_unavailable at connect
+means check database availability and the saved connection configuration;
+migration_lock_timeout identifies database contention; migration_statement_timeout
+identifies an overlong schema statement. SQLSTATE 42501 means permissions.
+Inspect the database's active transactions/locks before any manual intervention;
+never delete records or indiscriminately terminate sessions. A current unauthenticated
+401 confirms the web listener/auth gate responds, not that authenticated data
+checks passed. Do not increase port-scan timeouts to hide an unfinished migration.
+
+Fixture evidence: the actual production entrypoint with a deliberately stalled
+local database handshake exits with a controlled error after two attempts. Local
+PostgreSQL fixtures verify cache hits under held relation/advisory locks, failed
+DDL rollback, transient lock recovery, preserved ads/budgets and explicit repair
+replay. Fixtures are not a diagnosis or verification of the live database.

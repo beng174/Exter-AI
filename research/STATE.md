@@ -932,3 +932,31 @@ and blockers below remain unchanged.
   and npm run secrets:check passed on latest exter-test-drive plus this feature.
   Fixture browser checks passed at four widths. PR #26 targets exter-test-drive:
   https://github.com/beng174/Exter-AI/pull/26. No real model is validated.
+
+## Deployment startup repair (10 Nov 2026)
+
+- Supplied build logs for 6db19f5 show successful check/build followed by no open
+  port, then deployment timeout/SIGTERM. The first possible wait after the last
+  log was Postgres initialisation, which had no connection/lock/query deadline.
+  The logs cannot distinguish a connection stall from lock contention or later
+  local initialisation; new trusted phase logs identify each step.
+- Added bounded connection attempts and a total migration deadline, controlled
+  failure codes, safe connection disposal/rollback and atomic schema receipts.
+  Unchanged web/worker/scheduler starts skip locking DDL. Explicit migrations
+  retain safe backfill/repair semantics. All original rows and media stay intact.
+- Reproduced the actual entrypoint against a stalled local database handshake
+  and used disposable local Postgres for lock/cache/rollback tests. No live
+  database access, provider calls, plan/switch/budget changes or new dependencies.
+  A public unauthenticated health probe returned 401, confirming a listener/auth
+  response only. No authenticated live health or database state was verified.
+- Kernel work remains paused; both owned-account live gates remain open. Accuracy
+  and prediction gates retain PR #26's status. Deployment and operator diagnostics
+  are documented in docs/DEPLOY.md and the bounded-startup ExecPlan.
+
+- Validation for the startup repair: npm run check, npm test (549 passed),
+  npm run build and the disposable Postgres integration passed. The build keeps
+  its existing bundle-size warning; no UI or dependency changes were needed.
+
+- Secret scan passed after staging every repair file. PR #27 targets
+  exter-test-drive: https://github.com/beng174/Exter-AI/pull/27. The PR preserves
+  the current port/auth gate and records exact web/worker/scheduler rollout steps.
