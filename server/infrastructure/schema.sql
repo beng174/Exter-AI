@@ -57,7 +57,7 @@ ALTER TABLE watchlists ADD COLUMN IF NOT EXISTS brand_key text;
 ALTER TABLE watchlists ADD COLUMN IF NOT EXISTS purpose text NOT NULL DEFAULT 'brand' CHECK(purpose IN ('brand','discovery'));
 ALTER TABLE watchlists ADD COLUMN IF NOT EXISTS revision integer NOT NULL DEFAULT 1;
 DROP INDEX IF EXISTS watchlists_workspace;
-CREATE UNIQUE INDEX IF NOT EXISTS watchlists_workspace_brand ON watchlists(workspace_id,brand_key) WHERE brand_key IS NOT NULL;
+-- The per-brand/Page index below permits multiple relevant Pages for one brand.
 CREATE UNIQUE INDEX IF NOT EXISTS watchlists_workspace_page ON watchlists(workspace_id,(page_ids->>0)) WHERE purpose='brand' AND enabled AND brand_key IS NOT NULL AND jsonb_array_length(page_ids)=1;
 CREATE TABLE IF NOT EXISTS meta_request_gate(id integer PRIMARY KEY CHECK(id=1),next_request_at timestamptz NOT NULL DEFAULT now());
 INSERT INTO meta_request_gate(id) VALUES(1) ON CONFLICT DO NOTHING;
@@ -253,3 +253,36 @@ ALTER TABLE ad_media_requests DROP CONSTRAINT IF EXISTS ad_media_requests_outcom
 ALTER TABLE ad_media_requests ADD CONSTRAINT ad_media_requests_outcome_check CHECK(outcome IN ('requested','not_returned','expired','unsupported','wrong_page','stored','disk','provider','no_media'));
 
 ALTER TABLE public_category_batches ADD COLUMN IF NOT EXISTS max_cost_gbp numeric CHECK(max_cost_gbp>=0);
+
+-- Automatic onboarding: bounded public text, verified identity metadata and cost holds.
+CREATE TABLE IF NOT EXISTS brand_onboarding_runs (
+ id text PRIMARY KEY,workspace_id text NOT NULL,kind text NOT NULL CHECK(kind IN ('initial','monthly')),
+ status text NOT NULL DEFAULT 'queued',phase text NOT NULL DEFAULT 'website',data jsonb NOT NULL DEFAULT '{}',
+ error_kind text,available_at timestamptz NOT NULL DEFAULT now(),lease_owner text,lease_until timestamptz,
+ created_at timestamptz NOT NULL DEFAULT now(),updated_at timestamptz NOT NULL DEFAULT now(),finished_at timestamptz
+);
+CREATE INDEX IF NOT EXISTS brand_onboarding_queue ON brand_onboarding_runs(available_at) WHERE status IN ('queued','running');
+CREATE TABLE IF NOT EXISTS brand_onboarding_steps (
+ run_id text NOT NULL REFERENCES brand_onboarding_runs,key text NOT NULL,status text NOT NULL DEFAULT 'queued',data jsonb NOT NULL DEFAULT '{}',
+ estimate_gbp numeric,reservation_id text REFERENCES cost_ledger,provider_name text,error_kind text,
+ created_at timestamptz NOT NULL DEFAULT now(),updated_at timestamptz NOT NULL DEFAULT now(),PRIMARY KEY(run_id,key)
+);
+CREATE TABLE IF NOT EXISTS brand_onboarding_profiles (
+ workspace_id text PRIMARY KEY,profile jsonb NOT NULL,pages jsonb NOT NULL,price_range jsonb,
+ next_review_at timestamptz NOT NULL,updated_at timestamptz NOT NULL DEFAULT now()
+);
+CREATE TABLE IF NOT EXISTS brand_onboarding_choices (
+ workspace_id text NOT NULL,domain text NOT NULL,action text NOT NULL CHECK(action IN ('added','removed')),
+ updated_at timestamptz NOT NULL DEFAULT now(),PRIMARY KEY(workspace_id,domain)
+);
+CREATE TABLE IF NOT EXISTS workspace_category_vocabularies (
+ workspace_id text PRIMARY KEY,categories jsonb NOT NULL,updated_at timestamptz NOT NULL DEFAULT now()
+);
+ALTER TABLE watchlists ADD COLUMN IF NOT EXISTS managed_by text NOT NULL DEFAULT 'manual';
+DROP INDEX IF EXISTS watchlists_workspace_brand;
+DROP INDEX IF EXISTS watchlists_workspace_brand_page;
+CREATE UNIQUE INDEX watchlists_workspace_brand_page ON watchlists(workspace_id,brand_key,(page_ids->>0)) WHERE brand_key IS NOT NULL AND jsonb_array_length(page_ids)>0;
+
+ALTER TABLE public_category_batches ADD COLUMN IF NOT EXISTS vocabulary jsonb NOT NULL DEFAULT '[]';
+
+ALTER TABLE public_category_batches ADD COLUMN IF NOT EXISTS estimate_gbp numeric CHECK(estimate_gbp>=0);

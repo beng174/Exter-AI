@@ -18,6 +18,8 @@ export interface BrandResearchFact {
   kind: "observed" | "brand_claim";
 }
 export interface BrandResearch {
+  understanding?:import("./onboarding/types").BrandUnderstanding;
+  priceRange?:import("./onboarding/types").CompetitorChoice["priceRange"];
   brandId: string;
   brandName: string;
   domain: string;

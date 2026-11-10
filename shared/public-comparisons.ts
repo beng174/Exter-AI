@@ -6,7 +6,7 @@ export const AD_FORMATS=["video","static_image","carousel","catalogue"] as const
 export type AdFormat=typeof AD_FORMATS[number];
 export const formatName=(format:AdFormat)=>({video:"Video",static_image:"Static image",carousel:"Carousel",catalogue:"Catalogue"})[format];
 export function primaryCategories(brand:Pick<Brand,"primaryCategories"|"category"|"domain">):ProductCategory[]{
- if(brand.primaryCategories)return brand.primaryCategories.filter((v):v is ProductCategory=>PRODUCT_CATEGORIES.includes(v as ProductCategory));
+ if(brand.primaryCategories)return brand.primaryCategories.filter((v)=>typeof v==="string"&&v.length>=3&&v.length<=80) as ProductCategory[];
  if((brand.domain||"").replace(/^www\./,"").toLowerCase()==="valentte.com")return ["home fragrance","candles"];
  return ({"Home fragrance & gifting":["home fragrance","candles"],Fashion:["fashion"],"Beauty & skincare":["beauty and skincare"],Wellness:["wellness"],"Food & beverage":["food and drink"]} as Record<string,ProductCategory[]>)[brand.category]||[];
 }

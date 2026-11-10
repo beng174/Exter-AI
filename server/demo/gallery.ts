@@ -170,7 +170,7 @@ export class CreativeGalleryService {
     const transcript = result?.kind === "video" ? (result.value as VideoAnalysisResult).fields.spokenTranscript || [] : [];
     const partner = ad.brandedContentPartner;
     return {
-      adId: ad.id, nativeId: ad.providerAdId || ad.id, brandId: ad.brandId, brandName: ad.brand,
+      advertiserPageId:ad.advertiserPageId,adId: ad.id, nativeId: ad.providerAdId || ad.id, brandId: ad.brandId, brandName: ad.brand,
       adFormat:sourceAdFormat({mediaType:ad.mediaType||ad.format}),
       title: ad.title, copy: ad.copy || "", copyTruncated:ad.copyTruncated===true, sourceUrl: sourceUrl(ad), mediaKind: kind,
       durationSeconds: media?.kind === "video" ? media.video.durationSeconds : result?.kind === "video" ? (result.value as VideoAnalysisResult).coverage?.durationSeconds ?? null : null,

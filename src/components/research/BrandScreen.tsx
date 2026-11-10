@@ -1,3 +1,4 @@
+import {OnboardingProgress} from "../onboarding/OnboardingProgress";
 import {PrimaryCategories} from "./PrimaryCategories";
 import {navigateHref} from "../../navigation";
 import {MetaWatchlistEditor} from "./MetaWatchlistEditor";
@@ -15,16 +16,17 @@ export function BrandScreen({data,selection,refresh}:ScreenProps) {
   const profile=data.research,brand=data.brand,competitors=brandSnapshots(data.library,data.window,selection.platform).slice(1);
   const dataSources=`/?view=data&brandId=${encodeURIComponent(data.library.brand.id)}`;
   const refreshResearch=async()=>{setBusy(true);setError("");try{await api("/api/brand-research",{brandId:data.library.brand.id});refresh();}catch{setError("Research did not finish. Earlier evidence is preserved.");}finally{setBusy(false);}};
-  const field=(label:string,value:string|undefined)=><div key={label}><dt>{label}</dt><dd>{value||<Unavailable compact reason={`${label} has not been saved for this brand.`}/>}</dd></div>;
-  const positioning=profile?.analysis?[['Key message',profile.analysis.keyMessage],['Topic',profile.analysis.topic],['Observed relevance',profile.analysis.observedRelevance],['Observed tension',profile.analysis.observedTension]].filter(([,value])=>Boolean(value)):[];
+  const field=(label:string,value:string|undefined,basis?:"Observed"|"Modelled")=><div key={label}><dt>{label}{basis&&<> <DataLabel basis={basis}/></>}</dt><dd>{value||<Unavailable compact reason={`${label} has not been saved for this brand.`}/>}</dd></div>;
+  const positioning=profile?.understanding?[["Products",profile.understanding.categories.join(", ")],["Audience",profile.understanding.audience],["Key claims",profile.understanding.claims.map(claim=>claim.text).join(". ")]].filter(([,value])=>Boolean(value)):profile?.analysis?[['Key message',profile.analysis.keyMessage],['Topic',profile.analysis.topic],['Observed relevance',profile.analysis.observedRelevance],['Observed tension',profile.analysis.observedTension]].filter(([,value])=>Boolean(value)):[];
   return <>
+    <OnboardingProgress workspaceId={data.library.brand.id}/>
     {error&&<p role="alert">{error}</p>}
     <div className="research-brand-columns">
       <SectionCard title={data.library.brand.name} actions={<SafeLink href={data.library.brand.domain?`https://${data.library.brand.domain}`:null}>Website</SafeLink>}>
-        <dl className="research-profile">{field("Category",brand?.category)}{field("Country",(brand as typeof brand&{country?:string})?.country)}{field("Type",(brand as typeof brand&{role?:string})?.role?plainEnum((brand as typeof brand&{role:string}).role):undefined)}{field("Website",data.library.brand.domain)}</dl>
+        <dl className="research-profile">{field("Category",brand?.category,brand?.primaryCategoriesSource==="onboarding"?"Modelled":undefined)}{profile?.understanding?field("UK presence",profile.understanding.ukPresence==="yes"?"UK presence found":profile.understanding.ukPresence==="no"?"No UK presence found":"Needs checking","Modelled"):field("Country",(brand as typeof brand&{country?:string})?.country)}{field("Type",(brand as typeof brand&{role?:string})?.role?plainEnum((brand as typeof brand&{role:string}).role):undefined)}{field("Website",data.library.brand.domain)}{profile?.understanding?.audience&&field("Audience",profile.understanding.audience,"Modelled")}{profile?.priceRange&&field("Product prices",`£${profile.priceRange.min.toFixed(2)} to £${profile.priceRange.max.toFixed(2)}`,"Observed")}</dl>
         <PrimaryCategories library={data.library} sample={Boolean(data.library.presentation)} onSaved={refresh}/><BrandLogoSettings names={[data.library.brand.name,...data.library.competitors.map(b=>b.name)]}/><h3>Watchlist</h3>
         {data.watchlists===null?<Unavailable reason="Saved watchlist settings could not be read." href={dataSources} linkLabel="Review data sources"/>:data.watchlists.length?<ul className="research-plain-list">{data.watchlists.map(list=><li key={list.id}><strong>{list.page_ids.length?"Advertiser pages":"Category search"}</strong><p>{list.page_ids.join(", ")||list.search_terms.join(", ")} · {list.countries.join(", ")}</p></li>)}</ul>:<p className="research-note">No watchlist has been saved.</p>}
-        <h3>Category keywords</h3><div className="research-tags">{data.watchlists?.flatMap(item=>item.search_terms).map(term=><span key={term}>{term}</span>)}{!data.watchlists?.some(item=>item.search_terms.length)&&<Unavailable compact reason="No category keywords have been saved."/>}</div>
+        <h3>Category keywords</h3><div className="research-tags">{(data.watchlists?.some(item=>item.search_terms.length)?data.watchlists.flatMap(item=>item.search_terms):data.brand?.discoveryKeywords||[]).map(term=><span key={term}>{term}</span>)}{!data.watchlists?.some(item=>item.search_terms.length)&&!data.brand?.discoveryKeywords?.length&&<Unavailable compact reason="No category keywords have been saved."/>}</div>
         <button className="button secondary" onClick={()=>setEditing(value=>!value)} disabled={data.watchlists===null}>{editing?"Cancel":"Edit watchlist and keywords"}</button>
         <a className="research-inline-action" href={`/?view=settings&brandId=${encodeURIComponent(data.library.brand.id)}#demo-collection`}>Add or collect configured competitors</a>
         {editing&&<MetaWatchlistEditor data={data} onSaved={refresh}/>}

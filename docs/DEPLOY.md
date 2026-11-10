@@ -1315,3 +1315,63 @@ still need ten matching ads on at least one side. Reach and dates are unchanged.
 The owner cancelled production verification of the three historical ads. After
 deploy, check their brand/start dates in Ads without media and report the reasons.
 Fixtures do not verify those ads or guarantee that archived previews still exist.
+
+## Automatic brand onboarding (BO-01 to BO-07, 10 Nov 2026)
+
+This change builds on PR #32. Merge that media/Winners fix before this PR; both
+PRs target exter-test-drive. Nothing is deployed by these instructions alone.
+
+1. Deploy the same commit to exter-ai and exter-worker after running
+   `npm run db:migrate` once against the existing Postgres database. Then deploy
+   exter-scheduler at that commit. The new onboarding/profile/vocabulary tables
+   preserve observations, files, paid analyses and costs. Replacing the unique
+   brand-watchlist index allows one watchlist per brand/Page. Each Page keeps its
+   own cursor, failures, daily slot and media batches. No rows are deleted.
+2. Keep existing budgets, model settings, Render plans and switches. The web
+   service needs META_ACCESS_TOKEN, GEMINI_API_KEY, APIFY_TOKEN,
+   GEMINI_REQUEST_RESERVE_GBP and EXTER_AD_MEDIA_GBP_PER_USD in secure settings.
+   The worker needs the existing collection/media/tagging keys and the same GBP
+   ceiling/reserve settings. Tokens stay only in Render secrets.
+3. Web and worker need the same EXTER_AD_MEDIA_BROKER_TOKEN. Set the worker's
+   EXTER_AD_MEDIA_BROKER_ORIGIN to the web service's HTTPS origin. These are the
+   existing media broker settings; onboarding reuses that machine authentication
+   without depending on the media switch. Workers never open the web SQLite
+   database or media disk. The scheduler needs DATABASE_URL and its existing
+   collection switches; monthly reviews also refill from the configured worker.
+4. Existing EXTER_META_LIBRARY_ENABLED and EXTER_AD_MEDIA_ENABLED still govern
+   official collection and media downloads respectively. They are not changed or
+   enabled by onboarding. Disabled or budget-blocked stages appear paused.
+5. Add a brand using only its name and public website. Brand research and Data
+   sources show its checklist, counts, estimates, held amounts and known costs.
+   Website and competitor understanding use the existing asynchronous
+   gemini-2.5-flash-lite inline batch method. Competitor sites share one batch,
+   rather than waiting for separate batches in sequence. Completion can take up
+   to 24 hours. Known token usage settles the conservative GBP estimate; unknown
+   charges and ambiguous starts keep their holds and cannot automatically restart.
+6. Pages search may require additional Meta permissions. Its permission/schema
+   refusal falls back to Ad Library domain evidence. Discovery uses UK active
+   ads; brand identity search uses UK ALL ads. Every request, including Page
+   pictures, shares the existing Meta pacing and provider-budget guard. Large
+   discovery pages resume the same cursor at 50, 25, then 10 results after the
+   initial 100. No token, provider paging URL or error-message body is stored.
+7. Domain-backed high-confidence Pages are confirmed automatically. Ambiguous
+   matches stay in Needs one click. Every relevant Page found gets a separate
+   watchlist. A no-ad brand still gets competitor research and a no-UK-ads note.
+   Searches are bounded: at most ten keyword searches, three pages each, eight
+   suggested-brand lookups and 24 candidate websites. Counts mean ads found in
+   those searches, not an exhaustive market total. Never pad a short list with
+   weak matches, retailers or resellers without a relevant own-brand range.
+8. Specific product categories become My categories and the shared tagging
+   vocabulary. Manual category/keyword/Page choices win, including an empty
+   category list. Vocabulary changes invalidate old tag matches without deleting
+   them. Existing source facts and paid website analyses are preserved; replacing
+   current website research archives its previous full record in web SQLite.
+9. Remove or swap competitors from the checklist; removed domains remain
+   suppressed. Manual Edit watchlist supports several Pages and overrides setup.
+   Monthly reviews suggest new verified brands without silently replacing the
+   chosen set. Missing previews retain daily retry reasons; unclear ad text stays
+   untagged. A partial preview pass is shown as needing attention, not 100%.
+
+Verification uses fictional websites, Graph/model/actor responses and isolated
+local database schemas. It is not live verification of Meta permissions, a real
+brand's competitor set, costs, match accuracy, previews or prediction gates.

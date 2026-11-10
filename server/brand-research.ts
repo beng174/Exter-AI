@@ -146,7 +146,7 @@ async function readBounded(response: Response): Promise<string> {
   }
   return new TextDecoder().decode(bytes);
 }
-async function fetchPage(
+export async function fetchBrandWebsitePage(
   raw: string,
   domain: string,
   options: BrandResearchOptions,
@@ -404,7 +404,7 @@ export async function researchBrand(
       "Save a public website domain for this brand before researching it.",
     );
   assertProxySupport(Boolean(options.fetch), process.env);
-  const homepage = await fetchPage(
+  const homepage = await fetchBrandWebsitePage(
       `https://${brand.domain}/`,
       brand.domain,
       options,
@@ -441,7 +441,7 @@ export async function researchBrand(
     programmeData: Extracted[] = [];
   for (const url of data.programmeUrls) {
     try {
-      const page = await fetchPage(url, brand.domain, options),
+      const page = await fetchBrandWebsitePage(url, brand.domain, options),
         parsed = extract(page.html, page.url, brand);
       sources.push(source(page.url, parsed, "creator_programme", observedAt));
       programmeData.push(parsed);

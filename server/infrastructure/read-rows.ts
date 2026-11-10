@@ -1,7 +1,7 @@
 import pg from "pg";
 /** A row listener with no callback prevents pg from retaining a second raw row array. */
-export async function visitDatabaseRows<T>(pool:pg.Pool,text:string,values:unknown[],visit:(row:T)=>void,maxRows=100000):Promise<void>{
-  const client=await pool.connect();
+export async function visitDatabaseRows<T>(pool:pg.Pool,text:string,values:unknown[],visit:(row:T)=>void,maxRows=100000,borrowedClient?:pg.PoolClient):Promise<void>{
+  const client=borrowedClient||await pool.connect();
   try{
     await new Promise<void>((resolve,reject)=>{
       const query=new pg.Query({text,values});let rows=0,failure:unknown;
@@ -14,5 +14,5 @@ export async function visitDatabaseRows<T>(pool:pg.Pool,text:string,values:unkno
       query.once("error",reject);query.once("end",()=>failure?reject(failure):resolve());
       client.query(query);
     });
-  }finally{client.release();}
+  }finally{if(!borrowedClient)client.release();}
 }

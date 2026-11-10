@@ -14,6 +14,8 @@ export interface InfrastructureState {mediaDisk?:MediaDiskHealth;meta?:{status:s
 export interface ResearchData {comparison?:import("./comparison").ComparisonState;library:CreativeBrowserResponse;window:ResearchWindow;brand:Brand|undefined;research:BrandResearch|null;researchFailed:boolean;watchlists:Watchlist[]|null;watchlistPollFailed?:boolean;infrastructure:InfrastructureState|null;connections:{status:string;platform?:string;name?:string}[]|null;budgets:BudgetState[]|null}
 export function useResearchData(brandId:string,brands:Brand[],from:string|undefined,to:string|undefined,refresh:number) {
   const [data,setData]=useState<ResearchData|null>(null),[error,setError]=useState(false),[loading,setLoading]=useState(true);
+  const [onboardingRevision,setOnboardingRevision]=useState(0);
+  useEffect(()=>{const update=()=>setOnboardingRevision(value=>value+1);window.addEventListener("exter:onboarding-updated",update);return()=>window.removeEventListener("exter:onboarding-updated",update);},[]);
   useEffect(()=>{
     let active=true;setLoading(true);setError(false);
     const leases:{release:()=>void}[]=[];
@@ -37,7 +39,7 @@ export function useResearchData(brandId:string,brands:Brand[],from:string|undefi
     }
     void load().catch(()=>{if(active){setError(true);setData(null);}}).finally(()=>{if(active)setLoading(false);});
     return()=>{active=false;for(const lease of leases)lease.release();};
-  },[brandId,from,to,refresh]);
+  },[brandId,from,to,refresh,onboardingRevision]);
   const activeWorkspace=data?.watchlists?.some(w=>["queued","running"].includes(w.latestRun?.status||""))?data.library.brand.id:null;
   useEffect(()=>{
     if(!activeWorkspace)return;let active=true,pending=false;

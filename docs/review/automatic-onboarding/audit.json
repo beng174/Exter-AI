@@ -1,0 +1,303 @@
+{
+  "checks": [
+    {
+      "width": 1280,
+      "noOverflow": true,
+      "costCardsFit": true
+    },
+    {
+      "width": 1440,
+      "noOverflow": true,
+      "costCardsFit": true
+    },
+    {
+      "width": 1920,
+      "noOverflow": true,
+      "costCardsFit": true
+    },
+    {
+      "width": 390,
+      "noOverflow": true,
+      "costCardsFit": true
+    }
+  ],
+  "providerCalls": 0,
+  "externalRequests": [],
+  "pageErrors": [],
+  "fixtureActions": [
+    {
+      "path": "/api/brands/fixture-bottles/onboarding/page-picture",
+      "body": {
+        "pageId": "1001"
+      }
+    },
+    {
+      "path": "/api/brands/fixture-bottles/onboarding/page-picture",
+      "body": {
+        "pageId": "1002"
+      }
+    },
+    {
+      "path": "/api/brands/fixture-bottles/onboarding/page-picture",
+      "body": {
+        "pageId": "1003"
+      }
+    },
+    {
+      "path": "/api/brands/fixture-bottles/onboarding/page-picture",
+      "body": {
+        "pageId": "1099"
+      }
+    },
+    {
+      "path": "/api/brands/fixture-bottles/onboarding/page-picture",
+      "body": {
+        "pageId": "1001"
+      }
+    },
+    {
+      "path": "/api/brands/fixture-bottles/onboarding/page-picture",
+      "body": {
+        "pageId": "1002"
+      }
+    },
+    {
+      "path": "/api/brands/fixture-bottles/onboarding/page-picture",
+      "body": {
+        "pageId": "1003"
+      }
+    },
+    {
+      "path": "/api/brands/fixture-bottles/onboarding/page-picture",
+      "body": {
+        "pageId": "1099"
+      }
+    },
+    {
+      "path": "/api/brands/fixture-bottles/onboarding/page-picture",
+      "body": {
+        "pageId": "1001"
+      }
+    },
+    {
+      "path": "/api/brands/fixture-bottles/onboarding/page-picture",
+      "body": {
+        "pageId": "1002"
+      }
+    },
+    {
+      "path": "/api/brands/fixture-bottles/onboarding/page-picture",
+      "body": {
+        "pageId": "1003"
+      }
+    },
+    {
+      "path": "/api/brands/fixture-bottles/onboarding/page-picture",
+      "body": {
+        "pageId": "1099"
+      }
+    },
+    {
+      "path": "/api/brands/fixture-bottles/onboarding/page-picture",
+      "body": {
+        "pageId": "1001"
+      }
+    },
+    {
+      "path": "/api/brands/fixture-bottles/onboarding/page-picture",
+      "body": {
+        "pageId": "1002"
+      }
+    },
+    {
+      "path": "/api/brands/fixture-bottles/onboarding/page-picture",
+      "body": {
+        "pageId": "1003"
+      }
+    },
+    {
+      "path": "/api/brands/fixture-bottles/onboarding/page-picture",
+      "body": {
+        "pageId": "1099"
+      }
+    },
+    {
+      "path": "/api/brands/fixture-bottles/onboarding/page-picture",
+      "body": {
+        "pageId": "1001"
+      }
+    },
+    {
+      "path": "/api/brands/fixture-bottles/onboarding/page-picture",
+      "body": {
+        "pageId": "1002"
+      }
+    },
+    {
+      "path": "/api/brands/fixture-bottles/onboarding/page-picture",
+      "body": {
+        "pageId": "1003"
+      }
+    },
+    {
+      "path": "/api/brands/fixture-bottles/onboarding/page-picture",
+      "body": {
+        "pageId": "1099"
+      }
+    },
+    {
+      "path": "/api/brands/fixture-bottles/onboarding/page-picture",
+      "body": {
+        "pageId": "1001"
+      }
+    },
+    {
+      "path": "/api/brands/fixture-bottles/onboarding/page-picture",
+      "body": {
+        "pageId": "1002"
+      }
+    },
+    {
+      "path": "/api/brands/fixture-bottles/onboarding/page-picture",
+      "body": {
+        "pageId": "1003"
+      }
+    },
+    {
+      "path": "/api/brands/fixture-bottles/onboarding/page-picture",
+      "body": {
+        "pageId": "1099"
+      }
+    },
+    {
+      "path": "/api/brands/fixture-bottles/onboarding/page-picture",
+      "body": {
+        "pageId": "1001"
+      }
+    },
+    {
+      "path": "/api/brands/fixture-bottles/onboarding/page-picture",
+      "body": {
+        "pageId": "1002"
+      }
+    },
+    {
+      "path": "/api/brands/fixture-bottles/onboarding/page-picture",
+      "body": {
+        "pageId": "1003"
+      }
+    },
+    {
+      "path": "/api/brands/fixture-bottles/onboarding/page-picture",
+      "body": {
+        "pageId": "1099"
+      }
+    },
+    {
+      "path": "/api/onboarding/start",
+      "body": {
+        "name": "Fictional Bottle Works",
+        "website": "bottle-workshop.example"
+      }
+    },
+    {
+      "path": "/api/brands/fixture-bottles/onboarding/confirm-page",
+      "body": {
+        "pageId": "1099"
+      }
+    },
+    {
+      "path": "/api/brands/fixture-bottles/onboarding/page-picture",
+      "body": {
+        "pageId": "1099"
+      }
+    },
+    {
+      "path": "/api/brands/fixture-bottles/onboarding/page-picture",
+      "body": {
+        "pageId": "1001"
+      }
+    },
+    {
+      "path": "/api/brands/fixture-bottles/onboarding/page-picture",
+      "body": {
+        "pageId": "1002"
+      }
+    },
+    {
+      "path": "/api/brands/fixture-bottles/onboarding/page-picture",
+      "body": {
+        "pageId": "1003"
+      }
+    },
+    {
+      "path": "/api/brands/fixture-bottles/onboarding/page-picture",
+      "body": {
+        "pageId": "1099"
+      }
+    },
+    {
+      "path": "/api/brands/fixture-bottles/onboarding/competitor",
+      "body": {
+        "domain": "flask-0.example",
+        "action": "remove"
+      }
+    },
+    {
+      "path": "/api/brands/fixture-bottles/onboarding/page-picture",
+      "body": {
+        "pageId": "1001"
+      }
+    },
+    {
+      "path": "/api/brands/fixture-bottles/onboarding/page-picture",
+      "body": {
+        "pageId": "1002"
+      }
+    },
+    {
+      "path": "/api/brands/fixture-bottles/onboarding/page-picture",
+      "body": {
+        "pageId": "1003"
+      }
+    },
+    {
+      "path": "/api/brands/fixture-bottles/onboarding/page-picture",
+      "body": {
+        "pageId": "1099"
+      }
+    },
+    {
+      "path": "/api/brands/fixture-bottles/onboarding/competitor",
+      "body": {
+        "domain": "flask-6.example",
+        "action": "swap",
+        "swapDomain": "flask-0.example"
+      }
+    },
+    {
+      "path": "/api/brands/fixture-bottles/onboarding/page-picture",
+      "body": {
+        "pageId": "1001"
+      }
+    },
+    {
+      "path": "/api/brands/fixture-bottles/onboarding/page-picture",
+      "body": {
+        "pageId": "1002"
+      }
+    },
+    {
+      "path": "/api/brands/fixture-bottles/onboarding/page-picture",
+      "body": {
+        "pageId": "1003"
+      }
+    },
+    {
+      "path": "/api/brands/fixture-bottles/onboarding/page-picture",
+      "body": {
+        "pageId": "1099"
+      }
+    }
+  ]
+}

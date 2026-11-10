@@ -1017,3 +1017,26 @@ Text-only tagging has a quoted action and runs independently of media collection
 The owner cancelled production tracing of the three historical Valentte ads;
 no live cause is claimed. The owner will check their displayed reasons after deploy.
 Verification uses fictional fixtures, never live provider calls.
+
+### 10 Nov 2026: automatic UK brand onboarding (BO-01 to BO-07)
+
+PR #32's finish was rechecked with a clean full run: 596 tests passed.
+Automatic onboarding now accepts a name and website, crawls bounded public
+sources and runs budgeted text understanding. It saves specific My categories,
+source-backed claims/prices and discovery keywords, and fills Brand research.
+Domain-backed Page matches can auto-confirm under the owner's new instruction;
+ambiguous matches still require one click. Multiple Pages have separate watchlists,
+cursors and media jobs. Competitors need UK ads, matching products and domain
+proof; retailers/resellers without a relevant own range do not qualify.
+Competitor sites share one cheap model batch. Existing collection, media and
+category jobs drive live counts and coverage. Manual overrides and removals win;
+monthly checks suggest changes. Past website research and paid analyses are kept.
+No switches, budgets, model settings or prediction gates were changed. The own-
+account Phase 0/Phase 1 live gates remain open. Verification is fixture-only;
+production tracing of the three historical ads remains deferred by the owner.
+
+Checks: all 605 unit tests and 40 isolated Postgres fixture tests passed, including
+12 onboarding cases. TypeScript, production build and tracked-file secrets scan
+passed. Browser fixtures passed at 390/1280/1440/1920px with zero external requests.
+See docs/review/automatic-onboarding/README.md for screenshots and reference pairs.
+PR #32 is still open; this branch builds on its verified fixes. Merge it first.

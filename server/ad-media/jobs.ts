@@ -17,15 +17,16 @@ export async function enqueueAdMedia(pool:pg.Pool,watchlistId:string,now=new Dat
     if(!w){await lock.query("ROLLBACK");return null;}
     if((await lock.query("SELECT id FROM ad_media_runs WHERE watchlist_id=$1 AND status=ANY($2::text[])",[watchlistId,ACTIVE])).rowCount){await lock.query("ROLLBACK");return null;}
     // Stream source rows through the existing projection; never buffer full raw payloads on web.
-    const projected=await readPublicCreatives(pool,w.workspace_id,[],{id:w.workspace_id,name:"",domain:""},[{key:w.brand_key,brandId:w.brand_key,name:"",status:"configured"}]);
-    const observations=projected.filter(row=>row.brandId===w.brand_key).map(row=>({native_id:row.nativeId,start_time:row.deliveryStartAt,stop_time:row.deliveryStopAt,first_seen_at:row.firstObservedAt,observed_at:row.observedAt,days:row.daysRunning,reach:row.publicReach}));
-    const priority=priorityVideoIds(observations.map(o=>({nativeId:o.native_id,brandId:w.brand_key,deliveryStartAt:o.start_time,daysRunning:o.days,publicReach:o.reach})),now);
+    const projected=await readPublicCreatives(pool,w.workspace_id,[],{id:w.workspace_id,name:"",domain:""},[{key:w.brand_key,brandId:w.brand_key,name:"",status:"configured"}],lock);
+    const brandObservations=projected.filter(row=>row.brandId===w.brand_key);
+    const observations=brandObservations.filter(row=>row.advertiserPageId===w.page_ids[0]).map(row=>({native_id:row.nativeId,start_time:row.deliveryStartAt,stop_time:row.deliveryStopAt,first_seen_at:row.firstObservedAt,observed_at:row.observedAt,days:row.daysRunning,reach:row.publicReach}));
+    const priority=priorityVideoIds(brandObservations.map(o=>({nativeId:o.nativeId,brandId:w.brand_key,deliveryStartAt:o.deliveryStartAt,daysRunning:o.daysRunning,publicReach:o.publicReach})),now);
     const retained=await lock.query(`SELECT native_id,bool_or(EXISTS(SELECT 1 FROM jsonb_array_elements(assets)a WHERE a->>'role' IN ('image','poster') AND NOT EXISTS(SELECT 1 FROM ad_media_file_checks f WHERE f.workspace_id=$1 AND f.artifact_id=a->'ref'->>'artifactId' AND NOT f.available))) AS image,
       bool_or(EXISTS(SELECT 1 FROM jsonb_array_elements(assets)a WHERE a->>'role'='video' AND NOT EXISTS(SELECT 1 FROM ad_media_file_checks f WHERE f.workspace_id=$1 AND f.artifact_id=a->'ref'->>'artifactId' AND NOT f.available))) AS video,
       bool_or(format='video' OR expected_videos>0) AS is_video
       FROM ad_media_creatives WHERE workspace_id=$1 AND brand_key=$2 AND page_id=$3 GROUP BY native_id`,[w.workspace_id,w.brand_key,w.page_ids[0]]);
     const files=new Map<string,{image:boolean;video:boolean;is_video:boolean}>(retained.rows.map(r=>[r.native_id,r]));
-    const known=await lock.query("SELECT known_media_ids,known_video_ids,known_video_candidates FROM ad_media_runs WHERE workspace_id=$1 AND brand_key=$2 AND page_id=$3",[w.workspace_id,w.brand_key,w.page_ids[0]]);
+    const known=await lock.query("SELECT known_media_ids,known_video_ids,known_video_candidates FROM ad_media_runs WHERE workspace_id=$1 AND brand_key=$2 AND page_id=$3 AND started_at>$4::timestamptz-interval '1 day'",[w.workspace_id,w.brand_key,w.page_ids[0],now]);
     for(const row of known.rows)for(const native of new Set<string>([...row.known_media_ids,...row.known_video_ids,...row.known_video_candidates])){
       const previous=files.get(native)||{image:false,video:false,is_video:false};
       files.set(native,{image:previous.image||row.known_media_ids.includes(native),video:previous.video||row.known_video_ids.includes(native),is_video:previous.is_video||row.known_video_candidates.includes(native)});

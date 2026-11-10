@@ -1,3 +1,4 @@
+import {OnboardingMeta,OnboardingWait} from "./onboarding/meta.js";
 import {createHash,randomUUID} from "node:crypto";
 import {mkdir,readFile,writeFile,rename,mkdtemp,rm} from "node:fs/promises";
 import {tmpdir} from "node:os";
@@ -98,9 +99,10 @@ export function brandIdentities(db:DatabaseSync,workspaceId?:string,collection?:
   const owners=workspace?[workspace]:brands;
   for(const owner of owners){
     const domains=new Map<string,string>();
+    for(const c of owner.competitorProfiles||[])domains.set(c.name.toLowerCase(),c.domain);
     for(const c of readBrandResearch(db,owner.id)?.competitorCandidates||[])if(c.domain)domains.set(c.name.toLowerCase(),c.domain);
     if(collection)try{for(const c of collection.snapshot(owner.id).competitors)if(c.domain)domains.set(c.name.toLowerCase(),c.domain);}catch{}
-    for(const c of configuredCreativeCompetitors(db,owner,collection))if(!result.some(b=>b.id===c.brandId||b.name.toLowerCase()===c.name.toLowerCase()))result.push({id:`competitor-${hash(c.name.trim().toLowerCase()).slice(0,24)}`,name:c.name,domain:domains.get(c.name.toLowerCase())||"",color:brandColour(c.name),initials:brandInitials(c.name),mode:"imported"});
+    for(const c of configuredCreativeCompetitors(db,owner,collection))if(!result.some(b=>b.id===c.brandId||b.name.toLowerCase()===c.name.toLowerCase()))result.push({id:`competitor-${hash(c.name.trim().toLowerCase()).slice(0,24)}`,name:c.name,domain:domains.get(c.name.toLowerCase())||"",color:brandColour(c.name),initials:brandInitials(c.name),mode:"imported",metaPageId:owner.competitorProfiles?.find(p=>p.name===c.name)?.pageIds[0]});
   }
   return result;
 }
@@ -115,11 +117,11 @@ export async function resolvedBrandIdentities(db:DatabaseSync,workspaceId?:strin
       const name=w.brand_key===owner.id?owner.name:configuredCreativeCompetitors(db,owner,collection).find(c=>(c.brandId||c.key)===w.brand_key)?.name;
       const identity=identities.find(b=>b.name===name);if(!identity)continue;const pages=assignments.get(identity.id)||new Set<string>();pages.add(w.page_ids[0]);assignments.set(identity.id,pages);
     }
-    return identities.map(b=>({...b,metaPageId:assignments.get(b.id)?.size===1?[...assignments.get(b.id)!][0]:b.metaPageId}));
+    return identities.map(b=>({...b,metaPageId:assignments.get(b.id)?.size?(b.metaPageId&&assignments.get(b.id)!.has(b.metaPageId)?b.metaPageId:[...assignments.get(b.id)!].sort()[0]):b.metaPageId}));
   }catch{return identities;}
 }
 export function attachBrandLogos(app:Express,db:DatabaseSync){
-  const store=new BrandLogoStore();app.locals.brandLogos=store;
+  const store=new BrandLogoStore({beforeResourceRequest:async url=>{if(url.hostname==='graph.facebook.com')await new OnboardingMeta(infrastructureDatabase()).slot();},retryAutomatic:error=>error instanceof OnboardingWait});app.locals.brandLogos=store;
   const identities=(workspaceId?:string)=>resolvedBrandIdentities(db,workspaceId,app.locals.demoCollection,process.env.DATABASE_URL?infrastructureDatabase():undefined);
   app.get("/api/brand-identities",async(req,res)=>res.json(await identities(String(req.query.brandId||"")||undefined)));
   app.get("/api/brand-logos/:id",async(req,res)=>{res.setHeader("Cache-Control","private, no-store");const brand=(await identities(typeof req.query.workspaceId==="string"?req.query.workspaceId:undefined)).find(b=>b.id===req.params.id);if(!brand){res.sendStatus(404);return;}try{const image=await (app.locals.brandLogos as BrandLogoStore).image(brand);if(!image){res.status(204).end();return;}res.type("png").send(image);}catch{res.status(204).end();}});
