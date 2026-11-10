@@ -227,3 +227,18 @@ CREATE TABLE IF NOT EXISTS creator_discovery_rejected (
   PRIMARY KEY(workspace_id,handle)
 );
 CREATE INDEX IF NOT EXISTS creator_discovery_rejected_checked ON creator_discovery_rejected(checked_at);
+
+-- Durable paid creator steps. No tokens, provider URLs or raw datasets.
+CREATE TABLE IF NOT EXISTS creator_provider_runs (
+ reservation_id text PRIMARY KEY REFERENCES cost_ledger,workspace_id text,search_id text REFERENCES creator_discovery_runs,
+ phase text,step integer,actor_id text NOT NULL,actor_run_id text UNIQUE,dataset_id text,
+ status text NOT NULL DEFAULT 'STARTING',found integer,usage_usd numeric CHECK(usage_usd>=0),
+ gbp_per_usd numeric NOT NULL CHECK(gbp_per_usd>0),started_at timestamptz NOT NULL,
+ checked_at timestamptz,settled_at timestamptz,read_complete boolean NOT NULL DEFAULT false,
+ UNIQUE(search_id,phase,step)
+);
+ALTER TABLE creator_discovery_runs ADD COLUMN IF NOT EXISTS reconcile_requested boolean NOT NULL DEFAULT false;
+ALTER TABLE creator_discovery_runs ADD COLUMN IF NOT EXISTS reconcile_note text;
+ALTER TABLE creator_discovery_runs ADD COLUMN IF NOT EXISTS reconciled_at timestamptz;
+ALTER TABLE creator_discovery_runs ADD COLUMN IF NOT EXISTS reconcile_mappings jsonb NOT NULL DEFAULT '[]';
+ALTER TABLE creator_discovery_runs ADD COLUMN IF NOT EXISTS reconcile_window_end timestamptz;

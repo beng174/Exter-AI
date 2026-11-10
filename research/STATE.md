@@ -988,3 +988,20 @@ not live verification; no client gate is claimed. Owned live gates remain open
 and kernel work stays paused. Local Postgres/API fixtures and responsive browser checks pass. Screenshots are
 in docs/review/strict-creators/. npm run check, npm test (574 passed), npm run build and npm run secrets:check
 pass, plus the isolated Postgres/API fixture. Client gates remain closed.
+
+## Creator run recovery, 10 November 2026
+
+Instagram actor timeout is 15 minutes; status polling backs off from 5 to 15
+seconds, with a 20-minute wait window. Temporary status/dataset reads retry five
+times; no paid start is retried or aborted after a failed check. Per-step provider
+IDs, dataset IDs, reservations and progress are durable, with worker lease renewal.
+Terminal partial results use the existing strict screening and continue the search.
+Final real USD usage settles the original hold, using its saved GBP exchange rate.
+Reconcile runs in the worker and starts no actor. Earlier untracked holds require
+an owner-confirmed run-to-hold mapping, checked against actor/input/timing; unknown
+charges stay reserved. No real reconciliation, live collection or client validation
+is claimed. Accuracy gates stay closed, owned gates open and kernel work paused.
+Validation: npm run check, npm test (588 passed), npm run build and
+npm run secrets:check pass, plus both isolated Postgres/API fixtures. Browser
+checks pass at 1280/1440/1920/390px; fixture screenshots are in
+docs/review/creator-run-recovery/. No live billing reconciliation was performed.

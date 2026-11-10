@@ -69,7 +69,7 @@ export interface CreatorEligibilitySummary {
   reasonCounts: Partial<Record<CreatorEligibilityReason, number>>;
 }
 export interface CreatorProviderAccounting {
-  reservedCostGbp: number | null; billedCostGbp: null; requestAttempts: number; runIds: string[];
+  reservedCostGbp: number | null; billedCostGbp: number | null; reservationId?: string; billedCostUsd?: number | null; runStatus?: string; requestAttempts: number; runIds: string[];
 }
 export interface CreatorSearchObservation {
   id: string; createdAt: string; platform: CreatorPlatform; country: string; category: string; query: string;

@@ -37,3 +37,13 @@ non-target country is excluded when the country filter is active. Unknown locati
 stays in a review queue and cannot pass a UK-only shortlist automatically. A business
 account is not inherently a brand: professional individual creators remain eligible.
 Show each exclusion reason and retain only minimal diagnostics, not rejected profiles.
+
+Creator runtime recovery: Instagram runs may last fifteen minutes, with twenty
+minutes of polling. Retry safe reads five times on temporary failures; never
+retry a paid start or abort a running actor because its status check failed.
+Persist provider and reservation IDs before advancing. Final timed-out/aborted
+runs still contribute partial results through the same screening. Renew worker
+leases and resume the same run. Delete provider datasets only after projection
+and the durable step update. Reconcile final authenticated usage against its
+original hold and frozen exchange rate; unknown costs keep their hold. Earlier
+untracked runs require a confirmed run/hold mapping and input/actor checks.
