@@ -69,6 +69,12 @@ export function attachCreatorDiscovery(app: Express, db: DatabaseSync, options: 
     const row = (await p.query("SELECT image FROM creator_discovery_previews WHERE workspace_id=$1 AND handle=$2 AND post_id=$3", [id, handle, postId])).rows[0]; if (!row) { res.sendStatus(404); return; }
     res.setHeader("X-Content-Type-Options", "nosniff"); res.type("image/png").send(row.image);
   }));
+  app.post("/api/creator-discovery/reconcile",route(async(req,res,id,p)=>{
+    const searchId=z.string().uuid().parse(req.body?.searchId),mappings=z.array(z.object({reservationId:z.string().uuid(),actorRunId:z.string().regex(/^(?!apify_api_)[A-Za-z0-9_-]{1,100}$/)}).strict()).max(100).parse(req.body?.mappings??[]);
+    if(env.APIFY_TOKEN && JSON.stringify(mappings).includes(env.APIFY_TOKEN))throw new Error();
+    const result=await p.query("UPDATE creator_discovery_runs SET reconcile_requested=true,reconcile_mappings=$3,reconcile_window_end=COALESCE(reconcile_window_end,available_at),available_at=now(),reconcile_note='Charge check queued.' WHERE id=$1 AND workspace_id=$2 RETURNING id",[searchId,id,JSON.stringify(mappings)]);
+    if(!result.rowCount)throw new Error();res.status(202).json({queued:true});
+  }));
   app.post("/api/creator-discovery/validate", route(async (_req, res, id, p) => {
     await rescreenCreatorRules(p,id,now());
     const csv = await (options.labels ? options.labels() : readFile(new URL("../../research/creator-briefs/test-set.csv", import.meta.url), "utf8")), labels = parseCreatorLabels(csv);

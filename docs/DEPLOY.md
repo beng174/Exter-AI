@@ -1238,3 +1238,52 @@ reviewed business and repost negatives with `good_fit=no,is_individual=no`.
 All three precision checks need 85%, twenty predicted positives, complete label
 matching and both negative groups. The repository file stays header-only for the
 owner to label; fixture handles must not be copied into it as real verification.
+
+### Creator run duration, partial results and billing recovery
+
+Instagram creator runs use the existing actor with `timeout=900` and unchanged
+result/charge caps. Status polling starts at five seconds, moves to ten seconds
+after one minute and fifteen seconds after two minutes. A polling attempt waits
+at most twenty minutes. Safe status/dataset GETs retry temporary 429, 5xx and
+network failures five times with exponential backoff. Paid starts are never
+retried automatically. Failed checks never send a provider abort request.
+
+The worker saves the actor/run ID, dataset ID and budget reservation for each
+search step in creator_provider_runs, renews its lease and resumes that same
+paid run after a restart. A pending check keeps its hold. Final failed, timed-out
+or aborted actors still provide any partial dataset; profiles are screened by
+the same strict rules and the next search step can continue. Dataset deletion
+happens only after projection and the step update are committed. Unknown reads
+keep the dataset for a later attempt; provider retention limits still apply.
+
+Authenticated final `usageTotalUsd` is the actual provider charge. GBP uses the
+exchange rate frozen at dispatch, rounded to six decimal places. Settlement
+updates the existing budget row under its normal lock, preserving the original
+reserve. A genuine zero is valid; missing usage is not zero. Unknown or running
+charges keep their holds. A higher confirmed charge is recorded truthfully and
+the existing budget guard blocks later spend; limits are never raised.
+
+Creators > Find creators > Search progress shows provider run links, live
+record counts and per-run actual USD charge, converted GBP and remaining hold
+in Details. Records may be posts or repeated creators; they are not a count of
+qualified individual creators. Reconcile queues metadata reads in the worker;
+it starts no actor and can run when paid discovery is budget-paused.
+
+Earlier code did not retain run/reservation identities for discovery jobs.
+Reconcile cannot infer their cost from a timestamp or treat a failed search as
+free. For an earlier failed search, open Details, select its hold, enter the
+Apify run ID and choose Confirm and reconcile. Exter verifies the configured
+actor, saved input, start window and unique run-to-hold link before reading its
+final usage. Unverified, missing or unrelated mappings retain their hold. Repeat
+for each earlier run. No provider error text, credentials or paging URLs are saved.
+
+After merge, deploy exter-ai from exter-test-drive; normal startup applies the
+additive schema before serving. Once Live, deploy the same commit to exter-worker
+and exter-scheduler. Existing APIFY_TOKEN and budget configuration stay unchanged;
+the worker needs provider access for discovery and reconciliation. New searches
+use the longer window automatically. Use Reconcile for earlier holds. Fixtures
+are not live billing verification and this change does not refund provider fees.
+
+Provider contract checked 10 November 2026:
+https://docs.apify.com/api/client/js/reference/next/interface/Run
+The documented authenticated usageTotalUsd represents the run's total real cost.

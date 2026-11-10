@@ -1,3 +1,4 @@
+import {creatorRunViews,legacyCreatorHolds} from "./run-store.js";
 import { createHash, randomUUID } from "node:crypto";
 import type pg from "pg";
 import { z } from "zod";
@@ -78,6 +79,8 @@ export async function discoverySnapshot(pool: pg.Pool, workspace: string, now=ne
   value.rejected=await readCreatorRejections(pool,workspace);
   value.segments = (await pool.query("SELECT id,name,filters,created_at FROM creator_discovery_segments WHERE workspace_id=$1 ORDER BY created_at DESC LIMIT 100", [workspace])).rows.map(r => ({ ...r, createdAt: new Date(r.created_at).toISOString(), count: value.creators.filter(c => matchesCreator(c, r.filters)).length }));
   value.runs = (await pool.query("SELECT id,kind,status,found,verified,step,jsonb_array_length(steps) AS total_steps,reserved_gbp::float8,error,created_at FROM creator_discovery_runs WHERE workspace_id=$1 ORDER BY created_at DESC LIMIT 10", [workspace])).rows.map(r => ({ id: r.id, kind: r.kind, status: r.status, found: r.found, verified: r.verified, step: r.step, totalSteps: r.total_steps, reservedGbp: r.reserved_gbp, error: r.error, createdAt: new Date(r.created_at).toISOString() }));
+  const providers=await creatorRunViews(pool,value.runs.map(r=>r.id));
+  for(const run of value.runs){const record=(await pool.query("SELECT * FROM creator_discovery_runs WHERE id=$1 AND workspace_id=$2",[run.id,workspace])).rows[0];run.providerRuns=providers.filter(p=>p.searchId===run.id);run.reconcilePending=record.reconcile_requested;run.reconcileNote=record.reconcile_note;run.legacyHolds=["failed","paused","cancelled"].includes(run.status)?await legacyCreatorHolds(pool,record):[];}
   const validation = (await pool.query("SELECT results FROM creator_discovery_validation WHERE workspace_id=$1 AND brief_version=$2", [workspace, value.briefVersion])).rows[0];
   value.precision = validation?.results ?? [];
   value.clientReady = value.precision.length === 3 && value.precision.every(p => p.clientReady && p.ruleVersion === CREATOR_RULE_VERSION);

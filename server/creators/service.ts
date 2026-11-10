@@ -22,6 +22,7 @@ export class CreatorResearchError extends Error {
 export interface CreatorDiscovery {
   status(): CreatorProviderStatus;
   search(input: CreatorSearchInput): Promise<CreatorSearchResult>;
+  acknowledge?:(reservationId:string)=>Promise<void>;
 }
 export interface CreatorFitInput {
   sourceContext: CreatorFitAssessment["sourceContext"];
@@ -192,7 +193,7 @@ export class CreatorResearchService {
     if (this.active.has(activeKey)) throw new CreatorResearchError("A creator search is already running for this workspace and platform.", 409);
     this.active.add(activeKey);
     try {
-      const result = await this.discovery.search({ platform, country, category, query, maxProfiles: 5, maxPostsPerProfile: 12 });
+      const result = await this.discovery.search({ workspaceId:brand.id,platform, country, category, query, maxProfiles: 5, maxPostsPerProfile: 12 });
       const searchedAt = new Date().toISOString();
       const searchId = randomUUID();
       const seeds = this.seeds(brand), existing = this.all(brand);
@@ -212,6 +213,7 @@ export class CreatorResearchService {
         this.db.prepare("INSERT INTO creator_research_searches VALUES (?,?,?,?)").run(observation.id, brand.id, searchedAt, JSON.stringify(observation));
         this.db.exec("COMMIT");
       } catch (error) { this.db.exec("ROLLBACK"); throw error; }
+      if(result.accounting.reservationId)await this.discovery.acknowledge?.(result.accounting.reservationId);
       return this.snapshot(brand.id);
     } catch (error) {
       if (error instanceof CreatorProviderError && error.accounting) {

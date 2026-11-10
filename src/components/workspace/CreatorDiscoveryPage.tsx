@@ -1,3 +1,4 @@
+import {CreatorRunHistory} from "./CreatorRunHistory";
 import { useEffect, useState } from "react";
 import { ImageIcon, Search, Download } from "lucide-react";
 import { CREATOR_STYLES, emptyDiscovery, matchesCreator, type CreatorBrief, type CreatorFilters, type DiscoveryCreator, type DiscoveryQuote, type DiscoverySnapshot } from "../../../shared/creator-discovery";
@@ -23,7 +24,7 @@ export function CreatorDiscoveryPage({ data, header }: ActionProps) {
     api<DiscoverySnapshot>(`/api/creator-discovery?workspaceId=${encodeURIComponent(id)}`, undefined, { signal: controller.signal }).then(v => { setSnapshot(v); setBrief(v.brief || defaultBrief(data.base.brand?.category || "")); }).catch(e => { if (!controller.signal.aborted) setError(e.message); }).finally(() => { if (!controller.signal.aborted) setLoading(false); });
     return () => controller.abort();
   }, [id]);
-  const running = snapshot.runs.some(r => ["queued", "running"].includes(r.status));
+  const running = snapshot.runs.some(r => ["queued", "running"].includes(r.status)||r.reconcilePending);
   useEffect(() => { if (!running) return; const timer = setInterval(() => { void load().catch(() => setError("Creator progress could not be read. Refresh to retry.")); }, 10000); return () => clearInterval(timer); }, [running, id]);
   const act = async (name: string, path: string, body: unknown) => { setBusy(name); setError(""); try { await api(path, { workspaceId: id, ...body as object }); await load(); return true; } catch (e) { setError((e as Error).message); return false; } finally { setBusy(""); } };
   const update = <K extends keyof CreatorBrief>(key: K, value: CreatorBrief[K]) => { setBrief(b => ({ ...b, [key]: value })); setQuote(null); };
@@ -55,7 +56,7 @@ export function CreatorDiscoveryPage({ data, header }: ActionProps) {
         {quote && <p className="reference-muted">{quote.reason}</p>}
         {!snapshot.configured && <p className="reference-muted">{snapshot.reason}</p>}
       </form></details>
-      {snapshot.runs.length > 0 && <details className="creator-run-history"><summary>Search progress</summary><DataTable caption="Creator search runs" basis="Observed" showBasis={false} rows={snapshot.runs} rowKey={r => r.id} columns={[{ key: "date", label: "Started", value: r => ukDate(r.createdAt) }, { key: "status", label: "Status", value: r => r.status, render: r => <><StatusChip status={r.status.charAt(0).toUpperCase() + r.status.slice(1)} />{r.error && <small className="accuracy-detail">{r.error}</small>}</> }, { key: "found", label: "Found", align: "number", value: r => r.found }, { key: "verified", label: "Verified", align: "number", value: r => r.verified }, { key: "cost", label: "Reserved", align: "number", value: r => `£${r.reservedGbp.toFixed(2)}` }]} /></details>}
+      {snapshot.runs.length > 0 && <details className="creator-run-history"><summary>Search progress</summary><CreatorRunHistory runs={snapshot.runs} busy={Boolean(busy)} act={act}/></details>}
     </SectionCard>
     <SectionCard title={view} actions={<label>View<select value={layout} onChange={e => setLayout(e.target.value)}><option value="cards">Cards</option><option value="table">Table</option></select></label>}>
       <div className="creator-dispositions" role="group" aria-label="Screening lists">{(["Results","Needs review","Rejected"] as const).map(v=><button key={v} className={`button ${view===v?"primary":"secondary"}`} aria-pressed={view===v} onClick={()=>setView(v)}>{v} · {counts[v].toLocaleString("en-GB")}</button>)}</div>

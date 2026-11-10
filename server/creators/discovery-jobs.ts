@@ -1,3 +1,5 @@
+import { storedCreatorRun } from "./run-store.js";
+import { reconcileCreatorSearch } from "./run-reconciliation.js";
 import { randomUUID } from "node:crypto";
 import type pg from "pg";
 import { creatorHandle, evaluateCreator, nextCreatorRefresh, type CreatorBrief, type DiscoveryProfile } from "../../shared/creator-discovery.js";
@@ -8,12 +10,12 @@ import { recordCreatorRejection, actorDiscoveryInput, discoverySteps, upsertDisc
 import { claimMetaRequest, delayMetaRequests } from "../infrastructure/meta-rate.js";
 export interface CreatorJobOptions {
   env?: Record<string, string | undefined>; now?: () => Date;
-  discovery?: Pick<ApifyCreatorProvider, "researchConfiguration" | "collectPublic">;
+  discovery?: Pick<ApifyCreatorProvider, "researchConfiguration" | "collectPublic"> & Partial<Pick<ApifyCreatorProvider,"acknowledge"|"inspectRun"|"inspectInput"|"inspectActor">>;
   verifier?: Pick<InstagramCreatorVerifier, "configured" | "verify">;
   thumbnail?: (workspace: string, profile: DiscoveryProfile) => Promise<DiscoveryProfile>;
-  paceMs?: number;
+  paceMs?: number; heartbeatMs?:number;
 }
-const providerFor = (o: CreatorJobOptions) => o.discovery ?? new ApifyCreatorProvider({ env: o.env });
+const providerFor = (o: CreatorJobOptions,pool:pg.Pool) => o.discovery ?? new ApifyCreatorProvider({ env: o.env,pool });
 const verifierFor = (o: CreatorJobOptions) => o.verifier ?? new InstagramCreatorVerifier({ env: o.env, now: o.now });
 export async function scheduleCreatorRefresh(pool: pg.Pool, now = new Date(), env: Record<string, string | undefined> = process.env) {
   // Expired unsaved discoveries are no longer needed for the research purpose.
@@ -48,16 +50,25 @@ async function adCreatorHandles(pool: pg.Pool, workspace: string) {
   return matches;
 }
 export async function workCreatorDiscoveryOnce(pool: pg.Pool, options: CreatorJobOptions = {}): Promise<boolean> {
-  const discovery = providerFor(options), verifier = verifierFor(options), now = options.now?.() ?? new Date();
-  const owner = randomUUID(), job = (await pool.query(`UPDATE creator_discovery_runs SET status='running',lease_owner=$1,lease_until=now()+interval '5 minutes'
-    WHERE id=(SELECT id FROM creator_discovery_runs WHERE status IN ('queued','running') AND available_at<=now() AND (lease_until IS NULL OR lease_until<now()) ORDER BY available_at FOR UPDATE SKIP LOCKED LIMIT 1) RETURNING *`, [owner])).rows[0];
+  const discovery = providerFor(options,pool), verifier = verifierFor(options), now = options.now?.() ?? new Date();
+  const owner = randomUUID(), job = (await pool.query(`UPDATE creator_discovery_runs SET status=CASE WHEN reconcile_requested THEN status ELSE 'running' END,lease_owner=$1,lease_until=now()+interval '5 minutes'
+    WHERE id=(SELECT id FROM creator_discovery_runs WHERE (status IN ('queued','running') OR reconcile_requested) AND available_at<=now() AND (lease_until IS NULL OR lease_until<now()) ORDER BY available_at FOR UPDATE SKIP LOCKED LIMIT 1) RETURNING *`, [owner])).rows[0];
   if (!job) return false;
-  const previewDeadline=Date.now()+60000;
+  const controller=new AbortController();let heartbeatBusy=false;
+  const heartbeat=setInterval(()=>{if(heartbeatBusy)return;heartbeatBusy=true;void pool.query("UPDATE creator_discovery_runs SET lease_until=now()+interval '5 minutes' WHERE id=$1 AND lease_owner=$2 AND (status='running' OR reconcile_requested) RETURNING id",[job.id,owner]).then(r=>{if(!r.rowCount)controller.abort();}).catch(()=>controller.abort()).finally(()=>heartbeatBusy=false);},options.heartbeatMs??30000);heartbeat.unref();
+  if(job.reconcile_requested){
+    try{const note=await reconcileCreatorSearch(pool,job,discovery);await pool.query("UPDATE creator_discovery_runs SET reconcile_requested=false,reconcile_note=$3,reconciled_at=now(),lease_owner=NULL,lease_until=NULL WHERE id=$1 AND lease_owner=$2",[job.id,owner,note]);}
+    catch{await pool.query("UPDATE creator_discovery_runs SET reconcile_requested=false,reconcile_note='The provider charges could not be checked. Holds are unchanged.',lease_owner=NULL,lease_until=NULL WHERE id=$1 AND lease_owner=$2",[job.id,owner]);}
+    clearInterval(heartbeat);return true;
+  }
+  let acknowledgement:string|undefined;
+  let previewDeadline=Date.now()+60000;
   const handles = new Set<string>(Array.isArray(job.handles)?job.handles:[]);
   let status = "queued", error: string | null = null, delay = 0, nextStep = job.step, steps = job.steps as DiscoveryStep[], phase = job.phase, reserved = Number(job.reserved_gbp);
   const brief = job.brief as CreatorBrief, workspace = job.workspace_id as string;
   try {
-    if (job.dispatch_started) throw new CreatorProviderError("unavailable", "The previous paid lookup stopped unexpectedly. Check its charge before starting another search.");
+    const currentRun=await storedCreatorRun(pool,{searchId:job.id,phase:job.phase,step:job.step});
+    if (job.dispatch_started && !currentRun?.runId) throw new CreatorProviderError("unavailable", "The previous paid lookup stopped unexpectedly. Check its charge before starting another search.");
     if (nextStep >= steps.length) {
       if (phase === "discover") {
         const enrichHandles = (await pool.query("SELECT handle FROM creator_discovery_results WHERE workspace_id=$1 AND needs_enrichment AND handle=ANY($2::text[]) ORDER BY handle", [workspace, [...handles]])).rows.map(r => r.handle as string);
@@ -96,15 +107,17 @@ export async function workCreatorDiscoveryOnce(pool: pg.Pool, options: CreatorJo
         }
       } else {
         const config = discovery.researchConfiguration();
-        if (!config.configured || config.reserveGbp !== Number(job.per_batch_gbp) || config.conversion !== Number(job.conversion)) throw new CreatorProviderError("configuration", "Creator provider settings changed. Request a fresh cost estimate.");
-        if (reserved + config.reserveGbp > Number(job.max_cost_gbp) + .000001) throw new CreatorProviderError("budget_paused", "Creator research stopped at the agreed cost limit.");
+        if (!currentRun && (!config.configured || config.reserveGbp !== Number(job.per_batch_gbp) || config.conversion !== Number(job.conversion))) throw new CreatorProviderError("configuration", "Creator provider settings changed. Request a fresh cost estimate.");
+        if (!currentRun && reserved + config.reserveGbp! > Number(job.max_cost_gbp) + .000001) throw new CreatorProviderError("budget_paused", "Creator research stopped at the agreed cost limit.");
         // Persist dispatch intent before charging; an expired lease cannot start this paid step again.
-        await pool.query("UPDATE creator_discovery_runs SET dispatch_started=true,reserved_gbp=$3 WHERE id=$1 AND lease_owner=$2 AND status='running'", [job.id, owner, reserved+config.reserveGbp]);
-        let result;
+        const intent=await pool.query("UPDATE creator_discovery_runs SET dispatch_started=true,reserved_gbp=$3 WHERE id=$1 AND lease_owner=$2 AND status='running' RETURNING id", [job.id, owner, reserved+(currentRun?0:config.reserveGbp!)]);
+        if(!intent.rowCount)throw new CreatorProviderError("cancelled","This search no longer holds its worker lease.");
+        let result;let pending:CreatorProviderError|undefined;
         const sourceTarget = Math.min(199, Math.max(1, Math.ceil(brief.target / Math.max(1,discoverySteps(brief).length))));
-        try { result = await discovery.collectPublic(actorDiscoveryInput(step, brief.country, sourceTarget), step.kind === "seed" || step.kind === "enrich" ? 20 : sourceTarget); }
-        catch (e) { if (e instanceof CreatorProviderError) reserved += e.accounting?.reservedCostGbp ?? 0; throw e; }
-        reserved += result.accounting.reservedCostGbp ?? config.reserveGbp;
+        try { result = await discovery.collectPublic(actorDiscoveryInput(step, brief.country, sourceTarget), step.kind === "seed" || step.kind === "enrich" ? 20 : sourceTarget,controller.signal,{scope:{workspaceId:workspace,searchId:job.id,phase,step:nextStep}}); }
+        catch (e) {if(e instanceof CreatorProviderError && e.partialRows?.length){pending=e;result={rows:e.partialRows,accounting:e.accounting!};}else{if(e instanceof CreatorProviderError && !currentRun)reserved+=e.accounting?.reservedCostGbp??0;throw e;}}
+        if(!currentRun)reserved += result.accounting.reservedCostGbp ?? config.reserveGbp!;
+        previewDeadline=Date.now()+60000;
         let remaining = Math.max(0, brief.target + brief.seeds.length - handles.size);
         const ads = nextStep === 0 && phase === "discover" ? await adCreatorHandles(pool, workspace) : new Map<string, string[]>();
         const rows: unknown[] = [...[...ads.keys()].map(username => ({ username })), ...result.rows];
@@ -126,18 +139,23 @@ export async function workCreatorDiscoveryOnce(pool: pg.Pool, options: CreatorJo
             if (await upsertDiscoveryProfile(pool, workspace, related, brief, job.brief_version, false, now.toISOString())&&!handles.has(handle)){remaining--;handles.add(handle);}
           }
         }
+        if(pending)throw pending;
+        acknowledgement=result.accounting.reservationId;
         nextStep++;
       }
     }
   } catch (e) {
-    status = e instanceof CreatorProviderError && e.code === "budget_paused" || e instanceof CreatorVerificationError && ["configuration", "permissions", "rate_limited"].includes(e.reason) ? "paused" : "failed";
+    status = e instanceof CreatorProviderError && e.code === "pending" ? "queued" : e instanceof CreatorProviderError && e.code === "budget_paused" || e instanceof CreatorVerificationError && ["configuration", "permissions", "rate_limited"].includes(e.reason) ? "paused" : "failed";
     error = e instanceof CreatorProviderError || e instanceof CreatorVerificationError ? e.message : "Creator research could not finish. Earlier profiles are unchanged.";
+    if(e instanceof CreatorProviderError && e.code==="pending")delay=60000;
     if (e instanceof CreatorVerificationError && e.reason === "rate_limited") await delayMetaRequests(pool, 3600000);
   }
+  clearInterval(heartbeat);
   // Fence completion; a cancellation/deletion cannot be undone by the worker.
   const committed=await pool.query(`UPDATE creator_discovery_runs SET status=$3,error=$4,step=$5,steps=$6,phase=$7,reserved_gbp=$8,dispatch_started=false,
     found=$9,handles=$11,available_at=now()+($10*interval '1 millisecond'),lease_owner=NULL,lease_until=NULL
     WHERE id=$1 AND lease_owner=$2 AND status='running' RETURNING id`, [job.id, owner, status, error, nextStep, JSON.stringify(steps), phase, reserved, handles.size, delay, JSON.stringify([...handles])]);
+  if(committed.rowCount && acknowledgement)await discovery.acknowledge?.(acknowledgement);
   if (status === "complete" && committed.rowCount) {
     const rows = (await pool.query("SELECT handle,profile FROM creator_discovery_results WHERE workspace_id=$1 AND handle=ANY($2::text[]) AND evaluation->'screen'->>'disposition' IS DISTINCT FROM 'Rejected' ORDER BY handle", [workspace,[...handles]])).rows;
     const seeds = (await pool.query("SELECT profile FROM creator_discovery_results WHERE workspace_id=$1 AND handle=ANY($2::text[])",[workspace,brief.seeds])).rows.map(r=>r.profile as DiscoveryProfile);

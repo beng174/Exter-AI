@@ -27,8 +27,8 @@ test("a public Instagram search reserves the data-provider budget before actor d
   const provider=new ApifyCreatorProvider({env,now:()=>new Date(observedAt),sleep:async()=>{},reserve:async(amount,context)=>{assert.equal(amount,0.75);assert.equal(context.actorId,"fixture~instagram-scraper");events.push("reserve");return{reservationId:"reserve-one",reservedGbp:0.75};},
     fetch:async(input,init)=>{
       const url=new URL(String(input));calls.push(url);assert.equal(url.origin,"https://api.apify.com");assert.equal(new Headers(init?.headers).get("Authorization"),`Bearer ${token}`);assert.equal(init?.redirect,"manual");assert.equal(url.searchParams.has("token"),false);
-      if(url.pathname.endsWith("/runs")){events.push("start");requestBody=JSON.parse(String(init?.body));return json({data:{id:"run-one",status:"RUNNING"}});}
-      if(url.pathname==="/v2/actor-runs/run-one")return json({data:{id:"run-one",status:"SUCCEEDED",defaultDatasetId:"dataset-one"}});
+      if(url.pathname.endsWith("/runs")){assert.equal(url.searchParams.get("timeout"),"900");events.push("start");requestBody=JSON.parse(String(init?.body));return json({data:{id:"run-one",status:"RUNNING"}});}
+      if(url.pathname==="/v2/actor-runs/run-one")return json({data:{id:"run-one",status:"SUCCEEDED",usageTotalUsd:0.125,defaultDatasetId:"dataset-one"}});
       assert.equal(url.pathname,"/v2/datasets/dataset-one/items");return json([ig]);
     }});
   const result=await provider.search(query);
@@ -37,7 +37,7 @@ test("a public Instagram search reserves the data-provider budget before actor d
   assert.equal(profile.recentPosts[0].views,2500);assert.equal(profile.recentPosts[1].views,null);assert.equal(profile.recentPosts[1].comments,null);assert.equal(profile.recentPosts[0].shares,null);
   assert.deepEqual(profile.metricCoverage,{postsSampled:2,postsWithViews:1,postsWithLikes:2,postsWithComments:1,postsWithShares:0,followersAvailable:true});
   assert.ok(profile.evidence?.some(item=>item.field==="followers"&&item.value===12000&&item.observedAt===observedAt));
-  assert.deepEqual(result.accounting,{reservedCostGbp:0.75,billedCostGbp:null,requestAttempts:1,runIds:["run-one"]});assert.ok(!JSON.stringify(result).includes(token));
+  assert.deepEqual(result.accounting,{reservedCostGbp:0.75,billedCostGbp:.1,requestAttempts:1,runIds:["run-one"],reservationId:"reserve-one",runStatus:"SUCCEEDED",billedCostUsd:.125});assert.ok(!JSON.stringify(result).includes(token));
   assert.ok(result.warnings.some(warning=>warning.includes("not verified creator residence")));
 });
 
@@ -55,7 +55,7 @@ test("TikTok public post rows normalize real author counts and retain the newest
   assert.equal(result.length,1);assert.equal(result[0].followers,4321);assert.equal(result[0].following,120);assert.equal(result[0].postsCount,40);assert.deepEqual(result[0].recentPosts.map(post=>post.id),["3","2"]);assert.equal(result[0].recentPosts[0].shares,0);assert.ok(!JSON.stringify(result).includes("signed="));
   let body:any;
   const provider=new ApifyCreatorProvider({env,reserve:async()=>({reservationId:"tiktok-hold",reservedGbp:0.75}),fetch:async(input,init)=>{
-    const url=new URL(String(input));if(url.pathname.endsWith("/runs")){body=JSON.parse(String(init?.body));return json({data:{id:"run-tiktok",status:"SUCCEEDED",defaultDatasetId:"dataset-tiktok"}});}return json(rows);
+    const url=new URL(String(input));if(url.pathname.endsWith("/runs")){body=JSON.parse(String(init?.body));return json({data:{id:"run-tiktok",status:"SUCCEEDED",usageTotalUsd:0.125,defaultDatasetId:"dataset-tiktok"}});}return json(rows);
   }});
   await provider.search({...query,platform:"tiktok",seedHandles:["@scent.reviewer"]});assert.deepEqual(body.profiles,["scent.reviewer"]);assert.equal(body.shouldDownloadVideos,false);assert.equal(body.searchQueries,undefined);
 });
@@ -82,18 +82,18 @@ test("redirects and provider error payloads cannot leak credentials or follow un
   }
 });
 
-test("polling is bounded, aborts the existing run and never starts a second actor",async()=>{
+test("bounded polling keeps the existing paid run and never aborts or starts another actor",async()=>{
   let reserves=0,starts=0,polls=0,aborts=0;
   const provider=new ApifyCreatorProvider({env,maxPolls:2,pollIntervalMs:0,sleep:async()=>{},reserve:async()=>{reserves++;return{reservationId:"bounded-hold",reservedGbp:0.75};},fetch:async(input,init)=>{
     const url=new URL(String(input));if(url.pathname.endsWith("/runs")){starts++;return json({data:{id:"running-one",status:"RUNNING"}});}if(url.pathname.endsWith("/abort")){aborts++;assert.equal(init?.method,"POST");return json({data:{id:"running-one",status:"ABORTED"}});}polls++;return json({data:{id:"running-one",status:"RUNNING"}});
   }});
-  await assert.rejects(()=>provider.search(query),/bounded polling window/);assert.equal(starts,1);assert.equal(reserves,1);assert.equal(polls,2);assert.equal(aborts,1);
+  await assert.rejects(()=>provider.search(query),(e:unknown)=>e instanceof CreatorProviderError && e.code==="pending");assert.equal(starts,1);assert.equal(reserves,1);assert.equal(polls,2);assert.equal(aborts,0);
 });
 
 test("dataset pagination uses only validated official resource IDs and stops after two pages",async()=>{
   const offsets:string[]=[];
   const provider=new ApifyCreatorProvider({env,reserve:async()=>({reservationId:"pages-hold",reservedGbp:0.75}),fetch:async(input)=>{
-    const url=new URL(String(input));assert.equal(url.origin,"https://api.apify.com");if(url.pathname.endsWith("/runs"))return json({data:{id:"paged-one",status:"SUCCEEDED",defaultDatasetId:"dataset-paged",next:"https://evil.example"}});offsets.push(url.searchParams.get("offset")!);return json(Array.from({length:100},()=>ig));
+    const url=new URL(String(input));assert.equal(url.origin,"https://api.apify.com");if(url.pathname.endsWith("/runs"))return json({data:{id:"paged-one",status:"SUCCEEDED",usageTotalUsd:0.125,defaultDatasetId:"dataset-paged",next:"https://evil.example"}});offsets.push(url.searchParams.get("offset")!);return json(Array.from({length:100},()=>ig));
   }});
   const result=await provider.search(query);assert.deepEqual(offsets,["0","100"]);assert.equal(result.profiles.length,1);assert.ok(result.warnings.some(warning=>warning.includes("capped at 200")));
 });
@@ -108,11 +108,11 @@ test("creator research batches use the existing client, reserve first and enforc
  let reserved=false,starts=0,deleted=false;const researchEnv={...env,APIFY_INSTAGRAM_ACTOR_ID:"apify/instagram-scraper",EXTER_AD_MEDIA_GBP_PER_USD:"0.8"};
  const provider=new ApifyCreatorProvider({env:researchEnv,reserve:async(amount)=>{reserved=true;assert.equal(amount,.75);return{reservationId:"fixture-hold",reservedGbp:amount};},fetch:async(input,init)=>{
   const url=new URL(String(input));assert.ok(!url.href.includes(token));assert.equal(new Headers(init?.headers).get("Authorization"),`Bearer ${token}`);
-  if(url.pathname.endsWith("/runs")){starts++;assert.ok(reserved);assert.equal(url.searchParams.get("maxItems"),"199");assert.equal(url.searchParams.get("maxTotalChargeUsd"),"0.93");assert.equal(url.searchParams.get("restartOnError"),"false");return json({data:{id:"research-run",status:"SUCCEEDED",defaultDatasetId:"research-dataset"}});}
+  if(url.pathname.endsWith("/runs")){starts++;assert.ok(reserved);assert.equal(url.searchParams.get("maxItems"),"199");assert.equal(url.searchParams.get("maxTotalChargeUsd"),"0.93");assert.equal(url.searchParams.get("restartOnError"),"false");return json({data:{id:"research-run",status:"SUCCEEDED",usageTotalUsd:0.125,defaultDatasetId:"research-dataset"}});}
   if(init?.method==="DELETE"){deleted=true;return new Response(null,{status:204});}
   assert.ok(url.pathname.endsWith("/items"));const offset=Number(url.searchParams.get("offset")),limit=Number(url.searchParams.get("limit"));assert.ok(limit<=100);return json(Array.from({length:limit},(_,i)=>({username:`fixture${offset+i}`})));
  }});
- const result=await provider.collectPublic({resultsType:"details",search:"fixture"},199);assert.equal(result.rows.length,199);assert.equal(starts,1);assert.equal(deleted,true);assert.equal(result.accounting.reservedCostGbp,.75);
+ const result=await provider.collectPublic({resultsType:"details",search:"fixture"},199);assert.equal(result.rows.length,199);assert.equal(starts,1);assert.equal(deleted,false,"a dataset stays available until its rows are durably saved");assert.equal(result.accounting.reservedCostGbp,.75);
 });
 test("creator research cannot dispatch after a budget refusal and never retries an ambiguous paid call",async()=>{
  const researchEnv={...env,APIFY_INSTAGRAM_ACTOR_ID:"apify/instagram-scraper"};let calls=0;

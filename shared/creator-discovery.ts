@@ -42,7 +42,9 @@ export interface CreatorFilters {
 }
 export interface CreatorSegment { id: string; name: string; filters: CreatorFilters; count: number; createdAt: string }
 export interface DiscoveryQuote { id: string; maxCostGbp: number; batches: number; expiresAt: string; available: boolean; reason: string }
-export interface DiscoveryRun { id: string; kind: string; status: string; found: number; verified: number; step: number; totalSteps: number; reservedGbp: number; error: string | null; createdAt: string }
+export interface CreatorProviderRunView {reservationId:string;searchId:string;runId:string|null;status:string;found:number|null;usageUsd:number|null;costGbp:number|null;heldGbp:number;startedAt:string;checkedAt:string|null}
+export interface CreatorLegacyHold {reservationId:string;heldGbp:number;createdAt:string}
+export interface DiscoveryRun { id: string; kind: string; status: string; found: number; verified: number; step: number; totalSteps: number; reservedGbp: number; error: string | null; createdAt: string;providerRuns?:CreatorProviderRunView[];legacyHolds?:CreatorLegacyHold[];reconcilePending?:boolean;reconcileNote?:string|null }
 export interface CreatorPrecision {
   field: "Individual creator" | "Good fit" | "UK"; tp: number; fp: number; fn: number; precision: number | null;
   interval: [number, number] | null; labelled: number; matched: number; missing: number;
