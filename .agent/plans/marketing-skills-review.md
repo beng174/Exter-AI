@@ -16,7 +16,7 @@ budgets, schemas and the existing exter-kernel-task skill must not change.
 - [x] 2026-11-09 UTC: restored nine MIT folders plus provenance inventory; removed unlicensed/incomplete/duplicate helpers and added AGENTS.md precedence.
 - [x] 2026-11-09 UTC: reviewed 78 sourced rules, evidence grades, current-data limits, validation-only checklist/Working Score proposals and exact predictive gates.
 - [x] 2026-11-09 UTC: all four checks pass, including 522 tests; scope, licence, source hashes and kernel integrity audited.
-- [ ] Publish one documentation/reference PR against exter-test-drive.
+- [x] 2026-11-09 UTC: published PR #25 against exter-test-drive, with provenance, removals, review findings and validation results.
 
 ## Surprises and discoveries
 
@@ -39,7 +39,8 @@ to change product rules or execute audit scripts.
 
 ## Outcomes and retrospective
 
-The review and licence restoration are complete. No prediction or score behaviour
+The review and licence restoration are complete; PR #25 is open against
+exter-test-drive: https://github.com/beng174/Exter-AI/pull/25. No prediction or score behaviour
 is changed or authorised. Nine canonical MIT skills retain their source bytes;
 three unmatched descriptors are excluded. The review distinguishes unsupported
 benchmarks, unverified platform claims and cross-platform transfer errors.
