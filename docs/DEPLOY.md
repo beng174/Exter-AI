@@ -1209,10 +1209,13 @@ all provider, official account and image calls in it use fixtures.
 
 ### Strict creator screening rollout
 
-Run `npm run db:migrate` against the existing infrastructure Postgres database
-once before deploying this update. It adds only `creator_discovery_rejected` and
-its time index. Redeploy exter-ai, exter-worker and exter-scheduler from the same
-commit. No new secrets, switches, models or budget settings are needed.
+After merging into exter-test-drive, use Render Manual Deploy > Deploy latest
+commit on exter-ai first. Its normal startup applies the additive infrastructure
+schema before serving requests. Once it is Live, deploy the same commit to
+exter-worker and exter-scheduler. The schema adds only creator_discovery_rejected
+and its time index. If an explicit migration recheck is needed, run
+`npm run db:migrate` in exter-ai Shell after the new commit is Live. No new
+secrets, switches, models or budget settings are needed.
 
 The first creator read rechecks existing full profiles in bounded batches under
 the workspace lock, without calling a provider. Old-rule jobs are cancelled and
