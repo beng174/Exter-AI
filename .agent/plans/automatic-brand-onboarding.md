@@ -12,7 +12,7 @@ Keep budgets, official facts, manual overrides, sample isolation and live switch
 - [x] 2026-11-10 UTC: Add durable onboarding steps, bounded website crawl and budgeted text batches.
 - [x] 2026-11-10 UTC: Add rate-limited Page/discovery lookups, multi-Page watchlists and manual overrides.
 - [x] 2026-11-10 UTC: Connect downstream jobs, monthly suggestions, progress and two-field onboarding UI.
-- [x] 2026-11-10 UTC: All four checks, 605 unit tests, 40 Postgres fixtures and four browser widths passed.
+- [x] 2026-11-10 UTC: All four checks, 605 unit tests, 74 Postgres fixtures and four browser widths passed.
 - [x] 2026-11-10 UTC: Opened PR #33 against exter-test-drive. Merge dependency: PR #32.
 
 ## Surprises and discoveries
@@ -47,8 +47,9 @@ requests and slow down after completion. Parallel enqueue fixtures pass with onl
 two database connections. Existing paid research and prior evidence remain stored.
 
 Verification: npm run check, npm test (605 passed), npm run build and
-npm run secrets:check; 40 isolated Postgres fixtures, including 12 onboarding cases;
+npm run secrets:check; 74 isolated Postgres fixtures via npm run test:infrastructure, including 12 onboarding cases;
 responsive Chromium fixtures at 390/1280/1440/1920px with zero external requests.
+The CI integration script now includes onboarding and both media suites.
 Screenshots and reference comparisons: docs/review/automatic-onboarding/README.md.
 Fixtures cannot verify live identity, real match accuracy, costs, coverage or
 prediction gates. Batch completion can take 24 hours. Blocked sites pause honestly;

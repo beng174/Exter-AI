@@ -1042,3 +1042,6 @@ See docs/review/automatic-onboarding/README.md for screenshots and reference pai
 PR #32 is still open; this branch builds on its verified fixes. Merge it first.
 PR #33: https://github.com/beng174/Exter-AI/pull/33 (feat/automatic-brand-onboarding,
 base exter-test-drive). Deploy only after merging PR #32 then PR #33 and migrating.
+The CI integration command now includes onboarding, ad-media and public-media
+fixtures. Its full clean local run passed all 74 infrastructure tests (including
+the 40 targeted source/media/onboarding cases); no live providers were called.
