@@ -1051,3 +1051,19 @@ Local fixture validation uses `tests/public-comparisons.test.ts`,
 The integration runner requires a dedicated disposable `TEST_DATABASE_URL` and
 owns isolated schemas. All providers/files are substituted; browser external
 requests are blocked. No live or paid test calls are permitted.
+## Accuracy framework rollout
+
+After merging the accuracy PR into `exter-test-drive`, open Render > `exter-ai`
+> Manual Deploy > Deploy latest commit. Wait for Live and a healthy `/api/health`.
+No Blueprint sync, new secret, switch change or Postgres migration is needed.
+The web adds its SQLite measurement tables automatically on its existing disk;
+keep that disk and its backups. Worker and scheduler do not need a manual deploy
+for this feature and never read the web disk. Do not change provider budgets or
+existing collection/media switches for accuracy checks.
+
+Open Settings > Accuracy and choose Check saved data. Check the actual measured
+counts, nulls and dates. Owned results need previously synced account days; no
+sync starts here. Models remain unvalidated until an audited real outcome run
+passes every gate. Fixtures are not live verification. See
+[accuracy operations](ACCURACY.md) for offline evaluation, analysed draft files,
+scoped threshold overrides and immutable recommendation results.

@@ -21,6 +21,7 @@ export interface CreativePerformance {
 }
 import type { WorkspacePresentation, CreativePresentation } from "./workspace-presentation.js";
 export interface BrowserCreative extends DemoGalleryCreative {
+    likelihood?:import("./likelihood.js").LikelihoodEstimate;
     previewState?:import("./ad-media.js").PreviewState;
     adFormat?:"video"|"static_image"|"carousel"|"catalogue"|null;
     headlines?:string[];
@@ -116,6 +117,8 @@ export function filterBrowserCreatives(rows: BrowserCreative[], filters: Browser
         (!filters.to || row.performance.length > 0 || Boolean(row.observedAt && row.observedAt.slice(0, 10) <= filters.to)) &&
         (!needle || row.searchText.toLocaleLowerCase().includes(needle)));
     const ordered=result.sort((a, b) => {
+        if (filters.sort === "likelihood")
+            return (b.likelihood?.probability ?? -1) - (a.likelihood?.probability ?? -1) || a.adId.localeCompare(b.adId);
         if (filters.sort === "days")
             return (b.daysRunning ?? -1) - (a.daysRunning ?? -1) || a.adId.localeCompare(b.adId);
         if (filters.sort === "title")

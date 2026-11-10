@@ -1,3 +1,4 @@
+import {enrichLikelihood} from "../accuracy/predictions.js";
 import {writeJsonRows} from "../infrastructure/json-rows.js";
 import {LibraryReadGate} from "../infrastructure/library-read-gate.js";
 import {readRetainedMedia,mergeRetainedMedia,mergePreviewState} from "../ad-media/read.js";
@@ -149,6 +150,7 @@ export function attachCreativeBrowser(app: Express, db: DatabaseSync, options: B
             catch {
                 ownedStatus = "error";
             }
+            creatives=enrichLikelihood(db,brand.id,creatives,now.toISOString());
             const dates = creatives.flatMap(item => [item.firstObservedAt, item.observedAt].filter((value): value is string => Boolean(value))).sort();
             if(res.destroyed)return;
             await writeJsonRows(res,{ mediaReadStatus,categoryReadStatus,metaSource, brand: { id: brand.id, name: brand.name, domain: brand.domain,primaryCategories:primaryCategories(brand) }, creatives, competitors, sources, ownedStatus, dateRange: { from: dates[0] || null, to: dates.at(-1) || null }, lastChecked: dates.at(-1) || null, reportingRange: { from, to } } satisfies CreativeBrowserResponse,"creatives",{gzip:req.acceptsEncodings("gzip")==="gzip"});

@@ -6,7 +6,7 @@ import type { Page } from "../shared/types.js";
 test("UI-00 config has unique canonical IDs, ordered groups and only existing ready screens",()=>{
   assert.equal(new Set(navigation.map(item=>item.id)).size,navigation.length);
   assert.deepEqual(navigationGroups,["Overview","Research","Act","Share","Settings"]);
-  const screens:Page[]=["overview","brand","competitors","ads","formats","audiences","creators","reports","sources","settings","demo","labelling","patterns","winners","briefs","scores","ask"];
+  const screens:Page[]=["overview","brand","competitors","ads","formats","audiences","creators","reports","sources","settings","demo","accuracy","labelling","patterns","winners","briefs","scores","ask"];
   for(const item of navigation) {
     assert.ok(navigationGroups.includes(item.group));
     if(item.ready)assert.ok(item.screen && screens.includes(item.screen),item.id);
@@ -14,7 +14,7 @@ test("UI-00 config has unique canonical IDs, ordered groups and only existing re
   }
   for(const screen of screens)assert.equal(resolveNavigation(`/?view=${viewForScreen(screen)}&demo=1`).screen,screen);
   const visible=visibleNavigation().flatMap(group=>group.items.map(item=>item.id));
-  assert.deepEqual(visible,["overview","brands","competitors","creatives","formats","patterns","audience","winners","briefs","creators","scores","reports","ask","data","settings","labelling"]);
+  assert.deepEqual(visible,["overview","brands","competitors","creatives","formats","patterns","audience","winners","briefs","creators","scores","reports","ask","data","settings","accuracy","labelling"]);
   assert.ok(visibleNavigation(true).flatMap(group=>group.items).some(item=>item.id==="demo"));
 });
 test("UI-00 legacy aliases redirect canonically and preserve brand, filters and hashes",()=>{

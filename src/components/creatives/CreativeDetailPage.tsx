@@ -1,3 +1,4 @@
+import {LikelihoodSection} from "../ui/Likelihood";
 import {ComparisonFilters} from "../ui/ComparisonFilters";
 import {similarCompetitors,mediaFormat,formatName} from "../../../shared/public-comparisons";
 import {AdPreview} from "../ui/AdPreview";
@@ -123,6 +124,7 @@ function Detail({row,data,filtered,onOpen,onRefresh}:DetailProps&{row:BrowserCre
 
         </SectionCard>
 
+        <LikelihoodSection estimate={row.likelihood}/>
         <SectionCard title="Creative score" help="Best-practice checklist · Estimated, rules-based" meta={{...analysisMeta,lastChecked:row.score?.analysedAt||analysisMeta.lastChecked}} empty={!row.score&&scoreGap}>
           {row.score&&<CreativeScoreBreakdown score={row.score} workspaceId={data.brand.id} evidenceTarget={(row.videoUrl||row.imageUrls.length)&&!mediaError?"creative":"original"} onSeek={row.videoUrl&&!mediaError?seek:undefined} onSlide={row.mediaKind!=="video"?n=>{setSlide(n);document.getElementById("creative-media")?.scrollIntoView({behavior:"smooth"});}:undefined}/>}
 

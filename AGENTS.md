@@ -90,6 +90,8 @@ archived skill.
 
 UI work follows research/UI-SPEC.md and design/screens/.
 Read design/reference/README.md before UI work; compare each screen with its PNG and static HTML.
+Accuracy, recommendation tests and experimental likelihoods follow
+research/ACCURACY-SPEC.md. Fixtures never release real validation gates.
 
 Public Meta collection stays off unless EXTER_META_LIBRARY_ENABLED=true in both
 scheduler and worker. Collect watchlist brands by Page ID; keywords are category

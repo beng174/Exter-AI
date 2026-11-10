@@ -372,3 +372,18 @@ screenshots at 1440px and 390px if the environment can run the app.
 Working Score, Priority, review themes, weekly pack, client links, CA-03 to
 CA-12 logic, new connectors and any schema change. Those ship under their own
 spec items; the screens pick them up when they land.
+
+## Accuracy settings and experimental likelihoods (10 Nov 2026)
+
+The owner authorised Settings > Accuracy (`?view=accuracy`) under AC-01..06 in
+ACCURACY-SPEC.md. Reuse the shared reference header, sections and tables; there
+is no approved Accuracy reference image yet. Show field/model version, current
+score, sample, check date and gate status. Tests and brand threshold overrides
+are owned-account-only, grouped by account/product/category/format.
+
+The later model request permits internal experimental outputs before validation,
+labelled "Estimated, not yet validated". Every probability includes uncertainty,
+similar-ad count, model version and validation AUC/sample. Client reports exclude
+unpassed estimates. Creative detail and Scores show the same model; Creatives
+and Winners can sort its estimates. Drafts need an analysed feature file before
+scoring; the existing creative checklist and Working Score remain unchanged.

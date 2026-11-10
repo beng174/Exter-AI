@@ -1,3 +1,4 @@
+import { attachAccuracy } from "./accuracy/api.js";
 import {attachAdMedia,attachMediaStep} from "./ad-media/api.js";
 import {attachCategoryStep,attachPrimaryCategories} from "./public-categories/api.js";
 import { attachBrandLogos } from "./brand-logos.js";
@@ -277,6 +278,7 @@ export function createApp(db: DatabaseSync = openDatabase()) {
   attachPublicMonitor(app, db);
   const video = attachVideoAnalysis(app, db);
   attachLabelling(app, db, video);
+  attachAccuracy(app, db);
   attachGeminiSmoke(app, db, video);
   attachKernelJobs(app, broker, id => resolveDemoBrandId(db, id));
   attachBrandDemo(app, db);
