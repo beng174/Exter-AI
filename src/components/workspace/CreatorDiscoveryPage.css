@@ -9,3 +9,7 @@
 .creator-research-checks{display:grid;gap:8px;align-content:start}.creator-research-checks>.ui-status-chip{justify-self:start}.creator-research-checks>.creator-rule-list{align-self:start}
 
 .creator-run-details{margin-top:16px}.creator-run-details>summary{min-height:44px;align-content:center;cursor:pointer}.creator-reconcile-form{display:flex;align-items:end;flex-wrap:wrap;gap:12px;margin-top:16px}.creator-reconcile-form>p{flex-basis:100%}.creator-reconcile-form label{display:grid;gap:8px;font-size:13px;min-width:0;flex:1 1 220px}.creator-reconcile-form select,.creator-reconcile-form input{min-height:44px;width:100%;padding:8px 12px;border:1px solid var(--line);border-radius:8px;font:inherit}
+
+.creator-count-source{display:block;white-space:normal;overflow-wrap:anywhere;font-size:11px;line-height:1.4;color:var(--muted)}.creator-source-suggestions{max-width:85ch;margin:0 0 16px}.creator-rejected-summary{margin:0 0 16px;line-height:1.6}
+
+.creator-research-card .creator-discovery-metrics>div{grid-template-rows:32px 24px minmax(48px,auto);align-content:start}.creator-discovery-source{line-height:1.5;overflow-wrap:anywhere}

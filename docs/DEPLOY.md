@@ -1423,3 +1423,39 @@ Official dates, reach and historical rows are unchanged.
 The release target is at least 95% preview coverage for each brand. Fixture results
 are not a production forecast. See `docs/review/media-backfill/README.md` for
 confirmed code causes, supplied production figures and the limits of verification.
+
+### Creator-first discovery rollout
+
+Deploy the same commit to exter-ai and exter-worker; retain the existing provider
+and dedicated official-check tokens in Render secrets. No new key or budget change is required. Run `npm run db:migrate` once in the
+web service Shell after deploying this commit, then deploy the worker and scheduler
+to the same commit. The additive migration adds only `stop_requested` to creator
+searches and deletes nothing. The existing server-side provider client now uses
+`apify/instagram-hashtag-analytics-scraper` for top and recent hashtag posts
+(`hashtags`, `includeTopPosts`, `includeLatestPosts`), and the configured profile
+scraper for mentions, profile enrichment. The hashtag
+actor exposes top/recent posts to paid accounts; missing access must be resolved
+in the provider account. Both actor paths use the existing per-lookup reservation,
+real-usage reconciliation and charge cap. No command-line scraper is used.
+
+Open Creators for the existing brand after deployment. A new screening version
+rechecks saved full profiles automatically, including existing Valentte results,
+without a provider call. “Recheck saved results” repeats this locally from stored
+profiles. Inspect Rejected and its reason counts. Older searches discarded public
+follower counts and deleted the paid dataset after projection; those unavailable
+numbers cannot be recovered by rescreening. They stay unknown, never guessed.
+Minimal old rejections keep their dated decisions. A deliberate new search uses
+editable suggested hashtags and competitor queries, then an explicit estimate
+and approval. Scraper numbers read Observed (public profile); only official
+checks read Verified. The owner-labelled accuracy gates still apply.
+
+“Stop search” is available on active searches. The API records a durable stop;
+the worker aborts the current known provider run, processes its partial dataset,
+and settles its real usage, releasing the unused reserve. No later search step
+starts. While the provider confirms the stop or final charge, the page shows
+Stopping. Temporary failures reuse the same run, never start a replacement.
+Unknown historical run IDs or missing billing keep their holds for Reconcile.
+The rules upgrade also stops incompatible old searches safely rather than losing
+an active paid dataset. Results and source/check dates remain unchanged by a
+local recheck. Missing required checks reject; Needs review is only for genuine
+mixed creator-founders. Keywords never search account names.

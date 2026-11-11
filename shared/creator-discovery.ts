@@ -1,6 +1,6 @@
 import { screenCreator, type CreatorScreen, type PublicCreatorScreening } from "./creator-screening.js";
 /** Creator research is a checklist, never a sales prediction. */
-export const CREATOR_RULE_VERSION = "creator-discovery-v2-strict";
+export const CREATOR_RULE_VERSION = "creator-discovery-v3-public-people";
 export const CREATOR_STYLES = ["UGC", "Talking to camera", "Tutorial", "Aesthetic", "Lifestyle"] as const;
 export type CreatorStyle = typeof CREATOR_STYLES[number];
 export type FollowerTier = "Nano" | "Micro" | "Mid" | "Macro";
@@ -17,16 +17,18 @@ export interface DiscoveryPost {
 export interface DiscoveryProfile {
   handle: string; name: string; bio: string; website: string | null; businessEmail: string | null;
   screening?: PublicCreatorScreening;
+  sources?: { kind: "disclosed-competitor" | "collected-ad" | "seed" | "competitor-mention" | "hashtag"; query: string }[];
   private: boolean | null; accountKind: "creator" | "brand" | "repost" | "reseller" | "unknown";
   posts: DiscoveryPost[]; related: string[]; appearsInAds: string[];
-  growth?: { from: string; to: string; previousFollowers: number; followers: number };
+  growth?: { from: string; to: string; previousFollowers: number; followers: number; source?: "Verified" | "Observed (public profile)" };
   audit: { observedAt?: string; postIds?: string[]; sampledPosts: number; comments: number; repeatedFraction: number; genericFraction?: number; emojiFraction?: number } | null;
   followers: number | null; mediaCount: number | null;
-  verification: "Verified" | "Unverified"; verificationReason: string;
+  verification: "Verified" | "Observed (public profile)" | "Unverified"; verificationReason: string;
   checkedAt: string | null; discoveredAt: string;
 }
 export interface FitPart { key: string; label: string; points: number | null; max: number; reason: string }
 export interface CreatorEvaluation {
+  discoverySources?: DiscoveryProfile["sources"];
   handle: string; tier: FollowerTier | null; engagement: number | null; assessedPosts: number;
   frequency: number | null; from: string | null; to: string | null;
   uk: { confidence: number | null; band: "High" | "Medium" | "Low" | "Unknown"; reasons: string[]; foreign: boolean; signalCount: number };
@@ -44,7 +46,7 @@ export interface CreatorSegment { id: string; name: string; filters: CreatorFilt
 export interface DiscoveryQuote { id: string; maxCostGbp: number; batches: number; expiresAt: string; available: boolean; reason: string }
 export interface CreatorProviderRunView {reservationId:string;searchId:string;runId:string|null;status:string;found:number|null;usageUsd:number|null;costGbp:number|null;heldGbp:number;startedAt:string;checkedAt:string|null}
 export interface CreatorLegacyHold {reservationId:string;heldGbp:number;createdAt:string}
-export interface DiscoveryRun { id: string; kind: string; status: string; found: number; verified: number; step: number; totalSteps: number; reservedGbp: number; error: string | null; createdAt: string;providerRuns?:CreatorProviderRunView[];legacyHolds?:CreatorLegacyHold[];reconcilePending?:boolean;reconcileNote?:string|null }
+export interface DiscoveryRun { id: string; kind: string; status: string; found: number; verified: number; step: number; totalSteps: number; reservedGbp: number; error: string | null; createdAt: string;providerRuns?:CreatorProviderRunView[];legacyHolds?:CreatorLegacyHold[];reconcilePending?:boolean;reconcileNote?:string|null;stopRequested?:boolean }
 export interface CreatorPrecision {
   field: "Individual creator" | "Good fit" | "UK"; tp: number; fp: number; fn: number; precision: number | null;
   interval: [number, number] | null; labelled: number; matched: number; missing: number;
@@ -55,6 +57,7 @@ export interface DiscoverySnapshot {
   configured: boolean; verificationConfigured: boolean; reason: string; brief: CreatorBrief | null;
   briefVersion: string | null; creators: DiscoveryCreator[]; segments: CreatorSegment[];
   rejected: RejectedCreator[];
+  suggestions?: { hashtags: string[]; competitors: string[]; keywords: string[]; unconfirmedHandles: string[] };
   runs: DiscoveryRun[]; precision: CreatorPrecision[]; clientReady: boolean;
 }
 export interface RejectedCreator { handle: string; name: string; profileUrl: string; evaluation: CreatorEvaluation; briefVersion: string; checkedAt: string }
@@ -66,6 +69,10 @@ export function creatorHandle(value: unknown): string | null {
 }
 export function followerTier(count: number | null): FollowerTier | null {
   return count === null || !Number.isFinite(count) || count < 0 ? null : count < 10000 ? "Nano" : count < 100000 ? "Micro" : count < 500000 ? "Mid" : "Macro";
+}
+export function creatorSourceText(sources: DiscoveryProfile["sources"]) {
+  const names={"disclosed-competitor":"Disclosed competitor post","collected-ad":"Collected competitor ad","seed":"Seed creator or lookalike","competitor-mention":"Competitor mention","hashtag":"Hashtag post"};
+  return sources?.map(s=>`${names[s.kind]}${s.query?`: ${s.query}`:""}`).join(" · ") || "Earlier search";
 }
 export function scrubCreatorText(value: unknown, max = 1200): string {
   if (typeof value !== "string") return "";
@@ -87,13 +94,22 @@ export const median = (values: number[]): number | null => {
   return n ? n % 2 ? sorted[(n - 1) / 2] : (sorted[n / 2 - 1] + sorted[n / 2]) / 2 : null;
 };
 const validCount = (v: number | null): v is number => v !== null && Number.isSafeInteger(v) && v >= 0;
+export function hasCreatorCounts(profile: DiscoveryProfile) {
+  return profile.verification !== "Unverified" && (validCount(profile.followers) || validCount(profile.mediaCount));
+}
+/** Older failed official checks kept counts but cleared their verification label. */
+export function restoreSavedCreatorCounts(profile: DiscoveryProfile): DiscoveryProfile {
+  return profile.verification === "Unverified" && (validCount(profile.followers) || validCount(profile.mediaCount))
+    ? {...profile,verification:"Observed (public profile)",verificationReason:"Saved public counts; the official check needs renewal."}
+    : profile;
+}
 export function recentCreatorPosts(posts: DiscoveryPost[]) {
   const seen = new Set<string>();
   return [...posts].filter(p => p.at && Number.isFinite(Date.parse(p.at))).sort((a, b) => Date.parse(b.at!) - Date.parse(a.at!)).filter(p => !seen.has(p.id) && Boolean(seen.add(p.id))).slice(0, 12);
 }
 export function engagementMetrics(profile: DiscoveryProfile) {
   const posts = recentCreatorPosts(profile.posts), dates = posts.map(p => p.at!);
-  const eligible = profile.verification === "Verified" && validCount(profile.followers) && profile.followers > 0 ? posts.filter(p => validCount(p.likes) && validCount(p.comments)) : [];
+  const eligible = hasCreatorCounts(profile) && validCount(profile.followers) && profile.followers > 0 ? posts.filter(p => validCount(p.likes) && validCount(p.comments)) : [];
   const elapsed = dates.length > 1 ? (Date.parse(dates[0]) - Date.parse(dates.at(-1)!)) / 86400000 : 0;
   return { engagement: median(eligible.map(p => (p.likes! + p.comments!) / profile.followers!)), assessedPosts: eligible.length,
     frequency: elapsed > 0 ? (posts.length - 1) * 7 / elapsed : null, from: dates.at(-1) ?? null, to: dates[0] ?? null };
@@ -120,7 +136,7 @@ export function ukCreatorSignals(profile: DiscoveryProfile): CreatorEvaluation["
 function words(text: string) { return new Set(text.toLowerCase().match(/[a-z]{3,}/g)?.filter(w => !["the", "and", "for", "with", "this", "that", "from"].includes(w)) ?? []); }
 function similarity(a: string, b: string) { const x = words(a), y = words(b), union = new Set([...x, ...y]).size; return union ? [...x].filter(w => y.has(w)).length / union : null; }
 export function evaluateCreator(profile: DiscoveryProfile, brief: CreatorBrief, seeds: DiscoveryProfile[] = [], now = new Date()): CreatorEvaluation {
-  const metrics = engagementMetrics(profile), uk = ukCreatorSignals(profile), tier = followerTier(profile.followers);
+  const metrics = engagementMetrics(profile), uk = ukCreatorSignals(profile), tier = followerTier(hasCreatorCounts(profile) ? profile.followers : null);
   const text = `${profile.bio} ${profile.posts.map(p => p.caption).join(" ")}`.toLowerCase();
   const terms = [...new Set([brief.category, ...brief.keywords].map(v => v.trim().toLowerCase()).filter(Boolean))];
   const niches = terms.filter(t => text.includes(t));
@@ -138,7 +154,7 @@ export function evaluateCreator(profile: DiscoveryProfile, brief: CreatorBrief, 
   const seedValues = seeds.filter(s => brief.seeds.includes(s.handle) && s.handle !== profile.handle).map(s => similarity(text, `${s.bio} ${s.posts.map(p => p.caption).join(" ")}`)).filter((v): v is number => v !== null);
   const parts: FitPart[] = [
     { key: "niche", label: "Niche", points: terms.length && text.trim() ? 30 * niches.length / terms.length : null, max: 30, reason: niches.length ? `Matches: ${niches.join(", ")}.` : "No configured niche terms found." },
-    { key: "engagement", label: "Engagement", points: metrics.assessedPosts === 12 && tier && metrics.engagement !== null ? Math.min(1, metrics.engagement / benchmarks[tier]) * 20 : null, max: 20, reason: metrics.assessedPosts === 12 ? "Compared with a provisional tier guide." : "Needs 12 posts with official counts." },
+    { key: "engagement", label: "Engagement", points: metrics.assessedPosts === 12 && tier && metrics.engagement !== null ? Math.min(1, metrics.engagement / benchmarks[tier]) * 20 : null, max: 20, reason: metrics.assessedPosts === 12 ? "Compared with a provisional tier guide." : "Needs public or verified counts on 12 posts." },
     { key: "uk", label: "UK", points: brief.country === "GB" && uk.confidence !== null ? uk.confidence * 20 : null, max: 20, reason: uk.reasons.join(" ") || "No UK location signals found." },
     { key: "style", label: "Style", points: brief.styles.length && text.trim() ? 10 * brief.styles.filter(s => styles.includes(s)).length / brief.styles.length : null, max: 10, reason: "Estimated from public text, without visual inspection." },
     { key: "authenticity", label: "Authenticity", points: flagged ? 0 : audited ? 10 : null, max: 10, reason: risk.reasons[0] },
@@ -147,7 +163,7 @@ export function evaluateCreator(profile: DiscoveryProfile, brief: CreatorBrief, 
   const assessedPoints = parts.reduce((n, p) => n + (p.points === null ? 0 : p.max), 0);
   const screen=screenCreator(profile,brief,{...metrics,uk,tier,styles},now);
   const fit = assessedPoints ? Math.round(100 * parts.reduce((n, p) => n + (p.points ?? 0), 0) / assessedPoints) : null;
-  return { handle: profile.handle, ...metrics, uk, tier, niches, styles, collaborations, workedWithCompetitors, risk, excluded: screen.rules.filter(r=>r.state==="fail").map(r=>r.reason), review: screen.rules.filter(r=>r.state==="review").map(r=>r.reason), fit, assessedPoints, provisional: assessedPoints < 100,
+  return { handle: profile.handle, discoverySources:profile.sources, ...metrics, uk, tier, niches, styles, collaborations, workedWithCompetitors, risk, excluded: screen.rules.filter(r=>r.state==="fail").map(r=>r.reason), review: screen.rules.filter(r=>r.state==="review").map(r=>r.reason), fit, assessedPoints, provisional: assessedPoints < 100,
     parts, screen, goodFit: screen.disposition === "Results" && assessedPoints >= 80 && fit !== null && fit >= 70, ruleVersion: CREATOR_RULE_VERSION };
 }
 export function matchesCreator(row: DiscoveryCreator, f: CreatorFilters, disposition: "Results" | "Needs review" = "Results", now = new Date()): boolean {

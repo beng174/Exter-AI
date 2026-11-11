@@ -1,13 +1,19 @@
 import type pg from "pg";
-import { actorDiscoveryInput,discoverySteps } from "./discovery-store.js";
+import { actorDiscoveryInput,discoverySteps,briefDigest } from "./discovery-store.js";
 import { legacyCreatorHolds,actorIdValid,finalActorStatus,settleCreatorRun,trackCreatorProgress,type CreatorActorRun } from "./run-store.js";
 import type { ApifyCreatorProvider } from "./apify.js";
 const object=(v:unknown):Record<string,any>=>v&&typeof v==="object"&&!Array.isArray(v)?v as Record<string,any>:{};
 /** Historical matching also requires the owner's explicit run-to-hold selection. */
 export function creatorRunInputMatches(job:Record<string,any>,input:unknown){
- const actual=object(input),brief=job.brief,target=Math.min(199,Math.max(1,Math.ceil(brief.target/Math.max(1,discoverySteps(brief).length))));
- const steps=[...discoverySteps(brief),...(Array.isArray(job.steps)?job.steps:[])].filter(s=>s.kind!=="verify");
+ const actual=object(input),brief=job.brief,target=Math.min(199,Math.max(1,Math.ceil(brief.target/Math.max(1,discoverySteps(brief).filter(s=>!["ads","competitor"].includes(s.kind)).length))));
+ const steps=[...discoverySteps(brief),...(Array.isArray(job.steps)?job.steps:[])].filter(s=>["hashtag","partnership","competitor","seed","enrich"].includes(s.kind));
  if(steps.some(step=>{const expected=actorDiscoveryInput(step,brief.country,target);if(expected.search&&Array.isArray(actual.directUrls)&&actual.directUrls.length||expected.directUrls&&actual.search)return false;return Object.entries(expected).every(([k,v])=>JSON.stringify(actual[k])===JSON.stringify(v));}))return true;
+ // Old paid runs must remain reconcilable; this never dispatches their old searches.
+ if(job.brief_version!==briefDigest(brief)){
+  const count=brief.hashtags.length+(brief.keywords.length||1)+brief.competitors.length+Math.ceil(brief.seeds.length/20),limit=Math.min(100,Math.max(1,Math.ceil(brief.target/Math.max(1,count))));
+  const oldInputs=[...brief.hashtags.map((tag:string)=>({directUrls:[`https://www.instagram.com/explore/tags/${tag}/`],resultsType:"posts",resultsLimit:limit,addParentData:true})),...(brief.keywords.length?brief.keywords:[brief.category]).map((term:string)=>({search:`${term}${brief.country==="GB"?" UK":""}`,searchType:"user",searchLimit:limit,resultsType:"details",resultsLimit:1}))];
+  if(oldInputs.some(expected=>Object.entries(expected).every(([key,value])=>JSON.stringify(actual[key])===JSON.stringify(value)) && !("search" in expected && actual.directUrls)))return true;
+ }
  const known=new Set(Array.isArray(job.handles)?job.handles:[]);
  return actual.resultsType==="details" && actual.resultsLimit===1 && !actual.search && Array.isArray(actual.directUrls) && actual.directUrls.length>0 && actual.directUrls.length<=20 && actual.directUrls.every((url:unknown)=>typeof url==="string" && /^https:\/\/www\.instagram\.com\/[a-z0-9._]+\/$/.test(url) && known.has(url.split("/")[3]));
 }
@@ -18,8 +24,9 @@ export async function reconcileCreatorSearch(pool:pg.Pool,job:Record<string,any>
  for(const mapping of mappings)try{
   if(!actorIdValid(mapping.actorRunId)||!actorIdValid(mapping.reservationId))throw new Error();
   const hold=(await legacyCreatorHolds(pool,job)).find(h=>h.reservationId===mapping.reservationId);if(!hold)throw new Error();
-  const run=object(object(await provider.inspectRun(mapping.actorRunId)).data),actor=object(object(await provider.inspectActor?.()).data);
-  if(run.id!==mapping.actorRunId || !actorIdValid(actor.id) || run.actId!==actor.id || !actorIdValid(run.defaultKeyValueStoreId) || !creatorRunInputMatches(job,await provider.inspectInput?.(run.defaultKeyValueStoreId)))throw new Error();
+  const run=object(object(await provider.inspectRun(mapping.actorRunId)).data);if(!actorIdValid(run.defaultKeyValueStoreId))throw new Error();
+  const input=await provider.inspectInput?.(run.defaultKeyValueStoreId),actor=object(object(await provider.inspectActor?.(Array.isArray(object(input).hashtags)?"hashtag":undefined)).data);
+  if(run.id!==mapping.actorRunId || !actorIdValid(actor.id) || run.actId!==actor.id || !creatorRunInputMatches(job,input))throw new Error();
   const at=Date.parse(run.startedAt),holdAt=Date.parse(hold.createdAt);
   if(!Number.isFinite(at)||at<holdAt||at-holdAt>90000)throw new Error();
   await pool.query(`INSERT INTO creator_provider_runs(reservation_id,workspace_id,search_id,actor_id,actor_run_id,gbp_per_usd,started_at) VALUES($1,$2,$3,$4,$5,$6,$7) ON CONFLICT(reservation_id) DO UPDATE SET actor_run_id=excluded.actor_run_id WHERE creator_provider_runs.search_id=excluded.search_id AND creator_provider_runs.actor_run_id IS NULL`,[hold.reservationId,job.workspace_id,job.id,actor.id,run.id,job.conversion,run.startedAt]);

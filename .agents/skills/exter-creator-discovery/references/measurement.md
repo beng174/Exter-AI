@@ -1,10 +1,10 @@
 # Measurements
 
-Version: creator-discovery-v2-strict. Do not change ad metrics or existing Creative score.
+Version: creator-discovery-v3-public-people. Do not change ad metrics or existing Creative score.
 
 - **Engagement rate:** take the latest 12 unique, dated posts ordered by publication
-  time, not pinned order. For each post with official likes and comments and a
-  positive official follower count, compute `(likes + comments) / followers`.
+  time, not pinned order. For each post with public or verified likes and comments and a
+  positive follower count from the same source, compute `(likes + comments) / followers`.
   Take the median (mean of the middle two for an even sample). Multiply by 100
   only for display. This uses followers at check time, not historical followers.
   Real zero counts are valid; null, hidden or invalid counts are not zero.
@@ -24,7 +24,10 @@ Version: creator-discovery-v2-strict. Do not change ad metrics or existing Creat
   exclusions and missing predictions; never substitute agreement or recall.
 
 Source dates and post URLs are field-level provenance. Keep scraper text and
-verified official numbers separate. A failed refresh cannot overwrite good earlier
+public-profile and verified official numbers separate. Public counts can filter
+the inclusive follower range and determine tiers; outside bounds always rejects.
+Keep source and original check time. Official missing values stay missing; never
+label scraper fallbacks Verified. Compare growth only within the same source. A failed refresh cannot overwrite good earlier
 numbers with zero or silently renew their check time.
 
 Individual-creator prediction means the identity check passed, even if another

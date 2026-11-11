@@ -20,8 +20,9 @@ and the complete source inventory are in
    maximum reserved cost before dispatch. Use the existing server-side client and
    budget guard; no command line, cookies, private account access or paid auto-retry.
 3. Read [measurement.md](references/measurement.md) before calculating anything.
-   Only official business-discovery responses supply displayed follower, media,
-   like and comment numbers. Otherwise show Unverified. Engagement is the median
+   Dated scraper follower, media, like and comment counts are Observed (public
+   profile) and can drive filters, tiers and engagement. Official business-discovery
+   checks upgrade them to Verified. Missing counts stay Unverified. Engagement is the median
    of `(likes + comments) / followers` over the last 12 posts, displayed as percent.
 4. Read [fit-and-screening.md](references/fit-and-screening.md) for tier benchmarks,
    UK reasons, niche/style, partnership signals and the six-part fit checklist.
@@ -31,8 +32,8 @@ and the complete source inventory are in
    exporting, refreshing or deleting. Refresh monthly within the budget; expired
    official numbers remain dated and do not become current through a failed refresh.
 6. Show Find creators, Results and Segments inside the existing Creators view.
-   Results contain only individuals passing every hard brief rule. Put uncertain
-   accounts in Needs review and failures in Rejected, with counts by reason.
+   Results contain only individuals passing every hard brief rule. Reject failed or missing hard checks, with counts by reason. Needs review is
+   only for genuine mixed creator-founders whose other requirements pass.
    A genuine creator who owns a shop needs review. Fit cannot override screening.
    Keep unknown values unknown, reasons accessible, source/check time visible,
    source failures distinct from empty searches, and sample records isolated.

@@ -1,7 +1,7 @@
 import type { CreatorBrief, CreatorStyle, DiscoveryPost, DiscoveryProfile, FollowerTier } from "./creator-discovery.js";
 export type RuleState = "pass" | "fail" | "review";
 export type CreatorDisposition = "Results" | "Needs review" | "Rejected";
-export const REJECT_REASONS = ["Business page", "Repost page", "Outside follower range", "Not UK", "Off-niche", "Style mismatch", "Inactive", "Private account", "Excluded by brief", "Suspicious audience"] as const;
+export const REJECT_REASONS = ["Business page", "Repost page", "Outside follower range", "Not UK", "Off-niche", "Style mismatch", "Inactive", "Private account", "Excluded by brief", "Suspicious audience", "Missing profile counts", "Incomplete checks"] as const;
 export type RejectReason = typeof REJECT_REASONS[number];
 export interface CreatorRule { id: string; label: string; state: RuleState; reason: string; rejection?: RejectReason }
 export interface PublicCreatorScreening {
@@ -17,9 +17,10 @@ export const CREATOR_ENGAGEMENT_BANDS: Record<FollowerTier, { min: number; max: 
   Nano: { min: .003, max: .20 }, Micro: { min: .002, max: .15 },
   Mid: { min: .0015, max: .10 }, Macro: { min: .001, max: .08 },
 };
-const BUSINESS_CATEGORY = /\b(?:shopping|retail|brand|product[ /-]*service|local business|restaurant|shop|agency|magazine|media|publisher|news|community|organi[sz]ation|non[ -]?profit|school|reseller|management)\b/i;
+const BUSINESS_CATEGORY = /\b(?:shopping|retail|brand|product[ /-]*service|local business|restaurant|shop|clothing store|agency|magazine|media|publisher|news|community|organi[sz]ation|non[ -]?profit|school|reseller|management)\b/i;
 const CREATOR_CATEGORY = /\b(?:digital creator|blogger|personal blog|public figure|artist|content creator)\b/i;
 const BUSINESS_COPY = /\b(?:shop|store|official|studio|ltd|boutique|brand)\b|(?:^|\s)co\.(?:\s|$)|\bdm to order\b|\bshop now\b|\bworldwide shipping\b|\bfree delivery\b|\bdiscount code for our\b|\b(?:talent|marketing|management) agency\b|\btalent management\b|\bwe manage\b/i;
+const PRODUCT_NAME = /\b(?:clothing|fashion|wear|apparel|collection|fragrances?|candles?|home|interiors|shop|store|boutique|co|ltd|official|studio|brand|gifts?)\b/i;
 const REPOST_COPY = /\b(?:repost(?:ing)?|memes?|quotes?|fan page|fan account|aggregator|featuring page|tag us|dm for features|credit to (?:the )?owners|daily inspo|featured creators|curated by us)\b/i;
 const OWNER = /\b(?:founder|co[ -]?founder|owner|i own|my (?:shop|store|business|brand))\b/i;
 const DAY = 86400000;
@@ -59,6 +60,9 @@ export function individualCreator(profile: DiscoveryProfile): IndividualCreatorC
   if (repost) negatives.push("The page describes reposts, features or aggregated content.");
   if (BUSINESS_CATEGORY.test(category) || ["brand", "reseller"].includes(profile.accountKind)) negatives.push("The account category describes a business.");
   if (BUSINESS_COPY.test(identity)) negatives.push("The name or bio has business wording.");
+  const productIdentity = `${profile.name} ${profile.handle.replace(/[._]/g," ")}`;
+  const productHandle = /clothing|fashion|apparel|collection|london.*wear|fragrances?|candles?|home|interiors|shop|store|boutique|official|studio|brand|gifts?|(?:^|[._])(?:co|ltd)(?:$|[._])/i.test(profile.handle);
+  if (PRODUCT_NAME.test(productIdentity) || productHandle) negatives.push("The name or handle describes products or a shop.");
   if ((meta?.linkKind ?? linkKind(profile.website)) === "shop") negatives.push("The public link leads to a shop.");
   if (meta?.businessAddress || meta?.openingHours) negatives.push("The bio advertises shop premises or opening hours.");
   if (posts.length >= 3 && appearances.filter(p => p.person === false && p.productOnly === true).length > posts.length / 2) negatives.push("Most sampled posts show products without a person.");
@@ -87,40 +91,46 @@ export function screenCreator(profile: DiscoveryProfile, brief: CreatorBrief, in
   const individual = individualCreator(profile), rules: CreatorRule[] = [];
   const add = (id: string, label: string, state: RuleState, reason: string, rejection?: RejectReason) => rules.push({ id, label, state, reason, rejection });
   add("individual", "Individual creator", individual.state, individual.reason, profile.accountKind === "repost" || REPOST_COPY.test(`${profile.name} ${profile.bio}`) ? "Repost page" : "Business page");
-  const officialAt=profile.checkedAt?Date.parse(profile.checkedAt):NaN;
-  const knownFollowers = Number.isFinite(officialAt) && officialAt<=now.getTime() && now.getTime()-officialAt<=35*DAY && profile.verification === "Verified" && profile.followers !== null && Number.isFinite(profile.followers);
-  add("followers", "Follower range", !knownFollowers ? "review" : profile.followers! >= brief.minFollowers && profile.followers! <= brief.maxFollowers ? "pass" : "fail", !knownFollowers ? "Official follower numbers are needed." : `${profile.followers!.toLocaleString("en-GB")} followers; the brief requires ${brief.minFollowers.toLocaleString("en-GB")} to ${brief.maxFollowers.toLocaleString("en-GB")}.`, "Outside follower range");
+  const countAt=profile.checkedAt?Date.parse(profile.checkedAt):NaN;
+  const sourcedCounts = profile.verification !== "Unverified" && Number.isFinite(countAt) && countAt<=now.getTime();
+  const knownFollowers = profile.verification !== "Unverified" && profile.followers !== null && Number.isSafeInteger(profile.followers) && profile.followers>=0;
+  const outside = knownFollowers && (profile.followers! < brief.minFollowers || profile.followers! > brief.maxFollowers);
+  const freshCounts = sourcedCounts && now.getTime()-countAt<=35*DAY;
+  add("followers", "Follower range", outside ? "fail" : knownFollowers && freshCounts ? "pass" : "review", knownFollowers ? `${profile.followers!.toLocaleString("en-GB")} followers; the brief requires ${brief.minFollowers.toLocaleString("en-GB")} to ${brief.maxFollowers.toLocaleString("en-GB")}.${!freshCounts?" Refresh the dated count.":""}` : "Public or verified follower numbers are needed.", "Outside follower range");
   const ukPass = input.uk.band === "High" && (input.uk.signalCount ?? 0) >= 2;
   add("country", "Country", brief.country !== "GB" ? "pass" : input.uk.foreign ? "fail" : ukPass ? "pass" : "review", brief.country !== "GB" ? "The brief allows all countries." : input.uk.foreign ? "The bio states a base outside the UK." : ukPass ? "High UK confidence from at least two independent signals." : "High UK confidence needs at least two independent signals.", "Not UK");
   const unique = new Map<string, DiscoveryPost>();
   for(const p of [...profile.posts].filter(p=>p.at && Number.isFinite(Date.parse(p.at))).sort((a,b)=>Date.parse(b.at!)-Date.parse(a.at!))) if(!unique.has(p.id)) unique.set(p.id,p);
   const posts = [...unique.values()].slice(0, 12), terms = [...brief.keywords, ...brief.hashtags];
-  const bioMatch = nicheTextMatch(profile.bio, terms), matched = posts.filter(p => nicheTextMatch(`${p.caption} ${p.altText ?? ""}`, terms)).length;
+  const matched = posts.filter(p => nicheTextMatch(`${p.caption} ${p.altText ?? ""}`, terms)).length;
   const completeText = posts.length === 12 && posts.every(p => Boolean(p.caption.trim() || p.altText?.trim()));
-  add("niche", "Niche match", !terms.length ? "review" : bioMatch || matched >= 3 ? "pass" : completeText ? "fail" : "review", !terms.length ? "Add niche keywords or hashtags to the brief." : bioMatch ? "The bio matches the brief's niche." : `${matched} of 12 recent posts match; at least 3 are needed.`, "Off-niche");
+  add("niche", "Niche match", !terms.length ? "review" : matched >= 3 ? "pass" : completeText ? "fail" : "review", !terms.length ? "Add niche keywords or hashtags to the brief." : `${matched} of 12 recent posts match; at least 3 are needed.`, "Off-niche");
   const styleMatch = brief.styles.some(s => input.styles.includes(s));
   add("style", "Content style", !brief.styles.length || styleMatch ? "pass" : completeText ? "fail" : "review", !brief.styles.length ? "No content style is required." : styleMatch ? "At least one selected content style matches." : "No selected style is supported by the sampled content.", "Style mismatch");
   const latest = posts[0]?.at ? Date.parse(posts[0].at) : NaN, age = (now.getTime() - latest) / DAY;
-  const totalKnown = profile.verification === "Verified" && profile.mediaCount !== null && Number.isSafeInteger(profile.mediaCount) && profile.mediaCount >= 0;
+  const totalKnown = freshCounts && profile.mediaCount !== null && Number.isSafeInteger(profile.mediaCount) && profile.mediaCount >= 0;
   const activeFail = Number.isFinite(age) && age > 30 || totalKnown && profile.mediaCount! < 12;
   const activePass = Number.isFinite(age) && age >= 0 && age <= 30 && totalKnown && profile.mediaCount! >= 12;
-  add("active", "Recent activity", activeFail ? "fail" : activePass ? "pass" : "review", activeFail ? "Needs a post within 30 days and at least 12 posts overall." : activePass ? "Posted within 30 days; at least 12 posts are recorded." : "Recent activity or the official post count needs confirmation.", "Inactive");
+  add("active", "Recent activity", activeFail ? "fail" : activePass ? "pass" : "review", activeFail ? "Needs a post within 30 days and at least 12 posts overall." : activePass ? "Posted within 30 days; at least 12 posts are recorded." : "Recent activity or the public post count needs confirmation.", "Inactive");
   add("public", "Public account", profile.private === true ? "fail" : profile.private === false ? "pass" : "review", profile.private === true ? "The account is private." : profile.private === false ? "The public profile was accessible." : "Public account status is unknown.", "Private account");
   const identityText = `${profile.name} ${profile.bio} ${profile.posts.map(p => p.caption).join(" ")}`;
   const blocked = brief.exclusions.some(v => v.trim().replace(/^@/, "").toLowerCase() === profile.handle || nicheTextMatch(identityText, [v]));
   const minor = /\b(?:i am|i'm|age|aged)\s*(?:1[0-7]|[0-9])\b/i.test(profile.bio);
   add("exclusions", "Brief exclusions", blocked || minor ? "fail" : "pass", minor ? "The bio states an age under 18." : blocked ? "Matches the brief's exclusion list." : "No brief exclusion matches.", "Excluded by brief");
   const band = input.tier ? CREATOR_ENGAGEMENT_BANDS[input.tier] : null;
-  const rateKnown = input.engagement !== null && input.assessedPosts === 12 && profile.verification === "Verified" && band;
+  const rateKnown = input.engagement !== null && input.assessedPosts === 12 && freshCounts && band;
   const low = rateKnown && input.engagement! < band.min, high = rateKnown && input.engagement! > band.max;
   const growth = profile.growth, days = growth ? (Date.parse(growth.to) - Date.parse(growth.from)) / DAY : NaN;
-  const growthKnown = growth && days >= 7 && days <= 35 && Number.isSafeInteger(growth.previousFollowers) && growth.previousFollowers > 0 && Number.isSafeInteger(growth.followers) && growth.followers >= 0 && growth.followers===profile.followers && Date.parse(growth.to)===officialAt && Date.parse(growth.to) <= now.getTime() && now.getTime()-Date.parse(growth.to)<=35*DAY;
+  const growthKnown = growth && (growth.source ?? "Verified")===profile.verification && days >= 7 && days <= 35 && Number.isSafeInteger(growth.previousFollowers) && growth.previousFollowers > 0 && Number.isSafeInteger(growth.followers) && growth.followers >= 0 && growth.followers===profile.followers && Date.parse(growth.to)===countAt && freshCounts;
   const jump = growthKnown && Math.abs(growth.followers / growth.previousFollowers - 1) >= .5;
   const audit = profile.audit, auditKnown = audit && audit.observedAt && now.getTime()-Date.parse(audit.observedAt)>=0 && now.getTime()-Date.parse(audit.observedAt)<=35*DAY && audit.postIds && new Set(audit.postIds.filter(id=>posts.some(p=>p.id===id))).size>=3 && Number.isSafeInteger(audit.sampledPosts) && audit.sampledPosts >= 3 && audit.sampledPosts<=12 && Number.isSafeInteger(audit.comments) && audit.comments >= 10 && [audit.repeatedFraction,audit.genericFraction,audit.emojiFraction].every(v=>typeof v==="number" && Number.isFinite(v) && v>=0 && v<=1);
   const badComments = auditKnown && (audit.genericFraction! >= .5 || audit.emojiFraction! >= .5 || audit.repeatedFraction >= .5);
   const audienceFail = Boolean(low || high || jump || badComments);
-  const audienceReasons = [low ? "Engagement is unusually low; bought followers are one possible cause." : high ? "Engagement is unusually high; coordinated activity is one possible cause." : !rateKnown ? "Needs official engagement counts on all 12 posts." : `Engagement is within the provisional ${input.tier!.toLowerCase()} range.`, jump ? "Followers changed by at least 50% between recent checks." : !growthKnown ? "Two comparable follower checks are needed to assess sudden changes." : "No sudden follower change was found.", badComments ? "Most sampled comments are generic, emoji-only or repeated." : !auditKnown ? "Comment quality needs a sample across at least three posts." : "Most sampled comments are specific to the posts."];
-  add("audience", "Audience checks", audienceFail ? "fail" : rateKnown && growthKnown && auditKnown ? "pass" : "review", audienceReasons.join(" "), "Suspicious audience");
+  const audienceReasons = [low ? "Engagement is unusually low; bought followers are one possible cause." : high ? "Engagement is unusually high; coordinated activity is one possible cause." : !rateKnown ? "Needs public or verified engagement counts on all 12 posts." : `Engagement is within the provisional ${input.tier!.toLowerCase()} range.`, jump ? "Followers changed by at least 50% between recent checks." : !growthKnown ? "Two comparable follower checks are needed to assess sudden changes." : "No sudden follower change was found.", badComments ? "Most sampled comments are generic, emoji-only or repeated." : !auditKnown ? "Comment quality needs a sample across at least three posts." : "Most sampled comments are specific to the posts."];
+  const invalidOptional = Boolean(audit && !auditKnown || growth && !growthKnown);
+  add("audience", "Engagement plausibility", audienceFail ? "fail" : rateKnown && !invalidOptional ? "pass" : "review", audienceReasons.join(" "), "Suspicious audience");
   const rejectedReasons = [...new Set(rules.filter(r => r.state === "fail").map(r => r.rejection!))];
-  return { individual, rules, rejectedReasons, disposition: rules.some(r => r.state === "fail") ? "Rejected" : rules.some(r => r.state === "review") ? "Needs review" : "Results", screenedAt: now.toISOString(), activeUntil: activePass ? new Date(latest + 30 * DAY).toISOString() : null };
+  const pending=rules.filter(r=>r.state==="review"), mixedOnly=pending.length===1 && pending[0].id==="individual" && individual.negatives.length>0 && individual.positives.length>=2;
+  if(pending.length && !mixedOnly)rejectedReasons.push(!knownFollowers?"Missing profile counts":"Incomplete checks");
+  return { individual, rules, rejectedReasons, disposition: rejectedReasons.length ? "Rejected" : mixedOnly ? "Needs review" : "Results", screenedAt: now.toISOString(), activeUntil: activePass ? new Date(latest + 30 * DAY).toISOString() : null };
 }
