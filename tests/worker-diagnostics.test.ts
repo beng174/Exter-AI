@@ -1,6 +1,8 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import {brokerAcknowledgement,databaseConnectionError,workerDiagnostic} from "../server/infrastructure/worker-diagnostics.js";
+import {workCreatorDiscoveryOnce} from "../server/creators/discovery-jobs.js";
+import type pg from "pg";
 
 test("worker diagnostics keep SQLSTATE and application location without raw driver data",()=>{
  const error=Object.assign(new Error("canceling statement due to statement timeout"),{code:"57014",detail:"private query values",query:"private SQL text",parameters:["private parameter"],stack:"Error\n at enqueueAdMedia (/app/server/ad-media/jobs.ts:31:17)"});
@@ -31,4 +33,18 @@ test("broker acknowledgements are bounded and distinguish busy work from a faile
  assert(databaseConnectionError(Object.assign(new Error("Database connection lost"),{code:"08006"})));
  assert(databaseConnectionError(new Error("Connection terminated unexpectedly")));
  assert(!databaseConnectionError(Object.assign(new Error("deadlock detected"),{code:"40P01"})));
+});
+
+test("creator heartbeat is released even when reconciliation and its failure write throw",async context=>{
+ const handle={unref(){}};
+ const start=context.mock.method(globalThis,"setInterval",()=>handle as any);
+ const stop=context.mock.method(globalThis,"clearInterval",()=>{});
+ const failure=Object.assign(new Error("fixture status write failed"),{code:"57014"});let claims=0;
+ const pool={query:async(sql:string)=>{
+  if(sql.startsWith("UPDATE creator_discovery_runs SET status=CASE")&&claims++===0)return {rows:[{id:"fixture-search",workspace_id:"workspace",reconcile_requested:true}]};
+  throw failure;
+ }} as unknown as pg.Pool;
+ await assert.rejects(workCreatorDiscoveryOnce(pool,{env:{}}),failure);
+ assert.equal(start.mock.callCount(),1);
+ assert(stop.mock.calls.some(call=>call.arguments[0]===handle));
 });

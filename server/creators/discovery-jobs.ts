@@ -59,6 +59,7 @@ export async function workCreatorDiscoveryOnce(pool: pg.Pool, options: CreatorJo
   options.onClaim?.({id:job.id,owner,workspaceId:job.workspace_id});
   const controller=new AbortController();let heartbeatBusy=false;
   const heartbeat=setInterval(()=>{if(heartbeatBusy)return;heartbeatBusy=true;void pool.query("UPDATE creator_discovery_runs SET lease_until=now()+interval '5 minutes' WHERE id=$1 AND lease_owner=$2 AND (status='running' OR reconcile_requested) RETURNING id",[job.id,owner]).then(r=>{if(!r.rowCount)controller.abort();}).catch(()=>controller.abort()).finally(()=>heartbeatBusy=false);},options.heartbeatMs??30000);heartbeat.unref();
+  try {
   if(job.reconcile_requested){
     try{const note=await reconcileCreatorSearch(pool,job,discovery);await pool.query("UPDATE creator_discovery_runs SET reconcile_requested=false,reconcile_note=$3,reconciled_at=now(),lease_owner=NULL,lease_until=NULL WHERE id=$1 AND lease_owner=$2",[job.id,owner,note]);}
     catch{await pool.query("UPDATE creator_discovery_runs SET reconcile_requested=false,reconcile_note='The provider charges could not be checked. Holds are unchanged.',lease_owner=NULL,lease_until=NULL WHERE id=$1 AND lease_owner=$2",[job.id,owner]);}
@@ -189,6 +190,7 @@ export async function workCreatorDiscoveryOnce(pool: pg.Pool, options: CreatorJo
     }
   }
   return true;
+  } finally { clearInterval(heartbeat); }
 }
 export async function enqueueCreatorDiscovery(pool: pg.Pool, workspace: string, quoteId: string) {
   const client = await pool.connect();

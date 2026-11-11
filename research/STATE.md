@@ -1138,7 +1138,7 @@ counts, rechecks and Stop search. No external browser/provider requests were mad
 - All live owned-sync and model validation gates remain open. No Render plan,
   environment value, switch, budget, collection schedule or formula changed.
   Final checks, CI evidence and exact migration/deploy steps are recorded in the PR.
-- Local validation: all 94 infrastructure tests, both owned-sync tests and 635
+- Local validation: all 94 infrastructure tests, both owned-sync tests and 636
   unit tests pass. TypeScript, production build and secrets scan pass. The existing
   50,000-ad heap fixture passes at approximately 117 MB. Browser fixtures verify
   safe failure details, checkpoint retry and readable 1440px/390px layouts.

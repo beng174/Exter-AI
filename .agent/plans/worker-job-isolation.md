@@ -38,13 +38,15 @@ the running worker; statement timeouts are recoverable job failures.
 polls, pacing and smaller-page fallback. Preserve earlier permanent/uncertain
 pauses. A final safety fixture caught uncertain state being made resumable; the
 disposition and retry guards now preserve it and its hold.
+2026-11-11: creator reconciliation can throw while saving its own error. Wrap the
+entire claimed job in finally so even this path releases its heartbeat timer.
 
 ## Outcomes and retrospective
 Recovery fixtures cover SQL timeouts, broker diagnostics, handled provider errors,
 three-failure pausing across restarts, stale leases, successful streak reset,
 manual retry, uncertain holds and all seven claim gates. A history fixture retains
 18,000 observations for 2,000 ads and returns only current fields. All 94
-infrastructure tests, both owned-sync tests and 635 unit tests pass. TypeScript,
+infrastructure tests, both owned-sync tests and 636 unit tests pass. TypeScript,
 production build and secrets checks pass. The existing 50,000-ad fixture peaked
 at 116,861,384 bytes of heap. Browser fixtures verified failure details and retry
 at 1440px/390px with no page errors. Screenshots are in docs/screenshots/worker-recovery.

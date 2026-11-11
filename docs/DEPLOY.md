@@ -1513,6 +1513,7 @@ The worker supervises brand setup, public collection, owned sync, media, creator
 search, category tagging and media processing independently. An exception in one
 queue leaves the other queues running. Database connection loss can stop the
 process; statement timeouts and lock failures become job failures.
+Creator job heartbeats are released even when saving the failure itself throws.
 
 `worker_job_failures` stores the latest safe diagnostic, consecutive failure count
 and next attempt for each job. Failed steps back off for at least one minute,
