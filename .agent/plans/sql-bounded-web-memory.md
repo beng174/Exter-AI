@@ -13,7 +13,10 @@ collection schedules, media priority or retained history.
 - [x] Add minute heap logging and an 80% warning on Data sources.
 - [x] Prove 50,000-ad memory bound with fixture database and real HTTP page reads.
 - [x] Run all four checks and database/browser fixtures.
-- [ ] Push the branch, open PR against exter-test-drive and confirm CI green.
+- [x] Push the branch and open PR #36 against exter-test-drive.
+
+Delivery check: verify the final commit's four CI jobs before handing back. The
+current CI link and result are recorded in PR #36 rather than this static plan.
 
 ## Surprises and discoveries
 enqueueAdMedia streams raw observations but retains a BrowserCreative for every ad
@@ -43,8 +46,9 @@ and secrets checks pass. The 50,000-ad HTTP/queue fixture peaked at 116,319,648
 bytes of web heap, below 200 MB. Both originally reported test files are unchanged.
 Browser fixtures verified pagination, Back, preview filtering, full counts and the
 memory warning at 1440px and 390px, with no page errors. Screenshots are in
-docs/screenshots/sql-web-memory. These are not live Render measurements. PR/CI
-confirmation remains the final delivery step.
+docs/screenshots/sql-web-memory. These are not live Render measurements.
+PR #36: https://github.com/beng174/Exter-AI/pull/36. It records CI confirmation
+and exact Render rollout steps for the final pushed commit.
 
 ## Context and orientation
 Official history is Postgres ad_observations/public_ads, joined to current
