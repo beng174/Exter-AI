@@ -43,12 +43,15 @@ entire claimed job in finally so even this path releases its heartbeat timer.
 2026-11-11: kernel claims accept queued jobs only. Recover unexpected status-write
 failures to queued, with their original checkpoint, and preserve in-flight paid
 markers as blocked. A real Postgres trigger fixture verifies retry/pausing.
+2026-11-11: preserve the driver error when an owned-sync failure cannot be saved;
+its old generic wrapper discarded SQLSTATE. A trigger fixture verifies the code
+reaches the safe diagnostic without any provider call.
 
 ## Outcomes and retrospective
 Recovery fixtures cover SQL timeouts, broker diagnostics, handled provider errors,
 three-failure pausing across restarts, stale leases, successful streak reset,
 manual retry, uncertain holds and all seven claim gates. A history fixture retains
-18,000 observations for 2,000 ads and returns only current fields. All 95
+18,000 observations for 2,000 ads and returns only current fields. All 96
 infrastructure tests, both owned-sync tests and 636 unit tests pass. TypeScript,
 production build and secrets checks pass. The existing 50,000-ad fixture peaked
 at 116,861,384 bytes of heap. Browser fixtures verified failure details and retry

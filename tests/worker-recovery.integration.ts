@@ -160,3 +160,10 @@ test("kernel status-write failures return to a claimable state and pause after t
  }
  assert.equal(others,3);const failure=(await readWorkerFailures(pool,"workspace"))[0];assert.equal(failure.failures,3);assert.equal(failure.error.code,"57014");assert.equal(await claimKernelJob(pool,"another-worker",{pipelineVersions:[ARTIFACT_STAGE_PIPELINE]}),null);
 },0));
+
+test("owned-sync status failures preserve the actual SQLSTATE without calling a provider",async()=>creativeFixture(async(pool)=>{
+ await pool.query("INSERT INTO owned_accounts(id,workspace_id,platform,account_id,currency,attribution,conversion_event) VALUES('account','workspace','Meta','12','GBP','fixture','purchase'); INSERT INTO owned_sync_jobs(id,account_id,since_day,until_day) VALUES('sync','account','2026-11-01','2026-11-07')");
+ await pool.query(`CREATE FUNCTION fail_owned_status() RETURNS trigger LANGUAGE plpgsql AS $$ BEGIN RAISE EXCEPTION 'fixture status write timeout' USING ERRCODE='57014'; END $$;
+ CREATE TRIGGER failing_owned_status BEFORE UPDATE ON owned_sync_jobs FOR EACH ROW WHEN(NEW.status='not_connected') EXECUTE FUNCTION fail_owned_status()`);
+ await assert.rejects(workOwnedOnce(pool,{env:{EXTER_OWNED_SYNC_ENABLED:"true"},fetch:async()=>{assert.fail("Missing credentials cannot call a provider.");}}),error=>{assert.equal(workerDiagnostic(error).code,"57014");return true;});
+},0));

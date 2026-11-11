@@ -91,7 +91,7 @@ export async function workOwnedOnce(pool:pg.Pool,options:OwnedWorkerOptions={}) 
         await client.query("UPDATE owned_sync_jobs SET status=$3,lease_owner=NULL,lease_until=NULL,available_at=now()+interval '1 minute' WHERE id=$1 AND lease_owner=$2",[job.id,owner,retry?"queued":reason==="not_connected"?"not_connected":"failed"]);
       }
       await client.query("COMMIT");
-    }catch{await client.query("ROLLBACK");throw new Error("Owned sync status could not be saved.");}finally{client.release();}
+    }catch(error){await client.query("ROLLBACK").catch(()=>{});throw error;}finally{client.release();}
   }finally{if(heartbeat)clearInterval(heartbeat);}
   return true;
 }
