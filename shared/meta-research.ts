@@ -9,6 +9,10 @@ export function reachScorecard(data:CreativeBrowserResponse,window:ResearchWindo
 
 export function reachShares(data:CreativeBrowserResponse,selection:EvidenceSelection={},country="GB") {
   const brands=[{id:data.brand.id,name:data.brand.name,workspaceBrand:true},...data.competitors.map(b=>({id:b.brandId||b.key,name:b.name,workspaceBrand:false}))];
+  if(data.sql&&country==="GB"){
+    const stats=data.sql.brands.filter(s=>s.format===(data.sql!.scopeFormat||"all")),total=stats.reduce((n,s)=>n+(s.ukReach||0),0),known=stats.reduce((n,s)=>n+s.ukKnown,0),excluded=stats.reduce((n,s)=>n+s.sample-s.ukKnown,0);
+    return brands.map(brand=>{const s=stats.find(s=>s.brandId===brand.id),n=s?.ukKnown||0;const measure:EvidenceMeasure={value:n&&total>0?100*s!.ukReach!/total:null,known:n,excluded:(s?.sample||0)-n,selection:{...selection,brand:brand.id,kind:"all",reachCountry:country}};return {...brand,measure,totalReach:n?s!.ukReach:null,total,known,excluded};});
+  }
   const ids=new Set(brands.map(b=>b.id));
   const rows=selectResearchAds(data.creatives,{...selection,kind:"all"}).filter(row=>ids.has(row.brandId)),known=rows.filter(row=>countryReach(row.publicReach,country)!==null);
   const total=known.reduce((sum,row)=>sum+countryReach(row.publicReach,country)!,0);
@@ -19,6 +23,7 @@ export function reachShares(data:CreativeBrowserResponse,selection:EvidenceSelec
   });
 }
 export function reachedAudience(data:CreativeBrowserResponse,selection:EvidenceSelection={}) {
+  if(data.sql?.audience)return data.sql.audience.filter(c=>(!selection.brand||c.brandId===selection.brand)&&(!selection.show||selection.show==="all"||selection.show==="yours"&&c.brandId===data.brand.id||selection.show==="competitors"&&c.brandId!==data.brand.id));
   const brands=new Map([[data.brand.id,data.brand.name],...data.competitors.map(b=>[b.brandId||b.key,b.name] as [string,string])]);
   const result=new Map<string,{key:string;brandId:string;brand:string;country:string;age:string;gender:string;reach:number;ads:Set<string>}>();
   for(const ad of selectResearchAds(data.creatives,{...selection,kind:"all"}).filter(ad=>brands.has(ad.brandId)))for(const cell of ad.publicReach?.demographics?.value||[]){

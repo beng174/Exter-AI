@@ -8,7 +8,7 @@ import {reserveCost,settleGeminiCost,releaseGeminiCost} from "../infrastructure/
 import {CATEGORY_MODEL,CATEGORY_VERSION,CATEGORY_BATCH_SIZE,categoryHash,categorySourceHash,categoryResult,categoryBatchInput,PublicCategoryProvider,CategoryError,type CategoryRequest} from "./provider.js";
 interface Item {brandKey:string;pageId:string;nativeId:string;sourceHash:string;key:string}
 const keyFor=(brand:string,page:string,native:string,hash:string)=>createHash('sha256').update(JSON.stringify([brand,page,native,hash])).digest('hex');
-export async function categoryVocabulary(pool:pg.Pool|pg.PoolClient,workspace:string):Promise<string[]>{return ((await pool.query('SELECT categories FROM workspace_category_vocabularies WHERE workspace_id=$1',[workspace])).rows[0]?.categories||[]).slice().sort();}
+export async function categoryVocabulary(pool:Pick<pg.Pool,"query">,workspace:string):Promise<string[]>{return ((await pool.query('SELECT categories FROM workspace_category_vocabularies WHERE workspace_id=$1',[workspace])).rows[0]?.categories||[]).slice().sort();}
 export async function countTaggedAds(pool:pg.Pool,workspace:string):Promise<number>{
  const result=await pool.query(`SELECT count(DISTINCT (c.brand_key,c.native_id))::integer AS count FROM public_ad_categories c
  JOIN watchlists w ON w.workspace_id=c.workspace_id AND w.brand_key=c.brand_key AND w.page_ids->>0=c.page_id
@@ -124,9 +124,9 @@ export async function workPublicCategoriesOnce(pool:pg.Pool,options:{env?:Record
  }
  return true;
 }
-export async function mergeProductCategories(pool:pg.Pool,workspace:string,rows:BrowserCreative[]){
+export async function mergeProductCategories(pool:Pick<pg.Pool,"query">,workspace:string,rows:BrowserCreative[]){
  const vocabulary=await categoryVocabulary(pool,workspace);
- const labels=await pool.query(`SELECT c.* FROM public_ad_categories c JOIN watchlists w ON w.workspace_id=c.workspace_id AND w.brand_key=c.brand_key AND w.page_ids->>0=c.page_id WHERE c.workspace_id=$1 AND c.prompt_version=$2 ORDER BY c.created_at DESC`,[workspace,CATEGORY_VERSION]);
+ const labels=await pool.query(`SELECT c.* FROM public_ad_categories c JOIN watchlists w ON w.workspace_id=c.workspace_id AND w.brand_key=c.brand_key AND w.page_ids->>0=c.page_id WHERE c.workspace_id=$1 AND c.prompt_version=$2 AND c.native_id=ANY($3::text[]) ORDER BY c.created_at DESC`,[workspace,CATEGORY_VERSION,rows.map(row=>row.nativeId)]);
  const byKey=new Map<string,any>();for(const label of labels.rows){const key=JSON.stringify([label.brand_key,label.native_id,label.source_hash]);if(!byKey.has(key))byKey.set(key,label);}
  return rows.map(row=>{const hash=categorySourceHash(row.categorySourceHash||categoryHash(creativeCategoryInput(row)),vocabulary),label=byKey.get(JSON.stringify([row.brandId,row.nativeId,hash]));return label?{...row,productCategories:label.categories,productCategoryModel:label.model==='unavailable'?undefined:label.model}:row;});
 }

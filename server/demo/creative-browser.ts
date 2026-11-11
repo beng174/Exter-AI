@@ -1,4 +1,8 @@
+import {ownedPagePerformance} from "../infrastructure/owned-read.js";
 import {checkedRetainedMedia} from "../ad-media/file-health.js";
+import {refreshCreativeIndex} from "../infrastructure/creative-index.js";
+import {readCreativePage,type PageQuery} from "../infrastructure/creative-pages.js";
+import {sqliteCreativePage} from "../infrastructure/sqlite-creative-page.js";
 import {enrichLikelihood} from "../accuracy/predictions.js";
 import {writeJsonRows} from "../infrastructure/json-rows.js";
 import {LibraryReadGate} from "../infrastructure/library-read-gate.js";
@@ -9,20 +13,19 @@ import type { Express } from "express";
 import type { DatabaseSync } from "node:sqlite";
 import type pg from "pg";
 import { configuredCreativeCompetitors } from "./creative-competitors.js";
-import type { BrowserCreative, CreativeBrowserResponse, CreativePerformance } from "../../shared/creative-browser.js";
-import { ownedMetrics, type OwnedDay } from "../../shared/owned-metrics.js";
-import {researchWindow} from "../../shared/creative-research.js";
+import type { CreativeBrowserResponse } from "../../shared/creative-browser.js";
 import { readBrand } from "../db.js";
 import { resolveDemoBrandId } from "./reconcile.js";
-import type { CreativeGalleryService } from "./gallery.js";
-import type { BrandDemoService } from "./service.js";
+import { CreativeGalleryService } from "./gallery.js";
 import { infrastructureDatabase } from "../infrastructure/database.js";
 import {metaLibraryEnabled} from "../connectors/meta-library.js";
-import {metaSourceHealth,readPublicCreatives} from "../infrastructure/meta-evidence.js";
+import {metaSourceHealth} from "../infrastructure/meta-evidence.js";
 import type {MetaSourceHealth} from "../../shared/meta-public.js";
 export interface BrowserOptions {
     getPool?: () => pg.Pool | null;
     now?: () => Date;
+    /** Fixture observer. Production responses never expose database diagnostics. */
+    onReadError?: (error:unknown)=>void;
 }
 export function attachCreativeBrowser(app: Express, db: DatabaseSync, options: BrowserOptions = {}) {
     const libraryReads=new LibraryReadGate();
@@ -52,99 +55,40 @@ export function attachCreativeBrowser(app: Express, db: DatabaseSync, options: B
             res.status(400).json({ error: "The reporting start must precede the end." });
             return;
         }
+        for(const [key,min,max] of [["offset",0,10000000],["limit",1,100]] as const){const raw=req.query[key];if(raw!==undefined&&(typeof raw!=="string"||!/^\d+$/.test(raw)||!Number.isSafeInteger(Number(raw))||Number(raw)<min||Number(raw)>max)){res.status(400).json({error:"Choose a valid page."});return;}}
         const disconnected=new AbortController(),onClose=()=>disconnected.abort();res.once("close",onClose);
         const release=await libraryReads.acquire(disconnected.signal);
         if(!release){res.off("close",onClose);if(!res.destroyed){res.setHeader("Retry-After","2");res.status(503).json({error:"The creative library is busy. Please try again shortly."});}return;}
         if(res.destroyed){res.off("close",onClose);release();return;}
         try {
-            const gallery = app.locals.creativeGallery as CreativeGalleryService, reports = app.locals.brandDemo as BrandDemoService;
-            const competitors=configuredCreativeCompetitors(db,brand,app.locals.demoCollection);
-            const ids=new Set([brand.id,...competitors.flatMap(item=>item.brandId?[item.brandId]:[])]);
+            const gallery:CreativeGalleryService=typeof app.locals.creativeGallery?.selected==='function'?app.locals.creativeGallery:(app.locals.creativeGallery=new CreativeGalleryService(db)),competitors=configuredCreativeCompetitors(db,brand,app.locals.demoCollection);
+            const pool=options.getPool?options.getPool():process.env.DATABASE_URL?infrastructureDatabase():null;
+            const query:PageQuery={};for(const [key,value] of Object.entries(req.query)){if(typeof value!=="string"||value.length>(key==='refs'?20000:2000)){res.status(400).json({error:"Choose valid creative filters."});return;}(query as Record<string,string>)[key]=value;}
             const sources:CreativeBrowserResponse["sources"]=competitors.map(item=>({brandId:item.brandId,name:item.name,status:item.status}));
-            let creatives: BrowserCreative[] = [];
-            for (const id of ids) {
-                try {
-                    const list = await gallery.list(id);
-                    const coverage=sources.find(item=>item.brandId===id&&item.status==="configured");
-                    if(coverage)coverage.status=list.creatives.some(item=>!item.owned)?"collected":"not-collected";
-                    let scores: ReturnType<BrandDemoService["report"]>["scores"] = [];
-                    let scoreError=false;
-                    try {
-                        scores = reports.report(id).scores;
-                    }
-                    catch { scoreError=true; }
-                    for (const item of list.creatives) {
-                        if (id !== brand.id && item.owned)
-                            continue;
-                        creatives.push({ ...item, publicEvidence:!item.owned, platform: item.platform || "Unavailable", owned: id === brand.id && item.owned === true, workspaceBrand: id === brand.id, sourceKind: item.owned && id === brand.id ? "owned" : "public", placements: item.placements || [], score: scores.find(score => score.adId === item.adId || score.nativeId === item.nativeId) || null, scoreError, performance: [], scenes: item.scenes || [] });
-                    }
-                }
-                catch {
-                    sources.push({ brandId: id, name: competitors.find(item => item.brandId === id)?.name || "Configured brand", status: "error", message: "Stored creative data could not be read. Earlier records are preserved." });
-                }
-            }
             let mediaReadStatus:CreativeBrowserResponse["mediaReadStatus"]="not_configured",categoryReadStatus:CreativeBrowserResponse["categoryReadStatus"]="not_configured";
             let metaSource:MetaSourceHealth={status:metaLibraryEnabled()?"unavailable":"off",enabled:metaLibraryEnabled(),lastSuccessfulCheck:null,message:metaLibraryEnabled()?"Collection database is not configured.":"Live collection is off. Saved evidence is retained."};
-            try {
-                const pool=options.getPool?options.getPool():process.env.DATABASE_URL?infrastructureDatabase():null;
-                if(pool){
-                    const official=await readPublicCreatives(pool,brand.id,creatives,brand,competitors);
-                    const health=await metaSourceHealth(pool,brand.id);
-                    let merged=official;
-                    try{merged=mergeRetainedMedia(official,await checkedRetainedMedia(pool,await readRetainedMedia(pool,brand.id)),brand.id);mediaReadStatus="available";}catch{mediaReadStatus="unavailable";/* An upgrade or media failure cannot hide official evidence. */}
-                    try{merged=await mergePreviewState(pool,brand.id,merged);}catch{/* Earlier observations still render during an upgrade. */}
-                    try{merged=await mergeProductCategories(pool,brand.id,merged);categoryReadStatus="available";}catch{categoryReadStatus="unavailable";/* Missing tags exclude comparisons, never official records. */}
-                    creatives=merged;metaSource=health;
-                    for(const source of sources){const target=source.brandId||competitors.find(b=>b.name===source.name)?.key;if(source.status!=="error"&&creatives.some(row=>!row.owned&&row.brandId===target))source.status="collected";}
+            if(pool)await refreshCreativeIndex(pool,db,brand,competitors,gallery,disconnected.signal);
+            const page=pool?await readCreativePage(pool,brand,competitors,query,now):await sqliteCreativePage(db,brand,competitors,query,gallery);
+            let creatives=page.rows;
+            if((query as Record<string,string>).window==="research" && page.model.window.from && page.model.window.to){from=page.model.window.from;to=page.model.window.to;}
+            if(pool){
+                metaSource=await metaSourceHealth(pool,brand.id);
+                for(const source of sources){const target=source.brandId||competitors.find(c=>c.name===source.name)?.key;if(page.model.brands.some(b=>b.brandId===target&&b.sample>0))source.status="collected";}
+                // Rich legacy analysis/media is hydrated only for this page.
+                for(const target of [brand.id,...competitors.flatMap(c=>c.brandId?[c.brandId]:[])]){
+                    const selected=creatives.filter(c=>c.brandId===target);
+                    const rich=await gallery.selected(target,selected.map(c=>c.nativeId));const byId=new Map(rich.map(c=>[c.nativeId,c]));
+                    creatives=creatives.map(row=>{const r=row.brandId===target?byId.get(row.nativeId):null;return r?{...row,analysis:r.analysis,scenes:r.scenes||[],creatorEvidence:r.creatorEvidence,thumbnailUrl:r.thumbnailUrl,videoUrl:r.videoUrl,imageUrls:r.imageUrls,imageCount:r.imageCount,mediaAvailable:r.mediaAvailable,mediaStatus:r.mediaStatus,mediaSha256:r.mediaSha256}:row;});
                 }
-            }catch{mediaReadStatus="unavailable";categoryReadStatus="unavailable";metaSource={status:"unavailable",enabled:metaLibraryEnabled(),lastSuccessfulCheck:null,message:"Saved public collection could not be read. Earlier media and analysis are retained."};}
-            if(res.destroyed)return;
-            // Resolve the research window before owned cohorts, without a second library response.
-            if(req.query.window === "research") {
-                const window=researchWindow(creatives,req.query.from as string|undefined,req.query.to as string|undefined,now);
-                if(window.from)from=window.from;
-                if(window.to)to=window.to;
+                try{creatives=mergeRetainedMedia(creatives,await checkedRetainedMedia(pool,await readRetainedMedia(pool,brand.id,creatives.map(c=>c.nativeId))),brand.id);mediaReadStatus="available";}catch{mediaReadStatus="unavailable";}
+                creatives=await mergePreviewState(pool,brand.id,creatives);
+                creatives=await mergeProductCategories(pool,brand.id,creatives);categoryReadStatus="available";
             }
-            if(from>to){res.status(400).json({error:"The reporting start must precede the end."});return;}
             let ownedStatus: CreativeBrowserResponse["ownedStatus"] = "not_configured";
             try {
                 const pool = options.getPool ? options.getPool() : process.env.DATABASE_URL ? infrastructureDatabase() : null;
                 if (pool) {
-                    const result = await pool.query("SELECT d.data FROM owned_ad_days d JOIN owned_accounts a ON a.id=d.owned_account_id WHERE a.workspace_id=$1 AND d.day BETWEEN $2::date AND $3::date ORDER BY d.day,d.ad_id LIMIT 100001", [brand.id, from, to]);
-                    if (result.rows.length > 100000)
-                        throw new Error("Narrow the reporting window.");
-                    const withOwned=result.rows.length?creatives.map(item=>({...item,performance:[] as CreativePerformance[]})):creatives;
-                    const ownedIndex=new Map(withOwned.filter(item=>item.workspaceBrand).map(item=>[JSON.stringify([item.platform,item.nativeId]),item]));
-                    const rows = result.rows.map(row => row.data as OwnedDay), groups = new Map<string, OwnedDay[]>();
-                    for (const row of rows) {
-                        const key = JSON.stringify([row.platform, row.accountId, row.currency, row.attribution, row.conversionEvent]);
-                        const group = groups.get(key) || [];
-                        group.push(row);
-                        groups.set(key, group);
-                    }
-                    for (const [key, group] of groups) {
-                        const benchmark = ownedMetrics(group), ads = new Map<string, OwnedDay[]>();
-                        for (const row of group) {
-                            const days = ads.get(row.adId) || [];
-                            days.push(row);
-                            ads.set(row.adId, days);
-                        }
-                        for (const [nativeId, days] of ads) {
-                            const latest = [...days].sort((a, b) => b.pulledAt.localeCompare(a.pulledAt))[0];
-                            const identity=JSON.stringify([latest.platform,nativeId]);
-                            let creative = ownedIndex.get(identity);
-                            if (!creative) {
-                                creative = { adId: `owned:${brand.id}:${latest.platform}:${latest.accountId}:${nativeId}`, nativeId, brandId: brand.id, brandName: brand.name, title: latest.adName || `Ad ${nativeId}`, copy: "", sourceUrl: latest.platform === "Meta" && /^\d+$/.test(nativeId) ? `https://www.facebook.com/ads/library/?id=${nativeId}` : null, mediaKind: "unknown", durationSeconds: null, thumbnailUrl: null, videoUrl: null, imageUrls: [], imageCount: 0, mediaAvailable: false, mediaStatus: "not-stored", analysis: null, creativeFormat: null, hookType: null, angle: null, offerType: null, ugc: null, creatorEvidence: [], partnershipAttribution: null, deliveryStatus: "unknown", deliveryStartAt: null, deliveryStopAt: null, observedAt: latest.pulledAt, firstObservedAt: null, daysRunning: null, daysRunningAsOf: null, daysRunningBasis: null, searchText: latest.adName || "", platform: latest.platform, owned: true, workspaceBrand: true, sourceKind: "owned", publicEvidence:false, placements: [], score: null, performance: [], scenes: [] };
-                                withOwned.push(creative);
-                                ownedIndex.set(identity,creative);
-                            }
-                            creative.owned = true;
-                            creative.sourceKind = "owned";
-                            const cohort: CreativePerformance = { id: key, accountId: latest.accountId, platform: latest.platform, currency: latest.currency, attribution: latest.attribution, conversionEvent: latest.conversionEvent, from, to, lastChecked: latest.pulledAt, benchmarkSampleSize: ads.size, metrics: ownedMetrics(days), benchmark };
-                            creative.performance.push(cohort);
-                        }
-                    }
-                    creatives=withOwned;
+                    const owned=await ownedPagePerformance(pool,brand.id,creatives,from,to);creatives=owned.rows;page.model.ownedScopes=owned.scopes;
                     ownedStatus = "available";
                 }
             }
@@ -152,11 +96,11 @@ export function attachCreativeBrowser(app: Express, db: DatabaseSync, options: B
                 ownedStatus = "error";
             }
             creatives=enrichLikelihood(db,brand.id,creatives,now.toISOString());
-            const dates = creatives.flatMap(item => [item.firstObservedAt, item.observedAt].filter((value): value is string => Boolean(value))).sort();
             if(res.destroyed)return;
-            await writeJsonRows(res,{ mediaReadStatus,categoryReadStatus,metaSource, brand: { id: brand.id, name: brand.name, domain: brand.domain,primaryCategories:primaryCategories(brand) }, creatives, competitors, sources, ownedStatus, dateRange: { from: dates[0] || null, to: dates.at(-1) || null }, lastChecked: dates.at(-1) || null, reportingRange: { from, to } } satisfies CreativeBrowserResponse,"creatives",{gzip:req.acceptsEncodings("gzip")==="gzip"});
+            await writeJsonRows(res,{sql:page.model,mediaReadStatus,categoryReadStatus,metaSource,brand:{id:brand.id,name:brand.name,domain:brand.domain,primaryCategories:primaryCategories(brand)},creatives,competitors,sources,ownedStatus,dateRange:page.dateRange,lastChecked:page.lastChecked,reportingRange:{from,to}} satisfies CreativeBrowserResponse,"creatives",{gzip:req.acceptsEncodings("gzip")==="gzip"});
         }
-        catch {
+        catch(error) {
+            options.onReadError?.(error);
             if(!res.destroyed&&!res.headersSent)res.status(503).json({ error: "Stored creative evidence is unavailable. No source collection or analysis was started." });
             else if(!res.destroyed)res.destroy();
         }finally{res.off("close",onClose);release();}

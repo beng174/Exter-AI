@@ -7,7 +7,7 @@ import { storedPredictions, modelValidations } from "./store.js";
 /** Read-only enrichment. No training, model downloads or paid analysis on a page read. */
 export function enrichLikelihood(db:DatabaseSync,workspace:string,rows:BrowserCreative[],at:string):BrowserCreative[] {
   if(!db.prepare("SELECT name FROM sqlite_master WHERE type='table' AND name='accuracy_records'").get())return rows;
-  const saved=storedPredictions(db,workspace);
+  const saved=storedPredictions(db,workspace,rows.map(row=>row.adId));
   // Reference arrays can be large. Automatic previews without embeddings use theory only.
   const metadata=modelValidations(db,workspace);
   return rows.map(row=>{

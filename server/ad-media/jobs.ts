@@ -1,7 +1,7 @@
 import {randomUUID} from "node:crypto";
 import type pg from "pg";
-import {AD_MEDIA_BATCH,mediaEnabled,mediaMaximumUsd,mediaGbpRate,priorityVideoIds,previewPriority} from "../../shared/ad-media.js";
-import {readPublicCreatives} from "../infrastructure/meta-evidence.js";
+import {AD_MEDIA_BATCH,mediaEnabled,mediaMaximumUsd,mediaGbpRate} from "../../shared/ad-media.js";
+import {PUBLIC_ROWS_SQL} from "../infrastructure/public-rows-sql.js";
 import {reserveCost} from "../infrastructure/budget.js";
 import {AdMediaActor,AdMediaError,actorMedia,providerId,finalMediaCostUsd,actorCounts,mediaActorInput,record,type ActorScope} from "./apify.js";
 import {AdMediaStorage,videoFitsDisk} from "./storage.js";
@@ -17,57 +17,38 @@ export async function enqueueAdMedia(pool:pg.Pool,watchlistId:string,now=new Dat
     if(!w){await lock.query("ROLLBACK");return null;}
     await lock.query("UPDATE ad_media_runs SET status='failed',error_kind='priority',finished_at=clock_timestamp() WHERE watchlist_id=$1 AND preview_policy='legacy' AND status='queued' AND actor_run_id IS NULL AND reservation_id IS NULL AND requested_ids IS NULL AND (lease_until IS NULL OR lease_until<now())",[watchlistId]);
     if((await lock.query("SELECT id FROM ad_media_runs WHERE watchlist_id=$1 AND status=ANY($2::text[])",[watchlistId,ACTIVE])).rowCount){await lock.query("ROLLBACK");return null;}
-    // Stream source rows through the existing projection; never buffer full raw payloads on web.
-    const projected=await readPublicCreatives(pool,w.workspace_id,[],{id:w.workspace_id,name:"",domain:""},[{key:w.brand_key,brandId:w.brand_key,name:"",status:"configured"}],lock);
-    const brandObservations=projected.filter(row=>row.brandId===w.brand_key);
-    const observations=brandObservations.filter(row=>row.advertiserPageId===w.page_ids[0]).map(row=>({native_id:row.nativeId,start_time:row.deliveryStartAt,stop_time:row.deliveryStopAt,first_seen_at:row.firstObservedAt,observed_at:row.observedAt,days:row.daysRunning,reach:row.publicReach,status:row.deliveryStatus}));
-    const priority=priorityVideoIds(brandObservations.map(o=>({nativeId:o.nativeId,brandId:w.brand_key,deliveryStartAt:o.deliveryStartAt,daysRunning:o.daysRunning,publicReach:o.publicReach})),now);
-    const retained=await lock.query(`SELECT native_id,bool_or(EXISTS(SELECT 1 FROM jsonb_array_elements(assets)a WHERE a->>'role' IN ('image','poster') AND NOT EXISTS(SELECT 1 FROM ad_media_file_checks f WHERE f.workspace_id=$1 AND f.artifact_id=a->'ref'->>'artifactId' AND NOT f.available))) AS image,
-      bool_or(EXISTS(SELECT 1 FROM jsonb_array_elements(assets)a WHERE a->>'role'='video' AND NOT EXISTS(SELECT 1 FROM ad_media_file_checks f WHERE f.workspace_id=$1 AND f.artifact_id=a->'ref'->>'artifactId' AND NOT f.available))) AS video,
-      bool_or(format='video' OR expected_videos>0) AS is_video
-      FROM ad_media_creatives WHERE workspace_id=$1 AND brand_key=$2 AND page_id=$3 GROUP BY native_id`,[w.workspace_id,w.brand_key,w.page_ids[0]]);
-    const savedImages=new Set(retained.rows.filter(r=>r.image).map(r=>r.native_id));
-    const files=new Map<string,{image:boolean;video:boolean;is_video:boolean}>(retained.rows.map(r=>[r.native_id,r]));
-    const known=await lock.query("SELECT known_media_ids,known_video_ids,known_video_candidates FROM ad_media_runs WHERE workspace_id=$1 AND brand_key=$2 AND page_id=$3 AND started_at>$4::timestamptz-interval '1 day'",[w.workspace_id,w.brand_key,w.page_ids[0],now]);
-    for(const row of known.rows)for(const native of new Set<string>([...row.known_media_ids,...row.known_video_ids,...row.known_video_candidates])){
-      const previous=files.get(native)||{image:false,video:false,is_video:false};
-      files.set(native,{image:previous.image||row.known_media_ids.includes(native),video:previous.video||row.known_video_ids.includes(native),is_video:previous.is_video||row.known_video_candidates.includes(native)});
-    }
-    const missingFiles=await lock.query(`SELECT DISTINCT c.native_id FROM ad_media_creatives c CROSS JOIN LATERAL jsonb_array_elements(c.assets) a JOIN ad_media_file_checks f ON f.workspace_id=c.workspace_id AND f.artifact_id=a->'ref'->>'artifactId' WHERE c.workspace_id=$1 AND c.brand_key=$2 AND c.page_id=$3 AND NOT f.available AND a->>'role' IN ('image','poster')`,[w.workspace_id,w.brand_key,w.page_ids[0]]);
-    for(const row of missingFiles.rows){const file=files.get(row.native_id);if(file&&!savedImages.has(row.native_id))file.image=false;}
-    const attempts=await lock.query(`SELECT DISTINCT ON(q.native_id) q.native_id,q.requested_at AS attempted_at,q.returned_at,q.outcome,q.reprocess_version,r.lookup_mode,r.dataset_id,r.id AS source_run_id FROM ad_media_requests q JOIN ad_media_runs r ON r.id=q.run_id WHERE r.workspace_id=$1 AND r.brand_key=$2 AND r.page_id=$3 ORDER BY q.native_id,q.requested_at DESC,r.id DESC`,[w.workspace_id,w.brand_key,w.page_ids[0]]);
-    const last=new Map(attempts.rows.map(r=>[r.native_id,r]));
-    const attempted=new Map<string,number>(attempts.rows.map(r=>[r.native_id,new Date(r.attempted_at).getTime()]));
-    const legacy=await lock.query(`SELECT native_id,max(created_at) AS attempted_at FROM ad_media_creatives WHERE workspace_id=$1 AND brand_key=$2 AND page_id=$3 GROUP BY native_id`,[w.workspace_id,w.brand_key,w.page_ids[0]]);
-    for(const r of legacy.rows)if(!attempted.has(r.native_id))attempted.set(r.native_id,new Date(r.attempted_at).getTime());
-    const formatter=new Intl.DateTimeFormat('en-CA',{timeZone:'Europe/London',year:'numeric',month:'2-digit',day:'2-digit'}),today=formatter.format(now);
-    const day=(date:Date)=>formatter.format(date);
-    const eligible=observations.filter(o=>!attempted.has(o.native_id)||day(new Date(attempted.get(o.native_id)!))<today);
-    const newest=(a:typeof observations[number],b:typeof observations[number])=>Date.parse(String(b.start_time||b.first_seen_at))-Date.parse(String(a.start_time||a.first_seen_at))||a.native_id.localeCompare(b.native_id);
-    const eligibleIds=new Set(eligible.map(o=>o.native_id));
-    const ranked=previewPriority(observations.map(o=>({...o,nativeId:o.native_id,daysRunning:o.days,publicReach:o.reach,deliveryStartAt:o.start_time,deliveryStatus:o.status})));
-    let missing:typeof observations=ranked.filter(o=>!files.get(o.native_id)?.image&&!attempted.has(o.native_id));
-    let mode='backfill',source:any=null;
-    if(!missing.length){
-      const replay=ranked.filter(o=>!files.get(o.native_id)?.image&&last.get(o.native_id)?.returned_at&&last.get(o.native_id)?.outcome!=='expired'&&last.get(o.native_id)?.dataset_id&&last.get(o.native_id)?.reprocess_version!=='preview-v2'&&last.get(o.native_id)?.lookup_mode!=='reprocess');
-      if(replay.length){source=last.get(replay[0].native_id);missing=replay.filter(o=>last.get(o.native_id)?.source_run_id===source.source_run_id);mode='reprocess';}
-      else{
-        const fallback=ranked.find(o=>!files.get(o.native_id)?.image&&['not_returned','no_media','wrong_page','expired'].includes(last.get(o.native_id)?.outcome)&&last.get(o.native_id)?.lookup_mode==='backfill'||!files.get(o.native_id)?.image&&last.get(o.native_id)?.lookup_mode==='reprocess'&&last.get(o.native_id)?.outcome==='expired');
-        if(fallback){missing=[fallback];mode='ad_id';}
-        else {missing=ranked.filter(o=>!files.get(o.native_id)?.image&&eligibleIds.has(o.native_id));if(missing.length&&last.get(missing[0].native_id)?.lookup_mode==='ad_id'&&['not_returned','no_media','expired','wrong_page'].includes(last.get(missing[0].native_id)?.outcome)){missing=missing.slice(0,1);mode='ad_id';}}
-      }
-    }
-    let downloadVideos=false;
-    if(!missing.length){
-      const health=(await lock.query("SELECT data FROM ad_media_disk_health WHERE id=1 AND measured_at>now()-interval '10 minutes'")).rows[0]?.data;
-      if(health&&videoFitsDisk(health)){
-        const videos=eligible.filter(o=>files.get(o.native_id)?.image&&files.get(o.native_id)?.is_video&&!files.get(o.native_id)?.video);
-        missing=videos.sort((a,b)=>Number(priority.has(b.native_id))-Number(priority.has(a.native_id))||newest(a,b));downloadVideos=true;
-      }
-    }
-    if(!missing.length){await lock.query("ROLLBACK");return null;}
-    const targets=missing.slice(0,AD_MEDIA_BATCH).map(o=>o.native_id),id=randomUUID();
-    await lock.query(`INSERT INTO ad_media_runs(id,watchlist_id,workspace_id,brand_key,revision,page_id,window_from,window_to,phase,target_ids,priority_ids,cap,download_videos) VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13)`,[id,w.id,w.workspace_id,w.brand_key,w.revision,w.page_ids[0],yearStart(now),now.toISOString().slice(0,10),"missing",JSON.stringify(targets),JSON.stringify([...priority]),mode==='reprocess'?500:Math.min(AD_MEDIA_BATCH,Math.max(targets.length,1)),downloadVideos]);
+    const health=(await lock.query("SELECT data FROM ad_media_disk_health WHERE id=1 AND measured_at>now()-interval '10 minutes'")).rows[0]?.data;
+    // Bulk joins must not rescan a request-history CTE once per ad when a new
+    // workspace has small planner estimates. Settings end with this transaction.
+    await lock.query("SET LOCAL enable_nestloop=off; SET LOCAL enable_mergejoin=off; SET LOCAL jit=off; SET LOCAL statement_timeout='30s'");
+    const selected=await lock.query(`${PUBLIC_ROWS_SQL}, ranked AS (
+      SELECT s.*,row_number() OVER(ORDER BY days DESC NULLS LAST,native_id) AS longevity_rank,
+       CASE WHEN uk_reach IS NOT NULL THEN row_number() OVER(ORDER BY uk_reach DESC NULLS LAST,native_id) END AS reach_rank,
+       CASE WHEN COALESCE(uk_reach,eu_reach) IS NOT NULL THEN row_number() OVER(ORDER BY COALESCE(uk_reach,eu_reach) DESC NULLS LAST,native_id) END AS video_reach_rank
+      FROM state s
+    ), eligible AS (
+      SELECT *,days>=30 OR start_time BETWEEN $3::timestamptz-interval '7 days' AND $3 OR video_reach_rank<=20 AS priority,
+       CASE WHEN longevity_rank<=50 AND days IS NOT NULL THEN 0 WHEN reach_rank<=50 THEN 1 WHEN status='active' THEN 2 ELSE 3 END AS priority_tier,
+       CASE WHEN NOT image AND requested_at IS NULL AND legacy_attempt IS NULL THEN 0
+        WHEN NOT image AND returned_at IS NOT NULL AND outcome<>'expired' AND dataset_id IS NOT NULL AND reprocess_version IS DISTINCT FROM 'preview-v2' AND lookup_mode<>'reprocess' THEN 1
+        WHEN NOT image AND (lookup_mode='backfill' AND outcome IN ('not_returned','no_media','wrong_page','expired') OR lookup_mode='reprocess' AND outcome='expired') THEN 2
+        WHEN NOT image AND (COALESCE(requested_at,legacy_attempt) AT TIME ZONE 'Europe/London')::date<($3::timestamptz AT TIME ZONE 'Europe/London')::date THEN 3
+        WHEN image AND is_video AND NOT video AND $4::boolean AND (video_attempt_at IS NULL OR (video_attempt_at AT TIME ZONE 'Europe/London')::date<($3::timestamptz AT TIME ZONE 'Europe/London')::date) THEN 4 END AS phase
+      FROM ranked
+    ), ordered AS MATERIALIZED (
+      SELECT *,row_number() OVER(ORDER BY phase,CASE WHEN phase=4 THEN CASE WHEN priority THEN 0 ELSE 1 END ELSE priority_tier END,
+        CASE WHEN phase<>4 THEN days END DESC NULLS LAST,CASE WHEN phase=4 THEN start_time END DESC NULLS LAST,native_id) AS rank
+      FROM eligible WHERE phase IS NOT NULL
+    ), head AS MATERIALIZED (SELECT * FROM ordered WHERE rank=1 LIMIT 1)
+    SELECT o.native_id,o.priority,o.phase,o.source_run_id,o.dataset_id,
+      CASE WHEN o.phase=1 THEN 'reprocess' WHEN o.phase=2 OR h.phase=3 AND h.lookup_mode='ad_id' AND h.outcome IN ('not_returned','no_media','expired','wrong_page') THEN 'ad_id' ELSE 'backfill' END AS mode
+    FROM ordered o CROSS JOIN head h WHERE o.phase=h.phase AND (h.phase<>1 OR o.source_run_id=h.source_run_id)
+      AND (h.phase<>2 AND NOT COALESCE(h.phase=3 AND h.lookup_mode='ad_id' AND h.outcome IN ('not_returned','no_media','expired','wrong_page'),false) OR o.rank=h.rank)
+    ORDER BY o.rank LIMIT $5`,[w.workspace_id,w.id,now,Boolean(health&&videoFitsDisk(health)),AD_MEDIA_BATCH]);
+    if(!selected.rows.length){await lock.query("ROLLBACK");return null;}
+    const targets=selected.rows.map(row=>row.native_id),priority=selected.rows.filter(row=>row.priority).map(row=>row.native_id),mode=selected.rows[0].mode,
+      source=mode==='reprocess'?selected.rows[0]:null,downloadVideos=selected.rows[0].phase===4,id=randomUUID();
+    await lock.query(`INSERT INTO ad_media_runs(id,watchlist_id,workspace_id,brand_key,revision,page_id,window_from,window_to,phase,target_ids,priority_ids,cap,download_videos) VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13)`,[id,w.id,w.workspace_id,w.brand_key,w.revision,w.page_ids[0],yearStart(now),now.toISOString().slice(0,10),"missing",JSON.stringify(targets),JSON.stringify(priority),mode==='reprocess'?500:Math.min(AD_MEDIA_BATCH,Math.max(targets.length,1)),downloadVideos]);
     await lock.query("UPDATE ad_media_runs SET lookup_mode=$2,source_run_id=$3,dataset_id=$4,preview_policy='preview-v2' WHERE id=$1",[id,mode,source?.source_run_id||null,source?.dataset_id||null]);
     if(mode==='reprocess')await lock.query("INSERT INTO ad_media_requests(run_id,native_id,reprocess_version) SELECT $1,unnest($2::text[]),'preview-v2'",[id,targets]);
     await lock.query("COMMIT");return id;

@@ -1,3 +1,4 @@
+import {comparisonEvidenceIds} from "../../../shared/public-comparisons";
 import {workspaceRead} from "../../lib/workspace-read";
 import {invalidateWorkspaceReads} from "../../lib/read-cache";
 import {BrandName} from "../ui/BrandIdentity";
@@ -22,7 +23,8 @@ const titles:Record<string,string>={briefs:"Opportunities and briefs",creators:"
 const subtitles:Record<string,string>={briefs:"Ranked angles with their evidence, and a ready brief for each one.",creators:"Discover UK creators. Check their numbers and see what makes them fit.",scores:"Score a draft before it goes live, and see which checks each creative misses.",ask:"Questions answered only from your stored evidence. Every statement links to the ads, reviews or numbers behind it.",reports:"The Monday data pack your team writes the client report from, and the read-only view clients see.",data:"Where every number comes from, whether it is working, and the rules applied to it."};
 export function ActionWorkspace({brandId,brand,route}:{brandId:string;brand?:Brand;route:ReturnType<typeof resolveNavigation>}) {
   const [revision,setRevision]=useState(0),[loadedExtras,setExtras]=useState<{key:string;data:Omit<ActionData,"base">}|null>(null);
-  const {data:base,error,loading}=useResearchData(brandId,brand?[brand]:[],undefined,undefined,revision);
+  const briefIds=route.id==="briefs"&&loadedExtras&&JSON.parse(loadedExtras.key)[0]===(brand?.id||brandId)?[...new Set(comparisonEvidenceIds(loadedExtras.data.drafts.value?.opportunities||[]))]:[];
+  const {data:base,error,loading}=useResearchData(brandId,brand?[brand]:[],undefined,undefined,revision,{...Object.fromEntries(route.url.searchParams),screen:route.id,...(briefIds.length?{refs:JSON.stringify(briefIds),limit:"100"}:{})});
   const refresh=()=>{invalidateWorkspaceReads();setRevision(value=>value+1);},view=route.id;
   const extrasId=base?.library.brand.id||brand?.id||brandId;
   const extrasKey=JSON.stringify([extrasId,revision,view]),extras=loadedExtras?.key===extrasKey?loadedExtras.data:null;

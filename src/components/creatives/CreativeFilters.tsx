@@ -1,3 +1,4 @@
+import type {CreativeReadModel} from "../../../shared/creative-read-model";
 import {AD_FORMATS,PRODUCT_CATEGORIES,formatName} from "../../../shared/public-comparisons";
 import { CalendarDays, ChevronDown, Plus, RotateCcw, Search } from "lucide-react";
 import { plainEnum, ukDate } from "../../../shared/creative-presentation";
@@ -5,14 +6,15 @@ import type { BrowserCreative, BrowserFilters } from "../../../shared/creative-b
 import "./CreativeFilters.css";
 
 type Option = string | { value: string; label: string };
-export function CreativeFilters({ creatives, filters, onChange, datesOpen, onDatesOpen }: {
+export function CreativeFilters({ creatives, model, filters, onChange, datesOpen, onDatesOpen }: {
     creatives: readonly BrowserCreative[];
+    model?:CreativeReadModel;
     filters: BrowserFilters;
     onChange: (patch: BrowserFilters) => void;
     datesOpen: boolean;
     onDatesOpen: (open: boolean) => void;
 }) {
-    const values = (field: keyof BrowserCreative) => [...new Set(creatives.map(row => row[field]).filter((value): value is string => typeof value === "string" && Boolean(value) && !["unknown", "Unavailable"].includes(value)))].sort();
+    const values = (field: keyof BrowserCreative) => model?model.options[({platform:"platforms",creativeFormat:"formats",hookType:"hooks",angle:"angles",offerType:"offers"} as const)[field as "platform"]]||[]:[...new Set(creatives.map(row => row[field]).filter((value): value is string => typeof value === "string" && Boolean(value) && !["unknown", "Unavailable"].includes(value)))].sort();
     const select = (key: keyof BrowserFilters, label: string, options: Option[]) => <label className="creative-filter-pill" key={key}>
         <span className="sr-only">{label}</span>
         <select aria-label={label} value={filters[key] || "all"} onChange={event => onChange({ [key]: event.target.value })}>
@@ -24,7 +26,7 @@ export function CreativeFilters({ creatives, filters, onChange, datesOpen, onDat
     const dateLabel = selectedDates.some(Boolean) ? `${selectedDates[0] || "Any start"} to ${selectedDates[1] || "Any end"}` : null;
     return <section id="creative-filters" className="creative-filter-card" aria-label="Creative filters">
         <div className="creative-filter-top">
-            <div className="creative-show" role="group" aria-label="Show creatives">{[["yours", "Yours"], ["competitors", "Competitors"], ["all", "Both"]].map(([value, label]) => <button key={value} aria-pressed={(filters.show || "all") === value} onClick={() => onChange({ show: value })}>{label} <span>{creatives.filter(row => value === "all" || value === "yours" && row.workspaceBrand || value === "competitors" && !row.workspaceBrand).length}</span></button>)}</div>
+            <div className="creative-show" role="group" aria-label="Show creatives">{[["yours", "Yours"], ["competitors", "Competitors"], ["all", "Both"]].map(([value, label]) => <button key={value} aria-pressed={(filters.show || "all") === value} onClick={() => onChange({ show: value })}>{label} <span>{model?value==="all"?model.page.totalAll:value==="yours"?model.coverage.yours:model.page.totalAll-model.coverage.yours:creatives.filter(row => value === "all" || value === "yours" && row.workspaceBrand || value === "competitors" && !row.workspaceBrand).length}</span></button>)}</div>
             <label className="creative-search"><Search size={16} aria-hidden="true"/><span className="sr-only">Search copy, transcript and on-screen text</span><input type="search" value={filters.search || ""} placeholder="Search transcripts, on-screen text and ad copy" onChange={event => onChange({ search: event.target.value })}/></label>
             <label className="creative-sort">Sort by<select aria-label="Sort" value={filters.sort || "newest"} onChange={event => onChange({ sort: event.target.value })}><option value="newest">Last observed</option><option value="days">Days running</option><option value="title">Ad title</option><option value="likelihood">Winner likelihood (experimental)</option></select></label>
         </div>
@@ -33,7 +35,7 @@ export function CreativeFilters({ creatives, filters, onChange, datesOpen, onDat
                 <summary><CalendarDays size={14} aria-hidden="true"/>Date range{dateLabel ? `: ${dateLabel}` : ""}<ChevronDown size={14} aria-hidden="true"/></summary>
                 <div className="creative-filter-panel"><label>Observed from<input type="date" value={filters.from || ""} max={filters.to} onChange={event => onChange({ from: event.target.value })}/></label><label>Observed to<input type="date" value={filters.to || ""} min={filters.from} onChange={event => onChange({ to: event.target.value })}/></label><button onClick={() => { onChange({ from: "", to: "" }); onDatesOpen(false); }}>All dates</button><button onClick={() => onDatesOpen(false)}>Done</button></div>
             </details>
-            {select("brand", "Brand", [...new Map(creatives.map(row => [row.brandId, { value: row.brandId, label: row.brandName }])).values()])}
+            {select("brand", "Brand", model?.options.brands||[...new Map(creatives.map(row => [row.brandId, { value: row.brandId, label: row.brandName }])).values()])}
             {select("adFormat", "Format", AD_FORMATS.map(value=>({value,label:formatName(value)})))}
             {select("category","Category",[{value:"mine",label:"My categories"},...[...new Set([...creatives.flatMap(row=>row.productCategories||[]),...PRODUCT_CATEGORIES])].map(value=>({value,label:value}))])}
             {filters.format&&select("format","Creative style",values("creativeFormat"))}

@@ -1459,3 +1459,50 @@ The rules upgrade also stops incompatible old searches safely rather than losing
 an active paid dataset. Results and source/check dates remain unchanged by a
 local recheck. Missing required checks reject; Needs review is only for genuine
 mixed creator-founders. Keywords never search account names.
+
+### Bounded SQL web reads (11 Nov 2026)
+
+This supersedes the whole-library response used by the earlier streaming repair.
+The creative endpoint now returns a bounded page (50 rows by default; `limit`
+1–100 and `offset`), plus complete SQL totals, coverage, filter options and research
+summaries. Creatives and Winners navigate between pages. Home selects five ads
+per qualifying format in SQL. Data sources counts and missing-media pages use
+SQL aggregates. A page length is never used as a workspace denominator.
+
+`web_creative_index` holds rebuildable current card/search metadata, keyed by
+workspace, brand, platform and ad. Its refresh streams at most 500 narrow records
+at once. Ignored raw fields, provider accounting, embeddings and full raw payloads
+stay out of this cache and the HTTP response. Only changed source versions are
+updated; selected pages hydrate existing paid analysis and retained files. Legacy
+standalone imports use a temporary SQLite metadata index and bounded hydration.
+Owned benchmarks aggregate in SQL using the shared CA-01/CA-02 metric rules, with
+account, currency, attribution and event scopes kept separate.
+
+This adds the two metadata tables and lookup indexes. Run `npm run db:migrate`
+once from the **new release's** web shell, or let the existing startup migration
+receipt apply them. No historical observation, ad, analysis or media file is
+removed. Allow roughly 2–6 MB per 1,000 ads for the current metadata cache and its
+indexes, depending on copy and published breakdown size; this is a current cache,
+not another daily history. The first read builds missing metadata; later reads
+update changed versions. Bulk metadata joins use transaction-local planner
+settings and a 30-second statement deadline. They do not change database defaults.
+
+After merging into exter-test-drive, deploy exter-ai, exter-worker and
+exter-scheduler from that branch. Do not change Render plans, heap flags, switches,
+secrets or budgets. Check Creatives totals and next/previous navigation, Winners'
+preview filter, and Data sources coverage against the saved account. The web
+process logs `web_memory` once per minute (heap used, runtime heap limit,
+percentage, RSS and measurement time). Data sources warns at 80% of the actual
+runtime heap limit; its health refresh does not reload the creative library.
+
+`npm run test:infrastructure` includes a disposable 50,000-ad workspace with an
+ignored 24 KB raw field per ad. A separate HTTP client drives three consecutive
+500-ID batches, filtered and overlapping page reads, Home, Winners and Data
+sources. The actual web app runs with a test-only heap cap below 200 MB. A local
+run peaked at approximately 116 MB heap. This is fixture evidence, not a live
+Render benchmark; never apply the fixture heap flags to Render.
+
+The integration regressions also retain their original assertions: monthly
+creator refresh is due from the successful profile check, and a saved poster
+cannot postpone a full-video upgrade. Only a genuine video request starts its
+daily retry interval. Priority/newest ordering and the 80% video disk stop remain.

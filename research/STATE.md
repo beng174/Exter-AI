@@ -1092,3 +1092,28 @@ secrets:check pass. The infrastructure suite passes 80 tests; all three affected
 creator database fixtures were rerun after the final qualification update. Browser
 fixtures pass at 390, 1280, 1440 and 1920 pixels, including source edits, rejected
 counts, rechecks and Stop search. No external browser/provider requests were made.
+
+## SQL-bounded web reads and integration recovery (11 Nov 2026)
+
+- Replaced whole-workspace media projection with SQL priority selection of at
+  most 500 IDs. Never-requested batches still follow immediately; failed retries,
+  Page/revision fences, budgets and disk checks remain in force.
+- Creatives and Winners use bounded SQL pages with complete counts, coverage and
+  filter options. Home's format groups, scorecard and top ads use SQL summaries.
+  Data sources coverage and missing-media diagnostics no longer build an ad array.
+- Current metadata is rebuildable and incrementally refreshed in bounded chunks;
+  full raw payloads never enter the web response or metadata cache. Existing
+  imported copy, paid analysis, files and all historical observations remain.
+  Owned aggregates share CA-01/CA-02 formulas and retain all reporting scopes.
+- Web heap logging runs once a minute. Data sources shows measured usage and an
+  80% warning. No Render heap, plan, secret, live switch or budget was changed.
+- Reproduced the two reported integration failures without changing their tests.
+  Monthly saved-creator refresh now uses the successful profile-check date.
+  Video upgrades track the last video request, not the poster's save time.
+- The 50,000-ad fixture passed below 200 MB heap (approximately 116 MB in a local
+  run), including repeated queueing and overlapping page requests. Fixtures do
+  not verify the live workspace, provider coverage or either owned-sync live gate.
+  All 85 infrastructure tests and 631 unit tests pass, alongside TypeScript,
+  build and secrets checks. Browser fixtures verify paging, Back, preview filters
+  and the memory warning at 1440px and 390px. PR/CI results and rollout steps
+  are recorded in the PR.

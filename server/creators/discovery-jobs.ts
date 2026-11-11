@@ -102,7 +102,7 @@ export async function workCreatorDiscoveryOnce(pool: pg.Pool, options: CreatorJo
               profile = { ...prior, verificationReason: e.message };
             }
             if (successful && options.thumbnail) profile = await options.thumbnail(workspace, profile);
-            const due = nextCreatorRefresh(now.toISOString());
+            const due = nextCreatorRefresh(successful && profile.checkedAt ? profile.checkedAt : now.toISOString());
             await upsertDiscoveryProfile(pool, workspace, profile, brief, job.brief_version, true, due);
             await pool.query("UPDATE creator_discovery_results SET verification_due=false WHERE workspace_id=$1 AND handle=$2", [workspace, step.value]);
             if (successful) await pool.query("UPDATE creator_discovery_runs SET verified=verified+1 WHERE id=$1 AND lease_owner=$2", [job.id, owner]);

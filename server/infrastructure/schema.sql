@@ -244,6 +244,20 @@ ALTER TABLE creator_discovery_runs ADD COLUMN IF NOT EXISTS reconcile_mappings j
 ALTER TABLE creator_discovery_runs ADD COLUMN IF NOT EXISTS reconcile_window_end timestamptz;
 ALTER TABLE creator_discovery_runs ADD COLUMN IF NOT EXISTS stop_requested boolean NOT NULL DEFAULT false;
 
+-- Rebuildable current read model. Raw payloads and immutable history stay above.
+CREATE TABLE IF NOT EXISTS web_creative_index (
+ workspace_id text NOT NULL,brand_key text NOT NULL,platform text NOT NULL,native_id text NOT NULL,
+ source_type text NOT NULL CHECK(source_type IN ('official','legacy')),source_version text NOT NULL,
+ watchlist_id text,revision integer,page_id text,data jsonb NOT NULL,category_hash text,
+ has_analysis boolean NOT NULL DEFAULT false,claims jsonb NOT NULL DEFAULT '[]',cta text,talking boolean,
+ updated_at timestamptz NOT NULL DEFAULT now(),PRIMARY KEY(workspace_id,brand_key,platform,native_id,source_type)
+);
+CREATE TABLE IF NOT EXISTS web_creative_index_state(workspace_id text PRIMARY KEY,legacy_generation text NOT NULL);
+CREATE INDEX IF NOT EXISTS ad_media_creatives_lookup ON ad_media_creatives(workspace_id,brand_key,page_id,native_id,created_at DESC);
+CREATE INDEX IF NOT EXISTS ad_media_requests_latest ON ad_media_requests(native_id,requested_at DESC,run_id);
+CREATE INDEX IF NOT EXISTS public_categories_latest ON public_ad_categories(workspace_id,brand_key,native_id,created_at DESC);
+CREATE INDEX IF NOT EXISTS ad_observations_run ON ad_observations(workspace_id,run_id,platform,native_id);
+
 -- Web disk checks contain only scoped file identities and controlled availability.
 CREATE TABLE IF NOT EXISTS ad_media_file_checks (
  workspace_id text NOT NULL, artifact_id text NOT NULL, available boolean NOT NULL,

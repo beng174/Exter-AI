@@ -1,5 +1,4 @@
-import {checkedRetainedMedia} from "./file-health.js";
-import {readRetainedMedia} from "./read.js";
+import {checkWorkspaceMediaSlice} from "./file-health.js";
 import {readMediaCoverage,readMissingMedia} from "./coverage.js";
 import {actorCounts,mediaInputDetails} from "./apify.js";
 import {captionDomain} from "../../shared/meta-page-candidates.js";
@@ -42,14 +41,14 @@ export function attachMediaStep(app:Express,db:DatabaseSync,getPool= infrastruct
     if(!mediaEnabled(env)){res.status(409).json({error:"Media collection is off."});return;}
     if(!/^[a-f0-9-]{36}$/.test(String(req.params.runId))||!/^[a-f0-9-]{36}$/.test(String(req.params.owner))){res.status(400).json({error:"A leased media step is required."});return;}
     try{
-      const pool=getPool(),r=(await pool.query("SELECT workspace_id,brand_key FROM ad_media_runs WHERE id=$1 AND lease_owner=$2 AND lease_until>now()",[req.params.runId,req.params.owner])).rows[0],brand=r?readBrand(db,r.workspace_id):null;
+      const pool=getPool(),r=(await pool.query("SELECT workspace_id,brand_key,target_ids FROM ad_media_runs WHERE id=$1 AND lease_owner=$2 AND lease_until>now()",[req.params.runId,req.params.owner])).rows[0],brand=r?readBrand(db,r.workspace_id):null;
       if(!brand||brand.mode==="demo"){res.status(404).json({error:"Real workspace not found."});return;}
       const existingIds=new Set<string>(),existingVideoIds=new Set<string>(),existingVideoCandidates=new Set<string>(),gallery=app.locals.creativeGallery as CreativeGalleryService|undefined;
       const target=r.brand_key===brand.id?brand.id:configuredCreativeCompetitors(db,brand,app.locals.demoCollection).find(c=>(c.brandId||c.key)===r.brand_key)?.brandId;
       if(gallery&&target){
         // A failed legacy media read must not become permission to buy those files again.
-        const saved=await gallery.list(target);
-        for(const row of saved.creatives)if(row.mediaAvailable&&["Meta","Facebook","Instagram"].includes(row.platform||"")){
+        const saved=await gallery.selected(target,r.target_ids);
+        for(const row of saved)if(row.mediaAvailable&&["Meta","Facebook","Instagram"].includes(row.platform||"")){
           if(row.thumbnailUrl||row.imageUrls.length)existingIds.add(row.nativeId);
           if(row.videoUrl)existingVideoIds.add(row.nativeId);
           if(row.mediaKind==="video")existingVideoCandidates.add(row.nativeId);
@@ -91,7 +90,7 @@ export function attachAdMedia(app:Express,db:DatabaseSync,getPool=infrastructure
     const brand=typeof req.query.workspaceId==="string"?readBrand(db,req.query.workspaceId):null;
     if(!brand||brand.mode==="demo"){res.status(404).json({error:"Real workspace not found."});return;}
     const offset=Number(req.query.offset||0);if(!Number.isSafeInteger(offset)||offset<0){res.status(400).json({error:"Choose a valid page."});return;}
-    try{const pool=getPool();await checkedRetainedMedia(pool,await readRetainedMedia(pool,brand.id));res.json(await readMissingMedia(pool,brand.id,{adId:typeof req.query.adId==="string"?req.query.adId:undefined,brand:typeof req.query.brand==="string"?req.query.brand:undefined,reason:typeof req.query.reason==="string"?req.query.reason:undefined,offset}));}
+    try{const pool=getPool();await checkWorkspaceMediaSlice(pool,brand.id);res.json(await readMissingMedia(pool,brand.id,{adId:typeof req.query.adId==="string"?req.query.adId:undefined,brand:typeof req.query.brand==="string"?req.query.brand:undefined,reason:typeof req.query.reason==="string"?req.query.reason:undefined,offset}));}
     catch{res.status(503).json({error:"Missing media could not be read."});}
   });
   app.get("/api/ad-media/status",async(req,res)=>{
@@ -100,7 +99,7 @@ export function attachAdMedia(app:Express,db:DatabaseSync,getPool=infrastructure
     if(!brand||brand.mode==="demo"){res.status(404).json({error:"Real workspace not found."});return;}
     try{
       const pool=process.env.DATABASE_URL?getPool():null;
-      if(pool)await checkedRetainedMedia(pool,await readRetainedMedia(pool,brand.id));
+      if(pool)await checkWorkspaceMediaSlice(pool,brand.id);
       const coverage=pool?await readMediaCoverage(pool,brand.id):[];
       const targets=[{key:brand.id,name:brand.name},...configuredCreativeCompetitors(db,brand,app.locals.demoCollection).map(c=>({key:c.brandId||c.key,name:c.name}))];
       res.json({enabled:mediaEnabled(),configured:Boolean(process.env.APIFY_TOKEN?.trim()&&mediaGbpRate(process.env)!==null),disk:await mediaDiskHealth(),runs:pool?await adMediaRuns(pool,brand.id):[],coverage:coverage.map(c=>({...c,estimatedRemainingGbp:mediaGbpRate(process.env)===null?null:Math.ceil(((c.official-c.requested)*.0005+Math.ceil((c.official-c.requested)/500)*.00005)*mediaGbpRate(process.env)!*1e6)/1e6,brandName:targets.find(t=>t.key===c.brandKey)?.name||"Watchlist brand"}))});
