@@ -10,9 +10,9 @@ import type {DatabaseStorageHealth} from "../../../shared/storage-health";
 import type {MetaSourceHealth} from "../../../shared/meta-public";
 export type Watchlist=import("../../../shared/meta-public").MetaWatchlist;
 export interface BudgetState {cost_type:string;monthly_budget_gbp:number;used_gbp:number;paused:boolean;pause_reason:string|null}
-export interface InfrastructureState {mediaDisk?:MediaDiskHealth;meta?:{status:string};tiktok?:{status:string};database?:string;storage?:DatabaseStorageHealth;budgets?:BudgetState[]}
+export interface InfrastructureState {memory?:import("../../../shared/process-memory").ProcessMemoryHealth;mediaDisk?:MediaDiskHealth;meta?:{status:string};tiktok?:{status:string};database?:string;storage?:DatabaseStorageHealth;budgets?:BudgetState[]}
 export interface ResearchData {comparison?:import("./comparison").ComparisonState;library:CreativeBrowserResponse;window:ResearchWindow;brand:Brand|undefined;research:BrandResearch|null;researchFailed:boolean;watchlists:Watchlist[]|null;watchlistPollFailed?:boolean;infrastructure:InfrastructureState|null;connections:{status:string;platform?:string;name?:string}[]|null;budgets:BudgetState[]|null}
-export function useResearchData(brandId:string,brands:Brand[],from:string|undefined,to:string|undefined,refresh:number) {
+export function useResearchData(brandId:string,brands:Brand[],from:string|undefined,to:string|undefined,refresh:number,request:Record<string,string>={}) {
   const [data,setData]=useState<ResearchData|null>(null),[error,setError]=useState(false),[loading,setLoading]=useState(true);
   const [onboardingRevision,setOnboardingRevision]=useState(0);
   useEffect(()=>{const update=()=>setOnboardingRevision(value=>value+1);window.addEventListener("exter:onboarding-updated",update);return()=>window.removeEventListener("exter:onboarding-updated",update);},[]);
@@ -28,10 +28,10 @@ export function useResearchData(brandId:string,brands:Brand[],from:string|undefi
       read<{budgets:BudgetState[]}>("/api/budgets")
     ]);
     async function load(){
-      const query=new URLSearchParams({window:"research"});if(from)query.set("from",from);if(to)query.set("to",to);
+      const query=new URLSearchParams({...request,window:"research"});if(from)query.set("from",from);if(to)query.set("to",to);
       const contextual=context(brandId);
       const library=await read<CreativeBrowserResponse>(`/api/brands/${encodeURIComponent(brandId)}/creatives?${query}`,true);
-      const window=researchWindow(library.creatives,from,to);
+      const window=library.sql?.window||researchWindow(library.creatives,from,to);
       const id=library.brand.id;
       const results=await (id===brandId?contextual:context(id));
       const research=results[0].status==="fulfilled"?results[0].value:null;
@@ -39,7 +39,7 @@ export function useResearchData(brandId:string,brands:Brand[],from:string|undefi
     }
     void load().catch(()=>{if(active){setError(true);setData(null);}}).finally(()=>{if(active)setLoading(false);});
     return()=>{active=false;for(const lease of leases)lease.release();};
-  },[brandId,from,to,refresh,onboardingRevision]);
+  },[brandId,from,to,refresh,onboardingRevision,JSON.stringify(request)]);
   const activeWorkspace=data?.watchlists?.some(w=>["queued","running"].includes(w.latestRun?.status||""))?data.library.brand.id:null;
   useEffect(()=>{
     if(!activeWorkspace)return;let active=true,pending=false;
@@ -47,5 +47,6 @@ export function useResearchData(brandId:string,brands:Brand[],from:string|undefi
       void Promise.allSettled([api<Watchlist[]>(`/api/public/meta/watchlists?${new URLSearchParams({workspaceId:activeWorkspace})}`),api<MetaSourceHealth>(`/api/public/meta/source-status?${new URLSearchParams({workspaceId:activeWorkspace})}`)]).then(([lists,source])=>{if(active)setData(current=>current?.library.brand.id===activeWorkspace?{...current,...(lists.status==="fulfilled"?{watchlists:lists.value}:{}),watchlistPollFailed:lists.status==="rejected"||source.status==="rejected",library:source.status==="fulfilled"?{...current.library,metaSource:source.value}:current.library}:current);}).finally(()=>{pending=false;});
     },5000);return()=>{active=false;window.clearInterval(timer);};
   },[activeWorkspace]);
+  useEffect(()=>{if(!data||data.library.presentation)return;let active=true;const timer=window.setInterval(()=>{void api<InfrastructureState>('/api/infrastructure/status').then(infrastructure=>{if(active)setData(current=>current?{...current,infrastructure}:current);}).catch(()=>{});},60000);return()=>{active=false;window.clearInterval(timer);};},[data?.library.brand.id,Boolean(data?.library.presentation)]);
   return {data:data?{...data,brand:brands.find(item=>item.id===data.library.brand.id)||data.brand}:null,error,loading};
 }

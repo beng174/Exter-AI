@@ -25,7 +25,7 @@ export function CompetitorsScreen({data,selection,dimension,onDimension}:ScreenP
   const {brands,hasReach}=reachScorecard(chart.data.library,data.window,selection.platform),cards=scorecardCohorts(data,selection);
   const metrics=[{id:"active",label:"Active ads"},{id:"launched",label:"New this week"},{id:"stopped",label:"Stopped this week"},{id:"medianDays",label:"Median days running"},{id:"shareActive",label:hasReach?"Share of voice by reach":"Share of active ads"}] as const;
   const selectionFor=(brand:BrandSnapshot,id:string)=>id in brand?(brand[id as keyof BrandSnapshot] as {selection:EvidenceSelection}).selection:{...selection,brand:brand.id};
-  const values=brands.map(brand=>mixGroups(chart.data.library.creatives,dimension,{...chartSelection,brand:brand.id,kind:"active"}));
+  const values=brands.map(brand=>mixGroups(chart.data.library,dimension,{...chartSelection,brand:brand.id,kind:"active"}));
   const labels=[...new Set(values.flatMap(value=>value.groups.map(group=>group.value)))];
   const analysis={href:analysisUrl(data.library.brand.id),linkLabel:"Run analysis"};
   const collect={href:`/?view=settings&brandId=${encodeURIComponent(data.library.brand.id)}#demo-collection`,linkLabel:"Collect competitor ads"};
@@ -53,7 +53,7 @@ export function CompetitorsScreen({data,selection,dimension,onDimension}:ScreenP
     </SectionCard>
     <SectionCard title="What each competitor leans on"  meta={metadata(data,{...chartSelection,show:"competitors"})} empty={!brands.some(brand=>!brand.workspaceBrand&&brand.available)&&{reason:"Configured competitor evidence has not been collected.",...collect}}>
       <div className="research-competitor-grid">{brands.filter(brand=>!brand.workspaceBrand).map(brand=>{
-        const groups=mixGroups(chart.data.library.creatives,dimension,{...chartSelection,brand:brand.id,kind:"active"});
+        const groups=mixGroups(chart.data.library,dimension,{...chartSelection,brand:brand.id,kind:"active"});
         return <article className="research-competitor-card" key={brand.id}><h3>{brand.name}</h3>{groups.groups.length?<><BarList label={`Recorded ${dimension} labels`} basis="Observed" items={groups.groups.slice(0,3).map(group=>({id:group.value,label:dimensionLabel(dimension,group.value),value:group.count}))} meta={metadata(data,{...chartSelection,brand:brand.id,kind:"active"})} onSelect={value=>navigateHref(evidenceUrl(data.library.brand.id,{...chartSelection,brand:brand.id,kind:"active",dimension,value}))}/><div className="research-creative-grid">{longestRunning(chart.data.library.creatives,{...chartSelection,brand:brand.id,dimension,value:groups.groups[0].value,kind:"active"},3).map(row=><CreativeTile key={row.adId} row={row} workspaceId={data.library.brand.id}/>)}</div></>:<Unavailable reason={brand.available?"This sample has no supported analysis labels.":"No captured sample is saved."} {...(brand.available?{href:analysisUrl(brand.id,undefined,data.library.brand.id),linkLabel:"Run analysis"}:collect)}/>}</article>;
       })}</div>
     </SectionCard>
@@ -61,12 +61,12 @@ export function CompetitorsScreen({data,selection,dimension,onDimension}:ScreenP
 }
 export function FormatsScreen({data,selection}:ScreenProps) {
   if(data.library.presentation&&!data.comparison)return <FormatsReadModel library={data.library} model={data.library.presentation}/>;
-  const groups=comparedGroups(data,"format",selection),coverage=mixGroups(data.library.creatives,"format",selection);
+  const groups=comparedGroups(data,"format",selection),coverage=mixGroups(data.library,"format",selection);
   const analysis={href:analysisUrl(data.library.brand.id),linkLabel:"Run analysis"};
   const productionSelection={...selection,kind:"running" as const,take:"5"};
   const productionCohorts=data.comparison?.groups||[undefined];
   const measures=productionCohorts.flatMap(cohort=>{
-    const filter=cohort?cohortSelection(data,cohort,productionSelection):productionSelection,rows=cohort?.rows||data.library.creatives;
+    const filter=cohort?cohortSelection(data,cohort,productionSelection):productionSelection,rows=cohort?{...data.library,creatives:cohort.rows,sql:data.library.sql?{...data.library.sql,scopeFormat:cohort.format}:undefined}:data.library;
     const all=productionFacts(rows,filter),own=productionFacts(rows,{...filter,show:"yours"}),competitors=productionFacts(rows,{...filter,show:"competitors"});
     return ([{id:"duration",label:"Median video length (seconds)",known:all.duration!==null,all:all.duration,yours:own.duration,competitors:competitors.duration,basis:"Observed" as const},{id:"talking",label:"Talking to camera (%)",known:all.talkingShare!==null,all:all.talkingShare,yours:own.talkingShare,competitors:competitors.talkingShare,basis:"Modelled" as const},{id:"hook",label:"Measured hook length",known:false,all:null,yours:null,competitors:null,basis:"Unavailable" as const},{id:"captions",label:"Captions on",known:false,all:null,yours:null,competitors:null,basis:"Unavailable" as const},{id:"presence",label:"Person on camera",known:false,all:null,yours:null,competitors:null,basis:"Unavailable" as const}]).map(row=>({...row,cohort,selection:filter,key:`${cohort?.format||"all"}:${row.id}`}));
   });
@@ -76,7 +76,7 @@ export function FormatsScreen({data,selection}:ScreenProps) {
         {key:"format",label:"Format",value:row=>dimensionLabel("format",row.value)},
         {key:"mix",label:"Market and you",value:row=>row.yourShare??row.competitorShare,render:row=><ComparisonBars yours={row.yourShare} competitors={row.competitorShare} onYours={()=>navigateHref(evidenceUrl(data.library.brand.id,{...row.selection,show:"yours"}))} onCompetitors={()=>navigateHref(evidenceUrl(data.library.brand.id,{...row.selection,show:"competitors"}))}/>},
         {key:"days",label:"Median days",value:row=>row.medianDays,render:row=><EvidenceNumber value={row.medianDays} data={data} selection={{...row.selection,kind:"running"}}/>},
-        {key:"trend",label:"Launch-share trend (points)",value:row=>launchShareTrend(data.library.creatives,"format",row.value,data.window,row.selection),render:row=><EvidenceNumber data={data} basis="Modelled" value={launchShareTrend(data.library.creatives,"format",row.value,data.window,row.selection)} selection={{...row.selection,kind:"launches",activityFrom:data.window.previousFrom||undefined,activityTo:data.window.to||undefined}}/>},
+        {key:"trend",label:"Launch-share trend (points)",value:row=>launchShareTrend(data.library,"format",row.value,data.window,row.selection),render:row=><EvidenceNumber data={data} basis="Modelled" value={launchShareTrend(data.library,"format",row.value,data.window,row.selection)} selection={{...row.selection,kind:"launches",activityFrom:data.window.previousFrom||undefined,activityTo:data.window.to||undefined}}/>},
         {key:"win",label:"Category win rate",value:()=>null,unavailable:()=>({reason:"Working Score is not available yet."})},
         {key:"roas",label:"Your format ROAS",value:()=>null,unavailable:()=>({reason:"Your format results are not available yet."})}
       ]}/>
@@ -119,7 +119,7 @@ export function AudienceScreen({data,selection}:ScreenProps) {
   const audience=audienceReachTable(data.library,selection);
   const quotes=data.research?.facts.filter(fact=>fact.label==="Customer review displayed by the brand")||[];
   const brands=brandSnapshots(data.library,data.window,selection.platform);
-  const voices=brands.map(brand=>({...brand,...brandVoice(data.library.creatives,{...selection,brand:brand.id,kind:"active"})}));
+  const voices=brands.map(brand=>({...brand,...brandVoice(data.library,{...selection,brand:brand.id,kind:"active"})}));
   const researchHref=`/?view=brands&brandId=${encodeURIComponent(data.library.brand.id)}`;
   return <>
     <SectionCard title="Customer voice" help="Saved quotes from the brand website" empty={!quotes.length&&{reason:data.researchFailed?"Saved customer evidence could not be read.":"No source-linked customer reviews are saved.",href:researchHref,linkLabel:"Review brand sources"}}>
@@ -145,22 +145,26 @@ export function WinnersScreen({data,selection}:ScreenProps) {
   const [onlyPreviews,setOnlyPreviews]=useState(()=>typeof window==='undefined'||new URLSearchParams(window.location.search).get('previews')!=='all');
   if(data.library.presentation)return <WinnersReadModel library={data.library} model={data.library.presentation}/>;
   const likelihoodSort=typeof window!=="undefined"&&new URLSearchParams(window.location.search).get("sort")==="likelihood";
-  const raw=data.comparison?.originalLibrary||data.library,coverage=winnersCoverage(raw.creatives,data.comparison?.primary||raw.brand.primaryCategories||[],data.comparison?.filter),fallback=Boolean(data.comparison&&!data.comparison.groups.length),fixUrl=`/?view=data&brandId=${encodeURIComponent(data.library.brand.id)}`;
-  const candidates=fallback?unqualifiedWinners(raw.creatives,selection):likelihoodSort?(data.comparison?data.comparison.groups.flatMap(group=>selectResearchAds(group.rows,selection)):selectResearchAds(data.library.creatives,selection)).filter(row=>row.likelihood):longestByFormat(data,selection);
-  const rows=candidates.filter(row=>!onlyPreviews||Boolean(row.thumbnailUrl||row.imageUrls.length));
+  const raw=data.comparison?.originalLibrary||data.library,coverage=winnersCoverage(raw.creatives,data.comparison?.primary||raw.brand.primaryCategories||[],data.comparison?.filter,raw.sql),fallback=Boolean(data.comparison&&!data.comparison.groups.length),fixUrl=`/?view=data&brandId=${encodeURIComponent(data.library.brand.id)}`;
+  const candidates=raw.sql?raw.creatives:fallback?unqualifiedWinners(raw.creatives,selection):likelihoodSort?(data.comparison?data.comparison.groups.flatMap(group=>selectResearchAds(group.rows,selection)):selectResearchAds(data.library.creatives,selection)).filter(row=>row.likelihood):longestByFormat(data,selection);
+  const rows=raw.sql?candidates:candidates.filter(row=>!onlyPreviews||Boolean(row.thumbnailUrl||row.imageUrls.length));
+  const waiting=raw.sql?.previewMissing??candidates.length-rows.length;
+  const page=raw.sql?.page;
+  const changePage=(offset:number)=>{const url=new URL(window.location.href);url.searchParams.set("offset",String(offset));navigateHref(url.href);};
   if(likelihoodSort&&!fallback){const formats=[...new Set(rows.map(r=>r.adFormat||r.mediaKind))];rows.sort((a,b)=>formats.indexOf(a.adFormat||a.mediaKind)-formats.indexOf(b.adFormat||b.mediaKind)||(b.likelihood?.probability??-1)-(a.likelihood?.probability??-1));}
   return <>
-    <label className="winners-preview-toggle"><input type="checkbox" checked={onlyPreviews} onChange={event=>{setOnlyPreviews(event.target.checked);const url=new URL(window.location.href);url.searchParams.set('previews',event.target.checked?'only':'all');window.history.replaceState(window.history.state,'',url);}}/>Only ads with previews</label>
-    {onlyPreviews&&candidates.length>rows.length&&<p className="reference-muted">{adCount(candidates.length-rows.length)} {candidates.length-rows.length===1?'is':'are'} waiting for previews. <a href={`${fixUrl}#ads-without-media`}>Collect missing media</a></p>}
+    <label className="winners-preview-toggle"><input type="checkbox" checked={onlyPreviews} onChange={event=>{setOnlyPreviews(event.target.checked);const url=new URL(window.location.href);url.searchParams.set('previews',event.target.checked?'only':'all');url.searchParams.delete('offset');navigateHref(url.href);}}/>Only ads with previews</label>
+    {onlyPreviews&&waiting>0&&<p className="reference-muted">{adCount(waiting)} {waiting===1?'is':'are'} waiting for previews. <a href={`${fixUrl}#ads-without-media`}>Collect missing media</a></p>}
     <p className="reference-muted">Coverage · {coverage.total.toLocaleString("en-GB")} ads · {coverage.taggedPercent??0}% tagged · {coverage.knownPercent??0}% format known · {coverage.mediaPercent??0}% with media</p>
     {fallback&&<div className="reference-muted"><p><strong>Not yet like-for-like.</strong> Showing longest-running saved ads across categories and formats.</p>{coverage.gaps.length>0&&<p>{coverage.gaps.join(". ")}.</p>}<p>Each format needs 10 category-matched ads on at least one side.</p><a href={`${fixUrl}#public-category-status`}>Tag ads now</a> · <a href={`${fixUrl}#ads-without-media`}>Review missing media</a></div>}
-    <SectionCard title={likelihoodSort&&!fallback?"Winner likelihood":"Longest running"} help={likelihoodSort&&!fallback?"Experimental estimates, with uncertainty and model validation for each ad.":"Working Score, labels, confidence and public signal scores are not available yet. Longest running is shown instead."} empty={!rows.length&&{reason:onlyPreviews&&candidates.length?"Previews are being collected. Turn off the preview filter to see these ads.":likelihoodSort&&!fallback?"No estimates are ready for these comparable ads.":"No ads match these filters.",href:fixUrl,linkLabel:"Review categories and media"}}>
-      <DataTable caption={likelihoodSort&&!fallback?"Experimental winner estimates":fallback?"Longest-running ads · Not yet like-for-like":"Longest-running saved creatives"} basis="Observed" rowBasis={row=>row.likelihood?row.likelihood.label==="Modelled"?"Modelled":"Estimated":"Observed"} meta={likelihoodSort||fallback?{sampleSize:rows.length,from:data.window.from,to:data.window.to,lastChecked:data.window.asOf}:metadata(data,{...selection,kind:"running"})} rows={rows} rowKey={row=>row.adId} groupBy={row=>fallback?null:creativeGroup(row,data)} onRow={row=>navigateHref(evidenceUrl(data.library.brand.id,{...selection,...(fallback?{category:undefined,adFormat:undefined}:{}),ad:row.adId}))} columns={[
+    <SectionCard title={likelihoodSort&&!fallback?"Winner likelihood":"Longest running"} help={likelihoodSort&&!fallback?"Experimental estimates, with uncertainty and model validation for each ad.":"Working Score, labels, confidence and public signal scores are not available yet. Longest running is shown instead."} empty={!rows.length&&{reason:onlyPreviews&&waiting?"Previews are being collected. Turn off the preview filter to see these ads.":likelihoodSort&&!fallback?"No estimates are ready for these comparable ads.":"No ads match these filters.",href:fixUrl,linkLabel:"Review categories and media"}}>
+      <DataTable caption={likelihoodSort&&!fallback?"Experimental winner estimates":fallback?"Longest-running ads · Not yet like-for-like":"Longest-running saved creatives"} basis="Observed" rowBasis={row=>row.likelihood?row.likelihood.label==="Modelled"?"Modelled":"Estimated":"Observed"} meta={likelihoodSort||fallback?{sampleSize:page?.total??rows.length,from:data.window.from,to:data.window.to,lastChecked:data.window.asOf}:metadata(data,{...selection,kind:"running"})} rows={rows} rowKey={row=>row.adId} groupBy={row=>fallback?null:creativeGroup(row,data)} onRow={row=>navigateHref(evidenceUrl(data.library.brand.id,{...selection,...(fallback?{category:undefined,adFormat:undefined}:{}),ad:row.adId}))} columns={[
         {key:"creative",label:"Creative",value:row=>creativeTitle(row),render:row=><CreativeRow row={row} showId/>},{key:"brand",label:"Brand",value:row=>row.brandName},{key:"format",label:"Format",value:row=>mediaFormat(row)?formatName(mediaFormat(row)!):row.previewState?.failedDays&&row.previewState.failedDays>=7?"Unavailable":"Format pending",render:row=><span className="winner-format">{mediaFormat(row)?formatName(mediaFormat(row)!):row.previewState?.failedDays&&row.previewState.failedDays>=7?"Unavailable":"Format pending"}</span>,basis:row=>mediaFormat(row)?"Observed":"Unavailable"},
         {key:"days",label:"Days running",value:row=>row.daysRunning,render:row=><EvidenceNumber data={data} value={row.daysRunning} selection={{...selection,...(fallback?{category:undefined,adFormat:undefined}:{}),ad:row.adId}}/>},
         {key:"likelihood",label:"Winner likelihood",align:"number",value:row=>row.likelihood?.probability??null,render:row=><LikelihoodValue estimate={row.likelihood!}/>,basis:()=>"Estimated"}
       ]}/>
     </SectionCard>
+    {page&&<nav className="creative-show-more" aria-label="Winner pages"><span>{page.total.toLocaleString("en-GB")} matching ads</span><button className="button secondary" disabled={!page.offset} onClick={()=>changePage(Math.max(0,page.offset-page.limit))}>Previous page</button><button className="button secondary" disabled={!page.hasNext} onClick={()=>changePage(page.offset+page.limit)}>Next page</button></nav>}
     <SectionCard title="Your account winners" empty={{reason:"Your own winners appear once your ad account is connected and synced and winner comparisons are available.",href:`/?view=data&brandId=${encodeURIComponent(data.library.brand.id)}`,linkLabel:"Review owned sources"}}/>
   </>;
 }

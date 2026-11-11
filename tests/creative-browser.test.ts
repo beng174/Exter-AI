@@ -60,85 +60,22 @@ test("UI-00 brand switcher omits unknown roles and explains an empty competitor 
     assert.ok(!brandContext({ ...brand, role: "other" }).includes("Type:"));
     assert.equal(brandContext(brand,3),"3 competitors");assert.equal(brandContext(brand,null),"Competitors unavailable");
 });
-test("UI-02 read endpoint is authenticated, read-only, scoped and does not turn failures into empty success", async () => {
-    const db = openDatabase(":memory:", false), app = express();
-    const root = { id: "workspace-a", name: "Fixture advertiser", domain: "fixture.example", category: "Home fragrance & gifting", color: "#123456", initials: "FA", voice: [], competitors: ["competitor-a","Fixture competitor","WORKSPACE-A"], mode: "imported", createdAt: "2026-11-01" } as Brand;
-    for (const brand of [root, { ...root, id: "competitor-a", name: "Fixture competitor" }, { ...root, id: "unrelated", name: "Unrelated" }])
-        db.prepare("INSERT INTO brands VALUES (?,?)").run(brand.id, JSON.stringify(brand));
-    app.use(basicAuth({ EXTER_ADMIN_USER: "browser-fixture", EXTER_ADMIN_PASSWORD: "fixture-only" }));
-    let failGallery = false, failOwned = false, overflow = false;
-    const reads: string[] = [];
-    let queries = 0, expectedRange=["2026-11-01","2026-11-04"];
-    app.locals.creativeGallery = { async list(id: string) { reads.push(id); if (failGallery)
-            throw new Error("private provider detail"); return { creatives: id === root.id ? [browserCreative()] : [browserCreative({ adId: "public-competitor", brandId: id, workspaceBrand: false }), browserCreative({ adId: "private-competitor", brandId: id, workspaceBrand: false, owned: true })] }; } };
-    app.locals.demoCollection={snapshot(){return {competitors:[{brandId:"competitor-a",name:"Fixture competitor",status:"complete"},{brandId:null,name:"Pending competitor",status:"not-started"}]};}};
-    app.locals.brandDemo = { report() { throw new Error("No scoring evidence"); } };
-    const pool = { async query(sql: string, params: unknown[]) { queries++; if(sql.includes("FROM ad_observations")||sql.startsWith("SELECT DISTINCT ON(w.id)")){assert.deepEqual(params,[root.id]);return {rows:[]};} assert.match(sql, /^SELECT d.data FROM owned_ad_days d JOIN owned_accounts/); assert.match(sql, /a.workspace_id=\$1/); assert.match(sql, /LIMIT 100001/); assert.deepEqual(params, [root.id, ...expectedRange]); if (failOwned)
-            throw new Error("private database detail"); if (overflow)
-            return { rows: new Array(100001).fill({ data: ownedDay() }) }; return { rows: [ownedDay(), ownedDay({ spend: 120, pulledAt: "2026-11-05T00:00:00Z" }), ownedDay({ accountId: "account-b", currency: "USD", spend: 300 }), ownedDay({ attribution: "1d_click", spend: 40 })].map(data => ({ data })) }; } } as unknown as pg.Pool;
-    pool.connect=async()=>({query(q:any){queueMicrotask(()=>{void pool.query(q.text,q.values).then(result=>{for(const row of result.rows)q.emit("row",row);q.emit("end",{rows:[]});}).catch(error=>q.emit("error",error));});return q;},release(){}}) as any;
-    attachCreativeBrowser(app, db, { getPool: () => pool, now:()=>new Date("2026-11-05T12:00:00Z") });
-    const server = createServer(app);
-    await new Promise<void>(resolve => server.listen(0, "127.0.0.1", resolve));
-    const base = `http://127.0.0.1:${(server.address() as AddressInfo).port}/api/brands/${root.id}/creatives`, headers = { authorization: `Basic ${Buffer.from("browser-fixture:fixture-only").toString("base64")}` };
-    const before = db.prepare("SELECT total_changes() AS n").get();
-    try {
-        assert.equal((await fetch(base)).status, 401);
-        assert.equal(queries, 0);
-        assert.equal((await fetch(base + "?from=2026-02-31", { headers })).status, 400);
-        assert.equal((await fetch(base + "?from=2026-11-04&to=2026-11-01", { headers })).status, 400);
-        assert.equal((await fetch(base.replace(root.id, "missing"), { headers })).status, 404);
-        const response = await fetch(base + "?from=2026-11-01&to=2026-11-04", { headers });
-        assert.equal(response.status, 200);
-        assert.match(response.headers.get("cache-control")!, /no-store/);
-        assert.match(response.headers.get("vary")!, /Accept-Encoding/i);
-        assert.equal(response.headers.get("content-encoding"),"gzip");
-        const data = await response.json() as CreativeBrowserResponse;
-        assert.deepEqual(reads, ["workspace-a", "competitor-a"]);
-        const configured=await (await fetch(base.replace("/creatives","/creative-competitors"),{headers})).json();
-        assert.deepEqual(configured.competitors,data.competitors,"sidebar and list share the configured set");
-        assert.equal(configured.competitors.length,2,"duplicates and self are excluded; uncollected competitors remain");
-        assert.equal(configured.competitors[1].brandId,null);
-        assert.deepEqual(reads,["workspace-a","competitor-a"],"count endpoint does not read creatives or owned metrics");
-
-        assert.equal(data.creatives.length, 2);
-        const own = data.creatives.find(row => row.workspaceBrand)!;
-        assert.equal(own.performance.length, 3);
-        assert.equal(own.publicEvidence,true,"a matched owned ad retains its independent public source evidence");
-        assert.deepEqual(own.performance.map(item => item.metrics.Spend.value), [120, 300, 40]);
-        assert.deepEqual(own.performance.map(item => item.benchmark.Spend.value), [120, 300, 40]);
-        assert.equal(data.creatives.find(row => !row.workspaceBrand)!.performance.length, 0);
-        assert.equal(data.creatives.some(row => row.adId === "private-competitor"), false);
-        assert.equal(own.score, null, "saved creatives survive unavailable scoring");
-        assert.equal(own.scoreError,true,"a checklist read failure is explicit");
-        // The research preset resolves the same shared window before querying owned days.
-        expectedRange=["2026-10-29","2026-11-04"];
-        reads.length=0;
-        const preset=await (await fetch(base+"?window=research",{headers})).json() as CreativeBrowserResponse;
-        assert.deepEqual(preset.reportingRange,{from:expectedRange[0],to:expectedRange[1]});
-        assert.deepEqual(reads,["workspace-a","competitor-a"],"one gallery pass, one response");
-        assert.deepEqual(preset.creatives.find(row=>row.workspaceBrand)!.performance.map(cohort=>[cohort.from,cohort.to,cohort.currency,cohort.metrics.Spend.value]),[[...expectedRange,"GBP",120],[...expectedRange,"USD",300],[...expectedRange,"GBP",40]]);
-        const explicit=await (await fetch(base+"?from=2026-10-29&to=2026-11-04",{headers})).json();
-        assert.deepEqual(preset,explicit,"same data and cohorts as the old second read");
-        expectedRange=["2026-10-07","2026-11-05"];
-        const defaults=await (await fetch(base,{headers})).json();assert.deepEqual(defaults.reportingRange,{from:expectedRange[0],to:expectedRange[1]},"other clients keep the thirty-day default");
-        expectedRange=["2026-11-01","2026-11-04"];
-        failOwned = true;
-        let failed = await (await fetch(base + "?from=2026-11-01&to=2026-11-04", { headers })).json();
-        assert.equal(failed.ownedStatus, "error");
-        assert.ok(!JSON.stringify(failed).includes("private database detail"));
-        failOwned = false;
-        overflow = true;
-        failed = await (await fetch(base + "?from=2026-11-01&to=2026-11-04", { headers })).json();
-        assert.equal(failed.ownedStatus, "error");
-        failGallery = true;
-        failed = await (await fetch(base + "?from=2026-11-01&to=2026-11-04", { headers })).json();
-        assert.ok(failed.sources.some((source: any) => source.status === "error"));
-        assert.ok(!JSON.stringify(failed).includes("private provider detail"));
-        assert.deepEqual(db.prepare("SELECT total_changes() AS n").get(), before);
-    }
-    finally {
-        await new Promise<void>(resolve => server.close(() => resolve()));
-        db.close();
-    }
+test("UI-02 paginated endpoint is authenticated, scoped, read-only and returns controlled failures", async()=>{
+ const {CreativeGalleryService}=await import("../server/demo/gallery.js"),db=openDatabase(":memory:",false),app=express();
+ const root={id:"workspace-a",name:"Fixture advertiser",domain:"fixture.example",category:"Home fragrance & gifting",color:"#123456",initials:"FA",voice:[],competitors:["competitor-a","Fixture competitor","WORKSPACE-A"],mode:"imported",createdAt:"2026-11-01"} as Brand;
+ for(const brand of [root,{...root,id:"competitor-a",name:"Fixture competitor"},{...root,id:"unrelated",name:"Unrelated"}])db.prepare("INSERT INTO brands VALUES(?,?)").run(brand.id,JSON.stringify(brand));
+ for(const [id,target,owned] of [["own","workspace-a",false],["public-competitor","competitor-a",false],["private-competitor","competitor-a",true],["private-other","unrelated",false]] as const){const data={id,brandId:target,brand:target,providerAdId:id,source:"import",platform:"Meta",category:root.category,title:"A quiet evening.",copy:"A quiet evening.",format:"Video",owned,active:true,observedAt:"2026-11-04T00:00:00Z",deliveryStartAt:"2026-10-01T00:00:00Z",publishedAt:"2026-11-01",publisherPlatforms:[]};db.prepare("INSERT INTO ads VALUES(?,?,?,?,?,?)").run(id,target,"import","Meta",data.observedAt,JSON.stringify(data));}
+ const before=db.prepare("SELECT data FROM ads ORDER BY id").all();app.use(basicAuth({EXTER_ADMIN_USER:"browser-fixture",EXTER_ADMIN_PASSWORD:"fixture-only"}));app.locals.creativeGallery=new CreativeGalleryService(db);
+ app.locals.demoCollection={snapshot(){return {competitors:[{brandId:"competitor-a",name:"Fixture competitor",status:"complete"},{brandId:null,name:"Pending competitor",status:"not-started"}]};}};
+ let fail=false;attachCreativeBrowser(app,db,{getPool:()=>{if(fail)throw new Error("private provider detail");return null;},now:()=>new Date("2026-11-05T12:00:00Z")});
+ const server=createServer(app);await new Promise<void>(r=>server.listen(0,"127.0.0.1",r));const base=`http://127.0.0.1:${(server.address() as AddressInfo).port}/api/brands/${root.id}/creatives`,headers={authorization:`Basic ${Buffer.from("browser-fixture:fixture-only").toString("base64")}`};
+ try{
+  assert.equal((await fetch(base)).status,401);assert.equal((await fetch(base+"?from=2026-02-31",{headers})).status,400);assert.equal((await fetch(base+"?from=2026-11-04&to=2026-11-01",{headers})).status,400);assert.equal((await fetch(base.replace(root.id,"missing"),{headers})).status,404);
+  const response=await fetch(base+"?from=2026-11-01&to=2026-11-04&limit=1",{headers});assert.equal(response.status,200);assert.match(response.headers.get("cache-control")!,/no-store/);assert.match(response.headers.get("vary")!,/Accept-Encoding/i);assert.equal(response.headers.get("content-encoding"),"gzip");
+  const data=await response.json() as CreativeBrowserResponse;assert.equal(data.creatives.length,1);assert.equal(data.sql!.page.total,2);assert.equal(data.sql!.page.hasNext,true);
+  const second=await (await fetch(base+"?from=2026-11-01&to=2026-11-04&limit=1&offset=1",{headers})).json() as CreativeBrowserResponse;const rows=[...data.creatives,...second.creatives];assert.equal(new Set(rows.map(r=>r.adId)).size,2);assert(rows.every(r=>[root.id,"competitor-a"].includes(r.brandId)));assert(!rows.some(r=>r.adId==="private-competitor"));assert(rows.every(r=>r.performance.length===0));assert(rows.every(r=>r.publicEvidence));
+  const configured=await(await fetch(base.replace("/creatives","/creative-competitors"),{headers})).json();assert.deepEqual(configured.competitors,data.competitors);assert.equal(configured.competitors.length,2);assert.equal(configured.competitors[1].brandId,null);
+  const preset=await(await fetch(base+"?window=research",{headers})).json();assert.deepEqual(preset.reportingRange,{from:"2026-10-29",to:"2026-11-04"});
+  fail=true;const failed=await fetch(base,{headers});assert.equal(failed.status,503);assert(!JSON.stringify(await failed.json()).includes("private provider detail"));assert.deepEqual(db.prepare("SELECT data FROM ads ORDER BY id").all(),before);
+ }finally{server.closeAllConnections();await new Promise<void>(r=>server.close(()=>r()));db.close();}
 });

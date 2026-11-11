@@ -33,6 +33,19 @@ export type MetricField = { [K in keyof OwnedDay]: OwnedDay[K] extends number | 
 export type MetricName = "Spend" | "CPM" | "Link CTR" | "Hook rate" | "Hold rate" | "Retention 25%" | "Retention 50%" | "Retention 75%" | "Retention 95%" | "Retention 100%" | "Average watch time" | "Frequency" | "Purchases" | "CPA" | "ROAS" | "CVR";
 export interface OwnedMetric { value: number | null; status: "available" | "too early" | "unavailable"; rowsUsed: number; rowsExcluded: number }
 export const MINIMUM_SAMPLE = { impressions: 1000, earlyViews: 300, purchases: 10 } as const;
+export interface MetricRule { numerator:MetricField;denominator?:MetricField;scale?:number;minimum?:readonly [MetricField,number];reported?:boolean }
+/** Shared by the fixture formula and the SQL read model. */
+export const OWNED_METRIC_RULES:Record<MetricName,MetricRule>={
+ Spend:{numerator:"spend"},CPM:{numerator:"spend",denominator:"impressions",scale:1000},
+ "Link CTR":{numerator:"linkClicks",denominator:"impressions",minimum:["impressions",MINIMUM_SAMPLE.impressions]},
+ "Hook rate":{numerator:"earlyViews",denominator:"impressions",minimum:["impressions",MINIMUM_SAMPLE.impressions]},
+ "Hold rate":{numerator:"longerViews",denominator:"earlyViews",minimum:["earlyViews",MINIMUM_SAMPLE.earlyViews]},
+ "Retention 25%":{numerator:"retention25",denominator:"videoStarts"},"Retention 50%":{numerator:"retention50",denominator:"videoStarts"},
+ "Retention 75%":{numerator:"retention75",denominator:"videoStarts"},"Retention 95%":{numerator:"retention95",denominator:"videoStarts"},"Retention 100%":{numerator:"retention100",denominator:"videoStarts"},
+ "Average watch time":{numerator:"averageWatchTime",reported:true},Frequency:{numerator:"frequency",reported:true},Purchases:{numerator:"purchases"},
+ CPA:{numerator:"spend",denominator:"purchases",minimum:["purchases",MINIMUM_SAMPLE.purchases]},
+ ROAS:{numerator:"purchaseValue",denominator:"spend",minimum:["purchases",MINIMUM_SAMPLE.purchases]},CVR:{numerator:"purchases",denominator:"linkClicks"}
+};
 const cohort = (row: OwnedDay) => JSON.stringify([row.platform,row.accountId,row.currency,row.attribution,row.conversionEvent]);
 export function latestOwnedDays(rows: OwnedDay[]): OwnedDay[] {
   const latest = new Map<string, OwnedDay>();
@@ -47,7 +60,7 @@ export function ownedMetrics(input: OwnedDay[]): Record<MetricName, OwnedMetric>
   const rows = latestOwnedDays(input);
   if (new Set(rows.map(cohort)).size > 1) throw new Error("Select one account, platform, currency, attribution setting and conversion event.");
   const sum = (values: OwnedDay[], key: MetricField) => values.reduce((total,row)=>total+(row[key] ?? 0),0);
-  function measure(numerator: MetricField, denominator?: MetricField, scale=1, minimum?: [MetricField,number]): OwnedMetric {
+  function measure(numerator: MetricField, denominator?: MetricField, scale=1, minimum?: readonly [MetricField,number]): OwnedMetric {
     const eligible = rows.filter(row => row[numerator] !== null && (!denominator || row[denominator] !== null) && (!minimum || row[minimum[0]] !== null));
     const base = { rowsUsed: eligible.length, rowsExcluded: rows.length-eligible.length };
     if (!eligible.length) return { ...base, value:null,status:"unavailable" };
@@ -63,17 +76,7 @@ export function ownedMetrics(input: OwnedDay[]): Record<MetricName, OwnedMetric>
       ? {value:rows[0][key],status:"available",rowsUsed:1,rowsExcluded:0}
       : {value:null,status:"unavailable",rowsUsed:0,rowsExcluded:rows.length};
   }
-  return {
-    Spend:measure("spend"), CPM:measure("spend","impressions",1000),
-    "Link CTR":measure("linkClicks","impressions",1,["impressions",MINIMUM_SAMPLE.impressions]),
-    "Hook rate":measure("earlyViews","impressions",1,["impressions",MINIMUM_SAMPLE.impressions]),
-    "Hold rate":measure("longerViews","earlyViews",1,["earlyViews",MINIMUM_SAMPLE.earlyViews]),
-    "Retention 25%":measure("retention25","videoStarts"),"Retention 50%":measure("retention50","videoStarts"),
-    "Retention 75%":measure("retention75","videoStarts"),"Retention 95%":measure("retention95","videoStarts"),"Retention 100%":measure("retention100","videoStarts"),
-    "Average watch time":reported("averageWatchTime"), Frequency:reported("frequency"), Purchases:measure("purchases"),
-    CPA:measure("spend","purchases",1,["purchases",MINIMUM_SAMPLE.purchases]),
-    ROAS:measure("purchaseValue","spend",1,["purchases",MINIMUM_SAMPLE.purchases]), CVR:measure("purchases","linkClicks"),
-  };
+  return Object.fromEntries(Object.entries(OWNED_METRIC_RULES).map(([name,rule])=>[name,rule.reported?reported(rule.numerator):measure(rule.numerator,rule.denominator,rule.scale,rule.minimum)])) as Record<MetricName,OwnedMetric>;
 }
 /** Account benchmark uses every creative in the same inclusive date window. */
 export function ownedBenchmark(rows: OwnedDay[], selection: Pick<OwnedDay,"platform"|"accountId"|"currency"|"attribution"|"conversionEvent"> & {from:string;to:string}) {

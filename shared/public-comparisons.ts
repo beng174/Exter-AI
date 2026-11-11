@@ -40,8 +40,8 @@ export function similarCompetitors(selected:BrowserCreative,rows:readonly Browse
  return comparableAds(rows,primary,filter,selected).filter(row=>row.adId!==selected.adId&&row.brandId!==selected.brandId&&!row.workspaceBrand&&!row.owned)
   .sort((a,b)=>{const score=(row:BrowserCreative)=>Number(Boolean(selected.angle&&row.angle===selected.angle))*2+Number(Boolean(selected.offerType&&row.offerType===selected.offerType));return score(b)-score(a)||(b.daysRunning??-1)-(a.daysRunning??-1)||a.adId.localeCompare(b.adId);});
 }
-export function comparableBriefs<T extends {evidence:{adId?:string|null}[]}>(briefs:readonly T[],rows:readonly BrowserCreative[],primary:readonly string[],filter:ComparisonFilter={}){
- const groups=comparisonCohorts(rows,primary,filter).filter(group=>!group.hidden);
+export function comparableBriefs<T extends {evidence:{adId?:string|null}[]}>(briefs:readonly T[],rows:readonly BrowserCreative[],primary:readonly string[],filter:ComparisonFilter={},counts?:{format:AdFormat;yours:number;competitors:number;hidden:boolean}[]){
+ const groups=(counts?counts.map(g=>({...g,rows:comparableAds(rows,primary,filter).filter(r=>mediaFormat(r)===g.format)})):comparisonCohorts(rows,primary,filter)).filter(group=>!group.hidden);
  return briefs.flatMap(brief=>{
   const ids=brief.evidence.flatMap(ref=>ref.adId?[ref.adId]:[]);if(!ids.length)return [];
   const group=groups.find(group=>ids.every(id=>group.rows.some(row=>row.adId===id||row.nativeId===id)));

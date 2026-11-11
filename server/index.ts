@@ -8,6 +8,7 @@ import { createApp } from "./app.js";
 import { openDatabase } from "./db.js";
 import { startConnectionPolling } from "./connections.js";
 import { recoverHostedValentteResearch } from "./demo/reconcile.js";
+import {startHeapLogging} from "./infrastructure/process-memory.js";
 
 basicAuth(); // Validate the production access gate before opening any databases.
 for (const name of ["GEMINI_API_KEY","META_ACCESS_TOKEN","APIFY_TOKEN","YOUTUBE_API_KEY","DATABASE_URL"])
@@ -34,9 +35,11 @@ recoverHostedValentteResearch(db);
 // memory during deploy or restarting automatically after a process is killed.
 const stopPolling = startConnectionPolling(db);
 const stopBackups = startDailyBackups(db);
+const stopHeapLogging=startHeapLogging();
 process.once("SIGTERM", () => {
   stopPolling();
   stopBackups();
+  stopHeapLogging();
   process.exit(0);
 });
 const server = createServer(app);

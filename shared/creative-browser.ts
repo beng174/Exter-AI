@@ -21,6 +21,7 @@ export interface CreativePerformance {
 }
 import type { WorkspacePresentation, CreativePresentation } from "./workspace-presentation.js";
 export interface BrowserCreative extends DemoGalleryCreative {
+    publicVersionCount?:number|null;
     likelihood?:import("./likelihood.js").LikelihoodEstimate;
     previewState?:import("./ad-media.js").PreviewState;
     adFormat?:"video"|"static_image"|"carousel"|"catalogue"|null;
@@ -49,6 +50,7 @@ export interface BrowserCreative extends DemoGalleryCreative {
 }
 export interface CreativeCompetitor { key:string;brandId:string|null;name:string;status:string }
 export interface CreativeBrowserResponse {
+    sql?:import("./creative-read-model.js").CreativeReadModel;
     mediaReadStatus?:"available"|"unavailable"|"not_configured";
     categoryReadStatus?:"available"|"unavailable"|"not_configured";
     metaSource?:MetaSourceHealth;
@@ -80,6 +82,7 @@ export interface CreativeBrowserResponse {
     };
 }
 export interface BrowserFilters extends EvidenceSelection {
+    offset?:string;
     cohort?: string;
     show?: string;
     brand?: string;
@@ -97,7 +100,7 @@ export interface BrowserFilters extends EvidenceSelection {
     layout?: string;
     similarTo?:string;
 }
-export const BROWSER_FILTERS = ["similarTo","category","adFormat","demographicCountry","reachAge","reachGender","reachCountry","measure","take","dimension","value","kind","activityFrom","activityTo","asOf","ad","cohort", "show", "brand", "platform", "format", "hook", "angle", "offer", "ugc", "status", "from", "to", "search", "sort", "layout"] as const;
+export const BROWSER_FILTERS = ["offset","similarTo","category","adFormat","demographicCountry","reachAge","reachGender","reachCountry","measure","take","dimension","value","kind","activityFrom","activityTo","asOf","ad","cohort", "show", "brand", "platform", "format", "hook", "angle", "offer", "ugc", "status", "from", "to", "search", "sort", "layout"] as const;
 export function browserFilters(params: URLSearchParams): BrowserFilters {
     return Object.fromEntries(BROWSER_FILTERS.flatMap(key => params.get(key) ? [[key, params.get(key)!]] : []));
 }

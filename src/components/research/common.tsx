@@ -11,6 +11,7 @@ export const number=(value:number|null|undefined,digits=1)=>value==null||!Number
 export const percent=(value:number|null|undefined)=>value==null?null:`${number(value)}%`;
 export function dimensionLabel(dimension:ResearchDimension,value:string){if(value==="none")return dimension==="hook"?"No hook":dimension==="offer"?"No offer":"No identified angle";return plainEnum(value);}
 export function metadata(data:ResearchData,selection:EvidenceSelection={}):MetaLineProps {
+  if(data.library.sql){const stats=data.library.sql.brands.filter(b=>b.format===(data.library.sql!.scopeFormat||"all")&&(!selection.brand||b.brandId===selection.brand)&&(selection.show!=="yours"||b.brandId===data.library.brand.id)&&(selection.show!=="competitors"||b.brandId!==data.library.brand.id));return {sampleSize:stats.reduce((n,b)=>n+(selection.kind==="running"?b.daysKnown:selection.kind==="active"?b.active:selection.kind==="launches"?b.launches:selection.kind==="stopped"?b.stopped:b.sample),0),from:data.window.from,to:data.window.to,lastChecked:stats.flatMap(b=>b.lastChecked?[b.lastChecked]:[]).sort().at(-1)||null,href:evidenceUrl(data.library.brand.id,selection)};}
   const rows=selectResearchAds(data.library.creatives,selection),dates=rows.map(row=>row.observedAt).filter((date):date is string=>Boolean(date)).sort();
   return {sampleSize:rows.length,from:data.window.from,to:data.window.to,lastChecked:dates.at(-1)||null,href:evidenceUrl(data.library.brand.id,{...selection,kind:selection.kind||"all"})};
 }

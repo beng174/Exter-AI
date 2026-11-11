@@ -3,22 +3,17 @@ import {createServer} from 'node:http';
 import {openDatabase} from '../../server/db.js';
 import {attachCreativeBrowser} from '../../server/demo/creative-browser.js';
 import {createApp} from '../../server/app.js';
+import {CreativeGalleryService} from '../../server/demo/gallery.js';
 import {spawn} from 'node:child_process';
-globalThis.fetch=async()=>{throw new Error("Provider access is disabled in this fixture.");};
-const count=7800,extra=Number(process.env.FIXTURE_RAW_BYTES||24000);
-const db=openDatabase(':memory:',false),brand={id:'memory-fixture',name:'Fictional Candle House',domain:'fictional.example',category:'Home fragrance & gifting',color:'#123456',initials:'FC',voice:[],competitors:[],mode:'imported',createdAt:'2026-11-01'};
-db.prepare('INSERT INTO brands VALUES(?,?)').run(brand.id,JSON.stringify(brand));
-// Import and construct the app's services, but give the test endpoint a fixture pool.
-const app=createApp(db),api=express();api.locals.productionApp=app;
-api.locals.creativeGallery={async list(){return {creatives:[]};}};api.locals.brandDemo={report(){return {scores:[]};}};
-const payload=JSON.stringify({ad_creative_bodies:['A quiet evening, with a candle made for home.'],total_reach_by_location:[{country:'GB',reach:1234}],publisher_platforms:['facebook','instagram'],beneficiary_payers:[{beneficiary:'Fictional Candle House',payer:'x'.repeat(extra)}]});
-const makeRow=(i:number)=>({native_id:String(1000000+i),platform:'Meta',advertiser_id:'12001',observed_at:'2026-11-08T20:00:00Z',first_seen_at:'2026-11-01T00:00:00Z',start_time:'2026-10-01T00:00:00Z',stop_time:null,brand_key:brand.id,page_ids:['12001'],raw_payload:JSON.parse(payload)});
-let rawRows=0;
-const rows=(sql:string)=>{if(sql.includes('FROM ad_observations')){rawRows+=count;return Array.from({length:count},(_,i)=>makeRow(i));}return [];};
-const pool:any={query:async(sql:string)=>({rows:rows(sql)}),connect:async()=>({query(q:any){setImmediate(()=>{try{if(q.text.includes('FROM ad_observations')){for(let i=0;i<count;i++){rawRows++;q.emit('row',makeRow(i));if(i%100===0)peak=Math.max(peak,process.memoryUsage().heapUsed);}}q.emit('end',{rows:[]});}catch(e){q.emit('error',e);}});return q;},release(){}})};
-attachCreativeBrowser(api,db,{getPool:()=>pool});api.get('/health',(_q,r)=>r.json({ok:true}));
-const server=createServer(api);await new Promise<void>(r=>server.listen(0,'127.0.0.1',r));const port=(server.address() as any).port;
+import {mkdtemp,rm} from 'node:fs/promises';import {join} from 'node:path';import {tmpdir} from 'node:os';
+globalThis.fetch=async()=>{throw new Error('Provider access is disabled in this fixture.');};
+const root=await mkdtemp(join(tmpdir(),'exter-sqlite-memory-')),db=openDatabase(join(root,'fixture.sqlite'),false);db.exec('PRAGMA cache_size=-8192');
+const count=7800,brand={id:'memory-fixture',name:'Fictional Candle House',domain:'fictional.example',category:'Home fragrance & gifting',color:'#123456',initials:'FC',voice:[],competitors:[],mode:'imported',createdAt:'2026-11-01'};db.prepare('INSERT INTO brands VALUES(?,?)').run(brand.id,JSON.stringify(brand));
+const insert=db.prepare('INSERT INTO ads VALUES(?,?,?,?,?,?)');db.exec('BEGIN');for(let i=0;i<count;i++){const id=String(1000000+i),ad={id,providerAdId:id,brandId:brand.id,source:'public',platform:'Meta',category:brand.category,title:'A quiet evening.',copy:'A quiet evening, with a candle made for home.',format:'Video',owned:false,active:false,observedAt:'2026-11-08T20:00:00Z',publishedAt:'2026-11-01T00:00:00Z',deliveryStartAt:'2026-10-01T00:00:00Z',beneficiary_payers:[{payer:'x'.repeat(Number(process.env.FIXTURE_RAW_BYTES||24000))}]};insert.run(id,brand.id,'public','Meta',ad.observedAt,JSON.stringify(ad));}db.exec('COMMIT');
+const production=createApp(db),app=express();app.locals=production.locals;const gallery=new CreativeGalleryService(db),selected=gallery.selected.bind(gallery);let projected=0;gallery.selected=async(brand,ids)=>{projected+=ids.length;return selected(brand,ids);};app.locals.creativeGallery=gallery;
+attachCreativeBrowser(app,db,{getPool:()=>null});const server=createServer(app);await new Promise<void>(r=>server.listen(0,'127.0.0.1',r));
 const before=process.memoryUsage();let peak=before.heapUsed;const timer=setInterval(()=>peak=Math.max(peak,process.memoryUsage().heapUsed),5);
-const response=await new Promise<string>((resolve,reject)=>{const child=spawn(process.execPath,['--import','tsx','tests/fixtures/library-memory-client.ts',`http://127.0.0.1:${port}`,String(count),String(Number(process.env.FIXTURE_REQUESTS||1))],{stdio:['ignore','pipe','pipe']});let output='',errors='';child.stdout.on('data',c=>output+=c);child.stderr.on('data',c=>errors+=c);child.on('error',reject);child.on('exit',code=>code===0?resolve(output):reject(new Error(errors)));});
-const {responses}=JSON.parse(response);
-clearInterval(timer);console.log(JSON.stringify({responses,rawRows,heapBefore:before.heapUsed,heapAfter:process.memoryUsage().heapUsed,heapPeak:peak,rss:process.memoryUsage().rss}));await new Promise<void>(r=>server.close(()=>r()));db.close();
+try{
+ const output=await new Promise<string>((resolve,reject)=>{const child=spawn(process.execPath,['--import','tsx','tests/fixtures/library-memory-client.ts',`http://127.0.0.1:${(server.address() as any).port}`,String(count),String(process.env.FIXTURE_REQUESTS||1)],{stdio:['ignore','pipe','pipe']});let out='',errors='';child.stdout.on('data',c=>out+=c);child.stderr.on('data',c=>errors+=c);child.on('error',reject);child.on('exit',code=>code===0?resolve(out):reject(new Error(errors)));});
+ console.log(JSON.stringify({...JSON.parse(output),projected,heapBefore:before.heapUsed,heapAfter:process.memoryUsage().heapUsed,heapPeak:peak}));
+}finally{clearInterval(timer);await new Promise<void>(r=>server.close(()=>r()));db.close();await rm(root,{recursive:true,force:true});}

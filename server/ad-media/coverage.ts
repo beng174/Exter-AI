@@ -1,5 +1,6 @@
 import type pg from "pg";
 import type {MediaCoverage,MediaMissingReason,MissingMediaPage} from "../../shared/ad-media.js";
+import {PUBLIC_ROWS_SQL,MISSING_REASON_SQL} from "../infrastructure/public-rows-sql.js";
 export interface CoverageAd{brandKey:string;nativeId:string}
 export interface CoverageAttempt extends CoverageAd{returned:boolean;matched:boolean;outcome:string;queued?:boolean;requested?:boolean;lastAttemptAt?:string|null}
 export interface CoverageFile extends CoverageAd{image:boolean;video:boolean;legacy?:boolean;error?:string|null;missingFile?:boolean}
@@ -27,37 +28,22 @@ export function mediaCoverage(official:CoverageAd[],attempts:CoverageAttempt[],f
   return {brandKey:brand.brandKey,official:rows.length,images,videos,requested,returned,matched,missing:rows.length-images,reasons,historyIncomplete:Boolean(brand.historyIncomplete)};
  });
 }
-async function readCoverageData(pool:pg.Pool,workspace:string){
- const [brands,official,requests,files]=await Promise.all([
-  pool.query(`SELECT w.brand_key AS "brandKey",bool_or(EXISTS(SELECT 1 FROM ad_media_runs r WHERE r.watchlist_id=w.id AND r.status='paused' AND r.error_kind='budget')) AS budget,
-   bool_or(EXISTS(SELECT 1 FROM ad_media_runs r WHERE r.watchlist_id=w.id AND r.actor_run_id IS NOT NULL AND r.requested_ids IS NULL)) AS "historyIncomplete"
-   FROM watchlists w WHERE w.workspace_id=$1 AND w.purpose='brand' AND w.brand_key IS NOT NULL AND jsonb_array_length(w.page_ids)=1 GROUP BY w.brand_key`,[workspace]),
-  pool.query(`SELECT DISTINCT w.brand_key AS "brandKey",o.native_id AS "nativeId" FROM watchlists w JOIN collection_runs r ON r.watchlist_id=w.id JOIN ad_observations o ON o.run_id=r.id JOIN public_ads a USING(platform,native_id)
-   WHERE w.workspace_id=$1 AND o.workspace_id=$1 AND w.purpose='brand' AND r.config->>'revision'=w.revision::text AND a.advertiser_id=w.page_ids->>0`,[workspace]),
-  pool.query(`SELECT DISTINCT ON(r.brand_key,q.native_id) r.brand_key AS "brandKey",q.native_id AS "nativeId",bool_or(q.returned_at IS NOT NULL) OVER(PARTITION BY r.brand_key,q.native_id) AS returned,bool_or(q.matched_at IS NOT NULL) OVER(PARTITION BY r.brand_key,q.native_id) AS matched,q.outcome,q.requested_at AS "lastAttemptAt"
-   FROM ad_media_requests q JOIN ad_media_runs r ON r.id=q.run_id JOIN watchlists w ON w.id=r.watchlist_id AND w.page_ids->>0=r.page_id
-   WHERE r.workspace_id=$1 ORDER BY r.brand_key,q.native_id,q.requested_at DESC,r.id DESC`,[workspace]),
-  pool.query(`SELECT c.brand_key AS "brandKey",c.native_id AS "nativeId",true AS legacy,(array_agg(c.error_kind ORDER BY c.created_at DESC))[1] AS error,
-   bool_or(EXISTS(SELECT 1 FROM jsonb_array_elements(c.assets) a WHERE a->>'role' IN ('image','poster') AND NOT EXISTS(SELECT 1 FROM ad_media_file_checks f WHERE f.workspace_id=c.workspace_id AND f.artifact_id=a->'ref'->>'artifactId' AND NOT f.available))) AS image,
-   bool_or(EXISTS(SELECT 1 FROM jsonb_array_elements(c.assets) a WHERE a->>'role'='video' AND NOT EXISTS(SELECT 1 FROM ad_media_file_checks f WHERE f.workspace_id=c.workspace_id AND f.artifact_id=a->'ref'->>'artifactId' AND NOT f.available))) AS video,
-   bool_or(EXISTS(SELECT 1 FROM jsonb_array_elements(c.assets) a JOIN ad_media_file_checks f ON f.workspace_id=c.workspace_id AND f.artifact_id=a->'ref'->>'artifactId' WHERE a->>'role' IN ('image','poster') AND NOT f.available)) AS "missingFile"
-   FROM ad_media_creatives c JOIN watchlists w ON w.workspace_id=c.workspace_id AND w.brand_key=c.brand_key AND w.page_ids->>0=c.page_id
-   WHERE c.workspace_id=$1 GROUP BY c.brand_key,c.native_id`,[workspace])
- ]);
- const queued=await pool.query(`SELECT r.brand_key AS "brandKey",jsonb_array_elements_text(r.target_ids) AS "nativeId",r.status,r.error_kind
-  FROM ad_media_runs r JOIN watchlists w ON w.id=r.watchlist_id AND w.page_ids->>0=r.page_id WHERE r.workspace_id=$1 AND r.status IN ('queued','starting','running','paused','uncertain')`,[workspace]);
- const byId=new Map<string,CoverageAttempt>(requests.rows.map(row=>[identity(row),row]));
- for(const row of queued.rows){const key=identity(row),previous=byId.get(key);byId.set(key,{...row,returned:previous?.returned||false,matched:previous?.matched||false,lastAttemptAt:previous?.lastAttemptAt,outcome:row.error_kind==='budget'?'budget':previous?.outcome||'not_requested',requested:Boolean(previous),queued:!['paused','uncertain'].includes(row.status)});}
- return {official:official.rows as CoverageAd[],requests:[...byId.values()],files:files.rows as CoverageFile[],brands:brands.rows};
-}
-
 export async function readMediaCoverage(pool:pg.Pool,workspace:string):Promise<MediaCoverage[]>{
- const data=await readCoverageData(pool,workspace);return mediaCoverage(data.official,data.requests,data.files,data.brands);
+ const result=await pool.query(`${PUBLIC_ROWS_SQL}, counted AS (SELECT *,${MISSING_REASON_SQL} AS reason FROM state)
+ SELECT w.brand_key AS "brandKey",count(c.native_id)::integer AS official,count(*) FILTER(WHERE c.image)::integer AS images,count(*) FILTER(WHERE c.video)::integer AS videos,
+ count(*) FILTER(WHERE c.requested_at IS NOT NULL OR c.legacy_attempt IS NOT NULL)::integer AS requested,count(*) FILTER(WHERE c.ever_returned OR c.legacy_attempt IS NOT NULL)::integer AS returned,count(*) FILTER(WHERE c.ever_matched OR c.legacy_attempt IS NOT NULL)::integer AS matched,
+ count(*) FILTER(WHERE c.native_id IS NOT NULL AND NOT c.image)::integer AS missing,
+ jsonb_build_object(${["not_requested","not_returned","expired","unsupported","wrong_page","budget","disk","provider","queued","no_media","file_missing"].map(reason=>`'${reason}',count(*) FILTER(WHERE NOT c.image AND c.reason='${reason}')`).join(",")}) AS reasons,
+ EXISTS(SELECT 1 FROM ad_media_runs r WHERE r.workspace_id=$1 AND r.brand_key=w.brand_key AND r.actor_run_id IS NOT NULL AND r.requested_ids IS NULL) AS "historyIncomplete"
+ FROM (SELECT DISTINCT brand_key FROM watches) w LEFT JOIN counted c ON c.brand_key=w.brand_key GROUP BY w.brand_key ORDER BY w.brand_key`,[workspace,null,new Date()]);
+ return result.rows;
 }
 export async function readMissingMedia(pool:pg.Pool,workspace:string,options:{brand?:string;reason?:string;offset?:number;adId?:string}={}):Promise<MissingMediaPage>{
- const data=await readCoverageData(pool,workspace),requests=new Map(data.requests.map(row=>[identity(row),row])),files=new Map(data.files.map(row=>[identity(row),row]));
- const missing=data.official.filter(row=>!files.get(identity(row))?.image).map(row=>({...row,reason:missingMediaReason(requests.get(identity(row)),files.get(identity(row)),data.brands.find(b=>b.brandKey===row.brandKey)?.budget)})).filter(row=>(!options.adId||row.nativeId===options.adId.trim())&&(!options.brand||row.brandKey===options.brand)&&(!options.reason||row.reason===options.reason)).sort((a,b)=>a.brandKey.localeCompare(b.brandKey)||a.nativeId.localeCompare(b.nativeId));
- const offset=Math.max(0,Math.floor(options.offset||0)),limit=50,page=missing.slice(offset,offset+limit);
+ const offset=Math.max(0,Math.floor(options.offset||0)),limit=50;
+ const result=await pool.query(`${PUBLIC_ROWS_SQL}, missing AS (SELECT *,${MISSING_REASON_SQL} AS reason FROM state WHERE NOT image), filtered AS (
+  SELECT * FROM missing WHERE ($4::text IS NULL OR brand_key=$4) AND ($5::text IS NULL OR reason=$5) AND ($6::text IS NULL OR native_id=$6)
+ ) SELECT (SELECT count(*)::integer FROM filtered) AS total,COALESCE((SELECT jsonb_agg(p) FROM (SELECT brand_key AS "brandKey",native_id AS "nativeId",reason,requested_at AS "lastAttemptAt" FROM filtered ORDER BY brand_key,native_id LIMIT $7 OFFSET $8)p),'[]'::jsonb) AS ads`,[workspace,null,new Date(),options.brand||null,options.reason||null,options.adId?.trim()||null,limit,offset]);
+ const page:({brandKey:string;nativeId:string;reason:MediaMissingReason;lastAttemptAt:string|null})[]=result.rows[0]?.ads||[],total=result.rows[0]?.total||0;
  const attempts=page.length?(await pool.query(`SELECT DISTINCT ON(r.brand_key,q.native_id) r.brand_key,q.native_id,r.page_id,r.lookup_mode,q.returned_at,q.matched_at,
   COALESCE(c.diagnostics,'[]'::jsonb) AS diagnostics FROM ad_media_requests q JOIN ad_media_runs r ON r.id=q.run_id
   LEFT JOIN ad_media_creatives c ON c.run_id=r.id AND c.native_id=q.native_id WHERE r.workspace_id=$1 AND q.native_id=ANY($2::text[]) ORDER BY r.brand_key,q.native_id,q.requested_at DESC,r.id DESC`,[workspace,page.map(row=>row.nativeId)])).rows:[];
@@ -68,10 +54,12 @@ export async function readMissingMedia(pool:pg.Pool,workspace:string,options:{br
   LEFT JOIN ad_observations p ON p.workspace_id=o.workspace_id AND p.platform=o.platform AND p.native_id=o.native_id AND p.run_id=o.raw_payload_run_id
   WHERE o.workspace_id=$1 AND w.workspace_id=$1 AND r.config->>'revision'=w.revision::text AND a.advertiser_id=w.page_ids->>0 AND o.native_id=ANY($2::text[])
   ORDER BY w.brand_key,o.native_id,o.observed_at DESC,o.run_id DESC`,[workspace,page.map(row=>row.nativeId)]):{rows:[]};
- return {total:missing.length,offset,limit,ads:page.map(row=>{const meta=metadata.rows.find(m=>m.brand_key===row.brandKey&&m.native_id===row.nativeId),when=requests.get(identity(row))?.lastAttemptAt;const attempt=attempts.find(a=>a.brand_key===row.brandKey&&a.native_id===row.nativeId);return {...row,diagnostics:attempt?.diagnostics||[],pageId:attempt?.page_id||null,lookupMode:attempt?.lookup_mode||null,returned:Boolean(attempt?.returned_at),matched:Boolean(attempt?.matched_at),copy:meta?.copy||'',startAt:meta?.start_time?new Date(meta.start_time).toISOString():null,lastAttemptAt:when?new Date(when).toISOString():null};})};
+ return {total,offset,limit,ads:page.map(row=>{const meta=metadata.rows.find(m=>m.brand_key===row.brandKey&&m.native_id===row.nativeId),when=row.lastAttemptAt;const attempt=attempts.find(a=>a.brand_key===row.brandKey&&a.native_id===row.nativeId);return {...row,diagnostics:attempt?.diagnostics||[],pageId:attempt?.page_id||null,lookupMode:attempt?.lookup_mode||null,returned:Boolean(attempt?.returned_at),matched:Boolean(attempt?.matched_at),copy:meta?.copy||'',startAt:meta?.start_time?new Date(meta.start_time).toISOString():null,lastAttemptAt:when?new Date(when).toISOString():null};})};
 }
 
-export async function readMissingReasons(pool:pg.Pool,workspace:string){
- const data=await readCoverageData(pool,workspace),requests=new Map(data.requests.map(row=>[identity(row),row])),files=new Map(data.files.map(row=>[identity(row),row]));
- return new Map(data.official.filter(row=>!files.get(identity(row))?.image).map(row=>[identity(row),{reason:missingMediaReason(requests.get(identity(row)),files.get(identity(row)),data.brands.find(b=>b.brandKey===row.brandKey)?.budget),lastAttemptAt:requests.get(identity(row))?.lastAttemptAt||null}]));
+export async function readMissingReasons(pool:pg.Pool,workspace:string,ids?:string[]){
+ if(!ids?.length)return new Map<string,{reason:MediaMissingReason;lastAttemptAt:string|null}>();
+ const selectedSql=PUBLIC_ROWS_SQL.replace('WHERE a.advertiser_id=w.page_ids->>0','WHERE a.advertiser_id=w.page_ids->>0 AND o.native_id=ANY($4::text[])');
+ const result=await pool.query(`${selectedSql} SELECT brand_key AS "brandKey",native_id AS "nativeId",${MISSING_REASON_SQL} AS reason,requested_at AS "lastAttemptAt" FROM state WHERE NOT image LIMIT 500`,[workspace,null,new Date(),ids]);
+ return new Map(result.rows.map(row=>[identity(row),{reason:row.reason,lastAttemptAt:row.lastAttemptAt}]));
 }

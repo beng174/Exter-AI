@@ -2,11 +2,12 @@ import type {BrowserCreative} from "./creative-browser.js";
 import {countryReach,countryName,publishedAdDetails} from "./meta-public.js";
 export interface PublicSignalTile {id:string;label:string;value:number|string;basis:"Observed"|"Estimated";text?:boolean;note?:string;tooltip?:string}
 const format=(value:number)=>new Intl.NumberFormat("en-GB",{maximumFractionDigits:1}).format(value);
-const fullCopy=(row:BrowserCreative)=>row.copy&&!row.copyTruncated&&!/\{\{.*?\}\}/.test(row.copy)?row.copy.normalize("NFC").trim().replace(/\s+/g," "):null;
-const sha=(row:BrowserCreative)=>row.mediaSha256&&/^[a-f0-9]{64}$/i.test(row.mediaSha256)?row.mediaSha256.toLowerCase():null;
+export const fullCopy=(row:BrowserCreative)=>row.copy&&!row.copyTruncated&&!/\{\{.*?\}\}/.test(row.copy)?row.copy.normalize("NFC").trim().replace(/\s+/g," "):null;
+export const sha=(row:BrowserCreative)=>row.mediaSha256&&/^[a-f0-9]{64}$/i.test(row.mediaSha256)?row.mediaSha256.toLowerCase():null;
 const adIdentity=(row:BrowserCreative)=>`${["Meta","Facebook","Instagram"].includes(row.platform)?"Meta":row.platform}:${row.nativeId||row.adId}`;
 export function publicVersions(row:BrowserCreative,creatives:readonly BrowserCreative[]):number|null {
   if(row.owned&&row.workspaceBrand)return null;
+  if(row.publicVersionCount!==undefined)return row.publicVersionCount;
   const copy=fullCopy(row),hash=sha(row);if(!copy&&!hash)return null;
   const count=new Set([row,...creatives].filter(item=>(!item.owned||item.publicEvidence===true)&&item.brandId===row.brandId&&(Boolean(hash&&sha(item)===hash)||Boolean(copy&&fullCopy(item)===copy))).map(adIdentity)).size;
   return count||null;

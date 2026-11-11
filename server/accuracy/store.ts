@@ -20,8 +20,8 @@ export function latestRecords<T>(db:DatabaseSync,workspace:string,kind:string,li
   return rows.map(r=>JSON.parse(r.data) as T);
 }
 export function saveMeasurements(db:DatabaseSync,workspace:string,rows:AccuracyRow[],at:string){for(const r of rows)appendAccuracy(db,workspace,"measurement",`${r.layer}:${r.field}:${r.version}`,r,at);}
-export function storedPredictions(db:DatabaseSync,workspace:string):Map<string,LikelihoodEstimate> {
-  return new Map((db.prepare("SELECT ad_id,data FROM likelihood_estimates WHERE workspace_id=? LIMIT 100000").all(workspace) as {ad_id:string;data:string}[]).map(r=>[r.ad_id,JSON.parse(r.data)]));
+export function storedPredictions(db:DatabaseSync,workspace:string,ids?:readonly string[]):Map<string,LikelihoodEstimate> {
+  return new Map((db.prepare(`SELECT ad_id,data FROM likelihood_estimates WHERE workspace_id=? ${ids?`AND ad_id IN (${ids.map(()=>"?").join(",")||"NULL"})`:""} LIMIT 100000`).all(workspace,...(ids||[])) as {ad_id:string;data:string}[]).map(r=>[r.ad_id,JSON.parse(r.data)]));
 }
 export function savePrediction(db:DatabaseSync,workspace:string,id:string,value:LikelihoodEstimate,at:string){db.prepare("INSERT INTO likelihood_estimates VALUES(?,?,?,?) ON CONFLICT(workspace_id,ad_id) DO UPDATE SET created_at=excluded.created_at,data=excluded.data").run(workspace,id,at,JSON.stringify(value));}
 export const newAccuracyId=()=>randomUUID();

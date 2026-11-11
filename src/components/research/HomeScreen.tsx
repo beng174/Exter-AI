@@ -63,7 +63,7 @@ export function HomeScreen({data,selection,refresh}:ScreenProps) {
 }
 export function AccountPanel({data}:{data:ScreenProps["data"]}) {
   const [scope,setScope]=useState("");
-  const scopes=[...new Map(data.library.creatives.filter(row=>row.workspaceBrand&&row.owned).flatMap(row=>row.performance).map(item=>[item.id,item])).values()];
+  const scopes=data.library.sql?.ownedScopes||[...new Map(data.library.creatives.filter(row=>row.workspaceBrand&&row.owned).flatMap(row=>row.performance).map(item=>[item.id,item])).values()];
   const cohort=scopes.find(item=>item.id===scope)||(scopes.length===1?scopes[0]:undefined);
   const gap=data.library.ownedStatus==="error"?{reason:"Saved owned metrics could not be read.",href:`/?view=data&brandId=${encodeURIComponent(data.library.brand.id)}`,linkLabel:"Review source health"}:data.library.ownedStatus==="not_configured"?{reason:"No owned account metrics are synced.",href:`/?view=data&brandId=${encodeURIComponent(data.library.brand.id)}`,linkLabel:"Connect your ad account"}:{reason:"No owned metrics are saved in the selected dates.",href:evidenceUrl(data.library.brand.id,{show:"yours"}),linkLabel:"Review your creatives"};
   return <SectionCard title="Your account" help="Your saved account outcomes" meta={cohort?{sampleSize:cohort.benchmarkSampleSize,from:cohort.from,to:cohort.to,lastChecked:cohort.lastChecked,href:evidenceUrl(data.library.brand.id,{show:"yours"},{cohort:cohort.id,from:cohort.from,to:cohort.to})}:undefined} empty={!scopes.length&&gap}>

@@ -1,3 +1,4 @@
+import {sqlSnapshots,sqlMix} from "./creative-read-model.js";
 import {mediaFormat} from "./public-comparisons.js";
 import type { BrowserCreative, CreativeBrowserResponse } from "./creative-browser.js";
 import {countryReach} from "./meta-public.js";
@@ -71,7 +72,9 @@ export function median(values:(number|null|undefined)[]):number|null {
   const ordered=values.filter(finite).sort((a,b)=>a-b),middle=Math.floor(ordered.length/2);
   return !ordered.length?null:ordered.length%2?ordered[middle]:(ordered[middle-1]+ordered[middle])/2;
 }
-export function mixGroups(rows:BrowserCreative[],dimension:ResearchDimension,selection:EvidenceSelection={}) {
+export function mixGroups(input:BrowserCreative[]|CreativeBrowserResponse,dimension:ResearchDimension,selection:EvidenceSelection={}) {
+  if(!Array.isArray(input)&&input.sql)return sqlMix(input.sql,input.brand.id,dimension,selection);
+  const rows=Array.isArray(input)?input:input.creatives;
   const sample=selectResearchAds(rows,selection),groups=new Map<string,BrowserCreative[]>();
   for(const row of sample)for(const value of dimensionValues(row,dimension)){const group=groups.get(value)||[];group.push(row);groups.set(value,group);}
   return {sample:sample.length,classified:sample.filter(row=>dimensionValues(row,dimension).length).length,unclassified:sample.filter(row=>!dimensionValues(row,dimension).length).length,groups:[...groups].map(([value,ads]):MixGroup=>({value,count:ads.length,share:sample.length?100*ads.length/sample.length:null,selection:{...selection,dimension,value},adIds:ads.map(row=>row.adId),medianDays:median(ads.map(row=>row.daysRunning))})).sort((a,b)=>b.count-a.count||a.value.localeCompare(b.value))};
@@ -82,6 +85,7 @@ export function longestRunning(rows:BrowserCreative[],selection:EvidenceSelectio
 }
 export function brandSnapshots(data:CreativeBrowserResponse,window:ResearchWindow,platform?:string):BrandSnapshot[] {
   const brands=[{id:data.brand.id,name:data.brand.name,workspaceBrand:true,status:"saved"},...data.competitors.map(item=>({id:item.brandId||item.key,name:item.name,workspaceBrand:false,status:item.status}))];
+  if(data.sql)return sqlSnapshots(data.sql,data.brand.id,brands,window);
   const result=brands.map(brand=>{
     const base:EvidenceSelection={brand:brand.id,asOf:window.asOf||undefined,...(platform&&platform!=="all"?{platform}:{})};
     const rows=selectResearchAds(data.creatives,base),checked=rows.map(row=>row.observedAt).filter((value):value is string=>Boolean(value)).sort().at(-1)||null;
@@ -101,29 +105,33 @@ export function competitorAverage(brands:BrandSnapshot[],key:"active"|"launched"
   const competitors=brands.filter(brand=>!brand.workspaceBrand),known=competitors.filter(brand=>brand[key].value!==null);
   return {value:known.length?known.reduce((sum,brand)=>sum+brand[key].value!,0)/known.length:null,known:known.length,excluded:competitors.length-known.length,selection:{show:"competitors",kind:key==="active"||key==="shareActive"?"active":key==="medianDays"?"running":key==="launched"?"launches":"stopped"}};
 }
-export function comparisonGroups(rows:BrowserCreative[],dimension:ResearchDimension,selection:EvidenceSelection={}) {
+export function comparisonGroups(rows:BrowserCreative[]|CreativeBrowserResponse,dimension:ResearchDimension,selection:EvidenceSelection={}) {
   const yours=mixGroups(rows,dimension,{...selection,show:"yours"}),competitors=mixGroups(rows,dimension,{...selection,show:"competitors"});
   return [...new Set([...yours.groups,...competitors.groups].map(item=>item.value))].map(value=>{
     const own=yours.groups.find(item=>item.value===value),market=competitors.groups.find(item=>item.value===value);
     const ownShare=yours.classified?(own?.share??0):null,marketShare=competitors.classified?(market?.share??0):null;
-    return {value,yours:own?.count??(yours.classified?0:null),competitors:market?.count??(competitors.classified?0:null),yourShare:ownShare,competitorShare:marketShare,gap:ownShare===null||marketShare===null?null:marketShare-ownShare,medianDays:median(selectResearchAds(rows,{...selection,dimension,value}).map(row=>row.daysRunning)),selection:{...selection,dimension,value}};
+    return {value,yours:own?.count??(yours.classified?0:null),competitors:market?.count??(competitors.classified?0:null),yourShare:ownShare,competitorShare:marketShare,gap:ownShare===null||marketShare===null?null:marketShare-ownShare,medianDays:!Array.isArray(rows)&&rows.sql?mixGroups(rows,dimension,selection).groups.find(g=>g.value===value)?.medianDays??null:median(selectResearchAds(Array.isArray(rows)?rows:rows.creatives,{...selection,dimension,value}).map(row=>row.daysRunning)),selection:{...selection,dimension,value}};
   });
 }
-export function launchShareTrend(rows:BrowserCreative[],dimension:ResearchDimension,value:string,window:ResearchWindow,selection:EvidenceSelection={}) {
+export function launchShareTrend(rows:BrowserCreative[]|CreativeBrowserResponse,dimension:ResearchDimension,value:string,window:ResearchWindow,selection:EvidenceSelection={}) {
   if(!window.from||!window.to||!window.previousFrom||!window.previousTo)return null;
   const base={...selection,kind:"launches" as const,asOf:window.asOf||undefined};
   const current=mixGroups(rows,dimension,{...base,activityFrom:window.from,activityTo:window.to}),previous=mixGroups(rows,dimension,{...base,activityFrom:window.previousFrom,activityTo:window.previousTo});
   if(!current.sample||!previous.sample)return null;
   return (current.groups.find(item=>item.value===value)?.share||0)-(previous.groups.find(item=>item.value===value)?.share||0);
 }
-export function productionFacts(rows:BrowserCreative[],selection:EvidenceSelection={}) {
+export function productionFacts(input:BrowserCreative[]|CreativeBrowserResponse,selection:EvidenceSelection={}) {
+  if(!Array.isArray(input)&&input.sql){const s=input.sql.production?.find(s=>s.format===(input.sql!.scopeFormat||"all")&&s.show===(selection.show||"all"));return {duration:s?.duration??null,durationKnown:s?.durationKnown||0,talkingShare:s?.talkingShare??null,talkingKnown:s?.talkingKnown||0};}
+  const rows=Array.isArray(input)?input:input.creatives;
   const sample=selectResearchAds(rows,selection),durations=sample.filter(row=>row.mediaKind==="video"&&finite(row.durationSeconds)),talking=sample.filter(row=>row.analysis?.mediaKind==="video"&&typeof row.analysis.fields.personTalkingToCamera.value==="boolean");
   return {duration:median(durations.map(row=>row.durationSeconds)),durationKnown:durations.length,talkingShare:talking.length?100*talking.filter(row=>row.analysis?.mediaKind==="video"&&row.analysis.fields.personTalkingToCamera.value===true).length/talking.length:null,talkingKnown:talking.length};
 }
 export function staleCapture(lastChecked:string|null,now=new Date()) {return lastChecked&&Number.isFinite(Date.parse(lastChecked))?now.getTime()-Date.parse(lastChecked)>DAY:null;}
 
 /** Count exact saved phrases, never infer tone, themes or demographics. */
-export function brandVoice(rows:BrowserCreative[],selection:EvidenceSelection={}) {
+export function brandVoice(input:BrowserCreative[]|CreativeBrowserResponse,selection:EvidenceSelection={}) {
+  if(!Array.isArray(input)&&input.sql){const s=input.sql.voices?.find(s=>s.format===(input.sql!.scopeFormat||"all")&&s.brandId===selection.brand);return {claim:s?.claim||null,cta:s?.cta||null,offer:s?.offer||null};}
+  const rows=Array.isArray(input)?input:input.creatives;
   const sample=selectResearchAds(rows,selection),claims=new Map<string,number>(),ctas=new Map<string,number>();
   for(const row of sample){for(const claim of new Set(row.analysis?.fields.keyClaims.map(item=>item.value).filter(value=>value&&value!=="unknown")||[]))claims.set(claim,(claims.get(claim)||0)+1);const cta=row.analysis?.fields.cta.value;if(cta&&cta!=="unknown")ctas.set(cta,(ctas.get(cta)||0)+1);}
   const top=(values:Map<string,number>)=>[...values].sort((a,b)=>b[1]-a[1]||a[0].localeCompare(b[0]))[0]?.[0]||null;

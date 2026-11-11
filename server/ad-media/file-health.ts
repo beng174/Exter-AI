@@ -21,3 +21,12 @@ export async function checkedRetainedMedia(pool:pg.Pool,rows:RetainedCreative[],
  while(checks.size>25000)checks.delete(checks.keys().next().value!);
  return result;
 }
+/** Advance a bounded presence sweep; coverage reads never stat every saved file. */
+export async function checkWorkspaceMediaSlice(pool:pg.Pool,workspace:string,storage=new AdMediaStorage()){
+ const result=await pool.query(`SELECT * FROM (SELECT DISTINCT ON (a->'ref'->>'artifactId') c.workspace_id,c.brand_key,c.native_id,a AS asset,f.checked_at
+ FROM ad_media_creatives c JOIN watchlists w ON w.workspace_id=c.workspace_id AND w.brand_key=c.brand_key AND w.page_ids->>0=c.page_id
+ CROSS JOIN LATERAL jsonb_array_elements(c.assets)a LEFT JOIN ad_media_file_checks f ON f.workspace_id=c.workspace_id AND f.artifact_id=a->'ref'->>'artifactId'
+ WHERE c.workspace_id=$1 AND (f.checked_at IS NULL OR f.checked_at<now()-interval '1 minute')
+ ORDER BY a->'ref'->>'artifactId',f.checked_at NULLS FIRST) files ORDER BY checked_at NULLS FIRST,asset->'ref'->>'artifactId' LIMIT 250`,[workspace]);
+ await checkedRetainedMedia(pool,result.rows.map(r=>({workspace_id:r.workspace_id,brand_key:r.brand_key,native_id:r.native_id,format:null,assets:[r.asset]})),storage);
+}

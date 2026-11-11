@@ -203,6 +203,16 @@ export class CreativeGalleryService {
       dateRange: { from: dates[0] || null, to: dates.at(-1) || null },
       limitations: ["Includes collected source ads even when media or analysis is not yet retained. Missing thumbnails and analyses are not invented.", "Days shown use source-listed delivery dates and actual observed endpoints, not today's date or proof of uninterrupted delivery.", "Legacy free-text labels remain readable in the analysis but do not become fabricated fixed-taxonomy chips."] };
   }
+  /** Project only the selected page or media batch, never the workspace library. */
+  async selected(brandId:string,ids:readonly string[]):Promise<DemoGalleryCreative[]> {
+    if(ids.length>500)throw new GalleryError("Choose at most 500 creatives.");
+    const result:DemoGalleryCreative[]=[];
+    for(const id of new Set(ids)){
+      const ad=workspaceAd(this.db,brandId,id);if(ad&&ad.source!=="sample")result.push(await this.project(ad));
+      while(this.cache.size>256)this.cache.delete(this.cache.keys().next().value!);
+    }
+    return result;
+  }
   async videoFile(brandId: string, adId: string): Promise<StoredVideo> {
     const ad = this.ad(brandId, adId), media = await this.media(ad, this.analysis(ad));
     if (media?.kind !== "video") throw new GalleryError("Stored video is unavailable for this creative.", 404);
