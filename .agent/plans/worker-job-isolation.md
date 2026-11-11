@@ -40,12 +40,15 @@ pauses. A final safety fixture caught uncertain state being made resumable; the
 disposition and retry guards now preserve it and its hold.
 2026-11-11: creator reconciliation can throw while saving its own error. Wrap the
 entire claimed job in finally so even this path releases its heartbeat timer.
+2026-11-11: kernel claims accept queued jobs only. Recover unexpected status-write
+failures to queued, with their original checkpoint, and preserve in-flight paid
+markers as blocked. A real Postgres trigger fixture verifies retry/pausing.
 
 ## Outcomes and retrospective
 Recovery fixtures cover SQL timeouts, broker diagnostics, handled provider errors,
 three-failure pausing across restarts, stale leases, successful streak reset,
 manual retry, uncertain holds and all seven claim gates. A history fixture retains
-18,000 observations for 2,000 ads and returns only current fields. All 94
+18,000 observations for 2,000 ads and returns only current fields. All 95
 infrastructure tests, both owned-sync tests and 636 unit tests pass. TypeScript,
 production build and secrets checks pass. The existing 50,000-ad fixture peaked
 at 116,861,384 bytes of heap. Browser fixtures verified failure details and retry

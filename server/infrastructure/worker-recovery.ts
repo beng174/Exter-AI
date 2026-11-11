@@ -19,7 +19,7 @@ export async function recordWorkerFailure(pool:pg.Pool,type:WorkerJobType,claim:
   if(claim&&!workspace&&type==="collection")workspace=(await client.query("SELECT w.workspace_id FROM collection_runs r JOIN watchlists w ON w.id=r.watchlist_id WHERE r.id=$1",[id])).rows[0]?.workspace_id??null;
   if(claim&&!workspace&&type==="owned")workspace=(await client.query("SELECT workspace_id FROM owned_accounts WHERE id=$1",[row.account_id])).rows[0]?.workspace_id??null;
   const resume=type==="collection"||type==="owned"||type==="creators"||type==="kernel"?"queued":claim?.status??row?.status??null;
-  const policyPaused=row?.status==="paused"&&(type==="creators"||["budget","configuration","disk","uncertain","quote","output","changed","permission"].includes(row.error_kind)||["authentication","permission","budget","invalid","uncertain_paid"].includes(row.error_code));
+  const policyPaused=Boolean(row?.paid_dispatch_in_flight)||row?.status==="paused"&&(type==="creators"||["budget","configuration","disk","uncertain","quote","output","changed","permission"].includes(row.error_kind)||["authentication","permission","budget","invalid","uncertain_paid"].includes(row.error_code));
   const saved=(await client.query(`INSERT INTO worker_job_failures(job_type,job_id,workspace_id,failures,status,last_error,resume_status,next_attempt_at)
    VALUES($1,$2,$3,1,'retrying',$4,$5,now()+interval '1 minute') ON CONFLICT(job_type,job_id) DO UPDATE SET
    workspace_id=COALESCE(excluded.workspace_id,worker_job_failures.workspace_id),failures=CASE WHEN worker_job_failures.status='resolved' THEN 1 ELSE worker_job_failures.failures+1 END,
@@ -32,7 +32,7 @@ export async function recordWorkerFailure(pool:pg.Pool,type:WorkerJobType,claim:
    await client.query("UPDATE worker_job_failures SET status='paused',next_attempt_at=NULL WHERE job_type=$1 AND job_id=$2",[type,id]);saved.status="paused";saved.next_attempt_at=null;
   }
   if(row&&!policyPaused&&!["complete","superseded","cancelled","review_required","uncertain","failed","not_connected"].includes(row.status)){
-   const paused=saved.status==="paused",status=paused?(type==="owned"?"failed":"paused"):row.status==="paused"&&["queued","running","starting"].includes(resume??"")?resume:row.status;
+   const paused=saved.status==="paused",status=paused?(type==="owned"?"failed":"paused"):type==="kernel"?"queued":row.status==="paused"&&["queued","running","starting"].includes(resume??"")?resume:row.status;
    const updated=(await client.query(`UPDATE ${table} SET status=$2,lease_owner=NULL,lease_until=NULL,available_at=GREATEST(available_at,COALESCE($3::timestamptz,now())) WHERE id=$1 RETURNING available_at`,[id,status,saved.next_attempt_at])).rows[0];
    if(!paused&&updated&&new Date(updated.available_at)>new Date(saved.next_attempt_at)){
     saved.next_attempt_at=updated.available_at;await client.query("UPDATE worker_job_failures SET next_attempt_at=$3 WHERE job_type=$1 AND job_id=$2",[type,id,saved.next_attempt_at]);

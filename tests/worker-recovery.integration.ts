@@ -19,6 +19,7 @@ import {claimCategoryBatch} from "../server/public-categories/jobs.js";
 import {workOwnedOnce} from "../server/owned/jobs.js";
 import {workCreatorDiscoveryOnce} from "../server/creators/discovery-jobs.js";
 import {claimKernelJob} from "../server/kernel/jobs.js";
+import {workKernelOnce,ARTIFACT_STAGE_PIPELINE} from "../server/kernel/worker.js";
 import {attachWorkerRoutes} from "../server/infrastructure/worker-api.js";
 import {basicAuth} from "../server/auth.js";
 import {visitPublicCategoryInputs} from "../server/infrastructure/meta-evidence.js";
@@ -146,3 +147,16 @@ test("three handled provider failures pause the same paid run without another ac
  }})},{type:"collection",run:async()=>{others++;return true;}}],silent);}
  assert.equal(polls,3);assert.equal(others,3);const failure=(await readWorkerFailures(pool,"workspace"))[0];assert.equal(failure.failures,3);assert.equal(failure.status,"paused");assert.equal(failure.error.httpStatus,500);assert(!JSON.stringify(failure).includes("private provider response"));assert.equal((await pool.query("SELECT actor_run_id FROM ad_media_runs WHERE id=$1",[id])).rows[0].actor_run_id,"fixtureRun10000001");assert.equal((await pool.query("SELECT count(*)::integer AS n FROM ad_media_runs")).rows[0].n,1);
 },10));
+
+test("kernel status-write failures return to a claimable state and pause after three",async()=>creativeFixture(async(pool)=>{
+ const id=randomUUID();await pool.query("INSERT INTO kernel_jobs(id,workspace_id,platform,native_ad_id,idempotency_key,artifact,pipeline_version,config,context_hash) VALUES($1,'workspace','meta','1',$2,'{\"workspaceId\":\"workspace\"}',$3,'{}',$4)",[id,'c'.repeat(64),ARTIFACT_STAGE_PIPELINE,'d'.repeat(64)]);
+ await pool.query(`CREATE FUNCTION fail_kernel_status() RETURNS trigger LANGUAGE plpgsql AS $$ BEGIN RAISE EXCEPTION 'fixture status write timeout' USING ERRCODE='57014'; END $$;
+ CREATE TRIGGER failing_kernel_status BEFORE UPDATE ON kernel_jobs FOR EACH ROW WHEN(NEW.error_code='transient') EXECUTE FUNCTION fail_kernel_status()`);
+ let others=0;
+ for(let attempt=1;attempt<=3;attempt++){
+  await due(pool);await pool.query("UPDATE kernel_jobs SET available_at=now()-interval '1 second' WHERE id=$1",[id]);
+  await workerCycle(pool,[{type:"kernel",run:observer=>workKernelOnce(pool,{retrieve:async()=>{throw new Error("fixture transfer failed");}},observer)},{type:"collection",run:async()=>{others++;return true;}}],silent);
+  const row=(await pool.query("SELECT status,lease_owner FROM kernel_jobs WHERE id=$1",[id])).rows[0];assert.equal(row.status,attempt===3?"paused":"queued");assert.equal(row.lease_owner,null);
+ }
+ assert.equal(others,3);const failure=(await readWorkerFailures(pool,"workspace"))[0];assert.equal(failure.failures,3);assert.equal(failure.error.code,"57014");assert.equal(await claimKernelJob(pool,"another-worker",{pipelineVersions:[ARTIFACT_STAGE_PIPELINE]}),null);
+},0));
