@@ -1506,3 +1506,50 @@ The integration regressions also retain their original assertions: monthly
 creator refresh is due from the successful profile check, and a saved poster
 cannot postpone a full-video upgrade. Only a genuine video request starts its
 daily retry interval. Priority/newest ordering and the 80% video disk stop remain.
+
+### Worker failure isolation (11 Nov 2026)
+
+The worker supervises brand setup, public collection, owned sync, media, creator
+search, category tagging and media processing independently. An exception in one
+queue leaves the other queues running. Database connection loss can stop the
+process; statement timeouts and lock failures become job failures.
+
+`worker_job_failures` stores the latest safe diagnostic, consecutive failure count
+and next attempt for each job. Failed steps back off for at least one minute,
+then two minutes. Three consecutive failures pause the job across restarts. A
+successful step resets its streak. Existing permission, budget and uncertain-paid
+guards can block earlier. Normal pending polls, request pacing and smaller-page
+fallbacks are not failed attempts. Existing provider backoffs remain in force.
+
+Data sources now includes **Worker jobs**, with the job type, ID, failure count,
+reason, time, SQLSTATE or HTTP status, and application stack location. **Retry
+saved step** resumes the existing checkpoint through its normal guards. It keeps
+the paid run, provider identity, retained files and cost hold. Uncertain paid starts
+still need reconciliation. Existing collection, media, setup and tagging retry
+controls also clear their worker pause after passing their existing guards.
+
+Worker logs include `worker_started` and structured `worker_job_failed` events.
+`jobId: "@queue"` means a failure before a claim or while refilling the queue after
+a completed job. Logs contain a bounded, sanitised message and application stack
+location. Tokens, URLs, raw SQL parameters, driver details and provider bodies are
+excluded. Media/setup web steps pass the same safe diagnostic to the worker, so
+an internal 503 no longer hides its SQL cause.
+
+One reproduced failure path is a timeout while queueing the next media batch after
+the previous paid run completes. Its original handler could change completed work
+back to paused. Completion now stays final and queue refill backs off separately.
+Media/tagging queries select narrow latest-observation keys before extracting
+payload fields, reducing work across large observation histories.
+
+Rollout: merge into **exter-test-drive**, deploy **exter-ai**, **exter-worker** and
+**exter-scheduler** from the same revision, and run `npm run db:migrate` in the new
+web release's Render Shell if startup has not already applied it. The migration
+adds the diagnostic table and index. Keep existing switches, secrets, plans,
+budgets and schedules. Confirm the worker command is `npm run worker`; its logs
+should show `worker_started`. Then open Data sources > Worker jobs to identify
+any failing job and its saved reason.
+
+The supplied incident logs show `server/index.ts`, historical web OOMs and deploy
+replacements. They do not identify the production worker's failed job. The media
+timeout and recovery behaviour are reproduced with fixtures; production recovery
+remains unverified until the repaired worker is deployed.

@@ -1,3 +1,5 @@
+import type {WorkerObserver} from "../infrastructure/worker-diagnostics.js";
+import {workerClaimGate,clearWorkerFailures} from "../infrastructure/worker-recovery.js";
 import {randomUUID,createHash} from "node:crypto";
 import type pg from "pg";
 import {categoryText,creativeCategoryInput,type CategoryInput} from "../../shared/public-category-input.js";
@@ -52,7 +54,7 @@ export async function enqueueCategoryBatch(pool:pg.Pool,workspace:string,now=new
  const client=await pool.connect();
  try{
   await client.query('BEGIN');await client.query('SELECT pg_advisory_xact_lock(hashtext($1))',[`public-categories:${workspace}`]);
-  if(quote){const paused=await resumableCategory(client,workspace);if(paused){const estimate=await resumeQuote(pool,paused,quote.env,client);if(estimate.hash!==quote.hash)throw new CategoryError('output');await client.query("UPDATE public_category_batches SET status=CASE WHEN provider_name IS NULL THEN 'queued' ELSE 'running' END,error_kind=NULL,available_at=now(),max_cost_gbp=CASE WHEN provider_name IS NULL THEN $2 ELSE max_cost_gbp END WHERE id=$1",[paused.id,estimate.reserveGbp]);await client.query('COMMIT');return paused.id;}}
+  if(quote){const paused=await resumableCategory(client,workspace);if(paused){const estimate=await resumeQuote(pool,paused,quote.env,client);if(estimate.hash!==quote.hash)throw new CategoryError('output');await client.query("UPDATE public_category_batches SET status=CASE WHEN provider_name IS NULL THEN 'queued' ELSE 'running' END,error_kind=NULL,available_at=now(),max_cost_gbp=CASE WHEN provider_name IS NULL THEN $2 ELSE max_cost_gbp END WHERE id=$1",[paused.id,estimate.reserveGbp]);await clearWorkerFailures(client,'categories',[paused.id]);await client.query('COMMIT');return paused.id;}}
   const vocabulary=await categoryVocabulary(client,workspace),known=await pendingKeys(client,workspace,now),rows=await inputs(pool,workspace,known,undefined,vocabulary,client),items=rows.map(row=>row.item);
   const estimate=quote?quoteFor(rows,quote.env,vocabulary):null;
   if(quote&&estimate?.hash!==quote.hash)throw new CategoryError('output');
@@ -68,8 +70,8 @@ export async function schedulePublicCategories(pool:pg.Pool,env:Record<string,st
  const workspaces=await pool.query("SELECT DISTINCT workspace_id FROM watchlists WHERE enabled AND purpose='brand' AND brand_key IS NOT NULL");
  for(const row of workspaces.rows)for(let n=0;n<10;n++){if(!await enqueueCategoryBatch(pool,row.workspace_id))break;}
 }
-export async function claimCategoryBatch(pool:pg.Pool,owner:string){return (await pool.query(`UPDATE public_category_batches SET lease_owner=$1,lease_until=now()+interval '6 minutes' WHERE id=(SELECT id FROM public_category_batches WHERE status IN ('queued','starting','running') AND available_at<=now() AND (lease_until IS NULL OR lease_until<now()) ORDER BY available_at FOR UPDATE SKIP LOCKED LIMIT 1) RETURNING *`,[owner])).rows[0]||null;}
-export async function stepCategoryBatch(pool:pg.Pool,id:string,owner:string,options:{env?:Record<string,string|undefined>;provider?:PublicCategoryProvider}={}){
+export async function claimCategoryBatch(pool:pg.Pool,owner:string){return (await pool.query(`UPDATE public_category_batches SET lease_owner=$1,lease_until=now()+interval '6 minutes' WHERE id=(SELECT id FROM public_category_batches WHERE ${workerClaimGate('categories','public_category_batches.id')} AND status IN ('queued','starting','running') AND available_at<=now() AND (lease_until IS NULL OR lease_until<now()) ORDER BY available_at FOR UPDATE SKIP LOCKED LIMIT 1) RETURNING *`,[owner])).rows[0]||null;}
+export async function stepCategoryBatch(pool:pg.Pool,id:string,owner:string,options:WorkerObserver&{env?:Record<string,string|undefined>;provider?:PublicCategoryProvider}={}){
  const env=options.env||process.env;if(!categoryConfigured(env))return false;
  const client=await pool.connect();let run:any;
  try{
@@ -112,12 +114,13 @@ export async function stepCategoryBatch(pool:pg.Pool,id:string,owner:string,opti
   for(const {item,parsed} of valid)await save(item,parsed.categories,parsed.model||'unreported');
   if(priced&&seen.size===items.length&&run.reservation_id){const estimate=(inputTokens*.05+outputTokens*.20)/1_000_000*Number(run.gbp_per_usd),held=(await client.query('SELECT initial_reserved_gbp FROM cost_ledger WHERE id=$1',[run.reservation_id])).rows[0];if(held&&estimate<=Number(held.initial_reserved_gbp))await settleGeminiCost(run.reservation_id,estimate,pool);else partial=true;}
   await update('complete',partial||seen.size<items.length?'partial':null);return true;
- }catch(error){if(run)await client.query("UPDATE public_category_batches SET status=CASE WHEN provider_name IS NULL AND reservation_id IS NOT NULL THEN 'uncertain' WHEN $3='output' THEN 'failed' ELSE 'paused' END,error_kind=$3,available_at=now()+interval '15 minutes' WHERE id=$1 AND lease_owner=$2",[id,owner,error instanceof CategoryError?error.kind:'provider']);return true;}
+ }catch(error){options.onFailure?.(error);if(run)await client.query("UPDATE public_category_batches SET status=CASE WHEN provider_name IS NULL AND reservation_id IS NOT NULL THEN 'uncertain' WHEN $3='output' THEN 'failed' ELSE 'paused' END,error_kind=$3,available_at=now()+interval '15 minutes' WHERE id=$1 AND lease_owner=$2",[id,owner,error instanceof CategoryError?error.kind:'provider']);return true;}
  finally{await client.query('SELECT pg_advisory_unlock(hashtext($1))',[`category-step:${id}`]).catch(()=>{});client.release();}
 }
-export async function workPublicCategoriesOnce(pool:pg.Pool,options:{env?:Record<string,string|undefined>;provider?:PublicCategoryProvider}={}){
+export async function workPublicCategoriesOnce(pool:pg.Pool,options:WorkerObserver&{env?:Record<string,string|undefined>;provider?:PublicCategoryProvider}={}){
  const env=options.env||process.env;if(!categoryConfigured(env))return false;
  const owner=randomUUID();let run=await claimCategoryBatch(pool,owner);if(!run){await schedulePublicCategories(pool,env);run=await claimCategoryBatch(pool,owner);}if(!run)return false;
+ options.onClaim?.({id:run.id,owner,workspaceId:run.workspace_id,status:run.status});
  let worked=false;
  try{worked=await stepCategoryBatch(pool,run.id,owner,options);}finally{
   await pool.query("UPDATE public_category_batches SET lease_owner=NULL,lease_until=NULL,available_at=CASE WHEN $3 THEN available_at ELSE now()+interval '1 minute' END WHERE id=$1 AND lease_owner=$2",[run.id,owner,worked]);

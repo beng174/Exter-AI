@@ -13,6 +13,8 @@ import {infrastructureDatabase} from "../infrastructure/database.js";
 import {MEDIA_ERRORS,mediaEnabled,mediaGbpRate,type AdMediaRunSummary} from "../../shared/ad-media.js";
 import {AdMediaStorage,mediaDiskHealth} from "./storage.js";
 import {claimAdMedia,enqueueAdMedia,stepAdMedia,scheduleAdMedia} from "./jobs.js";
+import {brokerAcknowledgement,workerDiagnostic,type WorkerObserver} from "../infrastructure/worker-diagnostics.js";
+import {clearWorkerFailures} from "../infrastructure/worker-recovery.js";
 import {protectSettingsMutation} from "../request-guard.js";
 import {assertProxySupport} from "../connectors/http.js";
 import type {CreativeGalleryService} from "../demo/gallery.js";
@@ -57,31 +59,30 @@ export function attachMediaStep(app:Express,db:DatabaseSync,getPool= infrastruct
       const candidateName=configuredCreativeCompetitors(db,brand,app.locals.demoCollection).find(c=>(c.brandId||c.key)===r.brand_key)?.name;
       const host=captionDomain(r.brand_key===brand.id?brand.domain:brand.competitorProfiles?.find(c=>c.name.toLowerCase()===candidateName?.toLowerCase())?.domain||(target?readBrand(db,target)?.domain:null));
       const storage=new AdMediaStorage({images:{allowedHosts:host?[host,`*.${host}`]:[]}});
-      res.json({worked:await stepAdMedia(pool,String(req.params.runId),String(req.params.owner),{env,storage,existingIds,existingVideoIds,existingVideoCandidates})});
-    }catch{res.status(503).json({error:"The saved media step could not complete."});}
+      let diagnostic:ReturnType<typeof workerDiagnostic>|undefined;
+      const worked=await stepAdMedia(pool,String(req.params.runId),String(req.params.owner),{env,storage,existingIds,existingVideoIds,existingVideoCandidates,onFailure:error=>{diagnostic=workerDiagnostic(error);}});
+      res.json({worked,...(diagnostic?{diagnostic}:{})});
+    }catch(error){res.status(503).json({error:"The saved media step could not complete.",diagnostic:workerDiagnostic(error)});}
   });
 }
 async function refillMediaQueue(pool:pg.Pool,env:Record<string,string|undefined>,force=false){
  const claimed=await pool.query(`INSERT INTO ad_media_refill_gate(id,next_check) VALUES(1,now()+interval '1 minute') ON CONFLICT(id) DO UPDATE SET next_check=excluded.next_check WHERE ad_media_refill_gate.next_check<=now() OR $1 RETURNING id`,[force]);
  if(claimed.rowCount)await scheduleAdMedia(pool,env);
 }
-export async function workAdMediaOnce(pool:pg.Pool,options:{env?:Record<string,string|undefined>;fetch?:typeof fetch}={}){
+export async function workAdMediaOnce(pool:pg.Pool,options:WorkerObserver&{env?:Record<string,string|undefined>;fetch?:typeof fetch}={}){
   const env=options.env||process.env;if(!mediaEnabled(env))return false;
   const configuration=mediaBrokerConfig(env);if(!configuration)return false;
   const owner=randomUUID();let run=await claimAdMedia(pool,owner);if(!run){await refillMediaQueue(pool,env);run=await claimAdMedia(pool,owner);}if(!run)return false;
-  let worked=false;
+  options.onClaim?.({id:run.id,owner,workspaceId:run.workspace_id,status:run.status});
+  let worked=false,brokerFailed=false;
   try{
     assertProxySupport(Boolean(options.fetch),env);
     const response=await(options.fetch||fetch)(`${configuration.origin}/api/ad-media/step/${run.id}/${owner}`,{method:"POST",redirect:"error",signal:AbortSignal.timeout(240000),headers:{"X-Exter-Ad-Media-Token":configuration.token}});
-    if(response.ok&&response.body){
-      const reader=response.body.getReader(),chunks:Uint8Array[]=[];let bytes=0;
-      try{while(true){const item=await reader.read();if(item.done)break;bytes+=item.value.byteLength;if(bytes>1024)throw new Error("Unsupported acknowledgement.");chunks.push(item.value);}worked=JSON.parse(Buffer.concat(chunks).toString("utf8")).worked===true;}finally{await reader.cancel().catch(()=>{});reader.releaseLock();}
-    }
-    await response.body?.cancel().catch(()=>{});
-  }catch{/* Reclaim the same checkpoint; never automatically start another paid run. */}
+    worked=await brokerAcknowledgement(response);
+  }catch(error){brokerFailed=true;options.onFailure?.(error);}
   await pool.query("UPDATE ad_media_runs SET lease_owner=NULL,lease_until=NULL,available_at=CASE WHEN $3 THEN available_at ELSE now()+interval '60 seconds' END WHERE id=$1 AND lease_owner=$2",[run.id,owner,worked]);
   const current=(await pool.query("SELECT status FROM ad_media_runs WHERE id=$1",[run.id])).rows[0];
-  if(["complete","failed"].includes(current?.status))await refillMediaQueue(pool,env,true);
+  if(["complete","failed"].includes(current?.status)){options.onClaim?.(null);if(!brokerFailed)await refillMediaQueue(pool,env,true);}
   return true;
 }
 export function attachAdMedia(app:Express,db:DatabaseSync,getPool=infrastructureDatabase){
@@ -112,7 +113,8 @@ export function attachAdMedia(app:Express,db:DatabaseSync,getPool=infrastructure
     try{
       const pool=getPool(),rows=await pool.query("SELECT id FROM watchlists WHERE workspace_id=$1 AND enabled AND purpose='brand' AND ($2::text IS NULL OR brand_key=$2) ORDER BY id",[brand.id,typeof req.body?.brandKey==='string'?req.body.brandKey:null]);
       // Explicit retries resume safe existing checkpoints. Uncertain paid starts stay blocked.
-      await pool.query("UPDATE ad_media_runs SET status=CASE WHEN actor_run_id IS NULL THEN 'queued' ELSE 'running' END,error_kind=NULL,available_at=now() WHERE workspace_id=$1 AND status='paused' AND (reservation_id IS NULL OR actor_run_id IS NOT NULL) AND (lease_until IS NULL OR lease_until<now())",[brand.id]);
+      const resumed=await pool.query("UPDATE ad_media_runs SET status=CASE WHEN actor_run_id IS NULL THEN 'queued' ELSE 'running' END,error_kind=NULL,available_at=now() WHERE workspace_id=$1 AND status='paused' AND (reservation_id IS NULL OR actor_run_id IS NOT NULL) AND (lease_until IS NULL OR lease_until<now()) RETURNING id",[brand.id]);
+      await clearWorkerFailures(pool,"media",resumed.rows.map(row=>row.id));
       for(const row of rows.rows)await enqueueAdMedia(pool,row.id);
       res.status(202).json({queued:true});
     }catch{res.status(503).json({error:"Missing media could not be queued. Saved files are retained."});}

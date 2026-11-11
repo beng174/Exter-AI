@@ -17,15 +17,20 @@ export function sourceFormatSql(p:string){
 // $1 workspace; $2 optional watchlist; $3 measurement time. Payloads stay in SQL.
 export const PUBLIC_ROWS_SQL=`WITH watches AS MATERIALIZED (
  SELECT * FROM watchlists WHERE workspace_id=$1 AND purpose='brand' AND brand_key IS NOT NULL AND jsonb_array_length(page_ids)=1 AND ($2::text IS NULL OR id=$2)
-), latest AS MATERIALIZED (
+), latest_ids AS MATERIALIZED (
  SELECT DISTINCT ON(w.brand_key,o.platform,o.native_id) w.id AS watchlist_id,w.brand_key,w.page_ids->>0 AS page_id,o.platform,o.native_id,
+ o.run_id
+ FROM watches w JOIN collection_runs r ON r.watchlist_id=w.id AND r.config->>'revision'=w.revision::text
+ JOIN ad_observations o ON o.run_id=r.id AND o.workspace_id=$1 JOIN public_ads a USING(platform,native_id)
+ WHERE a.advertiser_id=w.page_ids->>0 ORDER BY w.brand_key,o.platform,o.native_id,o.observed_at DESC,o.run_id DESC
+), latest AS MATERIALIZED (
+ SELECT i.watchlist_id,i.brand_key,i.page_id,i.platform,i.native_id,
  COALESCE(o.last_confirmed_at,o.observed_at) AS observed_at,a.first_seen_at,a.start_time,a.stop_time,
  COALESCE(NULLIF(o.reach#>'{locations,value}','null'::jsonb),COALESCE(o.raw_payload,p.raw_payload)->'total_reach_by_location') AS locations,
  COALESCE(NULLIF(o.reach#>'{eu,value}','null'::jsonb),COALESCE(o.raw_payload,p.raw_payload)->'eu_total_reach') AS eu
- FROM watches w JOIN collection_runs r ON r.watchlist_id=w.id AND r.config->>'revision'=w.revision::text
- JOIN ad_observations o ON o.run_id=r.id AND o.workspace_id=$1 JOIN public_ads a USING(platform,native_id)
+ FROM latest_ids i JOIN ad_observations o ON o.platform=i.platform AND o.native_id=i.native_id AND o.run_id=i.run_id
+ JOIN public_ads a ON a.platform=i.platform AND a.native_id=i.native_id
  LEFT JOIN ad_observations p ON p.workspace_id=o.workspace_id AND p.platform=o.platform AND p.native_id=o.native_id AND p.run_id=o.raw_payload_run_id
- WHERE a.advertiser_id=w.page_ids->>0 ORDER BY w.brand_key,o.platform,o.native_id,o.observed_at DESC,o.run_id DESC
 ), facts AS MATERIALIZED (
  SELECT l.*,CASE WHEN start_time IS NOT NULL THEN greatest(0,floor(extract(epoch FROM (COALESCE(stop_time,observed_at)-start_time))/86400))::integer END AS days,
  CASE WHEN stop_time IS NOT NULL THEN 'inactive' ELSE 'unknown' END AS status,

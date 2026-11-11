@@ -1,3 +1,5 @@
+import type {WorkerObserver} from "../infrastructure/worker-diagnostics.js";
+import {workerClaimGate} from "../infrastructure/worker-recovery.js";
 import { randomUUID } from "node:crypto";
 import type pg from "pg";
 import { reserveCost } from "../infrastructure/budget.js";
@@ -30,16 +32,17 @@ export async function enqueueOwnedSync(pool:pg.Pool,accountId:string,day?:string
 export async function scheduleOwnedSync(pool:pg.Pool,now=new Date()) {
   for(const row of (await pool.query("SELECT id FROM owned_accounts WHERE enabled AND status IN ('pending','connected','syncing') ORDER BY id")).rows)await enqueueOwnedSync(pool,row.id,asDay(now),now);
 }
-export interface OwnedWorkerOptions {fetch?:FetchLike;env?:ConnectorEnv;now?:Date;beforeRequest?:()=>Promise<void>}
+export interface OwnedWorkerOptions extends WorkerObserver {fetch?:FetchLike;env?:ConnectorEnv;now?:Date;beforeRequest?:()=>Promise<void>}
 /** Default-off: fixture injection is allowed; production activation needs separate live approval. */
 export async function workOwnedOnce(pool:pg.Pool,options:OwnedWorkerOptions={}) {
   const env=options.env || process.env;
   if(!options.fetch && env.EXTER_OWNED_SYNC_ENABLED!=="true")return false;
   const owner=randomUUID(), now=options.now || new Date();
   const job=(await pool.query(`UPDATE owned_sync_jobs SET status='running',lease_owner=$1,lease_until=now()+interval '2 minutes',attempts=attempts+1
-    WHERE id=(SELECT id FROM owned_sync_jobs WHERE status IN ('queued','running') AND available_at<=now()
+    WHERE id=(SELECT id FROM owned_sync_jobs WHERE ${workerClaimGate('owned','owned_sync_jobs.id')} AND status IN ('queued','running') AND available_at<=now()
       AND (lease_until IS NULL OR lease_until<now()) ORDER BY available_at,id FOR UPDATE SKIP LOCKED LIMIT 1) RETURNING *,since_day::text AS since_text,until_day::text AS until_text`,[owner])).rows[0];
   if(!job)return false;
+  options.onClaim?.({id:job.id,owner});
   let heartbeat:ReturnType<typeof setInterval>|undefined;
   try {
     const account=(await pool.query("SELECT * FROM owned_accounts WHERE id=$1",[job.account_id])).rows[0] as OwnedAccount;
@@ -76,6 +79,7 @@ export async function workOwnedOnce(pool:pg.Pool,options:OwnedWorkerOptions={}) 
       await client.query("COMMIT");
     }catch(error){await client.query("ROLLBACK");throw error;}finally{client.release();}
   }catch(error){
+    if(!(error instanceof OwnedSyncError)||error.reason==="temporary")options.onFailure?.(error);
     const reason=error instanceof OwnedSyncError?error.reason:"temporary";
     const client=await pool.connect();
     try {

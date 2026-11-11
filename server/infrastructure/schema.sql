@@ -53,6 +53,16 @@ CREATE TABLE IF NOT EXISTS collection_cursors (
 );
 CREATE TABLE IF NOT EXISTS backup_runs(id bigint GENERATED ALWAYS AS IDENTITY PRIMARY KEY,created_at timestamptz NOT NULL,status text NOT NULL);
 
+-- Durable worker supervision is separate from provider attempts and paid holds.
+CREATE TABLE IF NOT EXISTS worker_job_failures (
+ job_type text NOT NULL CHECK(job_type IN ('onboarding','collection','owned','media','creators','categories','kernel')),
+ job_id text NOT NULL,workspace_id text,failures integer NOT NULL CHECK(failures>=0),
+ status text NOT NULL CHECK(status IN ('retrying','paused','resolved')),last_error jsonb NOT NULL,
+ resume_status text,last_failed_at timestamptz NOT NULL DEFAULT clock_timestamp(),next_attempt_at timestamptz,
+ PRIMARY KEY(job_type,job_id)
+);
+CREATE INDEX IF NOT EXISTS worker_failures_workspace ON worker_job_failures(workspace_id,last_failed_at DESC) WHERE status<>'resolved';
+
 ALTER TABLE watchlists ADD COLUMN IF NOT EXISTS brand_key text;
 ALTER TABLE watchlists ADD COLUMN IF NOT EXISTS purpose text NOT NULL DEFAULT 'brand' CHECK(purpose IN ('brand','discovery'));
 ALTER TABLE watchlists ADD COLUMN IF NOT EXISTS revision integer NOT NULL DEFAULT 1;

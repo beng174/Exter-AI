@@ -1,0 +1,17 @@
+.worker-health { margin-block: 24px; }
+.worker-health code { overflow-wrap: anywhere; white-space: normal; font-size: 12px; }
+.worker-health-id { display: block; max-width: 160px; }
+.worker-health details { margin-top: 8px; }
+.worker-health details p { margin-block: 8px; }
+.reference-ui .worker-health .ui-data-table table { min-width: 960px; }
+@media (max-width: 719px) {
+  .reference-ui .worker-health .ui-table-scroll { max-height: none; }
+  .reference-ui .worker-health .ui-data-table table { display: block; min-width: 0; }
+  .reference-ui .worker-health .ui-data-table thead { display: none; }
+  .reference-ui .worker-health .ui-data-table tbody { display: grid; gap: 16px; }
+  .reference-ui .worker-health .ui-data-table tr { display: block; padding: 16px; border: 1px solid var(--line-soft); border-radius: 8px; }
+  .reference-ui .worker-health .ui-data-table td { display: grid; grid-template-columns: 88px minmax(0, 1fr); gap: 8px 12px; padding: 8px 0; border: 0; }
+  .reference-ui .worker-health .ui-data-table td::before { display: block; content: attr(data-label); grid-column: 1; grid-row: 1; color: var(--muted); font-size: 12px; font-weight: 600; text-align: left; }
+  .reference-ui .worker-health .ui-data-table td > * { grid-column: 2; }
+  .reference-ui .worker-health .ui-status-chip { justify-self: start; }
+}

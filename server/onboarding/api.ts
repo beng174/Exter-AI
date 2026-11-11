@@ -1,3 +1,5 @@
+import {workerDiagnostic} from "../infrastructure/worker-diagnostics.js";
+import {clearWorkerFailures} from "../infrastructure/worker-recovery.js";
 import {BrandLogoStore} from "../brand-logos.js";
 import {OnboardingMeta,OnboardingWait} from "./meta.js";
 import {brandColour,brandInitials} from "../../shared/brand-identity.js";
@@ -20,7 +22,7 @@ export function attachOnboardingStep(app:Express,db:DatabaseSync,getPool=infrast
   res.setHeader('Cache-Control','private, no-store');const env=options.env||process.env,key=env.EXTER_AD_MEDIA_BROKER_TOKEN||'',given=req.get('X-Exter-Ad-Media-Token')||'';
   if(key.length<32||key.length>4096||/\s/.test(key)||!timingSafeEqual(digest(key),digest(given))){res.status(401).json({error:'Setup service authentication required.'});return;}
   if(![req.params.runId,req.params.owner].every(v=>/^[a-f0-9-]{36}$/.test(String(v)))){res.status(400).json({error:'A leased setup job is required.'});return;}
-  try{res.json({worked:await stepOnboarding(getPool(),db,String(req.params.runId),String(req.params.owner),options)});}catch{res.status(503).json({error:'Setup could not continue.'});}
+  try{let diagnostic:ReturnType<typeof workerDiagnostic>|undefined;const worked=await stepOnboarding(getPool(),db,String(req.params.runId),String(req.params.owner),{...options,onFailure:error=>{diagnostic=workerDiagnostic(error);}});res.json({worked,...(diagnostic?{diagnostic}:{})});}catch(error){res.status(503).json({error:'Setup could not continue.',diagnostic:workerDiagnostic(error)});}
  });
 }
 export function attachOnboarding(app:Express,db:DatabaseSync,getPool=infrastructureDatabase){
@@ -49,7 +51,7 @@ export function attachOnboarding(app:Express,db:DatabaseSync,getPool=infrastruct
  });
  app.post('/api/brands/:brandId/onboarding/retry',protectSettingsMutation,async(req,res)=>{
   try{const target=await load(String(req.params.brandId));if(!target){res.status(404).end();return;}if(target.run.status==='uncertain'){res.status(409).json({error:'Review the paid batch before retrying.'});return;}
-   await getPool().query("UPDATE brand_onboarding_runs SET status='queued',error_kind=NULL,available_at=now() WHERE id=$1 AND status='paused'",[target.run.id]);res.status(202).json({queued:true});
+   const resumed=await getPool().query("UPDATE brand_onboarding_runs SET status='queued',error_kind=NULL,available_at=now() WHERE id=$1 AND status='paused' RETURNING id",[target.run.id]);if(resumed.rowCount)await clearWorkerFailures(getPool(),"onboarding",[target.run.id]);res.status(202).json({queued:true});
   }catch{res.status(503).json({error:'Setup could not be resumed.'});}
  });
  app.post('/api/brands/:brandId/onboarding/confirm-page',protectSettingsMutation,async(req,res)=>{

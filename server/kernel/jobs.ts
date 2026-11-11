@@ -1,3 +1,4 @@
+import {workerClaimGate,clearWorkerFailures} from "../infrastructure/worker-recovery.js";
 import { createHash, randomUUID } from "node:crypto";
 import type pg from "pg";
 import { validateKernelArtifactRef, type KernelArtifactRef } from "./artifacts.js";
@@ -129,7 +130,7 @@ export async function claimKernelJob(pool: pg.Pool, owner: string, options: { le
       WHERE status='running' AND lease_until<=clock_timestamp() AND NOT paid_dispatch_in_flight`);
     const result = await client.query(`UPDATE kernel_jobs SET status='running',lease_owner=$1,lease_token=lease_token+1,
       lease_until=clock_timestamp()+($2 * interval '1 millisecond'),attempts=attempts+1,error_code=NULL,updated_at=clock_timestamp()
-      WHERE id=(SELECT id FROM kernel_jobs WHERE status='queued' AND available_at<=clock_timestamp()
+      WHERE id=(SELECT id FROM kernel_jobs WHERE ${workerClaimGate('kernel','kernel_jobs.id')} AND status='queued' AND available_at<=clock_timestamp()
         AND ($3::text[] IS NULL OR pipeline_version=ANY($3::text[])) ORDER BY available_at,created_at FOR UPDATE SKIP LOCKED LIMIT 1) RETURNING *`, [owner, milliseconds, options.pipelineVersions ?? null]);
     await client.query("COMMIT");
     return result.rowCount ? fromRow(result.rows[0]) : null;
@@ -188,8 +189,12 @@ export async function cancelKernelJob(pool: pg.Pool, id: string, workspaceId: st
 /** Explicit operator resume only. Review-required paid work cannot be replayed here. */
 export async function resumeKernelJob(pool: pg.Pool, id: string, workspaceId: string): Promise<boolean> {
   if (typeof id !== "string" || !UUID.test(id) || !identifier(workspaceId)) return false;
-  return Boolean((await pool.query(`UPDATE kernel_jobs SET status='queued',error_code=NULL,retry_count=0,available_at=clock_timestamp(),updated_at=clock_timestamp()
-    WHERE id=$1 AND workspace_id=$2 AND status='paused' AND NOT paid_dispatch_in_flight`, [id, workspaceId])).rowCount);
+  const client=await pool.connect();try{
+    await client.query("BEGIN");
+    const resumed=await client.query(`UPDATE kernel_jobs SET status='queued',error_code=NULL,retry_count=0,available_at=clock_timestamp(),updated_at=clock_timestamp()
+      WHERE id=$1 AND workspace_id=$2 AND status='paused' AND NOT paid_dispatch_in_flight RETURNING id`,[id,workspaceId]);
+    if(resumed.rowCount)await clearWorkerFailures(client,"kernel",[id]);await client.query("COMMIT");return Boolean(resumed.rowCount);
+  }catch(error){await client.query("ROLLBACK");throw error;}finally{client.release();}
 }
 export async function beginKernelPaidDispatch(pool: pg.Pool, lease: KernelJobLease, input: { requestKey: string; reservationId: string }): Promise<void> {
   validateLease(lease);

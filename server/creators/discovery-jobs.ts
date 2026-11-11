@@ -1,3 +1,5 @@
+import type {WorkerObserver} from "../infrastructure/worker-diagnostics.js";
+import {workerClaimGate} from "../infrastructure/worker-recovery.js";
 import { storedCreatorRun } from "./run-store.js";
 import { reconcileCreatorSearch } from "./run-reconciliation.js";
 import { randomUUID } from "node:crypto";
@@ -8,7 +10,7 @@ import { CreatorProviderError } from "./types.js";
 import { CreatorVerificationError, InstagramCreatorVerifier, discoveryProfile, discoveryProfiles, publicCreatorUrl } from "./discovery-provider.js";
 import { recordCreatorRejection, actorDiscoveryInput, discoverySteps, upsertDiscoveryProfile, type DiscoveryStep } from "./discovery-store.js";
 import { claimMetaRequest, delayMetaRequests } from "../infrastructure/meta-rate.js";
-export interface CreatorJobOptions {
+export interface CreatorJobOptions extends WorkerObserver {
   env?: Record<string, string | undefined>; now?: () => Date;
   discovery?: Pick<ApifyCreatorProvider, "researchConfiguration" | "collectPublic"> & Partial<Pick<ApifyCreatorProvider,"acknowledge"|"inspectRun"|"inspectInput"|"inspectActor">>;
   verifier?: Pick<InstagramCreatorVerifier, "configured" | "verify">;
@@ -52,8 +54,9 @@ async function adCreatorHandles(pool: pg.Pool, workspace: string) {
 export async function workCreatorDiscoveryOnce(pool: pg.Pool, options: CreatorJobOptions = {}): Promise<boolean> {
   const discovery = providerFor(options,pool), verifier = verifierFor(options), now = options.now?.() ?? new Date();
   const owner = randomUUID(), job = (await pool.query(`UPDATE creator_discovery_runs SET status=CASE WHEN reconcile_requested THEN status ELSE 'running' END,lease_owner=$1,lease_until=now()+interval '5 minutes'
-    WHERE id=(SELECT id FROM creator_discovery_runs WHERE (status IN ('queued','running') OR reconcile_requested) AND available_at<=now() AND (lease_until IS NULL OR lease_until<now()) ORDER BY available_at FOR UPDATE SKIP LOCKED LIMIT 1) RETURNING *`, [owner])).rows[0];
+    WHERE id=(SELECT id FROM creator_discovery_runs WHERE (reconcile_requested OR stop_requested OR ${workerClaimGate('creators','creator_discovery_runs.id')}) AND (status IN ('queued','running') OR reconcile_requested) AND available_at<=now() AND (lease_until IS NULL OR lease_until<now()) ORDER BY available_at FOR UPDATE SKIP LOCKED LIMIT 1) RETURNING *`, [owner])).rows[0];
   if (!job) return false;
+  options.onClaim?.({id:job.id,owner,workspaceId:job.workspace_id});
   const controller=new AbortController();let heartbeatBusy=false;
   const heartbeat=setInterval(()=>{if(heartbeatBusy)return;heartbeatBusy=true;void pool.query("UPDATE creator_discovery_runs SET lease_until=now()+interval '5 minutes' WHERE id=$1 AND lease_owner=$2 AND (status='running' OR reconcile_requested) RETURNING id",[job.id,owner]).then(r=>{if(!r.rowCount)controller.abort();}).catch(()=>controller.abort()).finally(()=>heartbeatBusy=false);},options.heartbeatMs??30000);heartbeat.unref();
   if(job.reconcile_requested){
@@ -163,6 +166,7 @@ export async function workCreatorDiscoveryOnce(pool: pg.Pool, options: CreatorJo
       }
     }
   } catch (e) {
+    if(!(e instanceof CreatorProviderError&&e.code==="pending"))options.onFailure?.(e);
     status = e instanceof CreatorProviderError && e.code === "pending" ? "queued" : e instanceof CreatorProviderError && e.code === "budget_paused" || e instanceof CreatorVerificationError && ["configuration", "permissions", "rate_limited"].includes(e.reason) ? "paused" : "failed";
     error = e instanceof CreatorProviderError || e instanceof CreatorVerificationError ? e.message : "Creator research could not finish. Earlier profiles are unchanged.";
     if(e instanceof CreatorProviderError && e.code==="pending")delay=60000;

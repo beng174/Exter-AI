@@ -43,7 +43,7 @@ async function profileBatchStep(pool:pg.Pool,id:string,key:string,requests:Under
 }
 export {claimOnboarding,scheduleOnboarding} from "./queue.js";
 export {workOnboardingOnce} from "./worker.js";
-export interface OnboardingOptions {env?:Record<string,string|undefined>;ai?:OnboardingAI;meta?:OnboardingMeta;website?:BrandResearchOptions;now?:()=>Date}
+export interface OnboardingOptions {env?:Record<string,string|undefined>;ai?:OnboardingAI;meta?:OnboardingMeta;website?:BrandResearchOptions;now?:()=>Date;onFailure?:(error:unknown)=>void}
 export async function stepOnboarding(pool:pg.Pool,db:DatabaseSync,id:string,owner:string,options:OnboardingOptions={}){
  const env=options.env||process.env,client=await pool.connect();let run:any;
  try{if(!(await client.query('SELECT pg_try_advisory_lock(hashtext($1)) AS locked',[`onboarding-step:${id}`])).rows[0].locked)return false;
@@ -128,6 +128,7 @@ export async function stepOnboarding(pool:pg.Pool,db:DatabaseSync,id:string,owne
   }
   return false;
  }catch(error){if(run){if(error instanceof MetaCollectionError&&error.reducePage&&['pages','discovery'].includes(run.phase)){const next=smallerMetaPage(metaPageSize(error.pageSize));if(next){const data=run.data as RunData;if(run.phase==='pages')data.ownPageSize=next;else data.searchPageSize=next;await client.query("UPDATE brand_onboarding_runs SET data=$3,status='running',error_kind=NULL,available_at=now()+interval '20 seconds',updated_at=now() WHERE id=$1 AND lease_owner=$2",[id,owner,JSON.stringify(data)]);return true;}}
- const kind=error instanceof OnboardingWait?'waiting':error instanceof CategoryError?error.kind:error instanceof MetaCollectionError?error.reason==='permission'?'configuration':'provider':error instanceof Error&&error.message==='website'?'website':'provider';await client.query("UPDATE brand_onboarding_runs SET status=CASE WHEN $3='uncertain' THEN 'uncertain' WHEN $3='waiting' THEN 'running' ELSE 'paused' END,error_kind=CASE WHEN $3='waiting' THEN NULL ELSE $3 END,available_at=now()+($4::integer*interval '1 millisecond'),updated_at=now() WHERE id=$1 AND lease_owner=$2",[id,owner,kind,error instanceof OnboardingWait?error.milliseconds:60000]);}return true;}
+ if(!(error instanceof OnboardingWait))options.onFailure?.(error);
+ const kind=error instanceof OnboardingWait?'waiting':error instanceof CategoryError?error.kind:error instanceof MetaCollectionError?error.reason==='permission'?'configuration':'provider':error instanceof Error&&error.message==='website'?'website':'provider';await client.query("UPDATE brand_onboarding_runs SET status=CASE WHEN $3='uncertain' THEN 'uncertain' WHEN $3='waiting' THEN 'running' ELSE 'paused' END,error_kind=CASE WHEN $3='waiting' THEN NULL ELSE $3 END,available_at=now()+($4::integer*interval '1 millisecond'),updated_at=now() WHERE id=$1 AND lease_owner=$2",[id,owner,kind,error instanceof OnboardingWait?error.milliseconds:60000]);}if(!(error instanceof CategoryError)&&!(error instanceof MetaCollectionError)&&!(error instanceof OnboardingWait)&&!(error instanceof Error&&error.message==='website'))throw error;return true;}
  finally{await client.query('SELECT pg_advisory_unlock(hashtext($1))',[`onboarding-step:${id}`]).catch(()=>{});client.release();}
 }
