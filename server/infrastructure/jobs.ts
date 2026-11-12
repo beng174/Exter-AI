@@ -1,3 +1,5 @@
+import type {WorkerObserver} from "./worker-diagnostics.js";
+import {workerClaimGate,clearWorkerFailures} from "./worker-recovery.js";
 import {scheduleOnboarding} from "../onboarding/queue.js";
 import { scheduleCreatorRefresh } from "../creators/discovery-jobs.js";
 import {schedulePublicCategories,enqueueCategoryBatch,categoryConfigured} from "../public-categories/jobs.js";
@@ -36,6 +38,7 @@ export async function enqueueCollection(pool: pg.Pool, watchlistId: string, day?
           SELECT id,COALESCE(stopped_at,finished_at),'legacy' FROM collection_runs WHERE id=$1 AND COALESCE(stopped_at,finished_at) IS NOT NULL
             AND NOT EXISTS(SELECT 1 FROM meta_collection_failures f WHERE f.run_id=$1)`,[run.id]);
         await client.query("UPDATE collection_runs SET status='queued',errors='[]',finished_at=NULL,stopped_at=NULL WHERE id=$1", [run.id]);
+        await clearWorkerFailures(client,"collection",[run.id]);
       }
       if (day) await client.query("INSERT INTO schedule_slots VALUES($1,$2,$3) ON CONFLICT DO NOTHING", [watchlistId,day,run.id]);
       await client.query("COMMIT"); return run.id as string;
@@ -52,17 +55,18 @@ export async function enqueueCollection(pool: pg.Pool, watchlistId: string, day?
 }
 export async function claimJob(pool: pg.Pool, owner: string) {
   const result = await pool.query(`UPDATE collection_jobs SET status='running',lease_owner=$1,lease_until=now()+interval '2 minutes',attempts=attempts+1
-    WHERE id=(SELECT id FROM collection_jobs WHERE status IN ('queued','running') AND available_at<=now()
+    WHERE id=(SELECT id FROM collection_jobs WHERE ${workerClaimGate('collection','collection_jobs.id')} AND status IN ('queued','running') AND available_at<=now()
       AND (lease_until IS NULL OR lease_until<now()) ORDER BY available_at FOR UPDATE SKIP LOCKED LIMIT 1) RETURNING *`, [owner]);
   return result.rows[0] ?? null;
 }
-export async function workOnce(pool: pg.Pool, connector?: MetaLibraryConnector, options:{env?:Record<string,string|undefined>;paceMs?:number}={}) {
+export async function workOnce(pool: pg.Pool, connector?: MetaLibraryConnector, options:WorkerObserver&{env?:Record<string,string|undefined>;paceMs?:number}={}) {
   if(!metaLibraryEnabled(options.env))return false;
   // A shared row reserves dispatch time across worker processes and watchlist brands.
   if(await claimMetaRequest(pool,options.paceMs??20000))return false;
   const owner = randomUUID();
   const job = await claimJob(pool,owner);
   if (!job) return false;
+  options.onClaim?.({id:job.id,owner});
   let state = "queued", backoffMs = 0, resetAttempts = false, errorMessage: string | null = null;
   let errorKind:MetaFailureKind|null=null,numericError:MetaCollectionError|null=null,nextSize:MetaPageSize|null=null;
   try {
@@ -89,6 +93,7 @@ export async function workOnce(pool: pg.Pool, connector?: MetaLibraryConnector, 
       resetAttempts = true;
     }
   } catch (error) {
+    if(!(error instanceof MetaCollectionError)&&!(error instanceof Error&&error.message.startsWith("Jobs paused:")))options.onFailure?.(error);
     numericError=error instanceof MetaCollectionError?error:null;
     const providerDelay=error instanceof MetaCollectionError?Math.max(error.reason==="rate_limited"?60000:0,error.retryAfterMs):0;
     await delayMetaRequests(pool,providerDelay);
@@ -116,6 +121,7 @@ export async function workOnce(pool: pg.Pool, connector?: MetaLibraryConnector, 
       errorMessage=META_CONTROLLED_ERRORS[errorKind];
       backoffMs = Math.max(error instanceof MetaCollectionError?error.retryAfterMs:0,Math.min(3600000,60000 * 2 ** Math.min(job.attempts - 1,6)));
     }
+    if(error instanceof MetaCollectionError&&state==="queued"&&errorKind!=="page_size")options.onFailure?.(error);
   }
   await delayMetaRequests(pool,backoffMs);
   // Commit the run and job disposition together, fenced by the live claim.

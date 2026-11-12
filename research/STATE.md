@@ -1117,3 +1117,28 @@ counts, rechecks and Stop search. No external browser/provider requests were mad
   build and secrets checks. Browser fixtures verify paging, Back, preview filters
   and the memory warning at 1440px and 390px. PR/CI results and rollout steps
   are recorded in the PR.
+
+## Worker job isolation and diagnostics (11 Nov 2026)
+
+- Seven queues now have independent failure handling. Lease-fenced recovery
+  preserves checkpoints, provider identities, cost holds and historical data.
+  Repeated failed steps back off and pause after three consecutive failures;
+  existing permission, budget and uncertain-paid guards can pause earlier.
+- Data sources shows saved worker failures and a guarded retry of the same step.
+  Safe logs include job type/ID, message, SQLSTATE/HTTP status and stack location.
+  Media/setup broker responses retain the underlying safe diagnostic. Normal
+  pending polls, request pacing and smaller-page fallback are not failures.
+- Reproduced and fixed completed media work being changed back to paused when
+  queueing the next batch fails. Queue refill now backs off separately. Latest
+  observation keys are selected before payload extraction for media/tagging reads.
+- The incident logs supplied here are web logs, including older web OOMs and
+  deploy replacements. They do not establish the crashing production worker job.
+  No production database, Render logs session or live provider was accessed.
+  Fixture checks and browser evidence cannot verify production recovery.
+- All live owned-sync and model validation gates remain open. No Render plan,
+  environment value, switch, budget, collection schedule or formula changed.
+  Final checks, CI evidence and exact migration/deploy steps are recorded in the PR.
+- Local validation: all 96 infrastructure tests, both owned-sync tests and 636
+  unit tests pass. TypeScript, production build and secrets scan pass. The existing
+  50,000-ad heap fixture passes at approximately 117 MB. Browser fixtures verify
+  safe failure details, checkpoint retry and readable 1440px/390px layouts.

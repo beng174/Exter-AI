@@ -1,3 +1,4 @@
+import {workerClaimGate} from "../infrastructure/worker-recovery.js";
 import {randomUUID} from "node:crypto";
 import type pg from "pg";
 import {AD_MEDIA_BATCH,mediaEnabled,mediaMaximumUsd,mediaGbpRate} from "../../shared/ad-media.js";
@@ -60,12 +61,12 @@ export async function scheduleAdMedia(pool:pg.Pool,env:Record<string,string|unde
   const rows=await pool.query("SELECT id FROM watchlists WHERE enabled AND purpose='brand' AND brand_key IS NOT NULL ORDER BY id");
   for(const w of rows.rows)await enqueueAdMedia(pool,w.id,now);
 }
-export async function claimAdMedia(pool:pg.Pool,owner:string){return(await pool.query(`UPDATE ad_media_runs SET lease_owner=$1,lease_until=now()+interval '6 minutes' WHERE id=(SELECT id FROM ad_media_runs WHERE status IN ('queued','running','starting') AND available_at<=now() AND (lease_until IS NULL OR lease_until<now()) ORDER BY available_at FOR UPDATE SKIP LOCKED LIMIT 1) RETURNING *`,[owner])).rows[0]||null;}
+export async function claimAdMedia(pool:pg.Pool,owner:string){return(await pool.query(`UPDATE ad_media_runs SET lease_owner=$1,lease_until=now()+interval '6 minutes' WHERE id=(SELECT id FROM ad_media_runs WHERE ${workerClaimGate('media','ad_media_runs.id')} AND status IN ('queued','running','starting') AND available_at<=now() AND (lease_until IS NULL OR lease_until<now()) ORDER BY available_at FOR UPDATE SKIP LOCKED LIMIT 1) RETURNING *`,[owner])).rows[0]||null;}
 
 /** A single fenced step runs on the disk-owning web service, not the diskless worker. */
-export async function stepAdMedia(pool:pg.Pool,id:string,owner:string,options:{now?:Date;env?:Record<string,string|undefined>;actor?:AdMediaActor;storage?:AdMediaStorage;existingIds?:Set<string>;existingVideoIds?:Set<string>;existingVideoCandidates?:Set<string>}={}){
+export async function stepAdMedia(pool:pg.Pool,id:string,owner:string,options:{now?:Date;env?:Record<string,string|undefined>;actor?:AdMediaActor;storage?:AdMediaStorage;existingIds?:Set<string>;existingVideoIds?:Set<string>;existingVideoCandidates?:Set<string>;onFailure?:(error:unknown)=>void}={}){
   const env=options.env||process.env;if(!mediaEnabled(env))return false;
-  const client=await pool.connect();let run:any;
+  const client=await pool.connect();let run:any,checkpointFinished=false;
   try{
     // One disk writer/transcode across service processes, with automatic release after a crash.
     if(!(await client.query("SELECT pg_try_advisory_lock(hashtext('ad-media-disk-step')) AS locked")).rows[0].locked)return false;
@@ -75,6 +76,7 @@ export async function stepAdMedia(pool:pg.Pool,id:string,owner:string,options:{n
     if(!run.enabled||run.current_revision!==run.revision||run.page_ids[0]!==run.page_id){await update("failed","changed");return true;}
     if(run.preview_policy==='legacy'&&run.status==='queued'&&!run.actor_run_id&&!run.reservation_id&&!run.requested_ids){
       await client.query("UPDATE ad_media_runs SET status='failed',error_kind='priority',finished_at=clock_timestamp() WHERE id=$1 AND lease_owner=$2",[id,owner]);
+      checkpointFinished=true;
       await enqueueAdMedia(pool,run.watchlist_id,options.now||new Date());return true;
     }
     const actor=options.actor||new AdMediaActor({env});
@@ -83,7 +85,7 @@ export async function stepAdMedia(pool:pg.Pool,id:string,owner:string,options:{n
       const known=(ids?:Set<string>)=>JSON.stringify((run.target_ids as string[]).filter(nativeId=>ids?.has(nativeId)));
       await client.query("UPDATE ad_media_runs SET known_media_ids=$2,known_video_ids=$3,known_video_candidates=$4 WHERE id=$1",[id,known(options.existingIds),known(options.existingVideoIds),known(options.existingVideoCandidates)]);
       const requested=(run.target_ids as string[]).filter(nativeId=>!(run.download_videos?options.existingVideoIds:options.existingIds)?.has(nativeId)).slice(0,run.cap);
-      if(!requested.length){await client.query("UPDATE ad_media_runs SET status='complete',finished_at=clock_timestamp() WHERE id=$1 AND lease_owner=$2",[id,owner]);await enqueueAdMedia(pool,run.watchlist_id,options.now||new Date());return true;}
+      if(!requested.length){await client.query("UPDATE ad_media_runs SET status='complete',finished_at=clock_timestamp() WHERE id=$1 AND lease_owner=$2",[id,owner]);checkpointFinished=true;await enqueueAdMedia(pool,run.watchlist_id,options.now||new Date());return true;}
       if(!env.APIFY_TOKEN?.trim()||/[\r\n]/.test(env.APIFY_TOKEN)||mediaGbpRate(env)===null){await update("paused","configuration");return true;}
       const disk=await (options.storage||new AdMediaStorage()).disk();
       await client.query("INSERT INTO ad_media_disk_health(id,data) VALUES(1,$1) ON CONFLICT(id) DO UPDATE SET data=excluded.data,measured_at=now()",[JSON.stringify(disk)]);
@@ -103,7 +105,7 @@ export async function stepAdMedia(pool:pg.Pool,id:string,owner:string,options:{n
         const started=await actor.start(scope);
         if(!providerId(started.id)||!providerId(started.defaultDatasetId))throw new AdMediaError("output");
         await client.query("UPDATE ad_media_runs SET status='running',actor_run_id=$3,dataset_id=$4,available_at=now() WHERE id=$1 AND lease_owner=$2",[id,owner,started.id,started.defaultDatasetId]);
-      }catch{await update("uncertain","uncertain");}
+      }catch(error){options.onFailure?.(error);await update("uncertain","uncertain");}
       return true;
     }
     // Read terminal state before the dataset tail, so a final append cannot be missed.
@@ -160,10 +162,15 @@ export async function stepAdMedia(pool:pg.Pool,id:string,owner:string,options:{n
       WHERE q.run_id=$1 AND NOT EXISTS(SELECT 1 FROM ad_media_creatives c WHERE c.workspace_id=r.workspace_id AND c.brand_key=r.brand_key AND c.page_id=r.page_id AND c.native_id=q.native_id AND EXISTS(SELECT 1 FROM jsonb_array_elements(c.assets)a WHERE a->>'role' IN ('image','poster')))
       ON CONFLICT(workspace_id,brand_key,page_id,native_id,day) DO UPDATE SET reason=excluded.reason,run_id=excluded.run_id,attempted_at=clock_timestamp()`,[id,state.status==='SUCCEEDED']);
     await client.query("UPDATE ad_media_runs SET status=$3,error_kind=COALESCE($4,error_kind),finished_at=clock_timestamp() WHERE id=$1 AND lease_owner=$2",[id,owner,state.status==="SUCCEEDED"?"complete":"failed",state.status==="SUCCEEDED"?null:"provider"]);
+    checkpointFinished=true;
     if(charged!==null)await enqueueAdMedia(pool,run.watchlist_id,options.now||new Date());
     return true;
   }catch(error){
     await client.query("ROLLBACK").catch(()=>{});
+    // A failed follow-up queue must not turn settled, completed work into a
+    // failed media attempt or overwrite its checkpoint and preview reasons.
+    if(checkpointFinished)throw error;
+    options.onFailure?.(error);
     if(run?.lookup_mode==='reprocess'&&error instanceof AdMediaError&&[404,410].includes(error.httpStatus||0)){
       await client.query("UPDATE ad_media_requests SET outcome='expired',returned_at=COALESCE(returned_at,clock_timestamp()) WHERE run_id=$1",[id]);
       await client.query("UPDATE ad_media_runs SET status='complete',error_kind='expired',finished_at=clock_timestamp() WHERE id=$1 AND lease_owner=$2",[id,owner]);
@@ -179,6 +186,7 @@ export async function stepAdMedia(pool:pg.Pool,id:string,owner:string,options:{n
        AND NOT EXISTS(SELECT 1 FROM ad_media_creatives c WHERE c.workspace_id=r.workspace_id AND c.brand_key=r.brand_key AND c.page_id=r.page_id AND c.native_id=q.native_id AND EXISTS(SELECT 1 FROM jsonb_array_elements(c.assets)a WHERE a->>'role' IN ('image','poster')))
       ON CONFLICT(workspace_id,brand_key,page_id,native_id,day) DO UPDATE SET reason=excluded.reason,run_id=excluded.run_id,attempted_at=clock_timestamp()`,[id]).catch(()=>{});
     if(run)await client.query("UPDATE ad_media_runs SET status='paused',error_kind=$3 WHERE id=$1 AND lease_owner=$2",[id,owner,error instanceof AdMediaError?error.kind:"provider"]);
+    if(!(error instanceof AdMediaError))throw error;
     return true;
   }finally{await client.query("SELECT pg_advisory_unlock(hashtext('ad-media-disk-step'))").catch(()=>{});client.release();}
 }

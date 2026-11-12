@@ -16,6 +16,7 @@ import {databaseStorageHealth} from "./storage-health.js";
 import {missingStorage} from "../../shared/storage-health.js";
 import {mediaDiskHealth} from "../ad-media/storage.js";
 import {processMemoryHealth} from "./process-memory.js";
+import {attachWorkerRoutes} from "./worker-api.js";
 type BudgetPool = ReturnType<typeof infrastructureDatabase>;
 
 export function attachBudgetRoutes(app: Express, getPool: () => BudgetPool = infrastructureDatabase) {
@@ -41,6 +42,7 @@ export function attachBudgetRoutes(app: Express, getPool: () => BudgetPool = inf
 }
 
 export function attachInfrastructure(app: Express, db: DatabaseSync, getPool:()=>BudgetPool=infrastructureDatabase,pageOptions:PageLookupApiOptions={}) {
+  attachWorkerRoutes(app,db,getPool);
   attachBudgetRoutes(app);
   attachMetaPageCandidates(app,db,getPool,pageOptions);
   app.get("/api/infrastructure/status", async (_req,res) => {

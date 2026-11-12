@@ -62,7 +62,19 @@ const PUBLIC_OBSERVATIONS_SQL=`SELECT DISTINCT ON(o.platform,o.native_id) o.nati
 export async function visitPublicCategoryInputs(pool:pg.Pool,workspace:string,visit:(row:PublicObservation)=>void,client?:pg.PoolClient){
  const payload="COALESCE(o.raw_payload,p.raw_payload)",fields=["ad_creative_bodies","ad_creative_link_titles","ad_creative_link_captions","ad_creative_link_urls"];
  const projection=`jsonb_build_object(${fields.map(field=>`'${field}',${payload}->'${field}'`).join(",")}) AS raw_payload`;
- await visitDatabaseRows<PublicObservation>(pool,PUBLIC_OBSERVATIONS_SQL.replace(`${payload} AS raw_payload`,projection).replace("WHERE o.workspace_id=$1","WHERE w.enabled AND o.workspace_id=$1"),[workspace],visit,100000,client);
+ // Choose narrow history keys before extracting copy. Sorting every historical
+ // payload repeatedly can exhaust database work memory during queue refill.
+ const sql=`WITH latest AS MATERIALIZED (
+ SELECT DISTINCT ON(o.platform,o.native_id) o.platform,o.native_id,o.run_id,w.brand_key,w.page_ids
+ FROM ad_observations o JOIN public_ads a USING(platform,native_id) JOIN collection_runs r ON r.id=o.run_id JOIN watchlists w ON w.id=r.watchlist_id
+ WHERE w.enabled AND o.workspace_id=$1 AND w.workspace_id=$1 AND w.purpose='brand' AND w.brand_key IS NOT NULL AND r.config->>'revision'=w.revision::text
+ ORDER BY o.platform,o.native_id,o.observed_at DESC,o.run_id DESC LIMIT 100001)
+ SELECT o.native_id,o.observed_at,o.last_confirmed_at,${projection},a.advertiser_id,a.first_seen_at,a.start_time,a.stop_time,l.brand_key,l.page_ids
+ FROM latest l JOIN ad_observations o ON o.platform=l.platform AND o.native_id=l.native_id AND o.run_id=l.run_id
+ JOIN public_ads a ON a.platform=l.platform AND a.native_id=l.native_id
+ LEFT JOIN ad_observations p ON p.platform=o.platform AND p.native_id=o.native_id AND p.run_id=o.raw_payload_run_id AND p.workspace_id=o.workspace_id
+ ORDER BY o.platform,o.native_id`;
+ await visitDatabaseRows<PublicObservation>(pool,sql,[workspace],visit,100000,client);
 }
 export async function readPublicCreatives(pool:pg.Pool,workspaceId:string,creatives:BrowserCreative[],brand:CreativeBrowserResponse["brand"],competitors:CreativeBrowserResponse["competitors"],client?:pg.PoolClient):Promise<BrowserCreative[]>{
   const merge=publicEvidenceMerger(creatives,brand,competitors);
