@@ -2,25 +2,32 @@ import type pg from "pg";
 import type {BrowserCreative,CreativeBrowserResponse,BrowserFilters} from "../../shared/creative-browser.js";
 import type {CreativeReadModel} from "../../shared/creative-read-model.js";
 import {researchWindow} from "../../shared/creative-research.js";
-import {PUBLIC_ROWS_SQL} from "./public-rows-sql.js";
+import {readIndexProgress,readLatestCreativeFallback} from "./creative-index-read.js";
 import {primaryCategories} from "../../shared/public-comparisons.js";
 import type {Brand} from "../../shared/types.js";
 import {ANGLE_VALUES,CLAIM_TYPE_VALUES,FORMAT_VALUES,HOOK_TYPE_VALUES,OFFER_TYPE_VALUES} from "../../shared/creative-taxonomy.js";
 
 /** Only SQL contains the full metadata relation. Node receives pages and small groups. */
 const ownedDefaults={adId:"",nativeId:"",brandId:"",brandName:"",title:"",copy:"",sourceUrl:null,mediaKind:"unknown",durationSeconds:null,thumbnailUrl:null,videoUrl:null,imageUrls:[],imageCount:0,mediaAvailable:false,mediaStatus:"not-stored",analysis:null,creativeFormat:null,hookType:null,angle:null,offerType:null,ugc:null,creatorEvidence:[],partnershipAttribution:null,deliveryStatus:"unknown",deliveryStartAt:null,deliveryStopAt:null,observedAt:null,firstObservedAt:null,daysRunning:null,daysRunningAsOf:null,daysRunningBasis:null,searchText:"",platform:"Meta",owned:true,workspaceBrand:true,sourceKind:"owned",publicEvidence:false,hasReporting:true,placements:[],score:null,performance:[],scenes:[]};
-export const INDEX_ROWS_SQL=`${PUBLIC_ROWS_SQL}, owned_names AS MATERIALIZED (
+export const INDEX_ROWS_SQL=`WITH state AS MATERIALIZED (
+ SELECT c.brand_key,c.native_id,
+ bool_or(EXISTS(SELECT 1 FROM jsonb_array_elements(c.assets)a WHERE a->>'role' IN ('image','poster') AND NOT EXISTS(SELECT 1 FROM ad_media_file_checks f WHERE f.workspace_id=c.workspace_id AND f.artifact_id=a->'ref'->>'artifactId' AND NOT f.available))) AS image,
+ bool_or(EXISTS(SELECT 1 FROM jsonb_array_elements(c.assets)a WHERE a->>'role'='video' AND NOT EXISTS(SELECT 1 FROM ad_media_file_checks f WHERE f.workspace_id=c.workspace_id AND f.artifact_id=a->'ref'->>'artifactId' AND NOT f.available))) AS video,
+ (array_agg(c.format ORDER BY c.created_at DESC) FILTER(WHERE c.format IS NOT NULL))[1] AS media_format,NULL::numeric AS uk_reach
+ FROM ad_media_creatives c JOIN watchlists w ON w.workspace_id=c.workspace_id AND w.brand_key=c.brand_key AND w.page_ids @> to_jsonb(ARRAY[c.page_id])
+ WHERE c.workspace_id=$1 AND c.brand_key=ANY($4::text[]) GROUP BY c.brand_key,c.native_id
+), owned_names AS MATERIALIZED (
  SELECT DISTINCT ON(d.platform,d.ad_id) d.platform,d.ad_id,d.pulled_at,d.data->>'adName' AS name,d.data->>'accountId' AS account
  FROM owned_ad_days d JOIN owned_accounts a ON a.id=d.owned_account_id WHERE a.workspace_id=$1 AND d.day BETWEEN $5::date AND $6::date ORDER BY d.platform,d.ad_id,d.pulled_at DESC
 ), valid_index AS MATERIALIZED (
  SELECT i.* FROM web_creative_index i WHERE i.workspace_id=$1 AND i.brand_key=ANY($4::text[]) AND (
- i.source_type='legacy' AND i.source_version=(SELECT legacy_generation FROM web_creative_index_state WHERE workspace_id=$1)
+ i.source_type='legacy'
  OR i.source_type='official' AND EXISTS(SELECT 1 FROM watchlists w WHERE w.id=i.watchlist_id AND w.workspace_id=$1 AND w.brand_key=i.brand_key AND w.revision=i.revision AND w.page_ids @> to_jsonb(ARRAY[i.page_id])))
 ), legacy_index AS MATERIALIZED (SELECT * FROM valid_index WHERE source_type='legacy'), chosen AS (
  SELECT DISTINCT ON(brand_key,platform,native_id) * FROM valid_index ORDER BY brand_key,platform,native_id,CASE WHEN source_type='official' THEN 0 ELSE 1 END
 ), merged AS (
  SELECT b.brand_key,b.platform,b.native_id,b.source_type,b.watchlist_id,b.page_id,
-  (b.data || COALESCE(l.data,'{}'::jsonb) || jsonb_build_object(
+  CASE WHEN l.native_id IS NULL THEN b.data ELSE (b.data || COALESCE(l.data,'{}'::jsonb) || jsonb_build_object(
    'copy',COALESCE(NULLIF(l.data->>'copy',''),b.data->>'copy',''),
    'cardTitle',b.data->'cardTitle','versionsCopyKey',b.data->'versionsCopyKey','versionsHashKey',b.data->'versionsHashKey',
    'searchText',concat(l.data->>'searchText',E'\\n',b.data->>'searchText'),
@@ -35,23 +42,25 @@ export const INDEX_ROWS_SQL=`${PUBLIC_ROWS_SQL}, owned_names AS MATERIALIZED (
    'daysRunning',COALESCE(NULLIF(l.data->'daysRunning','null'),b.data->'daysRunning'),
    'adFormat',CASE WHEN s.media_format='catalogue' THEN 'catalogue' ELSE COALESCE(b.data->>'adFormat',l.data->>'adFormat',CASE s.media_format WHEN 'image' THEN 'static_image' ELSE s.media_format END) END,
    'productCategories',COALESCE(b.data->'productCategories',l.data->'productCategories','[]'::jsonb)
-  )) AS data,COALESCE(l.has_analysis,b.has_analysis) AS has_analysis,COALESCE(l.claims,b.claims) AS claims,COALESCE(l.cta,b.cta) AS cta,COALESCE(l.talking,b.talking) AS talking,
+  )) END AS data,
+  CASE WHEN s.media_format='catalogue' THEN 'catalogue' ELSE COALESCE(b.data->>'adFormat',l.data->>'adFormat',CASE s.media_format WHEN 'image' THEN 'static_image' ELSE s.media_format END) END AS effective_format,
+  COALESCE(l.has_analysis,b.has_analysis) AS has_analysis,COALESCE(l.claims,b.claims) AS claims,COALESCE(l.cta,b.cta) AS cta,COALESCE(l.talking,b.talking) AS talking,
   COALESCE(s.image,false) OR COALESCE(l.data->>'thumbnailUrl',CASE WHEN b.source_type='legacy' THEN b.data->>'thumbnailUrl' END) IS NOT NULL AS image,
   COALESCE(s.video,false) OR COALESCE(l.data->>'videoUrl',CASE WHEN b.source_type='legacy' THEN b.data->>'videoUrl' END) IS NOT NULL AS video,
   COALESCE(s.uk_reach,(SELECT sum((entry->>'reach')::bigint) FROM jsonb_array_elements(COALESCE(NULLIF(b.data#>'{publicReach,locations,value}','null'),'[]'))entry WHERE entry->>'country'='GB')) AS uk_reach
  FROM chosen b LEFT JOIN legacy_index l ON b.source_type='official' AND l.brand_key=b.brand_key AND l.platform=b.platform AND l.native_id=b.native_id
  LEFT JOIN state s ON s.brand_key=b.brand_key AND s.native_id=b.native_id AND b.platform IN ('Meta','Facebook','Instagram')
 ), objects AS (
- SELECT b.data||CASE WHEN n.ad_id IS NOT NULL THEN '{"owned":true,"sourceKind":"owned","hasReporting":true}'::jsonb ELSE '{}'::jsonb END AS data,b.brand_key,b.platform,b.native_id,b.source_type,b.image,b.video,b.uk_reach,b.has_analysis,b.claims,b.cta,b.talking
+ SELECT b.data||CASE WHEN n.ad_id IS NOT NULL THEN '{"owned":true,"sourceKind":"owned","hasReporting":true}'::jsonb ELSE '{}'::jsonb END AS data,b.brand_key,b.platform,b.native_id,b.source_type,b.image,b.video,b.uk_reach,b.has_analysis,b.claims,b.cta,b.talking,b.effective_format
  FROM merged b LEFT JOIN owned_names n ON b.brand_key=$1 AND n.platform=b.platform AND n.ad_id=b.native_id
  UNION ALL
- SELECT '${JSON.stringify(ownedDefaults)}'::jsonb||jsonb_build_object('adId',concat('owned:',$1,':',n.platform,':',n.account,':',n.ad_id),'nativeId',n.ad_id,'brandId',$1,'brandName',$7::text,'platform',n.platform,'title',COALESCE(n.name,concat('Ad ',n.ad_id)),'searchText',COALESCE(n.name,''),'observedAt',to_char(n.pulled_at AT TIME ZONE 'UTC','YYYY-MM-DD"T"HH24:MI:SS.MS"Z"'),'sourceUrl',CASE WHEN n.platform='Meta' AND n.ad_id~'^\\d+$' THEN concat('https://www.facebook.com/ads/library/?id=',n.ad_id) END),$1,n.platform,n.ad_id,'owned',false,false,NULL::numeric,false,'[]'::jsonb,NULL::text,NULL::boolean
+ SELECT '${JSON.stringify(ownedDefaults)}'::jsonb||jsonb_build_object('adId',concat('owned:',$1,':',n.platform,':',n.account,':',n.ad_id),'nativeId',n.ad_id,'brandId',$1,'brandName',$7::text,'platform',n.platform,'title',COALESCE(n.name,concat('Ad ',n.ad_id)),'searchText',COALESCE(n.name,''),'observedAt',to_char(n.pulled_at AT TIME ZONE 'UTC','YYYY-MM-DD"T"HH24:MI:SS.MS"Z"'),'sourceUrl',CASE WHEN n.platform='Meta' AND n.ad_id~'^\\d+$' THEN concat('https://www.facebook.com/ads/library/?id=',n.ad_id) END),$1,n.platform,n.ad_id,'owned',false,false,NULL::numeric,false,'[]'::jsonb,NULL::text,NULL::boolean,NULL::text
  FROM owned_names n WHERE NOT EXISTS(SELECT 1 FROM merged b WHERE b.brand_key=$1 AND b.platform=n.platform AND b.native_id=n.ad_id)
 ), indexed AS MATERIALIZED (
  SELECT *,data->>'adId' AS ad_id,data->>'brandName' AS brand_name,(data->>'workspaceBrand')::boolean AS own,
  (data->>'publicEvidence')::boolean AS public,(data->>'owned')::boolean AS owned,
  data->>'observedAt' AS observed,data->>'deliveryStartAt' AS started,data->>'deliveryStopAt' AS stopped,data->>'deliveryStatus' AS status,
- (data->>'daysRunning')::integer AS days,data->>'adFormat' AS format,COALESCE(NULLIF(data->'productCategories','null'),'[]') AS categories
+ (data->>'daysRunning')::integer AS days,effective_format AS format,COALESCE(NULLIF(data->'productCategories','null'),'[]') AS categories
  FROM objects
 )`;
 export interface PageQuery extends BrowserFilters {screen?:string;offset?:string;limit?:string;previews?:string;chartFormat?:string;window?:string;refs?:string}
@@ -64,7 +73,7 @@ export async function readCreativePage(pool:pg.Pool,brand:Brand,competitors:Crea
  try{
  await client.query("BEGIN");
  if(query.window==='research'){
-  const latest=(await client.query(`SELECT max(i.data->>'observedAt') AS last FROM web_creative_index i WHERE i.workspace_id=$1 AND i.brand_key=ANY($2::text[]) AND COALESCE((i.data->>'publicEvidence')::boolean,false) AND (i.data->>'observedAt')::timestamptz<=$3::timestamptz AND (i.source_type='official' AND EXISTS(SELECT 1 FROM watchlists w WHERE w.id=i.watchlist_id AND w.revision=i.revision AND w.page_ids @> to_jsonb(ARRAY[i.page_id])) OR i.source_type='legacy' AND i.source_version=(SELECT legacy_generation FROM web_creative_index_state WHERE workspace_id=$1))`,[brand.id,targets,now])).rows[0].last;
+  const latest=(await client.query(`SELECT max(i.data->>'observedAt') AS last FROM web_creative_index i WHERE i.workspace_id=$1 AND i.brand_key=ANY($2::text[]) AND COALESCE((i.data->>'publicEvidence')::boolean,false) AND (i.data->>'observedAt')::timestamptz<=$3::timestamptz AND (i.source_type='official' AND EXISTS(SELECT 1 FROM watchlists w WHERE w.id=i.watchlist_id AND w.revision=i.revision AND w.page_ids @> to_jsonb(ARRAY[i.page_id])) OR i.source_type='legacy')`,[brand.id,targets,now])).rows[0].last;
   const reporting=researchWindow(latest?[{publicEvidence:true,observedAt:latest} as BrowserCreative]:[],query.from,query.to,now);if(reporting.from&&reporting.to){values[4]=reporting.from;values[5]=reporting.to;}
  }
  // Use complete hash joins for the metadata relation, then read its small
@@ -145,7 +154,7 @@ export async function readCreativePage(pool:pg.Pool,brand:Brand,competitors:Crea
    page.rows=[...new Map([...neighbours,...similar,selected.data].map((r:BrowserCreative)=>[r.adId,r])).values()];
   }else page.rows=[];
  }
- if(!['creatives','detail','winners','overview','data'].includes(query.screen||'')){
+ if(['brands','competitors','formats','patterns','audience','briefs'].includes(query.screen||'')){
   const quoted=(items:readonly string[])=>`ARRAY[${items.filter(v=>!['unknown','unsure'].includes(v)).map(v=>`'${v.replaceAll("'","''")}'`).join(',')}]::text[]`;
   const dimensions=[['format','creativeFormat',FORMAT_VALUES],['hook','hookType',HOOK_TYPE_VALUES],['angle','angle',ANGLE_VALUES],['offer','offerType',OFFER_TYPE_VALUES],['claim',null,CLAIM_TYPE_VALUES]] as const;
   const kinds=`CROSS JOIN LATERAL (VALUES('all',true),('active',status='active'),('launches',left(started,10) BETWEEN ${from} AND ${to}),('previousLaunches',left(started,10) BETWEEN ${previousFrom} AND ${previousTo})) k(kind,eligible)`;
@@ -161,6 +170,15 @@ export async function readCreativePage(pool:pg.Pool,brand:Brand,competitors:Crea
   ), counts AS (SELECT group_format,brand_key,kind,value,count(*) AS n FROM phrases GROUP BY group_format,brand_key,kind,value), ranked AS (SELECT *,row_number() OVER(PARTITION BY group_format,brand_key,kind ORDER BY n DESC,value) AS position FROM counts)
    SELECT group_format AS format,brand_key AS "brandId",max(value) FILTER(WHERE kind='claim') AS claim,max(value) FILTER(WHERE kind='cta') AS cta,max(value) FILTER(WHERE kind='offer') AS offer FROM ranked WHERE position=1 GROUP BY group_format,brand_key`,values)).rows;
   if(query.screen==='formats')model.production=(await sqlQuery(client,`${groupedScopeSql}, ranked AS (SELECT s.*,b.show,row_number() OVER(PARTITION BY group_format,b.show ORDER BY days DESC,ad_id) AS position FROM scoped s CROSS JOIN LATERAL (VALUES('all'),(CASE WHEN own THEN 'yours' ELSE 'competitors' END)) b(show) WHERE days IS NOT NULL), top AS (SELECT * FROM ranked WHERE position<=5) SELECT group_format AS format,show,percentile_cont(.5) WITHIN GROUP(ORDER BY (data->>'durationSeconds')::double precision) FILTER(WHERE data->>'mediaKind'='video') AS duration,count(*) FILTER(WHERE data->>'mediaKind'='video' AND data->>'durationSeconds' IS NOT NULL)::integer AS "durationKnown",(100.0*count(*) FILTER(WHERE talking)/NULLIF(count(talking),0))::float8 AS "talkingShare",count(talking)::integer AS "talkingKnown" FROM top GROUP BY group_format,show`,values)).rows;
+ }
+ model.indexing=await readIndexProgress(client,brand.id,targets);
+ if(summary.total===0&&model.indexing.total>0){
+  page.rows=await readLatestCreativeFallback(client,brand,competitors,query);
+  model.page={offset:0,limit:48,total:page.rows.length,totalAll:page.rows.length,hasNext:false};
+  model.indexing.fallback=true;
+  // These are the bounded preview sample, not the workspace totals.
+  model.coverage={yours:page.rows.filter((r:BrowserCreative)=>r.workspaceBrand).length,ads:page.rows.length,images:0,videos:0,tagged:0,formatKnown:0,owned:0,official:page.rows.length};
+  model.window=researchWindow(page.rows,query.from,query.to,now);
  }
  await client.query('COMMIT');
  return {rows:page.rows,model,dateRange:{from:summary.first||null,to:summary.last||null},lastChecked:summary.last||null};

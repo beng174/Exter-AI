@@ -1,0 +1,20 @@
+{
+  "screens": [
+    "brands",
+    "competitors",
+    "creatives",
+    "formats",
+    "patterns",
+    "audience",
+    "winners",
+    "briefs",
+    "creators",
+    "scores",
+    "data"
+  ],
+  "partialIndex": true,
+  "controlledError": true,
+  "browserErrors": [],
+  "externalRequests": [],
+  "writes": []
+}

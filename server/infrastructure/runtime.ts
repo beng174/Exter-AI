@@ -1,3 +1,4 @@
+import {workCreativeIndexOnce,enqueueAllCreativeIndexes} from "./creative-index-jobs.js";
 import {workOnboardingOnce} from "../onboarding/worker.js";
 import { workCreatorDiscoveryOnce } from "../creators/discovery-jobs.js";
 import { retainCreatorPreviews } from "../creators/discovery-previews.js";
@@ -16,7 +17,7 @@ try {
     onProgress: phase => console.log(`Database initialisation: ${phase}.`),
     onRetry: error => console.warn(`${migrationDiagnostic(error)} Retrying within the startup deadline.`),
   });
-  if (role === "scheduler") await schedule(pool);
+  if (role === "scheduler") {await schedule(pool);await enqueueAllCreativeIndexes(pool);}
   else if (role === "migrate") { /* schema is ready */ }
   else if (role === "worker") {
     const shutdown = new AbortController();
@@ -24,6 +25,7 @@ try {
     process.once("SIGINT", () => shutdown.abort());
     console.log(JSON.stringify({event:"worker_started",failureLimit:3}));
     await runWorkerLoop(pool,[
+      {type:"index",run:observer=>workCreativeIndexOnce(pool,observer)},
       {type:"onboarding",run:observer=>workOnboardingOnce(pool,observer)},
       {type:"collection",run:observer=>workOnce(pool,undefined,observer)},
       {type:"owned",run:observer=>workOwnedOnce(pool,observer)},

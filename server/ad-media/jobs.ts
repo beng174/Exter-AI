@@ -1,3 +1,4 @@
+import {enqueueCreativeIndex} from "../infrastructure/creative-index-jobs.js";
 import {workerClaimGate} from "../infrastructure/worker-recovery.js";
 import {randomUUID} from "node:crypto";
 import type pg from "pg";
@@ -163,6 +164,7 @@ export async function stepAdMedia(pool:pg.Pool,id:string,owner:string,options:{n
       ON CONFLICT(workspace_id,brand_key,page_id,native_id,day) DO UPDATE SET reason=excluded.reason,run_id=excluded.run_id,attempted_at=clock_timestamp()`,[id,state.status==='SUCCEEDED']);
     await client.query("UPDATE ad_media_runs SET status=$3,error_kind=COALESCE($4,error_kind),finished_at=clock_timestamp() WHERE id=$1 AND lease_owner=$2",[id,owner,state.status==="SUCCEEDED"?"complete":"failed",state.status==="SUCCEEDED"?null:"provider"]);
     checkpointFinished=true;
+    await enqueueCreativeIndex(pool,run.workspace_id);
     if(charged!==null)await enqueueAdMedia(pool,run.watchlist_id,options.now||new Date());
     return true;
   }catch(error){

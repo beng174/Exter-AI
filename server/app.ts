@@ -1,3 +1,5 @@
+import {attachCreativeIndexStep} from "./infrastructure/creative-index-jobs.js";
+import {apiFailureLogging,apiErrorReason} from "./infrastructure/api-errors.js";
 import {attachOnboarding,attachOnboardingStep} from "./onboarding/api.js";
 import { attachCreatorDiscovery } from "./creators/discovery-api.js";
 import { attachAccuracy } from "./accuracy/api.js";
@@ -7,6 +9,7 @@ import { attachBrandLogos } from "./brand-logos.js";
 import { attachSampleWorkspace } from "./sample.js";
 import { attachCreativeBrowser } from "./demo/creative-browser.js";
 import { attachOwnedAccounts } from "./owned/api.js";
+import {infrastructureDatabase} from "./infrastructure/database.js";
 import { attachInfrastructure } from "./infrastructure/api.js";
 import { basicAuth } from "./auth.js";
 import { protectSettingsMutation } from "./request-guard.js";
@@ -249,9 +252,11 @@ function parseImportRow(row: unknown, brand: Brand): Ad {
 }
 export function createApp(db: DatabaseSync = openDatabase()) {
   const app = express();
+  app.use(apiFailureLogging());
   const authenticate = basicAuth();
   const broker = new KernelMediaBroker(db, { video: () => app.locals.videoAnalysis, images: () => app.locals.geminiSmoke.images });
   attachKernelArtifactDownload(app, broker);
+  attachCreativeIndexStep(app,db,infrastructureDatabase);
   attachMediaStep(app,db);
   attachCategoryStep(app,db);
   attachOnboardingStep(app,db);
@@ -622,7 +627,7 @@ export function createApp(db: DatabaseSync = openDatabase()) {
         return;
       }
       console.error("API error:", error);
-      res.status(500).json({ error: "Unexpected server error." });
+      res.status(500).json({ error: apiErrorReason(error) });
     },
   );
   return app;

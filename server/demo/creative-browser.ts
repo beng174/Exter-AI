@@ -1,6 +1,6 @@
 import {ownedPagePerformance} from "../infrastructure/owned-read.js";
 import {checkedRetainedMedia} from "../ad-media/file-health.js";
-import {refreshCreativeIndex} from "../infrastructure/creative-index.js";
+import {apiErrorReason} from "../infrastructure/api-errors.js";
 import {readCreativePage,type PageQuery} from "../infrastructure/creative-pages.js";
 import {sqliteCreativePage} from "../infrastructure/sqlite-creative-page.js";
 import {enrichLikelihood} from "../accuracy/predictions.js";
@@ -67,8 +67,11 @@ export function attachCreativeBrowser(app: Express, db: DatabaseSync, options: B
             const sources:CreativeBrowserResponse["sources"]=competitors.map(item=>({brandId:item.brandId,name:item.name,status:item.status}));
             let mediaReadStatus:CreativeBrowserResponse["mediaReadStatus"]="not_configured",categoryReadStatus:CreativeBrowserResponse["categoryReadStatus"]="not_configured";
             let metaSource:MetaSourceHealth={status:metaLibraryEnabled()?"unavailable":"off",enabled:metaLibraryEnabled(),lastSuccessfulCheck:null,message:metaLibraryEnabled()?"Collection database is not configured.":"Live collection is off. Saved evidence is retained."};
-            if(pool)await refreshCreativeIndex(pool,db,brand,competitors,gallery,disconnected.signal);
-            const page=pool?await readCreativePage(pool,brand,competitors,query,now):await sqliteCreativePage(db,brand,competitors,query,gallery);
+            let page=pool?await readCreativePage(pool,brand,competitors,query,now):await sqliteCreativePage(db,brand,competitors,query,gallery);
+            if(pool&&!page.rows.length&&page.model.page.totalAll===0&&page.model.indexing?.total===0){
+                const local=await sqliteCreativePage(db,brand,competitors,{...query,limit:"48"},gallery);
+                if(local.rows.length)page={...local,model:{...local.model,indexing:{indexed:0,total:local.model.page.totalAll,status:page.model.indexing.status,fallback:true}}};
+            }
             let creatives=page.rows;
             if((query as Record<string,string>).window==="research" && page.model.window.from && page.model.window.to){from=page.model.window.from;to=page.model.window.to;}
             if(pool){
@@ -100,8 +103,9 @@ export function attachCreativeBrowser(app: Express, db: DatabaseSync, options: B
             await writeJsonRows(res,{sql:page.model,mediaReadStatus,categoryReadStatus,metaSource,brand:{id:brand.id,name:brand.name,domain:brand.domain,primaryCategories:primaryCategories(brand)},creatives,competitors,sources,ownedStatus,dateRange:page.dateRange,lastChecked:page.lastChecked,reportingRange:{from,to}} satisfies CreativeBrowserResponse,"creatives",{gzip:req.acceptsEncodings("gzip")==="gzip"});
         }
         catch(error) {
+            res.locals.apiFailureReason=apiErrorReason(error);
             options.onReadError?.(error);
-            if(!res.destroyed&&!res.headersSent)res.status(503).json({ error: "Stored creative evidence is unavailable. No source collection or analysis was started." });
+            if(!res.destroyed&&!res.headersSent)res.status(503).json({ error: `Saved ads could not be read: ${apiErrorReason(error)}` });
             else if(!res.destroyed)res.destroy();
         }finally{res.off("close",onClose);release();}
     });

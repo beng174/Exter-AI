@@ -1,3 +1,4 @@
+import {enqueueCreativeIndex} from "./creative-index-jobs.js";
 import type {WorkerObserver} from "./worker-diagnostics.js";
 import {workerClaimGate,clearWorkerFailures} from "./worker-recovery.js";
 import {scheduleOnboarding} from "../onboarding/queue.js";
@@ -145,6 +146,7 @@ export async function workOnce(pool: pg.Pool, connector?: MetaLibraryConnector, 
   if(state==="complete"){
     try{const completed=(await pool.query("SELECT r.watchlist_id,w.workspace_id FROM collection_runs r JOIN watchlists w ON w.id=r.watchlist_id WHERE r.id=$1",[job.id])).rows[0];
       if(completed){
+        await enqueueCreativeIndex(pool,completed.workspace_id);
         if((options.env||process.env).EXTER_AD_MEDIA_ENABLED==="true")await enqueueAdMedia(pool,completed.watchlist_id,new Date(),job.id);
         if(categoryConfigured(options.env||process.env))await enqueueCategoryBatch(pool,completed.workspace_id);
       }

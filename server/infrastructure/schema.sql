@@ -320,3 +320,15 @@ ALTER TABLE ad_media_requests ADD COLUMN IF NOT EXISTS reprocess_version text;
 ALTER TABLE ad_media_creatives ADD COLUMN IF NOT EXISTS product jsonb;
 ALTER TABLE ad_media_creatives ADD COLUMN IF NOT EXISTS diagnostics jsonb NOT NULL DEFAULT '[]';
 ALTER TABLE ad_media_runs ADD COLUMN IF NOT EXISTS preview_policy text NOT NULL DEFAULT 'legacy';
+
+-- Durable, independently committed background read-index checkpoints.
+CREATE TABLE IF NOT EXISTS creative_index_jobs (
+ id text PRIMARY KEY,workspace_id text NOT NULL UNIQUE,
+ status text NOT NULL DEFAULT 'queued' CHECK(status IN ('queued','running','complete','paused')),
+ checkpoint jsonb,processed integer NOT NULL DEFAULT 0,
+ requested_at timestamptz NOT NULL DEFAULT clock_timestamp(),started_at timestamptz,
+ finished_at timestamptz,available_at timestamptz NOT NULL DEFAULT now(),
+ lease_owner text,lease_until timestamptz
+);
+ALTER TABLE worker_job_failures DROP CONSTRAINT IF EXISTS worker_job_failures_job_type_check;
+ALTER TABLE worker_job_failures ADD CONSTRAINT worker_job_failures_job_type_check CHECK(job_type IN ('onboarding','collection','owned','media','creators','categories','kernel','index'));

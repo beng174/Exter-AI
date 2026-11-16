@@ -9,6 +9,7 @@ export interface SqlDimensionStats {format:string;brandId:string;kind:string;dim
 export interface SqlProductionStats {format:string;show:string;duration:number|null;durationKnown:number;talkingShare:number|null;talkingKnown:number}
 export interface SqlAudienceCell {key:string;brandId:string;brand:string;country:string;age:string;gender:string;reach:number;ads:number}
 export interface CreativeReadModel {
+ indexing?:{indexed:number;total:number;status:string;fallback?:boolean};
  detailOrder?:string[];
  detailSimilarTotal?:number;
  page:{offset:number;limit:number;total:number;totalAll:number;hasNext:boolean};
