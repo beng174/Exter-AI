@@ -1,10 +1,11 @@
+import {useIndexRefresh} from "../../hooks/useIndexRefresh";
 import {IndexingNotice} from "../ui/IndexingNotice";
 import {publicMediaCoverage} from "../../../shared/ad-media";
 import {workspaceRead} from "../../lib/workspace-read";
 import {invalidateWorkspaceReads} from "../../lib/read-cache";
 import { Caveat } from "../ui/Caveat";
 import { Disabled } from "../workspace/ActionWorkspace";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { Search, ChevronDown, Plus, X } from "lucide-react";
 import { browserFilters, filterBrowserCreatives, type BrowserFilters, type BrowserCreative, type CreativeBrowserResponse } from "../../../shared/creative-browser";
 import { NAVIGATION_EVENT, openCreativeRoute, type resolveNavigation } from "../../navigation";
@@ -21,10 +22,12 @@ export function CreativeBrowserPage({ brandId, route, refresh }: {
     refresh: number;
 }) {
     const [data, setData] = useState<CreativeBrowserResponse | null>(null), [error, setError] = useState<string|null>(null), [loading, setLoading] = useState(true), [attempt, setAttempt] = useState(0), [datesOpen, setDatesOpen] = useState(false), [expanded,setExpanded]=useState(false), [visibleCount,setVisibleCount]=useState(8);
+    const loadedKey=useRef<string|null>(null);
     const filters = browserFilters(route.url.searchParams);
     useEffect(()=>setVisibleCount(8),[JSON.stringify(filters)]);
     useEffect(() => {
-        let active = true;
+        const key=JSON.stringify([brandId,filters,route.id,route.adId]);
+        let active = true;if(loadedKey.current!==key)setData(null);
         setLoading(true);
         setError(null);
         const query = new URLSearchParams(Object.entries(filters).filter(([,value])=>Boolean(value)) as [string,string][]);
@@ -36,10 +39,9 @@ export function CreativeBrowserPage({ brandId, route, refresh }: {
         if (filters.to)
             query.set("to", filters.to);
         const lease=workspaceRead<CreativeBrowserResponse>(`/api/brands/${encodeURIComponent(brandId)}/creatives?${query}`,true);
-        lease.promise.then(value => { if (active)
-            setData(value); }).catch(reason => { if (active) {
-            setData(null);
-            setError(reason instanceof Error?reason.message:"Saved ads could not be read.");
+        lease.promise.then(value => { if (active){loadedKey.current=key;
+            setData(value);} }).catch(reason => { if (active) {
+            setError(reason instanceof Error?reason.message:"Saved ads could not be read.");if(loadedKey.current!==key)setData(null);
         } }).finally(() => { if (active)
             setLoading(false); });
         return () => { active = false; lease.release(); };
@@ -50,9 +52,9 @@ export function CreativeBrowserPage({ brandId, route, refresh }: {
         else
             url.searchParams.set(key, value);
     } window.history.pushState({}, "", url); window.dispatchEvent(new Event(NAVIGATION_EVENT)); };
-    useEffect(()=>{if(!data?.sql?.indexing||data.sql.indexing.status==='complete')return;const timer=window.setInterval(()=>{invalidateWorkspaceReads();setAttempt(value=>value+1);},5000);return()=>window.clearInterval(timer);},[data?.sql?.indexing?.status,data?.brand.id]);
-    if (error)
-        return <div className="creative-browser"><PageHeader title={route.id === "creative" ? "Creative detail" : "Creatives"}/><Unavailable reason={error} action={{label:"Retry",onClick:()=>(invalidateWorkspaceReads(),setAttempt(value=>value+1))}}/><button className="button secondary" onClick={() => change({ from: "", to: "" })}>Clear dates and retry</button></div>;
+    useIndexRefresh(Boolean(data?.sql?.indexing&&data.sql.indexing.status!=='complete'),loading,attempt,()=>setAttempt(value=>value+1));
+    if (error&&!data)
+        return <div className="creative-browser"><PageHeader title={route.id === "creative" ? "Creative detail" : "Creatives"}/><Unavailable reason={error} action={{label:"Retry",onClick:()=>(invalidateWorkspaceReads(),setAttempt(value=>value+1))}}/>{/reporting dates|reporting start/.test(error)&&<button className="button secondary" onClick={() => change({ from: "", to: "" })}>Clear dates and retry</button>}</div>;
     if (!data)
         return <div className="creative-browser" aria-busy="true"><PageHeader title={route.id === "creative" ? "Creative detail" : "Creatives"}/><p role="status">Reading saved creative evidence…</p></div>;
     const mediaCoverage=data.sql?.coverage||publicMediaCoverage(data.creatives);
@@ -74,6 +76,7 @@ export function CreativeBrowserPage({ brandId, route, refresh }: {
     {data.presentation?<section className="creative-filter-card" aria-label="Creative filters"><div className="creative-filter-top"><div className="creative-show" role="group" aria-label="Show creatives">{[["yours","Yours",data.creatives.filter(row=>row.workspaceBrand).length],["competitors","Competitors",data.creatives.filter(row=>!row.workspaceBrand).length],["all","Both",data.creatives.length]].map(([value,label,count])=><button key={value} aria-pressed={(filters.show||"all")===value} onClick={()=>change({show:String(value)})}>{label} {count}</button>)}</div><label className="creative-search"><Search size={16}/><span className="sr-only">Search copy, transcript and on-screen text</span><input placeholder="Search transcripts, on-screen text and ad copy" value={filters.search||""} onChange={e=>change({search:e.target.value})}/></label><label className="read-model-sort">Sort by<select aria-label="Sort" value={filters.sort||"newest"} onChange={e=>change({sort:e.target.value})}><option value="newest">Working Score</option><option value="days">Days running</option><option value="title">Ad title</option></select></label></div><div className="read-model-filter-pills">{data.presentation.Creatives.filters.map((item,index)=><button key={item.label} className={index===7?"read-model-selected-pill":""} onClick={()=>setExpanded(!expanded)}>{item.label} {index===8?<Plus size={14}/>:index===7?<X size={14}/>:<ChevronDown size={14}/>}</button>)}</div>{expanded&&<div className="read-model-filter-options">{select("brand","Brand",[...new Map(data.creatives.map(row=>[row.brandId,{value:row.brandId,label:row.brandName}])).values()])}{select("format","Format",values("creativeFormat"))}{select("hook","Hook",values("hookType"))}{select("angle","Angle",values("angle"))}{select("offer","Offer",values("offerType"))}{select("ugc","UGC with proof",[{value:"yes",label:"Yes"},{value:"no",label:"No"}])}<button onClick={()=>change(Object.fromEntries(Object.keys(filters).map(key=>[key,""])))}>Reset filters</button></div>}</section>:<CreativeFilters model={data.sql} creatives={data.creatives} filters={filters} onChange={change} datesOpen={datesOpen} onDatesOpen={setDatesOpen}/>}
     {data.presentation?<div className="creative-results"><span>Showing {filters.layout==="table"?rows.length:Math.min(visibleCount,rows.length)} of {rows.length} · {rows.slice(0,visibleCount).filter(row=>row.workspaceBrand).length} yours, {rows.slice(0,visibleCount).filter(row=>!row.workspaceBrand).length} from competitors · {ukDate(data.dateRange.from)} to {ukDate(data.dateRange.to)}</span><span>Yours: spend, ROAS, hook rate <DataLabel basis="Observed"/> · Competitors: Working Score <DataLabel basis="Estimated"/>, days running and reach <DataLabel basis="Observed"/></span></div>:<div className="creative-results"><span>Showing {data.sql?`${Math.min(data.sql.page.offset+1,data.sql.page.total)} to ${data.sql.page.offset+rows.length}`:filters.layout === "table" ? rows.length : Math.min(visibleCount, rows.length)} of {(data.sql?.page.total??rows.length).toLocaleString("en-GB")} · {rows.slice(0, data.sql||filters.layout === "table" ? rows.length : visibleCount).filter(row=>row.workspaceBrand).length} yours, {rows.slice(0, data.sql||filters.layout === "table" ? rows.length : visibleCount).filter(row=>!row.workspaceBrand).length} from competitors <DataLabel basis="Observed"/></span><span>{data.dateRange.from&&data.dateRange.to?`${ukDate(data.dateRange.from)} to ${ukDate(data.dateRange.to)}`:""}</span></div>}
     <IndexingNotice progress={data.sql?.indexing}/>
+    {error&&<p role="status">Showing earlier results. {error} <button className="text-button" onClick={()=>setAttempt(value=>value+1)}>Retry</button></p>}
     {(missingOwned.length>0||data.ownedStatus==="error")&&<div className="creative-owned-gap" role="region" aria-label="Owned metrics availability"><Unavailable label="" {...ownedGap}/></div>}
     <Caveat><p>Owned account outcomes: {ukDate(data.reportingRange.from)} to {ukDate(data.reportingRange.to)}. Account, currency, attribution and conversion-event scopes stay separate.</p><MetaLine {...meta}/>{coverage.length>0&&<p>{coverage.map(source=>`${source.name}: ${source.status==="not-started"?"not collected":plainEnum(source.status)}`).join("; ")}</p>}</Caveat>
     {filters.layout === "table" ? <DataTable<BrowserCreative> caption="Stored creatives" basis="Observed" rows={rows} rowKey={row => row.adId} onRow={open} meta={meta} columns={[

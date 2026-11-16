@@ -61,6 +61,9 @@ export class ReadCache {
     }};
   }
 
+  /** Polls expire only completed results. Shared in-flight reads must settle. */
+  expireSettled() { for(const [key,entry] of this.entries)if(entry.settled)this.entries.delete(key); }
+
   clear() {
     for (const entry of this.entries.values()) {
       clearTimeout(entry.cancellation);
@@ -84,3 +87,5 @@ export class ReadCache {
 export const libraryReads = new ReadCache(2, 30_000);
 export const contextReads = new ReadCache(24, 20_000);
 export function invalidateWorkspaceReads() { libraryReads.clear(); contextReads.clear(); }
+
+export function expireLibraryReads() { libraryReads.expireSettled(); }

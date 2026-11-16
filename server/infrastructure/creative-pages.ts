@@ -1,3 +1,4 @@
+import {readConnection} from "./read-connection.js";
 import type pg from "pg";
 import type {BrowserCreative,CreativeBrowserResponse,BrowserFilters} from "../../shared/creative-browser.js";
 import type {CreativeReadModel} from "../../shared/creative-read-model.js";
@@ -66,12 +67,14 @@ export const INDEX_ROWS_SQL=`WITH state AS MATERIALIZED (
 export interface PageQuery extends BrowserFilters {screen?:string;offset?:string;limit?:string;previews?:string;chartFormat?:string;window?:string;refs?:string}
 function sqlQuery(pool:Pick<pg.Pool,"query">,sql:string,values:unknown[]){const indexes=new Map<number,number>(),args:unknown[]=[];const text=sql.replace(/\$(\d+)\b/g,(_s,n)=>{const key=Number(n);if(!indexes.has(key)){indexes.set(key,indexes.size+1);args.push(values[key-1]);}return `$${indexes.get(key)}`;});return pool.query(text,args);}
 const knownValue=(v:string|undefined)=>v&&v!=="all"?v:null;
-export async function readCreativePage(pool:pg.Pool,brand:Brand,competitors:CreativeBrowserResponse["competitors"],query:PageQuery,now=new Date()):Promise<{rows:BrowserCreative[];model:CreativeReadModel;dateRange:CreativeBrowserResponse["dateRange"];lastChecked:string|null}> {
+export async function readCreativePage(pool:pg.Pool,brand:Brand,competitors:CreativeBrowserResponse["competitors"],query:PageQuery,now=new Date(),options:{signal?:AbortSignal}={}):Promise<{rows:BrowserCreative[];model:CreativeReadModel;dateRange:CreativeBrowserResponse["dateRange"];lastChecked:string|null}> {
  const targets=[brand.id,...competitors.map(c=>c.brandId||c.key)],values:unknown[]=[brand.id,null,now,targets,query.from||new Date(now.getTime()-29*86400000).toISOString().slice(0,10),query.to||now.toISOString().slice(0,10),brand.name];
  const param=(v:unknown)=>{values.push(v);return `$${values.length}`;};
- const client=await pool.connect();
+ const connection=await readConnection(pool,options.signal),client=connection.client;
  try{
  await client.query("BEGIN");
+ await client.query("SELECT set_config('application_name',$1,true)",[connection.tag]);
+ options.signal?.throwIfAborted();
  if(query.window==='research'){
   const latest=(await client.query(`SELECT max(i.data->>'observedAt') AS last FROM web_creative_index i WHERE i.workspace_id=$1 AND i.brand_key=ANY($2::text[]) AND COALESCE((i.data->>'publicEvidence')::boolean,false) AND (i.data->>'observedAt')::timestamptz<=$3::timestamptz AND (i.source_type='official' AND EXISTS(SELECT 1 FROM watchlists w WHERE w.id=i.watchlist_id AND w.revision=i.revision AND w.page_ids @> to_jsonb(ARRAY[i.page_id])) OR i.source_type='legacy')`,[brand.id,targets,now])).rows[0].last;
   const reporting=researchWindow(latest?[{publicEvidence:true,observedAt:latest} as BrowserCreative]:[],query.from,query.to,now);if(reporting.from&&reporting.to){values[4]=reporting.from;values[5]=reporting.to;}
@@ -182,5 +185,5 @@ export async function readCreativePage(pool:pg.Pool,brand:Brand,competitors:Crea
  }
  await client.query('COMMIT');
  return {rows:page.rows,model,dateRange:{from:summary.first||null,to:summary.last||null},lastChecked:summary.last||null};
- }catch(error){await client.query('ROLLBACK');throw error;}finally{client.release();}
+ }catch(error){if(!connection.abandoned)await client.query('ROLLBACK').catch(()=>{});throw error;}finally{connection.release();}
 }

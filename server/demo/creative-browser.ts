@@ -28,7 +28,7 @@ export interface BrowserOptions {
     onReadError?: (error:unknown)=>void;
 }
 export function attachCreativeBrowser(app: Express, db: DatabaseSync, options: BrowserOptions = {}) {
-    const libraryReads=new LibraryReadGate();
+    const libraryReads=new LibraryReadGate(),sqlReads=new LibraryReadGate(8,30000,2);
     app.get("/api/brands/:brandId/creative-competitors",(req,res)=>{
         res.setHeader("Cache-Control","private, no-store");
         try {
@@ -56,18 +56,21 @@ export function attachCreativeBrowser(app: Express, db: DatabaseSync, options: B
             return;
         }
         for(const [key,min,max] of [["offset",0,10000000],["limit",1,100]] as const){const raw=req.query[key];if(raw!==undefined&&(typeof raw!=="string"||!/^\d+$/.test(raw)||!Number.isSafeInteger(Number(raw))||Number(raw)<min||Number(raw)>max)){res.status(400).json({error:"Choose a valid page."});return;}}
+        let sqlPool:pg.Pool|null;
+        try{sqlPool=options.getPool?options.getPool():process.env.DATABASE_URL?infrastructureDatabase():null;}
+        catch(error){options.onReadError?.(error);res.status(503).json({error:`Saved ads could not be read: ${apiErrorReason(error)}`});return;}
         const disconnected=new AbortController(),onClose=()=>disconnected.abort();res.once("close",onClose);
-        const release=await libraryReads.acquire(disconnected.signal);
+        const release=await(sqlPool?sqlReads:libraryReads).acquire(disconnected.signal);
         if(!release){res.off("close",onClose);if(!res.destroyed){res.setHeader("Retry-After","2");res.status(503).json({error:"The creative library is busy. Please try again shortly."});}return;}
         if(res.destroyed){res.off("close",onClose);release();return;}
         try {
             const gallery:CreativeGalleryService=typeof app.locals.creativeGallery?.selected==='function'?app.locals.creativeGallery:(app.locals.creativeGallery=new CreativeGalleryService(db)),competitors=configuredCreativeCompetitors(db,brand,app.locals.demoCollection);
-            const pool=options.getPool?options.getPool():process.env.DATABASE_URL?infrastructureDatabase():null;
+            const pool=sqlPool;
             const query:PageQuery={};for(const [key,value] of Object.entries(req.query)){if(typeof value!=="string"||value.length>(key==='refs'?20000:2000)){res.status(400).json({error:"Choose valid creative filters."});return;}(query as Record<string,string>)[key]=value;}
             const sources:CreativeBrowserResponse["sources"]=competitors.map(item=>({brandId:item.brandId,name:item.name,status:item.status}));
             let mediaReadStatus:CreativeBrowserResponse["mediaReadStatus"]="not_configured",categoryReadStatus:CreativeBrowserResponse["categoryReadStatus"]="not_configured";
             let metaSource:MetaSourceHealth={status:metaLibraryEnabled()?"unavailable":"off",enabled:metaLibraryEnabled(),lastSuccessfulCheck:null,message:metaLibraryEnabled()?"Collection database is not configured.":"Live collection is off. Saved evidence is retained."};
-            let page=pool?await readCreativePage(pool,brand,competitors,query,now):await sqliteCreativePage(db,brand,competitors,query,gallery);
+            let page=pool?await readCreativePage(pool,brand,competitors,query,now,{signal:disconnected.signal}):await sqliteCreativePage(db,brand,competitors,query,gallery);
             if(pool&&!page.rows.length&&page.model.page.totalAll===0&&page.model.indexing?.total===0){
                 const local=await sqliteCreativePage(db,brand,competitors,{...query,limit:"48"},gallery);
                 if(local.rows.length)page={...local,model:{...local.model,indexing:{indexed:0,total:local.model.page.totalAll,status:page.model.indexing.status,fallback:true}}};
@@ -89,7 +92,7 @@ export function attachCreativeBrowser(app: Express, db: DatabaseSync, options: B
             }
             let ownedStatus: CreativeBrowserResponse["ownedStatus"] = "not_configured";
             try {
-                const pool = options.getPool ? options.getPool() : process.env.DATABASE_URL ? infrastructureDatabase() : null;
+                const pool=sqlPool;
                 if (pool) {
                     const owned=await ownedPagePerformance(pool,brand.id,creatives,from,to);creatives=owned.rows;page.model.ownedScopes=owned.scopes;
                     ownedStatus = "available";

@@ -1579,3 +1579,16 @@ After three failed steps the job pauses. Data sources > worker details shows the
 safe error and Retry action, which preserves the checkpoint. Look for
 `worker_job_failed` with `jobType: index` and `api_request_failed` in Render logs.
 API logs contain route patterns and safe reasons, never query strings or tokens.
+
+### Creative read queue follow-up (16 Nov 2026)
+
+Index polling waits five seconds after the previous load settles. It expires only
+completed creative results, keeping shared pending reads and context-cache TTLs.
+Postgres admits two bounded pages; the legacy local-import path keeps its single
+reader memory guard. Navigation disconnects cancel the tagged read transaction and
+release its connection. Cancellation matches both backend PID and a unique local
+application name, protecting index jobs and other operations.
+
+Deploy this follow-up to `exter-ai` after merging. It needs no migration, new secret,
+provider call or worker/scheduler change. Previously loaded results stay visible
+with the reason when a background refresh fails. Indexing still runs in the worker.
