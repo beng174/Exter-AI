@@ -11,7 +11,8 @@ to collected facts, formulas, collection schedules or budgets.
 - [x] 2026-11-16 UTC: Implement bounded, committed index chunks and persistent background queue.
 - [x] 2026-11-16 UTC: Add partial-index progress, bounded empty-index fallback and safe API errors.
 - [x] 2026-11-16 UTC: Prove recovery and all research routes on a 20,000-ad fixture.
-- [ ] Run infrastructure tests, four checks, open PR and verify CI.
+- [x] 2026-11-16 UTC: Run infrastructure tests, four checks and open PR #39.
+  Final CI status is recorded on the PR and must pass before handoff.
 
 ## Surprises and discoveries
 The worker has no access to the web service SQLite disk. Existing machine-auth
