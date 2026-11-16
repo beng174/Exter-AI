@@ -67,3 +67,70 @@ test('the read index preserves imported copy and analysis identity when official
  assert.equal(page.model.page.total,1);assert.equal(page.rows[0].adId,ad.id);assert.equal(page.rows[0].copy,ad.copy);assert.equal(page.rows[0].observedAt,'2026-11-09T00:00:00.000Z');assert.equal(page.rows[0].publicEvidence,true);assert.equal(page.rows[0].publicReach?.locations.value?.[0].reach,1);
  assert.deepEqual(db.prepare('SELECT data FROM ads WHERE id=?').get(ad.id),before);
 },1));
+
+import express from 'express';
+import {createServer} from 'node:http';
+import {performance} from 'node:perf_hooks';
+import {writeFile} from 'node:fs/promises';
+import {indexCreativeChunk,firstIndexCheckpoint} from '../server/infrastructure/creative-index.js';
+import {enqueueCreativeIndex,attachCreativeIndexStep,workCreativeIndexOnce} from '../server/infrastructure/creative-index-jobs.js';
+import {attachCreativeBrowser} from '../server/demo/creative-browser.js';
+import {apiFailureLogging} from '../server/infrastructure/api-errors.js';
+
+test('20,000 real-shaped ads: pages stay fast during committed indexing and a cancelled chunk resumes', {timeout:240000},async()=>creativeFixture(async(pool,db,brand,gallery)=>{
+ await pool.query(`UPDATE ad_observations SET raw_payload=raw_payload||jsonb_build_object(
+  'ad_creative_link_titles',jsonb_build_array('A candle for quiet evenings'),
+  'ad_creative_link_captions',jsonb_build_array('fictional.example'),
+  'ad_creative_link_urls',jsonb_build_array('https://fictional.example/collections/candles'),
+  'publisher_platforms',jsonb_build_array('facebook','instagram'),'languages',jsonb_build_array('en'),
+  'eu_total_reach',12000+native_id::integer%1000,
+  'target_ages',jsonb_build_array('25','65+'),'target_gender','All',
+  'target_locations',jsonb_build_array(jsonb_build_object('name','United Kingdom')),
+  'age_country_gender_reach_breakdown',jsonb_build_array(jsonb_build_object('country','GB','age_gender_breakdowns',jsonb_build_array(jsonb_build_object('age_range','25-34','male',120,'female',180)))),
+  'snapshot',jsonb_build_object('display_format','VIDEO','cards',jsonb_build_array(jsonb_build_object('title','Quiet evenings','video_sd_url','https://media.fixture.example/preview.mp4'))))`);
+ const app=express(),logs:string[]=[];app.use(apiFailureLogging(line=>logs.push(line)));attachCreativeBrowser(app,db,{getPool:()=>pool,now:()=>new Date('2026-11-10')});
+ const env={EXTER_AD_MEDIA_BROKER_TOKEN:'fixture-index-machine-key-1234567890',EXTER_AD_MEDIA_BROKER_ORIGIN:'https://index.fixture.example'};
+ attachCreativeIndexStep(app,db,()=>pool,env);
+ const server=createServer(app);await new Promise<void>(resolve=>server.listen(0,'127.0.0.1',resolve));const base=`http://127.0.0.1:${(server.address() as any).port}`;
+ const request=async(screen:string)=>{const start=performance.now(),res=await fetch(`${base}/api/brands/workspace/creatives?window=research&screen=${screen}&previews=all`);assert.equal(res.status,200,await(res.ok?Promise.resolve(''):res.text()));const data=await res.json();assert(data.creatives.length<=50);return {data,ms:performance.now()-start};};
+ try{
+  await enqueueCreativeIndex(pool,brand.id);
+  const cold=await request('creatives');assert(cold.ms<2000,`Cold page ${cold.ms}ms`);assert.equal(cold.data.creatives.length,48);assert.equal(cold.data.sql.indexing.total,20000);assert.equal(cold.data.sql.indexing.indexed,0);assert.equal(cold.data.sql.indexing.fallback,true);
+  const brokerFetch:typeof fetch=async(input,init)=>{const url=new URL(String(input));return fetch(base+url.pathname,init);};
+  await workCreativeIndexOnce(pool,{env,fetch:brokerFetch});await workCreativeIndexOnce(pool,{env,fetch:brokerFetch});await workCreativeIndexOnce(pool,{env,fetch:brokerFetch});
+  const before=(await pool.query('SELECT checkpoint,processed FROM creative_index_jobs WHERE id=$1',[brand.id])).rows[0];assert.equal(before.processed,500);
+  const partial=await request('creatives');assert(partial.ms<2000,`Partial page ${partial.ms}ms`);assert.equal(partial.data.sql.indexing.indexed,500);assert.equal(partial.data.sql.coverage.ads,500);
+  await assert.rejects(indexCreativeChunk(pool,db,brand,[],gallery,{checkpoint:before.checkpoint,beforeWrite:async client=>{await client.query("SET LOCAL statement_timeout='10ms'");await client.query('SELECT pg_sleep(0.1)');}}),{code:'57014'});
+  assert.equal((await pool.query('SELECT count(*)::integer AS n FROM web_creative_index')).rows[0].n,500,'Earlier committed chunks survive a timeout.');
+  assert.deepEqual((await pool.query('SELECT checkpoint,processed FROM creative_index_jobs WHERE id=$1',[brand.id])).rows[0],before,'The failed chunk never advances its durable cursor.');
+  // A live read overlaps a deliberately delayed worker write transaction.
+  let inside!:()=>void;const entered=new Promise<void>(resolve=>inside=resolve);
+  const chunk=indexCreativeChunk(pool,db,brand,[],gallery,{checkpoint:before.checkpoint,beforeWrite:async client=>{inside();await client.query('SELECT pg_sleep(0.2)');}});
+  await entered;const during=await request('creatives');assert(during.ms<2000,`Concurrent page ${during.ms}ms`);await chunk;
+  for(let n=0;n<50;n++){const status=(await pool.query('SELECT status FROM creative_index_jobs WHERE id=$1',[brand.id])).rows[0].status;if(status==='complete')break;assert(await workCreativeIndexOnce(pool,{env,fetch:brokerFetch}));}
+  assert.equal((await pool.query('SELECT status FROM creative_index_jobs WHERE id=$1',[brand.id])).rows[0].status,'complete');assert.equal((await pool.query('SELECT count(*)::integer AS n FROM web_creative_index')).rows[0].n,20000);
+  const captures:Record<string,unknown>={cold:cold.data,partial:partial.data};
+  const timings:Record<string,number>={cold:cold.ms,partial:partial.ms,during:during.ms};
+  for(const screen of ['brands','competitors','creatives','formats','patterns','audience','winners','briefs','creators','scores','data']){const result=await request(screen);assert.equal(result.data.sql.coverage.ads,20000);assert.equal(result.data.sql.indexing.indexed,20000);timings[screen]=Math.round(result.ms);captures[screen]=result.data;}
+  if(process.env.INDEX_FIXTURE_OUTPUT)await writeFile(process.env.INDEX_FIXTURE_OUTPUT,JSON.stringify({brand,pages:captures}));
+  const max=(await pool.query('SELECT max(octet_length(data::text)) AS n FROM web_creative_index')).rows[0].n;assert(max<24000);assert.equal(logs.length,0,logs.join('\n'));console.log('20,000-ad indexing page timings (ms): '+JSON.stringify(timings));
+ }finally{await new Promise<void>(resolve=>server.close(()=>resolve()));}
+},20000));
+
+import {workerCycle} from '../server/infrastructure/worker-loop.js';
+import {retryWorkerFailure} from '../server/infrastructure/worker-recovery.js';
+test('background index failures back off and pause without losing the checkpoint; manual retry resumes it',async()=>creativeFixture(async(pool,_db,brand)=>{
+ await enqueueCreativeIndex(pool,brand.id);const checkpoint={...firstIndexCheckpoint(),phase:'official',key:['workspace','Meta','1000000']};
+ await pool.query("UPDATE creative_index_jobs SET checkpoint=$2,processed=500,started_at=now() WHERE id=$1",[brand.id,JSON.stringify(checkpoint)]);
+ const env={EXTER_AD_MEDIA_BROKER_TOKEN:'fixture-index-machine-key-1234567890',EXTER_AD_MEDIA_BROKER_ORIGIN:'https://index.fixture.example'},logs:string[]=[],seen:string[]=[];
+ const tasks=[{type:'index' as const,run:(observer:any)=>workCreativeIndexOnce(pool,{...observer,env,fetch:async()=>new Response(JSON.stringify({diagnostic:{message:'Statement cancelled',code:'57014'}}),{status:503})})},{type:'creators' as const,run:async()=>{seen.push('creators');return true;}}];
+ for(let n=0;n<3;n++){await pool.query("UPDATE worker_job_failures SET next_attempt_at=now()-interval '1 second'");await pool.query("UPDATE creative_index_jobs SET available_at=now()-interval '1 second'");await workerCycle(pool,tasks,{log:line=>logs.push(line)});}
+ const job=(await pool.query('SELECT * FROM creative_index_jobs WHERE id=$1',[brand.id])).rows[0],failure=(await pool.query("SELECT * FROM worker_job_failures WHERE job_type='index'")).rows[0];
+ assert.equal(job.status,'paused');assert.deepEqual(job.checkpoint,checkpoint);assert.equal(job.processed,500);assert.equal(failure.last_error.code,'57014');assert.equal(failure.failures,3);assert.equal(seen.length,3);
+ assert(await retryWorkerFailure(pool,brand.id,'index',brand.id));const resumed=(await pool.query('SELECT * FROM creative_index_jobs WHERE id=$1',[brand.id])).rows[0];assert.equal(resumed.status,'queued');assert.deepEqual(resumed.checkpoint,checkpoint);assert(logs.every(line=>!line.includes('fixture-index-machine-key')));
+},1));
+
+test('an obsolete index revision falls back to bounded ads rather than claiming completion',async()=>creativeFixture(async(pool,db,brand,gallery)=>{
+ await refreshCreativeIndex(pool,db,brand,[],gallery);await enqueueCreativeIndex(pool,brand.id);await pool.query("UPDATE creative_index_jobs SET status='complete'");await pool.query('UPDATE web_creative_index SET revision=0');
+ const page=await readCreativePage(pool,brand,[],{screen:'creatives'},new Date('2026-11-10'));assert.equal(page.rows.length,1);assert.equal(page.model.indexing?.indexed,0);assert.equal(page.model.indexing?.total,1);assert.equal(page.model.indexing?.status,'queued');assert.equal(page.model.indexing?.fallback,true);
+},1));

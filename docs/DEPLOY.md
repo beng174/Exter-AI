@@ -1554,3 +1554,28 @@ The supplied incident logs show `server/index.ts`, historical web OOMs and deplo
 replacements. They do not identify the production worker's failed job. The media
 timeout and recovery behaviour are reproduced with fixtures; production recovery
 remains unverified until the repaired worker is deployed.
+
+### Creative index recovery (16 Nov 2026)
+
+Research requests never rebuild the creative index. The worker claims a durable
+`creative_index_jobs` row and asks the existing machine-authenticated web adapter
+for one local-disk step. Each step selects at most 500 ad identities before reading
+payload fields, then commits the index rows and checkpoint together. No step starts
+a provider call. The web adapter is necessary because imports and paid analysis
+remain on the web disk; the worker cannot mount that disk.
+
+Deploy the same revision to `exter-ai`, `exter-worker` and `exter-scheduler`, with
+web first when deploying manually. Existing startup migrations add the queue and
+register its worker diagnostics; no evidence is deleted. Web deployment queues
+all real workspaces once, and successful collection, media and category runs queue
+refreshes. The scheduler also queues a refresh. Keep the existing
+`EXTER_AD_MEDIA_BROKER_TOKEN` and `EXTER_AD_MEDIA_BROKER_ORIGIN` configured on web
+and worker. Indexing does not depend on the paid-media collection switch.
+
+Pages show the already indexed ads and `Indexing ads: X of Y`. With an empty
+index they read at most 48 recent source ads, or a bounded local-import page.
+A cancelled chunk rolls back only that chunk; a restart resumes its saved key.
+After three failed steps the job pauses. Data sources > worker details shows the
+safe error and Retry action, which preserves the checkpoint. Look for
+`worker_job_failed` with `jobType: index` and `api_request_failed` in Render logs.
+API logs contain route patterns and safe reasons, never query strings or tokens.

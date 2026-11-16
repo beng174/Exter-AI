@@ -1142,3 +1142,34 @@ counts, rechecks and Stop search. No external browser/provider requests were mad
   unit tests pass. TypeScript, production build and secrets scan pass. The existing
   50,000-ad heap fixture passes at approximately 117 MB. Browser fixtures verify
   safe failure details, checkpoint retry and readable 1440px/390px layouts.
+
+## Background creative index recovery (16 Nov 2026)
+
+- Removed the request-time creative index rebuild. Public research reads use
+  committed index metadata and never scan or decompress the full raw history.
+- Added a durable indexing queue driven by the worker. The existing authenticated
+  web adapter handles the local SQLite disk in chunks of at most 500 identities.
+  Each chunk commits its index rows and checkpoint together. Timeouts roll back
+  only the current chunk; restarts resume the saved key. Source history is untouched.
+- Deployment, completed collection/media/tagging and the scheduler enqueue refreshes.
+  Three failed steps pause the indexing job with its safe reason in Data sources;
+  the existing Retry action preserves the checkpoint.
+- Partial pages show committed ads and indexing progress. Empty or obsolete indexes
+  fall back to at most 48 recent source ads or a bounded local-import page. The
+  interface keeps cards visible during background refreshes. Unchanged metadata
+  does not cause another index-row update.
+- Failed API responses log their route, status and sanitised reason. Database
+  timeout reasons now reach the page's Unavailable state; tokens, URLs, query
+  strings and provider bodies are excluded from diagnostics.
+- Fixtures: the 20,000-ad cold and partial reads meet the two-second gate; a forced
+  SQL timeout preserves earlier committed rows and the durable cursor. All eleven
+  requested screens load in browser fixtures, including progress and controlled
+  error states, with no browser errors, external requests or writes. Screenshots
+  and the result log are in output/playwright/background-index/.
+- Validation: TypeScript, 637 unit tests, production build and secrets scan pass.
+  The complete Postgres integration suite passes (98 tests), including the existing
+  50,000-ad memory case. All seven targeted index tests also pass with richer source payloads,
+  including an obsolete revision. These are fixture results, not live verification.
+- Rollout: deploy the same revision to web, worker and scheduler. Existing startup
+  migrations create the additive queue. Keep the existing broker token and origin;
+  no new secrets, provider calls, budget changes or collection schedule changes.

@@ -1,3 +1,4 @@
+import {IndexingNotice} from "../ui/IndexingNotice";
 import {LikelihoodSection} from "../ui/Likelihood";
 import {ComparisonFilters} from "../ui/ComparisonFilters";
 import {similarCompetitors,mediaFormat,formatName} from "../../../shared/public-comparisons";
@@ -91,6 +92,7 @@ function Detail({row,data,filtered,onOpen,onRefresh}:DetailProps&{row:BrowserCre
       <button className="button secondary" aria-label="Next creative" disabled={index<0||index===filtered.length-1} onClick={()=>onOpen(filtered[index+1])}><ArrowRight size={18}/></button>
       <a className="button secondary" href="#creative-market">Compare with market</a><button className="button primary" disabled title="Adding saved creatives to briefs is not available yet.">Add to brief</button>
     </>}/>
+    <IndexingNotice progress={data.sql?.indexing}/>
     <div className="creative-detail-columns">
       <div className="creative-detail-media-column">
         {!mediaError&&(row.videoUrl||row.imageUrls[slide]||row.thumbnailUrl)?<div className="creative-media" id="creative-media">{row.videoUrl?<video ref={video} controls playsInline preload="metadata" poster={row.thumbnailUrl||undefined} src={row.videoUrl} onError={()=>setMediaError(true)} aria-label={`Saved video: ${title}`}/>:<img src={row.imageUrls[slide]||row.thumbnailUrl||undefined} alt={`Saved creative${row.imageUrls.length>1?`, slide ${slide+1}`:""}`} onError={()=>setMediaError(true)}/>}</div>:<div id="creative-media" className="creative-media creative-media-copy" role="region" aria-label="Creative media"><AdPreview row={row}/></div>}

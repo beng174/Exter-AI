@@ -1,3 +1,4 @@
+import {refreshCreativeIndex} from "../../server/infrastructure/creative-index.js";
 import express from 'express';
 import {createServer} from 'node:http';
 import {spawn} from 'node:child_process';
@@ -29,6 +30,8 @@ app.get('/health',(_q,r)=>r.json({ok:true,memory:processMemoryHealth()}));
 const server=createServer(app);await new Promise<void>(r=>server.listen(0,'127.0.0.1',r));
 const before=process.memoryUsage().heapUsed;let peak=before;const timer=setInterval(()=>peak=Math.max(peak,process.memoryUsage().heapUsed),5),stop=startHeapLogging(()=>{});
 try{
+ // Background projection is now explicit fixture setup, never an HTTP read.
+ await refreshCreativeIndex(pool,db,brand as any,[],production.locals.creativeGallery);
  const output=await new Promise<string>((resolve,reject)=>{const child=spawn(process.execPath,['--import','tsx','tests/fixtures/sql-memory-client.ts',`http://127.0.0.1:${(server.address() as any).port}`],{stdio:['ignore','pipe','pipe']});let out='',errors='';child.stdout.on('data',c=>out+=c);child.stderr.on('data',c=>errors+=c);child.on('error',reject);child.on('exit',code=>code===0?resolve(out):reject(new Error(errors.slice(-3000))));});
  console.log(JSON.stringify({...JSON.parse(output),heapBefore:before,heapAfter:process.memoryUsage().heapUsed,heapPeak:peak,heapLimit:processMemoryHealth().heapLimitBytes}));
 }finally{clearInterval(timer);stop();await new Promise<void>(r=>server.close(()=>r()));await pool.end();db.close();}

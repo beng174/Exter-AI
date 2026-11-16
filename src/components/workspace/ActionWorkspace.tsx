@@ -1,3 +1,4 @@
+import {IndexingNotice} from "../ui/IndexingNotice";
 import {comparisonEvidenceIds} from "../../../shared/public-comparisons";
 import {workspaceRead} from "../../lib/workspace-read";
 import {invalidateWorkspaceReads} from "../../lib/read-cache";
@@ -44,9 +45,9 @@ export function ActionWorkspace({brandId,brand,route}:{brandId:string;brand?:Bra
   },[extrasId,revision,view]);
   useEffect(()=>{if(!extras||!base)return;const hash=window.location.hash.slice(1);if(!["owned-accounts","monthly-budgets"].includes(hash))return;const frame=requestAnimationFrame(()=>document.getElementById(hash)?.scrollIntoView({block:"start"}));return()=>cancelAnimationFrame(frame);},[extras,base,view]);
   const header=(actions?:ReactNode)=><PageHeader title={titles[view]} eyebrow={view!=="data"&&base?<><BrandName name={base.library.brand.name} size={32}/> · {navigation.find(item=>item.id===view)!.group}</>:undefined} subtitle={subtitles[view]} actions={actions}/>;
-  if(error)return <div className="reference-page action-workspace">{header()}<SectionCard title="Saved evidence" empty={{reason:"Saved evidence could not be read.",action:{label:"Retry",onClick:refresh}}}/></div>;
-  if(loading||!base||!extras)return <div className="reference-page action-workspace">{header()}<p role="status">Reading saved evidence…</p></div>;
+  if(error)return <div className="reference-page action-workspace">{header()}<SectionCard title="Saved evidence" empty={{reason:error,action:{label:"Retry",onClick:refresh}}}/></div>;
+  if(!base||!extras)return <div className="reference-page action-workspace">{header()}<p role="status">Reading saved evidence…</p></div>;
   const props={data:{base,...extras},refresh,header};
-  return <div className={`reference-page action-workspace action-${view}`} data-view={view} data-read-model={base.library.presentation?"complete":undefined}>{view==="briefs"?<BriefsPage {...props}/>:view==="creators"?<CreatorsPage {...props}/>:view==="scores"?<ScoresPage {...props}/>:view==="ask"?<AskPage key={base.library.brand.id} {...props}/>:view==="reports"?<ReportsPage {...props}/>:<DataSourcesPage {...props}/>}</div>;
+  return <div className={`reference-page action-workspace action-${view}`} data-view={view} data-read-model={base.library.presentation?"complete":undefined}><IndexingNotice progress={base.library.sql?.indexing}/>{view==="briefs"?<BriefsPage {...props}/>:view==="creators"?<CreatorsPage {...props}/>:view==="scores"?<ScoresPage {...props}/>:view==="ask"?<AskPage key={base.library.brand.id} {...props}/>:view==="reports"?<ReportsPage {...props}/>:<DataSourcesPage {...props}/>}</div>;
 }
 export function Disabled({children,reason,primary=false}:{children:ReactNode;reason:string;primary?:boolean}) {return <span title={reason} className="disabled-control"><button type="button" className={`button ${primary?"primary":"secondary"}`} disabled aria-label={typeof children==="string"?`${children}: ${reason}`:undefined}>{children}</button></span>;}

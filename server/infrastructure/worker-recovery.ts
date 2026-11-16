@@ -3,7 +3,7 @@ import type {WorkerJobType,WorkerDiagnostic,WorkerFailure} from "../../shared/wo
 import type {WorkerClaim} from "./worker-diagnostics.js";
 
 export const QUEUE_JOB_ID="@queue";
-export const JOB_TABLES:Record<WorkerJobType,string>={onboarding:"brand_onboarding_runs",collection:"collection_jobs",owned:"owned_sync_jobs",media:"ad_media_runs",creators:"creator_discovery_runs",categories:"public_category_batches",kernel:"kernel_jobs"};
+export const JOB_TABLES:Record<WorkerJobType,string>={onboarding:"brand_onboarding_runs",collection:"collection_jobs",owned:"owned_sync_jobs",media:"ad_media_runs",creators:"creator_discovery_runs",categories:"public_category_batches",kernel:"kernel_jobs",index:"creative_index_jobs"};
 /** Static SQL identifiers only; caller supplies a known queue and an internal alias. */
 export function workerClaimGate(type:WorkerJobType,idExpression:string){return `NOT EXISTS(SELECT 1 FROM worker_job_failures wf WHERE wf.job_type='${type}' AND wf.job_id=(${idExpression})::text AND (wf.status='paused' OR wf.status='retrying' AND wf.next_attempt_at>now()))`;}
 export async function queueMayRun(pool:pg.Pool,type:WorkerJobType){return !(await pool.query("SELECT 1 FROM worker_job_failures WHERE job_type=$1 AND job_id=$2 AND (status='paused' OR status='retrying' AND next_attempt_at>now())",[type,QUEUE_JOB_ID])).rowCount;}

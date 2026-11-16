@@ -1,3 +1,6 @@
+import {enqueueAllCreativeIndexes} from "./infrastructure/creative-index-jobs.js";
+import {canonicalWorkspaceBrands} from "./demo/reconcile.js";
+import {workerDiagnostic} from "./infrastructure/worker-diagnostics.js";
 import { basicAuth } from "./auth.js";
 import { startDailyBackups } from "./infrastructure/backups.js";
 import { infrastructureDatabase, initialiseInfrastructure, migrationDiagnostic } from "./infrastructure/database.js";
@@ -33,6 +36,8 @@ recoverHostedValentteResearch(db);
 // Keep boot limited to serving saved evidence. Browsers and model cold starts
 // must be explicit operator actions, never competing with the web server for
 // memory during deploy or restarting automatically after a process is killed.
+// Queue only identities at deployment; projection is never part of startup.
+if(process.env.DATABASE_URL)void enqueueAllCreativeIndexes(infrastructureDatabase(),canonicalWorkspaceBrands(db).filter(b=>b.mode!=="demo").map(b=>b.id)).catch(error=>console.error(JSON.stringify({event:"index_enqueue_failed",error:workerDiagnostic(error)})));
 const stopPolling = startConnectionPolling(db);
 const stopBackups = startDailyBackups(db);
 const stopHeapLogging=startHeapLogging();

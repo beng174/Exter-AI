@@ -1,3 +1,4 @@
+import {enqueueCreativeIndex} from "../infrastructure/creative-index-jobs.js";
 import type {WorkerObserver} from "../infrastructure/worker-diagnostics.js";
 import {workerClaimGate,clearWorkerFailures} from "../infrastructure/worker-recovery.js";
 import {randomUUID,createHash} from "node:crypto";
@@ -78,7 +79,7 @@ export async function stepCategoryBatch(pool:pg.Pool,id:string,owner:string,opti
   if(!(await client.query('SELECT pg_try_advisory_lock(hashtext($1)) AS locked',[`category-step:${id}`])).rows[0].locked)return false;
   run=(await client.query('SELECT * FROM public_category_batches WHERE id=$1 AND lease_owner=$2 AND lease_until>now()',[id,owner])).rows[0];
   if(!run||!['queued','starting','running'].includes(run.status))return false;
-  const update=async(status:string,error:string|null=null)=>client.query("UPDATE public_category_batches SET status=$3,error_kind=$4,available_at=now()+interval '1 minute',finished_at=CASE WHEN $3 IN ('complete','failed') THEN clock_timestamp() ELSE NULL END WHERE id=$1 AND lease_owner=$2 AND lease_until>now()",[id,owner,status,error]);
+  const update=async(status:string,error:string|null=null)=>{const result=await client.query("UPDATE public_category_batches SET status=$3,error_kind=$4,available_at=now()+interval '1 minute',finished_at=CASE WHEN $3 IN ('complete','failed') THEN clock_timestamp() ELSE NULL END WHERE id=$1 AND lease_owner=$2 AND lease_until>now()",[id,owner,status,error]);if(status==='complete')await enqueueCreativeIndex(pool,run.workspace_id);return result;};
   if(run.status==='starting'&&!run.provider_name){await update('uncertain','uncertain');return true;}
   const provider=options.provider||new PublicCategoryProvider({env}),items=run.items as Item[];
   const save=async(item:Item,categories:string[],model:string)=>client.query(`INSERT INTO public_ad_categories(workspace_id,brand_key,page_id,native_id,source_hash,prompt_version,model,categories,batch_id) SELECT $1,$2,$3,$4,$5,$6,$7,$8,$9 WHERE EXISTS(SELECT 1 FROM watchlists w WHERE w.workspace_id=$1 AND w.brand_key=$2 AND w.enabled AND w.page_ids->>0=$3) ON CONFLICT DO NOTHING`,[run.workspace_id,item.brandKey,item.pageId,item.nativeId,item.sourceHash,CATEGORY_VERSION,model,JSON.stringify(categories),id]);
