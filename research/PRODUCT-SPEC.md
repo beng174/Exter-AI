@@ -306,22 +306,64 @@ Every Monday at 6am, Exter freezes a weekly data pack per client brand covering 
 1. **Headline:** 3 findings in one sentence each, with the number behind each one.
 2. **Top working ads:** the 5 highest Working Scores for the brand and for each competitor, with thumbnail, score, label, confidence and the signal that drives it.
 3. **Rising this week:** new ads already scaling fast, brand and competitors.
-4. **What changed:** ads launched and stopped, new concepts, new offers, shifts in angle mix, share of voice up or down.
-5. **Brand vs competitors scorecard:** this week against last week.
-6. **What to work on:** the top 3 priorities (Test now, Scale, Fix, Reduce), each with its numbers, 3 example ads and a linked brief.
-7. **Last week's tests:** how the brand's newly launched ads are doing on the Working Score.
-8. **Data coverage:** ads observed, sources checked, last successful check, what is estimated and why.
+4. **What changed:** ads launched and stopped, new concepts, new offers, shifts in angle mix, share of voice up or down. Campaigns launched and ended this week, with offers.
+5. **Offers:** share of new ads with an offer and the deepest discount, per brand, against the same week last year.
+6. **Brand vs competitors scorecard:** this week against last week.
+7. **What to work on:** the top 3 priorities (Test now, Scale, Fix, Reduce), each with its numbers, 3 example ads and a linked brief.
+8. **Last week's tests:** how the brand's newly launched ads are doing on the Working Score.
+9. **Data coverage:** ads observed, sources checked, last successful check, what is estimated and why.
 
 Every number in the report opens its ads and its calculation. Each week is saved, so trends build up month on month.
 
+## Market activity layer (added 16 Nov 2026)
+
+Exter ranks individual creatives. This layer adds the campaign-level view agencies plan with: what each competitor is running, with which offers, how this compares with last year, and what to do this week. It reuses data Exter already collects wherever possible.
+
+**1. Weekly opportunities (Home)**
+
+Every Monday, Exter writes up to 3 opportunity cards per client brand. Each card has:
+
+- A one-line play, written as an action ("Put the refill kit in your gifting ads this week").
+- Tier (1 to 3) and timing (This week, Next 2 weeks, Plan for next month).
+- The evidence: the numbers behind it (Working Score winners, usage gap, offer share, creator trend size, last year's timing), each one opening its ads or posts.
+- What changed since last week, and whether last week's suggestion was acted on.
+- What to do: 2 to 4 specific steps (how many ads, which format, which campaign, which creators, which words customers use).
+- Sources and a link to the brief.
+
+Cards expire when their trigger stops being true. Opportunities and briefs keeps the full history.
+
+**2. Campaigns**
+
+Exter groups each brand's ads (and later posts, emails and creator content) into named campaigns. The grouping signals are: same landing page or collection, same stated offer, same theme or product, launch dates within 14 days, and similar copy. AI names each campaign ("Black Friday Sale, up to 50% off"). Each campaign shows its brand, dates, status (live or ended), pieces by channel, active ads, offer and depth, products featured, its top ads by Working Score, and a weekly launch chart. Labelled Estimated, because the grouping is inferred. Strategists can merge, split or rename campaigns.
+
+**3. Offer tracking**
+
+For every new ad, Exter reads the stated offer from the copy, headline and on-screen text: percent off, money off, bundle, free gift, free delivery, discount code, buy one get one, or none. It also reads the depth ("up to 50%"). Weekly per brand, it shows: the share of new ads with an offer, the mix of offer types, and the deepest discount stated. Observed from the ad text. Feeds the scorecard, campaigns and opportunities.
+
+**4. Same period last year**
+
+For any date range, Exter shows each brand's campaigns and stated offers in the same weeks last year, with their dates and length. It uses the ad library's history where it keeps it (EU-delivered ads, and UK where available) plus Exter's own saved history. Missing sources are named, never filled in. This is used to plan seasonal moments (Black Friday, Christmas, January sale, Mother's Day).
+
+**5. Creator trends**
+
+Exter tracks public creator and press posts that mention or tag the client brand and its competitors (Instagram and TikTok first). Each post is classed as paid (#ad, paid partnership), gifted, affiliate (discount code), brand partnership or earned. Weekly per brand: creator posts by type, creator size, views and interactions, and discount codes seen. Trends: recurring themes across posts (for example "Black Friday wishlists"), with the posting accounts per week, total reach and phase (Emerging, Rising, Steady, Fading), plus the top posts. These creators feed the Creators screen as warm candidates.
+
+**6. Product and review signals**
+
+Per competitor website (product feeds where public): product launches, removals, low stock, stockouts, restocks and markdowns, weekly. Per brand: review rating and count, with change over time. These are used as evidence in opportunities (for example "competitor stocked out of X"). Phase 2. Collected within the data-provider budget, with UK GDPR rules unchanged.
+
+**Order:** 1 to 3 first (they use ads already collected), then 4, then 5 and 6. None of this starts until the core loop works on real data: Winners, creative breakdown, Patterns, briefs.
+
 ## Platform screens
 
-Twelve screens, one per job. The rule across all of them: every number and every finding opens the ads behind it.
+Fourteen screens, one per job. The rule across all of them: every number and every finding opens the ads behind it.
 
 | Screen | What it shows | What you can do |
 | --- | --- | --- |
 | Brands | All client and prospect brands, last checked, alerts | Add a brand, its competitors and category keywords |
-| Overview | Ads collected, active and analysed; format mix; top hooks and angles; 3 headline findings; what changed this week | Click any number or finding to see its ads |
+| Overview | 3 weekly opportunity cards; ads collected, active and analysed; format mix; top hooks and angles; what changed this week | Click any number or finding to see its ads |
+| Campaigns | Live and ended campaigns per brand, with offer, dates, channels and top ads | Merge, split or rename campaigns |
+| Last year | Campaigns and offers in the same weeks last year | Choose a date range |
 | Creative library | Gallery of every ad as a thumbnail with format, days running and 2 to 3 tags | Filter by brand, format, hook, angle, offer, UGC; search transcripts and on-screen text |
 | Ad detail | The video or image beside its full analysis | Play, jump to a timestamp, open in Meta Ad Library, previous and next ad |
 | Competitors | The brand against 3 to 5 competitors: activity, longevity, format mix, hooks, angles, offers, UGC share | Switch metrics, open example ads per brand |
@@ -407,6 +449,7 @@ The engine works: Exter collects real ads and reads them accurately with AI. Wha
 | Working Score, competitor comparison, What to work on | To build |
 | Weekly data pack | To build |
 | Customer voice, creators, Google ads | Phase 2 |
+| Market activity layer (opportunities, campaigns, offers, last year, creator trends, product and review signals) | To build, after the core loop works on real data |
 
 Working Score, gap analysis and the weekly report are still to build. Survival and scaling can start now from browser collection history; reach velocity and share of voice need the Meta or TikTok API.
 
@@ -428,6 +471,8 @@ Motion (motionapp.com) already covers own-account creative analytics, own-ad sco
 1. Competitor evidence from both Meta and TikTok, with the Working Score on competitors' ads.
 2. Brand vs competitors gaps and "What to work on", ending in ready briefs.
 3. Customer voice from reviews, linked to angles and briefs.
+
+Whole-market trackers (e.g. LittleBirdie) cover campaign, offer and channel activity broadly but don't rank individual creatives or produce briefs; Exter adds the campaign and offer view on top of its creative winners, not instead of them.
 
 Owned results and own-ad scores stay as they are; do not expand them until the three items above are live.
 

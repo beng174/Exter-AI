@@ -1142,3 +1142,26 @@ counts, rechecks and Stop search. No external browser/provider requests were mad
   unit tests pass. TypeScript, production build and secrets scan pass. The existing
   50,000-ad heap fixture passes at approximately 117 MB. Browser fixtures verify
   safe failure details, checkpoint retry and readable 1440px/390px layouts.
+
+## Market activity layer specification (16 Nov 2026)
+
+- Added the planned market activity layer to research/PRODUCT-SPEC.md: up to
+  three weekly opportunity cards, inferred campaigns, stated offers, the same
+  period last year, creator trends, and product and review signals.
+- Weekly reports now include campaign launches and endings, plus offer share
+  and deepest stated discount against the same week last year. Overview leads
+  with opportunity cards. Campaigns and Last year are planned screen entries.
+- Build gate: Winners, creative breakdown, Patterns and briefs must work on real
+  data first. Then build opportunities, campaigns and offers (1 to 3), followed
+  by last year (4), then creator trends and product/review signals (5 and 6).
+  Product and review collection remains Phase 2, within the existing provider
+  budget and UK GDPR rules. Missing historical sources must be named.
+- Campaign grouping is Estimated; stated offers are Observed from ad text.
+  The product positioning note adds the wider campaign and offer view alongside
+  individual creative rankings and briefs. Other product names stay in research
+  documentation and never enter product code or UI copy.
+- Documentation only. The layer is To build; this change starts no collection,
+  jobs, analysis or feature work. Existing live validation gates remain open.
+- Validation: the supplied section text is preserved; report numbering and the
+  14 screen rows are consistent. TypeScript, all 636 unit tests, production build
+  and secrets scan pass.
