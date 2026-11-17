@@ -1196,3 +1196,28 @@ counts, rechecks and Stop search. No external browser/provider requests were mad
 - Rollout: deploy the same revision to web, worker and scheduler. Existing startup
   migrations create the additive queue. Keep the existing broker token and origin;
   no new secrets, provider calls, budget changes or collection schedule changes.
+
+## Creative request queue recovery (16 Nov 2026)
+
+- The indexing interval could invalidate an unfinished page every five seconds.
+  Refreshes now wait until the current load settles, then wait five seconds. Only
+  completed creative-cache entries expire; pending shared reads are preserved and
+  the independent context cache keeps its normal expiry.
+- Postgres serves at most two bounded pages at once. The legacy local-import
+  reader keeps its single-reader memory guard. Navigation disconnects destroy the
+  checked-out read connection and cancel only its uniquely tagged SQL transaction.
+  The PID and transaction tag prevent cancellation of reused or unrelated sessions.
+- Same-filter background errors keep earlier results visible with the reason and
+  Retry. Changing brands or filters clears the old result. The busy error no longer
+  offers an unrelated Clear dates action. Background indexing stays unchanged.
+- Validation: all four checks pass, including 639 unit tests. All 101 disposable
+  Postgres integration tests pass. A slow page no longer blocks another page;
+  abandoning a read releases its SQL connection and stops the backend query.
+  The unchanged 50,000-ad fixture peaks at 111,337,224 heap bytes, below 200 MB.
+- Chromium fixtures on Home and Creatives finish a 6.52-second refresh with one
+  request in flight, keep results through a temporary busy response, then recover.
+  No browser errors, failed network requests, provider requests or writes occur.
+  Screenshots and results are in output/playwright/read-queue/. These are fixtures,
+  not live verification.
+- Deploy this follow-up to exter-ai after merge. No migration, new secret, worker
+  update, provider-switch change or budget change is required.

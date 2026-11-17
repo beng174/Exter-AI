@@ -74,3 +74,11 @@ test("streaming gzip shrinks a full library without changing any JSON values, an
     const response=await fetch(base+"/cancel");await response.body!.cancel();await cleanup;assert.equal((await fetch(base)).status,200);
   }finally{server.closeAllConnections();await new Promise<void>(r=>server.close(()=>r()));}
 });
+
+test('index polling expires completed results without aborting a shared slow read',async()=>{
+ const cache=new ReadCache(2,30000);let finish!:(value:number)=>void,aborted=false;
+ const slow=cache.acquire('slow',signal=>{signal.addEventListener('abort',()=>aborted=true);return new Promise<number>(resolve=>finish=resolve);});await Promise.resolve();
+ const complete=cache.acquire('complete',async()=>1);assert.equal(await complete.promise,1);complete.release();
+ cache.expireSettled();const shared=cache.acquire('slow',async()=>999);assert.strictEqual(shared.promise,slow.promise);assert.equal(aborted,false);
+ const fresh=cache.acquire('complete',async()=>2);assert.equal(await fresh.promise,2);finish(7);assert.equal(await shared.promise,7);slow.release();shared.release();fresh.release();
+});

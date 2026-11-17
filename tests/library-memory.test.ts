@@ -71,3 +71,9 @@ test('a closed streaming response completes cleanup and leaves the server health
  app.get('/large',(_req,res)=>{void writeJsonRows(res,value,'creatives').catch(()=>{}).finally(settled);});app.get('/health',(_req,res)=>res.json({ok:true}));const server=createServer(app);await new Promise<void>(r=>server.listen(0,'127.0.0.1',r));
  try{const base=`http://127.0.0.1:${(server.address() as AddressInfo).port}`,response=await fetch(base+'/large');await response.body!.cancel();await done;assert.equal((await fetch(base+'/health')).status,200);}finally{server.closeAllConnections();await new Promise<void>(r=>server.close(()=>r()));}
 });
+
+test('bounded page reads admit two requests and cancelled waiters cannot block a later request',async()=>{
+ const gate=new LibraryReadGate(2,5000,2),first=await gate.acquire(open().signal),second=await gate.acquire(open().signal);assert(first&&second);
+ const cancelled=open(),waiting=gate.acquire(cancelled.signal);cancelled.abort();assert.equal(await waiting,null);
+ let granted=false;const third=gate.acquire(open().signal).then(value=>{granted=true;return value;});await Promise.resolve();assert.equal(granted,false);first();const release=await third;assert(release);second();release();
+});

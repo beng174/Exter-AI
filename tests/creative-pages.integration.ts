@@ -134,3 +134,38 @@ test('an obsolete index revision falls back to bounded ads rather than claiming 
  await refreshCreativeIndex(pool,db,brand,[],gallery);await enqueueCreativeIndex(pool,brand.id);await pool.query("UPDATE creative_index_jobs SET status='complete'");await pool.query('UPDATE web_creative_index SET revision=0');
  const page=await readCreativePage(pool,brand,[],{screen:'creatives'},new Date('2026-11-10'));assert.equal(page.rows.length,1);assert.equal(page.model.indexing?.indexed,0);assert.equal(page.model.indexing?.total,1);assert.equal(page.model.indexing?.status,'queued');assert.equal(page.model.indexing?.fallback,true);
 },1));
+
+import {readConnection} from '../server/infrastructure/read-connection.js';
+test('abandoning a slow SQL page cancels its backend and frees a one-connection pool',async()=>creativeFixture(async pool=>{
+ const constrained=new pg.Pool({...pool.options,max:1}),controller=new AbortController();
+ try{
+  const read=await readConnection(constrained,controller.signal);
+  await read.client.query('BEGIN');await read.client.query("SELECT set_config('application_name',$1,true)",[read.tag]);
+  const query=read.client.query('SELECT pg_sleep(20)');const rejected=assert.rejects(query);
+  await new Promise(resolve=>setTimeout(resolve,75));const start=performance.now();controller.abort();await rejected;
+  assert(performance.now()-start<2000,'A cancelled page must immediately relinquish its query.');
+  read.release();read.release();assert.equal((await constrained.query('SELECT 1 AS ok')).rows[0].ok,1);
+  for(let n=0;n<20;n++){const running=await pool.query('SELECT 1 FROM pg_stat_activity WHERE application_name=$1',[read.tag]);if(!running.rowCount)break;await new Promise(resolve=>setTimeout(resolve,50));}
+  assert.equal((await pool.query('SELECT 1 FROM pg_stat_activity WHERE application_name=$1',[read.tag])).rowCount,0,'The abandoned backend must not continue scanning.');
+  const other=await pool.connect();await other.query('BEGIN');await other.query("SELECT set_config('application_name','another-read',true)");
+  assert.equal((await other.query('SELECT 7 AS ok')).rows[0].ok,7);await other.query('ROLLBACK');other.release();
+ }finally{await constrained.end();}
+},1));
+
+test('a slow page does not block another page, and disconnect cancels its SQL transaction',async()=>creativeFixture(async(pool,db,brand,gallery)=>{
+ await refreshCreativeIndex(pool,db,brand,[],gallery);
+ const readers=new pg.Pool({...pool.options,max:2});let delay=true,entered!:()=>void;const started=new Promise<void>(resolve=>entered=resolve);
+ readers.on('connect',client=>{const query=client.query.bind(client);(client as any).query=(text:any,...args:any[])=>{
+  if(delay&&typeof text==='string'&&text.startsWith('CREATE TEMP TABLE web_page_rows')){delay=false;const sleeping=query('SELECT pg_sleep(20)');entered();return sleeping.then(()=>(query as any)(text,...args));}
+  return(query as any)(text,...args);
+ };});
+ const app=express();attachCreativeBrowser(app,db,{getPool:()=>readers});app.get('/health',(_q,res)=>res.json({ok:true}));
+ const server=createServer(app);await new Promise<void>(resolve=>server.listen(0,'127.0.0.1',resolve));const base=`http://127.0.0.1:${(server.address() as any).port}`,controller=new AbortController();
+ try{
+  const first=fetch(base+'/api/brands/workspace/creatives?screen=creatives',{signal:controller.signal}).catch(error=>error);await started;
+  const start=performance.now(),second=await fetch(base+'/api/brands/workspace/creatives?screen=winners&previews=all');assert.equal(second.status,200);assert.equal((await second.json()).creatives.length,1);assert(performance.now()-start<2000,'The second page must not queue behind the slow first page.');
+  assert.equal((await fetch(base+'/health')).status,200);controller.abort();await first;
+  for(let n=0;n<20;n++){const count=(await pool.query("SELECT count(*)::integer AS n FROM pg_stat_activity WHERE application_name LIKE 'creative-read:%' AND state='active'")).rows[0].n;if(!count)break;await new Promise(resolve=>setTimeout(resolve,50));}
+  assert.equal((await pool.query("SELECT count(*)::integer AS n FROM pg_stat_activity WHERE application_name LIKE 'creative-read:%' AND state='active'")).rows[0].n,0);
+ }finally{controller.abort();server.closeAllConnections();await new Promise<void>(resolve=>server.close(()=>resolve()));await readers.end();}
+},1));

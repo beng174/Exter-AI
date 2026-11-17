@@ -1,0 +1,18 @@
+[
+  {
+    "view": "creatives",
+    "reads": 4,
+    "peakConcurrentReads": 1,
+    "slowRefreshSeconds": 6.52,
+    "browserErrors": [],
+    "failedRequests": []
+  },
+  {
+    "view": "overview",
+    "reads": 4,
+    "peakConcurrentReads": 1,
+    "slowRefreshSeconds": 6.52,
+    "browserErrors": [],
+    "failedRequests": []
+  }
+]
