@@ -26,8 +26,8 @@ the existing 500-ad selector and budget/disk guards; no read-time paid dispatch.
 
 ## Outcomes and retrospective
 Handoff and busy-worker fixtures passed. Four retained PNGs decoded in a browser,
-with one automatic refresh after 30 seconds and no external requests. Full checks
-and CI are pending. The screenshot's precise production cause is not
+with one automatic refresh after 30 seconds and no external requests. The PR records final command and CI results. Browser screenshots cover 1440px
+and 390px; mobile captures scroll to the cards. The screenshot's precise production cause is not
 verified; report proven code paths and keep configuration failures diagnosable.
 
 ## Context and orientation

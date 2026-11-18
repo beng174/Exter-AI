@@ -34,14 +34,14 @@ async def main():
   for card in await cards.all():await expect(card.locator('h3')).to_have_count(1)
   assert 'During this backfill' not in await page.locator('main').inner_text()
   await page.screenshot(path=str(OUT/'pending-1440.png'))
-  await page.set_viewport_size({'width':390,'height':844});await page.screenshot(path=str(OUT/'pending-390.png'))
+  await page.set_viewport_size({'width':390,'height':844});await cards.first.scroll_into_view_if_needed();await page.screenshot(path=str(OUT/'pending-390.png'))
   await page.set_viewport_size({'width':1440,'height':1100});phase='after'
   await page.wait_for_function("()=>{const images=[...document.querySelectorAll('.ui-creative-poster>img')];return images.length===4&&images.every(img=>img.complete&&img.naturalWidth===320)}",timeout=40000)
   assert len(reads)==2,reads
   await expect(page.get_by_text('Preview not collected',exact=True)).to_have_count(0)
   await expect(page.get_by_role('link',name='Manage previews')).to_have_count(0)
   await page.screenshot(path=str(OUT/'retained-1440.png'))
-  await page.set_viewport_size({'width':390,'height':844});await page.screenshot(path=str(OUT/'retained-390.png'))
+  await page.set_viewport_size({'width':390,'height':844});await cards.first.scroll_into_view_if_needed();await page.screenshot(path=str(OUT/'retained-390.png'))
   assert not errors and not external,(errors,external)
   result={'ads':4,'decodedImages':len(images),'automaticRefreshes':len(reads)-1,'secondsToRefresh':round(reads[1]['at']-reads[0]['at'],1),'browserErrors':errors,'externalRequests':external}
   (OUT/'results.json').write_text(json.dumps(result,indent=2)+'\n');print(json.dumps(result));await browser.close()
