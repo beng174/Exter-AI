@@ -53,3 +53,11 @@ test('preview rejection requires seven actual failed days and a reason; coverage
  assert.equal(previewMessage({failedDays:6,reason:'expired',lastAttemptAt:null}),'Preview being retried');assert.equal(previewMessage({failedDays:7,reason:null,lastAttemptAt:null}),'Preview being retried');assert.equal(previewMessage({failedDays:7,reason:'expired',lastAttemptAt:null}),'No preview from Meta');
  assert.deepEqual(publicMediaCoverage([ad({thumbnailUrl:'/poster',videoUrl:'/video'}),ad({nativeId:'other',imageUrls:['/image']}),ad({nativeId:'private',owned:true,publicEvidence:false})]),{ads:2,images:2,videos:1});
 });
+
+test('configured public previews keep refreshing after indexing, but paused, private and terminal gaps do not',async()=>{
+ const {needsPreviewRefresh}=await import('../shared/ad-media.js');
+ const pending=browserCreative({publicEvidence:true,thumbnailUrl:null,imageUrls:[],previewState:{failedDays:0,reason:'not_requested',lastAttemptAt:null}});
+ assert(needsPreviewRefresh([pending],true));assert(!needsPreviewRefresh([pending],false));assert(!needsPreviewRefresh([{...pending,thumbnailUrl:'/api/ad-media/files/stored'}],true));
+ for(const reason of ['budget','disk'])assert(!needsPreviewRefresh([{...pending,previewState:{failedDays:0,reason,lastAttemptAt:null}}],true));
+ assert(!needsPreviewRefresh([{...pending,previewState:{failedDays:7,reason:'unsupported',lastAttemptAt:null}}],true));assert(!needsPreviewRefresh([{...pending,publicEvidence:false,owned:true}],true));assert(needsPreviewRefresh([{...pending,previewState:{failedDays:7,reason:'queued',lastAttemptAt:null}}],true));
+});

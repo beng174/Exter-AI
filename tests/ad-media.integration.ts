@@ -155,3 +155,17 @@ test("missing-media diagnostics cover every ad, active and inactive, with disk-a
  const cards=await mergePreviewState(pool,'workspace',[browserCreative({brandId:'fictional-brand',nativeId:'9005'}),browserCreative({brandId:'fictional-brand',nativeId:'9001'})]);assert.equal(cards[0].previewState?.reason,'file_missing');assert.equal(cards[1].previewState?.reason,'no_media');
  const retry=await enqueueAdMedia(pool,'watch',new Date(Date.now()+25*3600000));assert(retry);assert((await pool.query('SELECT target_ids FROM ad_media_runs WHERE id=$1',[retry])).rows[0].target_ids.includes('9006'),'initial never-requested ads precede daily failed retries');assert.equal((await readMissingMedia(pool,'workspace',{reason:'file_missing'})).ads[0].nativeId,'9005');
 }));
+
+test('a busy worker discovers a new brand without waiting for its existing paid run to finish',async()=>fixture(async pool=>{
+ const {workAdMediaOnce}=await import('../server/ad-media/api.js');
+ const first=await enqueueAdMedia(pool,'watch');assert(first);
+ await pool.query("UPDATE ad_media_runs SET status='running',actor_run_id='fixtureRun10000001',available_at=now() WHERE id=$1",[first]);
+ await pool.query("INSERT INTO ad_media_refill_gate VALUES(1,now()-interval '1 minute')");
+ await pool.query(`INSERT INTO watchlists(id,workspace_id,brand_key,page_ids) VALUES('new-brand','workspace','fictional-bottle-brand','["12002"]');INSERT INTO collection_runs(id,watchlist_id,config,status) VALUES('new-official','new-brand','{"revision":1}','running');
+  INSERT INTO public_ads(platform,native_id,advertiser_id,start_time) VALUES('Meta','30001','12002','2026-01-22');INSERT INTO ad_observations(platform,native_id,run_id,workspace_id,active_status,raw_payload,reach) VALUES('Meta','30001','new-official','workspace','unknown','{"ad_creative_bodies":["A fictional school bottle."]}','{}');`);
+ const workerEnv={...env,EXTER_AD_MEDIA_BROKER_ORIGIN:'https://exter-fixture.example',EXTER_AD_MEDIA_BROKER_TOKEN:'fixture-only-service-'.repeat(3)};
+ assert(await workAdMediaOnce(pool,{env:workerEnv,fetch:async()=>Response.json({worked:true})}));
+ assert.equal((await pool.query('SELECT status FROM ad_media_runs WHERE id=$1',[first])).rows[0].status,'running');
+ const next=(await pool.query("SELECT target_ids,status FROM ad_media_runs WHERE watchlist_id='new-brand'")).rows[0];assert(next);assert.equal(next.status,'queued');assert.deepEqual(next.target_ids,['30001']);
+ assert.equal((await pool.query("SELECT count(*)::integer AS n FROM cost_ledger WHERE provider='apify_ad_media'")).rows[0].n,0);
+}));

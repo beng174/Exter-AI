@@ -89,9 +89,9 @@ test("cost settlement counts all billed results and retains unknown, changed-pri
 });
 
 test("the diskless worker uses only the authenticated fixed-origin step and bounded acknowledgements",async()=>{
- const env={EXTER_AD_MEDIA_ENABLED:"true",EXTER_AD_MEDIA_BROKER_TOKEN:"fixture-only-service-".repeat(3),EXTER_AD_MEDIA_BROKER_ORIGIN:"https://exter-fixture.example"};let queries=0,calls=0;
- const pool:any={query:async(sql:string)=>{queries++;return sql.includes("RETURNING *")?{rows:[{id:"00000000-0000-4000-8000-000000000001",watchlist_id:"fixture-watch"}]}:sql.startsWith("SELECT status")?{rows:[{status:"running"}]}:{rows:[]};}};
- assert.equal(await workAdMediaOnce(pool,{env,fetch:async(url,init)=>{calls++;assert(String(url).startsWith(env.EXTER_AD_MEDIA_BROKER_ORIGIN+"/api/ad-media/step/"));assert(!String(url).includes(env.EXTER_AD_MEDIA_BROKER_TOKEN));assert.equal(init?.method,"POST");assert.equal(init?.redirect,"error");assert.equal(new Headers(init?.headers).get("X-Exter-Ad-Media-Token"),env.EXTER_AD_MEDIA_BROKER_TOKEN);assert(!new Headers(init?.headers).has("Authorization"));return Response.json({worked:true});}}),true);assert.equal(calls,1);assert.equal(queries,3);
+ const env={EXTER_AD_MEDIA_ENABLED:"true",EXTER_AD_MEDIA_BROKER_TOKEN:"fixture-only-service-".repeat(3),EXTER_AD_MEDIA_BROKER_ORIGIN:"https://exter-fixture.example"};let queries=0,calls=0;const statements:string[]=[];
+ const pool:any={query:async(sql:string)=>{statements.push(sql);queries++;return sql.includes("RETURNING *")?{rows:[{id:"00000000-0000-4000-8000-000000000001",watchlist_id:"fixture-watch"}]}:sql.startsWith("SELECT status")?{rows:[{status:"running"}]}:{rows:[]};}};
+ assert.equal(await workAdMediaOnce(pool,{env,fetch:async(url,init)=>{calls++;assert(String(url).startsWith(env.EXTER_AD_MEDIA_BROKER_ORIGIN+"/api/ad-media/step/"));assert(!String(url).includes(env.EXTER_AD_MEDIA_BROKER_TOKEN));assert.equal(init?.method,"POST");assert.equal(init?.redirect,"error");assert.equal(new Headers(init?.headers).get("X-Exter-Ad-Media-Token"),env.EXTER_AD_MEDIA_BROKER_TOKEN);assert(!new Headers(init?.headers).has("Authorization"));return Response.json({worked:true});}}),true);assert.equal(calls,1);assert.equal(queries,4);assert(statements.some(sql=>sql.includes("ad_media_refill_gate")),"Busy workers still check the refill clock.");
 });
 
 test('video-only results keep a JPEG poster for non-priority ads without retaining a full video at the disk limit',async()=>{
@@ -106,4 +106,8 @@ test('video-only results keep a JPEG poster for non-priority ads without retaini
 test('nested catalogue snapshot media supplies product images and keeps its observed format',()=>{
  const row=actorMedia({adArchiveId:'9001',pageId:'12001',snapshot:{display_format:'DPA',cards:[{original_image_url:url}],videos:[],images:[]}});
  assert.equal(row?.format,'catalogue');assert.deepEqual(row?.images,[url]);
+});
+
+test('an enabled media worker reports missing service configuration without a provider call',async()=>{
+ let calls=0;await assert.rejects(workAdMediaOnce({query:async()=>{calls++;}} as any,{env:{EXTER_AD_MEDIA_ENABLED:'true'},fetch:async()=>{assert.fail('No provider request without service configuration.');}}),/service token and web service origin/);assert.equal(calls,0);
 });

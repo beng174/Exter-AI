@@ -68,6 +68,7 @@ export async function workOnce(pool: pg.Pool, connector?: MetaLibraryConnector, 
   const job = await claimJob(pool,owner);
   if (!job) return false;
   options.onClaim?.({id:job.id,owner});
+  let collectedPage=false;
   let state = "queued", backoffMs = 0, resetAttempts = false, errorMessage: string | null = null;
   let errorKind:MetaFailureKind|null=null,numericError:MetaCollectionError|null=null,nextSize:MetaPageSize|null=null;
   try {
@@ -89,6 +90,7 @@ export async function workOnce(pool: pg.Pool, connector?: MetaLibraryConnector, 
       await pool.query(`UPDATE collection_runs r SET status='running',stopped_at=NULL WHERE r.id=$1 AND r.status IN ('queued','running')
         AND EXISTS(SELECT 1 FROM collection_jobs j WHERE j.id=r.id AND j.lease_owner=$2 AND j.lease_until>now())`,[job.id,owner]);
       const result = await collectMetaPage(pool,job.id,connector,owner);
+      collectedPage=true;
       state = result.complete ? "complete" : "queued"; backoffMs = result.backoffMs;
       // Attempts apply to the current page, not the total number of healthy pages.
       resetAttempts = true;
@@ -143,12 +145,12 @@ export async function workOnce(pool: pg.Pool, connector?: MetaLibraryConnector, 
     await client.query("COMMIT");
   } catch (error) { await client.query("ROLLBACK"); throw error; }
   finally { client.release(); }
-  if(state==="complete"){
+  if(state==="complete"||collectedPage){
     try{const completed=(await pool.query("SELECT r.watchlist_id,w.workspace_id FROM collection_runs r JOIN watchlists w ON w.id=r.watchlist_id WHERE r.id=$1",[job.id])).rows[0];
       if(completed){
         await enqueueCreativeIndex(pool,completed.workspace_id);
         if((options.env||process.env).EXTER_AD_MEDIA_ENABLED==="true")await enqueueAdMedia(pool,completed.watchlist_id,new Date(),job.id);
-        if(categoryConfigured(options.env||process.env))await enqueueCategoryBatch(pool,completed.workspace_id);
+        if(state==="complete"&&categoryConfigured(options.env||process.env))await enqueueCategoryBatch(pool,completed.workspace_id);
       }
     }catch{/* Durable refill gates retry enrichment without repeating official collection. */}
   }

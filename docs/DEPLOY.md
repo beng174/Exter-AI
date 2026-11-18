@@ -1592,3 +1592,21 @@ application name, protecting index jobs and other operations.
 Deploy this follow-up to `exter-ai` after merging. It needs no migration, new secret,
 provider call or worker/scheduler change. Previously loaded results stay visible
 with the reason when a background refresh fails. Indexing still runs in the worker.
+
+## Preview handoff recovery (18 November 2026)
+
+Deploy this change to **exter-ai and exter-worker**. No migration or new secrets
+are required. Keep the current media switch, budget and disk limits. The worker
+uses the existing service token and web origin; missing broker configuration now
+produces a controlled diagnostic instead of silently leaving work unqueued.
+
+A committed collection page queues missing previews before the entire backfill
+finishes. Worker refill also checks for newly collected brands while older runs
+are active. The existing 500-ad batch, daily failed-ad retry and paid-call guards
+remain in force. For historical gaps, Data sources → Collect missing media starts
+the existing backfill. Retry a paused media job after correcting its configuration.
+
+Creatives refreshes visible pending previews every 30 seconds after the previous
+read settles. It does not start paid work from a page read. Unrequested ads show
+copy and their actual collection state rather than promising an active backfill.
+Fixture checks are not live verification of production coverage.
