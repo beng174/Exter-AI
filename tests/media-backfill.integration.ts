@@ -67,3 +67,21 @@ test('legacy undispatched newest-first plans are retained and replaced before an
  const old=await enqueueAdMedia(pool,'watch');await pool.query("UPDATE ad_media_runs SET preview_policy='legacy',target_ids='[\"900060\"]' WHERE id=$1",[old]);const owner=randomUUID();await pool.query("UPDATE ad_media_runs SET lease_owner=$2,lease_until=now()+interval '6 minutes' WHERE id=$1",[old,owner]);
  let starts=0;await stepAdMedia(pool,old!,owner,{env,storage,actor:actor([],[])});const prior=(await pool.query('SELECT status FROM ad_media_runs WHERE id=$1',[old])).rows[0];assert.equal(prior.status,'failed');const current=(await pool.query("SELECT * FROM ad_media_runs WHERE status='queued'")).rows[0];assert.equal(current.preview_policy,'preview-v2');assert.equal(current.target_ids[0],'900001');assert.equal((await pool.query('SELECT count(*)::int n FROM cost_ledger')).rows[0].n,0);
 },60));
+
+import {readFile,writeFile} from 'node:fs/promises';
+import {mergePreviewState,readRetainedMedia,mergeRetainedMedia} from '../server/ad-media/read.js';
+import {browserCreative} from './fixtures/creative-browser.js';
+test('preview handoff retains a decodable image, removes the missing reason and exposes the stored URL',async()=>fixture(async pool=>{
+ const image=await readFile(new URL('./fixtures/media/bottle-preview.png',import.meta.url)),root=await mkdtemp(join(tmpdir(),'preview-browser-'));
+ const storage=new AdMediaStorage({root,disk:async()=>mediaDiskMeasurement(10*1024**3,9*1024**3),images:{resolve:async()=>[{address:'8.8.8.8',family:4}],fetch:async()=>new Response(image,{headers:{'content-type':'image/png'}}),probe:async()=>({width:320,height:400})}});
+ try{
+  const originals=Array.from({length:4},(_,n)=>browserCreative({adId:'preview-'+n,nativeId:String(900001+n),brandId:'brand',brandName:'Fictional Bottle House',platform:'Meta',copy:['A bottle for every school day.','Keeps drinks cool on long walks.','Refill and reuse, every day.','A colourful bottle for small adventures.'][n],publicEvidence:true,owned:false,workspaceBrand:true,thumbnailUrl:null,imageUrls:[],videoUrl:null,mediaAvailable:false,deliveryStartAt:'2026-01-22T00:00:00Z',sourceUrl:'https://www.facebook.com/ads/library/?id='+String(900001+n)}));
+  const before=await mergePreviewState(pool,'workspace',originals);assert(before.every(row=>row.previewState?.reason==='not_requested'));
+  const id=await enqueueAdMedia(pool,'watch');assert(id);const queued=await mergePreviewState(pool,'workspace',originals);assert(queued.every(row=>row.previewState?.reason==='queued'));
+  const provider=actor(originals.map(row=>({type:'ad',adArchiveId:row.nativeId,pageId:'12001',displayFormat:'IMAGE',imageUrls:['https://image.fixture.fbcdn.net/preview.png']})));
+  for(let n=0;n<8;n++){if((await pool.query('SELECT status FROM ad_media_runs WHERE id=$1',[id])).rows[0].status==='complete')break;await tick(pool,storage,provider);}
+  const retained=await readRetainedMedia(pool,'workspace',originals.map(row=>row.nativeId)),after=mergeRetainedMedia(originals,retained,'workspace');assert(after.every(row=>row.thumbnailUrl?.startsWith('/api/ad-media/files/workspace/brand/')),JSON.stringify((await pool.query("SELECT r.status,r.error_kind,r.result_offset,r.results,c.error_kind AS file_error,c.diagnostics FROM ad_media_runs r LEFT JOIN ad_media_creatives c ON c.run_id=r.id")).rows));assert.equal((await readMediaCoverage(pool,'workspace'))[0].images,4);
+  const assets:Record<string,string>={};for(let n=0;n<after.length;n++){const asset=retained[n].assets[0],file=await storage.store.load(asset.ref);assert(file);assert.deepEqual(await readFile(file.absolutePath),image);assets[after[n].thumbnailUrl!]=image.toString('base64');}
+  if(process.env.MEDIA_PREVIEW_FIXTURE_OUTPUT)await writeFile(process.env.MEDIA_PREVIEW_FIXTURE_OUTPUT,JSON.stringify({before,queued,after,assets}));
+ }finally{await rm(root,{recursive:true,force:true});}
+},4));

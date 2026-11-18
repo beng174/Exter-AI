@@ -1,3 +1,4 @@
+import {mediaEnabled,mediaGbpRate} from "../../shared/ad-media.js";
 import {ownedPagePerformance} from "../infrastructure/owned-read.js";
 import {checkedRetainedMedia} from "../ad-media/file-health.js";
 import {apiErrorReason} from "../infrastructure/api-errors.js";
@@ -103,7 +104,7 @@ export function attachCreativeBrowser(app: Express, db: DatabaseSync, options: B
             }
             creatives=enrichLikelihood(db,brand.id,creatives,now.toISOString());
             if(res.destroyed)return;
-            await writeJsonRows(res,{sql:page.model,mediaReadStatus,categoryReadStatus,metaSource,brand:{id:brand.id,name:brand.name,domain:brand.domain,primaryCategories:primaryCategories(brand)},creatives,competitors,sources,ownedStatus,dateRange:page.dateRange,lastChecked:page.lastChecked,reportingRange:{from,to}} satisfies CreativeBrowserResponse,"creatives",{gzip:req.acceptsEncodings("gzip")==="gzip"});
+            await writeJsonRows(res,{mediaCollectionEnabled:Boolean(pool&&mediaEnabled()&&process.env.APIFY_TOKEN?.trim()&&mediaGbpRate(process.env)!==null),sql:page.model,mediaReadStatus,categoryReadStatus,metaSource,brand:{id:brand.id,name:brand.name,domain:brand.domain,primaryCategories:primaryCategories(brand)},creatives,competitors,sources,ownedStatus,dateRange:page.dateRange,lastChecked:page.lastChecked,reportingRange:{from,to}} satisfies CreativeBrowserResponse,"creatives",{gzip:req.acceptsEncodings("gzip")==="gzip"});
         }
         catch(error) {
             res.locals.apiFailureReason=apiErrorReason(error);
