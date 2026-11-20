@@ -1,3 +1,4 @@
+import {deleteCreatorPerformance} from "./performance-store.js";
 import type {WorkerObserver} from "../infrastructure/worker-diagnostics.js";
 import {workerClaimGate} from "../infrastructure/worker-recovery.js";
 import { storedCreatorRun } from "./run-store.js";
@@ -22,7 +23,8 @@ const verifierFor = (o: CreatorJobOptions) => o.verifier ?? new InstagramCreator
 export async function scheduleCreatorRefresh(pool: pg.Pool, now = new Date(), env: Record<string, string | undefined> = process.env) {
   // Expired unsaved discoveries are no longer needed for the research purpose.
   await pool.query("DELETE FROM creator_discovery_rejected WHERE checked_at<$1::timestamptz-interval '90 days'",[now]);
-  await pool.query("DELETE FROM creator_discovery_results WHERE NOT saved AND used_at<$1::timestamptz-interval '90 days'", [now]);
+  const expired=(await pool.query("DELETE FROM creator_discovery_results WHERE (workspace_id,handle) IN (SELECT workspace_id,handle FROM creator_discovery_results WHERE NOT saved AND used_at<$1::timestamptz-interval '90 days' LIMIT 100) RETURNING workspace_id,handle",[now])).rows;
+  for(const row of expired)await deleteCreatorPerformance(pool,row.workspace_id,row.handle);
   if (!new InstagramCreatorVerifier({ env }).configured()) return;
   const workspaces = (await pool.query(`SELECT DISTINCT r.workspace_id FROM creator_discovery_results r JOIN creator_discovery_settings s USING(workspace_id)
     WHERE r.saved AND r.next_refresh_at<=$1 AND NOT EXISTS(SELECT 1 FROM creator_discovery_runs j WHERE j.workspace_id=r.workspace_id AND j.status IN ('queued','running')) AND COALESCE((SELECT status FROM creator_discovery_runs j WHERE j.workspace_id=r.workspace_id AND j.kind='refresh' ORDER BY created_at DESC LIMIT 1),'complete') NOT IN ('paused','failed') LIMIT 100`, [now])).rows;

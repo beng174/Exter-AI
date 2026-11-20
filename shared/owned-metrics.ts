@@ -1,6 +1,7 @@
 /** CA-01/CA-02. All formulas and thresholds come from the creative analytics spec. */
 export type OwnedPlatform = "Meta" | "TikTok";
 export interface OwnedDay {
+  creatorAttributions?:{handle:string;kind:"Partnership"|"Whitelisted"}[];
   platform: OwnedPlatform;
   accountId: string;
   adId: string;
@@ -29,7 +30,7 @@ export interface OwnedDay {
   purchases: number | null;
   purchaseValue: number | null;
 }
-export type MetricField = { [K in keyof OwnedDay]: OwnedDay[K] extends number | null ? K : never }[keyof OwnedDay];
+export type MetricField = { [K in keyof OwnedDay]-?: OwnedDay[K] extends number | null ? K : never }[keyof OwnedDay];
 export type MetricName = "Spend" | "CPM" | "Link CTR" | "Hook rate" | "Hold rate" | "Retention 25%" | "Retention 50%" | "Retention 75%" | "Retention 95%" | "Retention 100%" | "Average watch time" | "Frequency" | "Purchases" | "CPA" | "ROAS" | "CVR";
 export interface OwnedMetric { value: number | null; status: "available" | "too early" | "unavailable"; rowsUsed: number; rowsExcluded: number }
 export const MINIMUM_SAMPLE = { impressions: 1000, earlyViews: 300, purchases: 10 } as const;

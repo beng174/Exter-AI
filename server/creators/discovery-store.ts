@@ -1,3 +1,4 @@
+import {refreshCreatorSales,deleteCreatorPerformance} from "./performance-store.js";
 import {creatorRunViews,legacyCreatorHolds} from "./run-store.js";
 import { createHash, randomUUID } from "node:crypto";
 import type pg from "pg";
@@ -5,9 +6,9 @@ import { z } from "zod";
 import { CREATOR_STYLES, CREATOR_RULE_VERSION, creatorHandle, emptyDiscovery, evaluateCreator, matchesCreator, recentCreatorPosts, restoreSavedCreatorCounts, type CreatorBrief, type CreatorFilters, type DiscoveryCreator, type DiscoveryProfile, type DiscoverySnapshot, type RejectedCreator, type CreatorEvaluation } from "../../shared/creator-discovery.js";
 const handles = z.array(z.string().max(31).transform(v => creatorHandle(v)).refine((v): v is string => v !== null)).max(30);
 const terms = z.array(z.string().trim().min(1).max(100)).max(30);
-export const briefSchema = z.object({ category: z.string().trim().min(2).max(160), keywords: terms, hashtags: z.array(z.string().trim().regex(/^#?[\p{L}\p{N}_]{1,80}$/u).transform(v => v.replace(/^#/, ""))).max(20), competitors: handles, country: z.enum(["GB", "ALL"]), minFollowers: z.number().int().min(0).max(100000000), maxFollowers: z.number().int().positive().max(100000000), seeds: handles, exclusions: terms, styles: z.array(z.enum(CREATOR_STYLES)).max(5), target: z.number().int().min(1).max(1000) }).strict().refine(b => b.minFollowers <= b.maxFollowers, "Follower range is reversed.");
-export const filtersSchema = z.object({ tier: z.enum(["Nano", "Micro", "Mid", "Macro", ""]).optional(), niche: z.string().max(100).optional(), engagement: z.enum(["Under 1%", "1 to 3%", "3% or more", ""]).optional(), uk: z.enum(["High", "Medium", "Low", "Unknown", ""]).optional(), style: z.string().max(50).optional(), worked: z.boolean().optional(), ads: z.boolean().optional(), minFit: z.number().min(0).max(100).optional(), saved: z.boolean().optional(), review: z.boolean().optional() }).strict();
-export function briefDigest(brief: CreatorBrief) { return createHash("sha256").update(JSON.stringify([CREATOR_RULE_VERSION, brief.category, brief.keywords, brief.hashtags, brief.competitors, brief.country, brief.minFollowers, brief.maxFollowers, brief.seeds, brief.exclusions, brief.styles, brief.target])).digest("hex"); }
+export const briefSchema = z.object({ audienceTarget:z.object({ages:z.array(z.string().regex(/^\d{2}(?:-\d{2}|\+)$/)).max(10).optional(),genders:z.array(z.enum(["female","male","unknown"])).max(3).optional()}).strict().optional(), category: z.string().trim().min(2).max(160), keywords: terms, hashtags: z.array(z.string().trim().regex(/^#?[\p{L}\p{N}_]{1,80}$/u).transform(v => v.replace(/^#/, ""))).max(20), competitors: handles, country: z.enum(["GB", "ALL"]), minFollowers: z.number().int().min(0).max(100000000), maxFollowers: z.number().int().positive().max(100000000), seeds: handles, exclusions: terms, styles: z.array(z.enum(CREATOR_STYLES)).max(5), target: z.number().int().min(1).max(1000) }).strict().refine(b => b.minFollowers <= b.maxFollowers, "Follower range is reversed.");
+export const filtersSchema = z.object({ minSales:z.number().min(0).max(100).optional(), tier: z.enum(["Nano", "Micro", "Mid", "Macro", ""]).optional(), niche: z.string().max(100).optional(), engagement: z.enum(["Under 1%", "1 to 3%", "3% or more", ""]).optional(), uk: z.enum(["High", "Medium", "Low", "Unknown", ""]).optional(), style: z.string().max(50).optional(), worked: z.boolean().optional(), ads: z.boolean().optional(), minFit: z.number().min(0).max(100).optional(), saved: z.boolean().optional(), review: z.boolean().optional() }).strict();
+export function briefDigest(brief: CreatorBrief) { return createHash("sha256").update(JSON.stringify([CREATOR_RULE_VERSION, brief.category, brief.keywords, brief.hashtags, brief.competitors, brief.country, brief.minFollowers, brief.maxFollowers, brief.seeds, brief.exclusions, brief.styles, brief.target,...(brief.audienceTarget?[brief.audienceTarget]:[])])).digest("hex"); }
 export function suppressionHash(workspace: string, handle: string) { return createHash("sha256").update(JSON.stringify([workspace, handle])).digest("hex"); }
 export interface DiscoveryStep { kind: "hashtag" | "partnership" | "ads" | "competitor" | "seed" | "enrich" | "verify"; value: string; handles?: string[] }
 export function discoverySteps(brief: CreatorBrief): DiscoveryStep[] {
@@ -28,12 +29,12 @@ export function actorDiscoveryInput(step: DiscoveryStep, country: string, target
   throw new Error("Account name searches are not supported.");
 }
 export async function readDiscoveryCreators(pool: pg.Pool, workspace: string): Promise<DiscoveryCreator[]> {
-  const rows = (await pool.query(`SELECT (profile-'posts'-'related'-'audit') || jsonb_build_object('related','[]'::jsonb,'audit',NULL,'posts',
+  const rows = (await pool.query(`SELECT (SELECT signal FROM creator_sales_current s WHERE s.workspace_id=creator_discovery_results.workspace_id AND s.handle=creator_discovery_results.handle) AS sales_signal,(profile-'posts'-'related'-'audit') || jsonb_build_object('related','[]'::jsonb,'audit',NULL,'posts',
     (SELECT COALESCE(jsonb_agg(p || jsonb_build_object('caption',left(p->>'caption',240))),'[]'::jsonb)
       FROM jsonb_array_elements(profile->'posts') WITH ORDINALITY AS t(p,n) WHERE n<=3)) AS profile,
     evaluation,saved,brief_version,next_refresh_at FROM creator_discovery_results WHERE workspace_id=$1 AND (NOT EXISTS(SELECT 1 FROM creator_discovery_settings WHERE workspace_id=$1) OR brief_version=(SELECT brief_version FROM creator_discovery_settings WHERE workspace_id=$1)) ORDER BY handle LIMIT 5001`, [workspace])).rows;
   if (rows.length > 5000) throw new Error("Creator list exceeds the read limit.");
-  return rows.map(r => ({ profile: r.profile, evaluation: r.evaluation, saved: r.saved, briefVersion: r.brief_version, nextRefreshAt: new Date(r.next_refresh_at).toISOString() }));
+  return rows.map(r => ({ salesSignal:r.sales_signal??undefined,profile: r.profile, evaluation: r.evaluation, saved: r.saved, briefVersion: r.brief_version, nextRefreshAt: new Date(r.next_refresh_at).toISOString() }));
 }
 export async function recordCreatorRejection(client: Pick<pg.PoolClient,"query">, workspace:string, profile:DiscoveryProfile, evaluation:CreatorEvaluation, version:string, at:Date) {
   if(evaluation.screen.disposition==="Rejected") await client.query(`INSERT INTO creator_discovery_rejected(workspace_id,handle,name,evaluation,brief_version,checked_at,official_followers,official_checked_at) VALUES($1,$2,$3,$4,$5,$6,$7,$8) ON CONFLICT(workspace_id,handle) DO UPDATE SET name=excluded.name,evaluation=excluded.evaluation,brief_version=excluded.brief_version,checked_at=excluded.checked_at,official_followers=COALESCE(excluded.official_followers,creator_discovery_rejected.official_followers),official_checked_at=COALESCE(excluded.official_checked_at,creator_discovery_rejected.official_checked_at)`,[workspace,profile.handle,profile.name,JSON.stringify(evaluation),version,at,profile.verification==="Verified"?profile.followers:null,profile.verification==="Verified"?profile.checkedAt:null]);
@@ -68,6 +69,7 @@ export async function rescreenCreatorRules(pool:pg.Pool,workspace:string,now=new
         await client.query("UPDATE creator_discovery_results SET evaluation=$3,brief_version=$4,profile=$5 WHERE workspace_id=$1 AND handle=$2",[workspace,row.handle,JSON.stringify(evaluation),version,JSON.stringify(profile)]);
         await recordCreatorRejection(client,workspace,profile,evaluation,version,now);
       }
+      await refreshCreatorSales(client,workspace,batch.map(r=>r.handle));
       touched=true;cursor=batch.at(-1)!.handle;
     }
     if(touched)await client.query("DELETE FROM creator_discovery_validation WHERE workspace_id=$1",[workspace]);
@@ -128,6 +130,7 @@ export async function upsertDiscoveryProfile(pool: pg.Pool, workspace: string, p
       verification_due=true,next_refresh_at=CASE WHEN $8 THEN excluded.next_refresh_at ELSE creator_discovery_results.next_refresh_at END`,
     [workspace, profile.handle, JSON.stringify(profile), JSON.stringify(evaluation), version, !enriched, next, enriched]);
     await client.query("DELETE FROM creator_discovery_validation WHERE workspace_id=$1",[workspace]);
+    await refreshCreatorSales(client,workspace,[profile.handle]);
     await client.query("COMMIT");return true;
   } catch(e){await client.query("ROLLBACK");throw e;}finally{client.release();}
 }
@@ -138,6 +141,7 @@ export async function deleteDiscoveryCreator(pool: pg.Pool, workspace: string, h
     await client.query("BEGIN");
     await client.query("SELECT pg_advisory_xact_lock(hashtextextended($1,0))",[`creator:${workspace}`]);
     await client.query("INSERT INTO creator_discovery_suppression(workspace_id,handle_hash) VALUES($1,$2) ON CONFLICT DO NOTHING", [workspace, suppressionHash(workspace, handle)]);
+    await deleteCreatorPerformance(client,workspace,handle);
     // Cancel active jobs before removing the profile; a leased worker checks suppression again.
     await client.query("UPDATE creator_discovery_runs SET status=CASE WHEN status IN ('queued','running') THEN 'cancelled' ELSE status END,steps='[]',handles='[]',brief=jsonb_set(brief,'{seeds}','[]'),lease_until=NULL,lease_owner=NULL WHERE workspace_id=$1", [workspace]);
     await client.query("DELETE FROM creator_discovery_results WHERE workspace_id=$1 AND handle=$2", [workspace, handle]);

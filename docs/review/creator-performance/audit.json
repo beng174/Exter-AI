@@ -1,0 +1,36 @@
+{
+  "checks": [
+    {
+      "width": 1280,
+      "noOverflow": true,
+      "qualifiedCreators": 2,
+      "forecastGated": true
+    },
+    {
+      "width": 1440,
+      "noOverflow": true,
+      "qualifiedCreators": 2,
+      "forecastGated": true
+    },
+    {
+      "width": 1920,
+      "noOverflow": true,
+      "qualifiedCreators": 2,
+      "forecastGated": true
+    },
+    {
+      "width": 390,
+      "noOverflow": true,
+      "qualifiedCreators": 2,
+      "forecastGated": true
+    }
+  ],
+  "actions": [
+    "quote",
+    "import"
+  ],
+  "externalRequests": [],
+  "pageErrors": [],
+  "providerCalls": 0,
+  "note": "Fixtures only. No production measurement or release of validation gates."
+}
