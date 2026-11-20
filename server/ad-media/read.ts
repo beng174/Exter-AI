@@ -33,5 +33,5 @@ export async function mergePreviewState(pool:pg.Pool,workspace:string,rows:Brows
  const days=new Map(result.rows.map(r=>[JSON.stringify([r.brand_key,r.native_id]),r]));
  // Read all controlled states without loading ad copy for every page of diagnostics.
  const reasons=await readMissingReasons(pool,workspace,rows.map(row=>row.nativeId));
- return rows.map(row=>{if(row.thumbnailUrl)return row;const key=JSON.stringify([row.brandId,row.nativeId]),day=days.get(key),state=reasons.get(key);return {...row,previewState:{failedDays:day?.failed_days||0,reason:state?.reason||"not_requested",lastAttemptAt:state?.lastAttemptAt||null}};});
+ return rows.map(row=>{if(row.thumbnailUrl)return row;const key=JSON.stringify([row.brandId,row.nativeId]),day=days.get(key),state=reasons.get(key);return {...row,previewState:{failedDays:day?.failed_days||0,reason:state?.reason||null,lastAttemptAt:state?.lastAttemptAt||null}};});
 }

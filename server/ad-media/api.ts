@@ -71,8 +71,10 @@ async function refillMediaQueue(pool:pg.Pool,env:Record<string,string|undefined>
 }
 export async function workAdMediaOnce(pool:pg.Pool,options:WorkerObserver&{env?:Record<string,string|undefined>;fetch?:typeof fetch}={}){
   const env=options.env||process.env;if(!mediaEnabled(env))return false;
-  const configuration=mediaBrokerConfig(env);if(!configuration)return false;
-  const owner=randomUUID();let run=await claimAdMedia(pool,owner);if(!run){await refillMediaQueue(pool,env);run=await claimAdMedia(pool,owner);}if(!run)return false;
+  const configuration=mediaBrokerConfig(env);if(!configuration)throw new Error("Media worker needs its service token and web service origin in Render.");
+  // A long paid run must not stop discovery of newly collected watchlists.
+  await refillMediaQueue(pool,env);
+  const owner=randomUUID(),run=await claimAdMedia(pool,owner);if(!run)return false;
   options.onClaim?.({id:run.id,owner,workspaceId:run.workspace_id,status:run.status});
   let worked=false,brokerFailed=false;
   try{

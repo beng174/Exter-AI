@@ -155,3 +155,11 @@ test("preview-loading cards show one title and source actions follow their metri
  const title="A fictional candle for quiet evenings.",html=render(ui.CreativeCard,{title,creative:{brandName:"Fictional Candle House",platform:"Meta",copy:title,sourceUrl:"https://www.facebook.com/ads/library/?id=9001",deliveryStartAt:"2025-08-21",adFormat:"video",previewState:{failedDays:1,reason:"file_missing",lastAttemptAt:"2026-11-10"}},source:"Fictional Candle House",metrics:[{label:"UK reach",value:1234567,basis:"Observed"}],onOpen:()=>{}});
  assert.match(html,/Preview loading/);assert.match(html,/File missing from disk/);assert.match(html,/Video/);assert.match(html,/1,234,567/);assert.match(html,/Observed/);assert.equal((html.match(/<h3/g)||[]).length,1);assert(html.indexOf('</dl>')<html.indexOf('class="ui-card-source-link"'));
 });
+
+test('unqueued previews use ad copy once, preserve catalogue titles and never promise an active backfill',()=>{
+ const title='A fictional bottle that lasts through school days.',creative={brandName:'Fictional Bottle House',platform:'Meta',copy:title,sourceUrl:'https://www.facebook.com/ads/library/?id=9001',deliveryStartAt:'2026-01-22',previewState:{failedDays:0,reason:'not_requested',lastAttemptAt:null}};
+ const html=render(ui.CreativeCard,{title,creative,source:creative.brandName,metrics:[],onOpen:()=>{}});
+ assert.match(html,/Preview not collected/);assert.match(html,/Never requested/);assert.match(html,/Collect missing media in Data sources/);assert(!html.includes('During this backfill'));assert(!html.includes('Preview loading'));assert.equal((html.match(new RegExp(title.replace(/[.*+?^${}()|[\]\\]/g,'\\$&'),'g'))||[]).length,2,'The copy appears in the accessible open label and once in the visible poster.');
+ assert.equal((html.match(/<h3/g)||[]).length,1);assert.match(html,/22 Jan 2026/);assert.match(html,/\/providers\/meta.svg/);
+ const catalogue=render(ui.CreativeCard,{title:'A fictional starter set',creative:{...creative,copy:'{{product.name}}',adFormat:'catalogue',catalogueProduct:{title:'A fictional starter set',description:'Starter set'}},source:creative.brandName,metrics:[],onOpen:()=>{}});assert(!catalogue.includes('{{product.name}}'));assert.match(catalogue,/A fictional starter set/);
+});

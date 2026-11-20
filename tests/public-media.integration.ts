@@ -126,3 +126,14 @@ test('a paused tagging batch can be resumed from a fresh quote without holding a
  const quote=await categoryQuote(pool,'workspace',env);assert.equal(quote.ads,12);assert.equal('resume' in quote&&quote.resume,true);
  assert.equal(await enqueueCategoryBatch(pool,'workspace',new Date(),{hash:quote.hash,env}),id);assert.equal((await pool.query('SELECT status FROM public_category_batches WHERE id=$1',[id])).rows[0].status,'queued');assert.equal((await pool.query('SELECT count(*)::integer AS n FROM cost_ledger')).rows[0].n,0);
 }));
+
+test('a committed collection page queues previews before the year-long collection completes',async()=>fixture(async pool=>{
+ const {enqueueCollection,workOnce}=await import('../server/infrastructure/jobs.js'),{MetaLibraryConnector}=await import('../server/connectors/meta-library.js');
+ const id=await enqueueCollection(pool,'own'),connector=new MetaLibraryConnector({token:'fixture-only',fetch:async()=>Response.json({data:[{id:'9998',page_id:'12',ad_creative_bodies:['A fictional bottle for school days.'],ad_delivery_start_time:'2026-01-22'}],paging:{next:'https://graph.facebook.com/ads_archive',cursors:{after:'another-page'}}})});
+ assert(await workOnce(pool,connector,{env:{...env,EXTER_META_LIBRARY_ENABLED:'true'},paceMs:0}));
+ assert.equal((await pool.query('SELECT status FROM collection_runs WHERE id=$1',[id])).rows[0].status,'running');
+ assert.equal((await pool.query('SELECT status FROM collection_jobs WHERE id=$1',[id])).rows[0].status,'queued');
+ const media=(await pool.query('SELECT status,target_ids,cap FROM ad_media_runs')).rows;assert.equal(media.length,1);assert.equal(media[0].status,'queued');assert(media[0].target_ids.includes('9998'));assert(media[0].cap<=500);
+ assert.equal((await pool.query("SELECT count(*)::integer AS n FROM cost_ledger WHERE provider='apify_ad_media'")).rows[0].n,0,'Handoff queues work without a paid media start.');
+ assert.equal((await pool.query("SELECT count(*)::integer AS n FROM ad_observations WHERE native_id='9998'")).rows[0].n,1);
+},0));

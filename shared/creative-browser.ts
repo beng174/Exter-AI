@@ -51,6 +51,7 @@ export interface BrowserCreative extends DemoGalleryCreative {
 }
 export interface CreativeCompetitor { key:string;brandId:string|null;name:string;status:string }
 export interface CreativeBrowserResponse {
+  mediaCollectionEnabled?:boolean;
     sql?:import("./creative-read-model.js").CreativeReadModel;
     mediaReadStatus?:"available"|"unavailable"|"not_configured";
     categoryReadStatus?:"available"|"unavailable"|"not_configured";

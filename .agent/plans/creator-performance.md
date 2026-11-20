@@ -14,7 +14,8 @@ accuracy gates; public ad reach never becomes sales or ROAS.
 - [x] 2026-11-20 UTC: validate focused fixtures, responsive browser layouts and database integration.
 - [x] 2026-11-20 UTC: all four local checks pass; 650 unit tests, build and secret scan.
 - CI results are tracked on the PR.
-- [ ] Open a PR against exter-test-drive and record rollout and limitations.
+- [x] 2026-11-20 UTC: open PR #42 against exter-test-drive with screenshots and rollout.
+- [ ] Recheck the merged target revision and confirm final CI.
 
 ## Surprises and discoveries
 Working Score remains unavailable in real ad read models. Use it only when a
@@ -24,6 +25,9 @@ creator profile projections keep only three recent posts for page reads, so sale
 calculations must use the bounded full twelve-post profile on the server.
 
 ## Decision log
+2026-11-20: GitHub confirmed target commit 077ea4b includes PR #41 while the
+checkout remote advertisement remained at ba71c5f. Fetch the exact commit SHA and
+merge it, preserving both dated documentation sections and the preview recovery.
 2026-11-20: separate public association proof from explicit owned-ad identity.
 Build evidence in the existing committed 500-ad background index chunks. New
 public page reads must not scan/decompress every raw payload. Formula assumptions

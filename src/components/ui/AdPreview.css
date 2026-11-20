@@ -17,3 +17,12 @@
 .ui-ad-preview-compact { width:100%;height:100%;min-height:0;padding:4px;gap:4px; }
 .ui-ad-preview-compact>strong { font-size:9px;line-height:1.25;text-align:center; }
 .ui-creative-no-poster>.ui-ad-preview { justify-content:center;align-items:center;gap:12px; }
+
+/* The original copy remains useful while a preview is waiting for collection. */
+.ui-ad-preview { align-items:flex-start;text-align:left;background:var(--surface);gap:12px; }
+.ui-ad-preview .brand-name { margin-bottom:0; }
+.ui-ad-preview-copy { font-size:16px;font-weight:600;line-height:1.5;max-width:100%; }
+.ui-ad-preview .ui-ad-preview-platform { flex-wrap:wrap;font-size:12px; }
+.ui-ad-preview .ui-ad-preview-reason { align-items:flex-start;text-align:left;margin-top:auto; }
+.ui-ad-preview-compact { align-items:center;justify-content:center;text-align:center; }
+.ui-ad-preview-compact .ui-ad-preview-reason { margin-top:0;align-items:center; }

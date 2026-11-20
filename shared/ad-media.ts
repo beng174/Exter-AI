@@ -43,3 +43,8 @@ export function publicMediaCoverage(rows:readonly BrowserCreative[]){
  return {ads:ads.length,images:ads.filter(row=>Boolean(row.thumbnailUrl||row.imageUrls.length)).length,videos:ads.filter(row=>Boolean(row.videoUrl)).length};
 }
 export const MEDIA_ERRORS:Record<string,string>={priority:"Queued previews were reordered. No paid run was started.",configuration:"Media collection needs its token, GBP exchange-rate ceiling and service configuration.",budget:"Media collection is paused by the data provider budget.",provider:"The media provider could not complete this request. Saved files are retained.",uncertain:"A paid start could not be confirmed. Its reserve is retained; check the provider run before retrying.",changed:"The saved watchlist changed. Earlier files are retained.",media:"Some returned files could not be retained. Missing media will be checked on a later day.",disk:"Video downloads are paused at the disk safety limit. Images and saved files are retained.",expired:"Some temporary media links expired. Missing files can be retried later.",unsupported:"Some returned files are unsupported or missing.",output:"The media provider returned unsupported output. Its reserve is retained."};
+
+/** Refresh only the visible public rows while configured collection can fill them. */
+export function needsPreviewRefresh(rows:readonly BrowserCreative[],enabled:boolean){
+ return enabled&&rows.some(row=>(row.publicEvidence??(!row.owned&&row.sourceKind==='public'))&&!row.thumbnailUrl&&!row.imageUrls.length&&!['budget','disk'].includes(row.previewState?.reason||'')&&(row.previewState?.reason==='queued'||previewMessage(row.previewState)!=='No preview from Meta'));
+}

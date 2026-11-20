@@ -1222,6 +1222,19 @@ counts, rechecks and Stop search. No external browser/provider requests were mad
 - Deploy this follow-up to exter-ai after merge. No migration, new secret, worker
   update, provider-switch change or budget change is required.
 
+## 18 November 2026: preview handoff recovery
+
+The ION8 screenshot shows never-requested previews. Without production access,
+the exact deployed cause is unverified. Code inspection found collection handed
+off media only at run completion, and busy media workers skipped periodic refill.
+Both handoffs now run without waiting for long backfills or older paid runs.
+Creatives also refreshes pending previews after indexing has completed; unknown
+tracking is no longer described as proof that media was never requested.
+
+Fictional pipeline/browser fixtures retain and decode four real image files. Cards
+update without navigation after 30 seconds at 1440px and 390px. No provider calls.
+No deployment, coverage claim or live gate has been confirmed by these fixtures.
+
 ## 20 November 2026: creator performance intelligence (CP-01..06)
 
 PRODUCT-SPEC now defines Creator Sales Signal and ROAS forecasting. The spec and
