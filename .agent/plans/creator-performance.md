@@ -12,10 +12,10 @@ accuracy gates; public ad reach never becomes sales or ROAS.
 - [x] 2026-11-20 UTC: implement bounded evidence linking, outcomes and shared signal calculations.
 - [x] 2026-11-20 UTC: add discovery controls, brief handoff, import and forecast/accuracy interfaces.
 - [x] 2026-11-20 UTC: validate focused fixtures, responsive browser layouts and database integration.
-- [x] 2026-11-20 UTC: all four local checks pass; 650 unit tests, build and secret scan.
-- CI results are tracked on the PR.
+- [x] 2026-11-20 UTC: all four local checks pass; 653 unit tests after merging PR #41, build and secret scan.
 - [x] 2026-11-20 UTC: open PR #42 against exter-test-drive with screenshots and rollout.
-- [ ] Recheck the merged target revision and confirm final CI.
+- [x] 2026-11-20 UTC: merge the verified current target, retaining PR #41.
+- Final follow-up CI is tracked on PR #42; the merged branch passed all four jobs.
 
 ## Surprises and discoveries
 Working Score remains unavailable in real ad read models. Use it only when a
@@ -38,7 +38,8 @@ training, not a weaker replacement for the accuracy publication gates.
 Core implementation and focused calculation, API and database fixtures pass.
 Browser checks found and fixed a narrow-screen expanded-table overflow.
 1280/1440/1920/390px checks pass, without external requests or page errors.
-The full 105-test database suite passed, including existing large workspaces.
+Accuracy and the expanded creator breakdown also pass at 1440/390px.
+The full 108-test database suite passed in CI, including existing large workspaces.
 All four local checks pass. Focused reruns also cover owned sync, creator refresh,
 expiry and direct-ad identity. CI results are tracked on the PR. Fixtures cannot establish live gates.
 

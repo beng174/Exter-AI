@@ -26,6 +26,7 @@ with sync_playwright() as pw:
   elif path=='/api/connections':value={'connections':[]}
   elif path=='/api/creator-discovery':value=C['snapshot']
   elif path=='/api/creator-performance':value=C['performance']
+  elif path=='/api/accuracy':value=C['accuracy']
   elif path=='/api/creator-performance/creator':value=C['details']
   elif path=='/api/creator-discovery/quote':
    body=req.post_data_json;assert body['brief']['seeds']==['one.creator','two_creator','third'];assert body['brief']['minFollowers']==10000;assert 'candles' in body['brief']['keywords'];actions.append('quote');value={'id':'fixture-quote','maxCostGbp':3,'batches':4,'expiresAt':'2026-12-01','available':True,'reason':'Fixture cost limit.'}
@@ -55,6 +56,8 @@ with sync_playwright() as pw:
  page.get_by_text('Import campaign history',exact=True).click();page.get_by_label('Product or price tier',exact=True).fill('Starter kit')
  history='creator_handle,brand,platform,start_date,end_date,spend,revenue,roas,cpa,content_type,campaign_id,purchases,ad_ids\nharper_creator,Fixture Candle House,Meta,2026-01-01,2026-01-14,100,250,2.5,10,video,new-campaign,10,\n'
  page.get_by_label('Campaign CSV',exact=True).set_input_files({'name':'campaigns.csv','mimeType':'text/csv','buffer':history.encode()});expect(page.get_by_text('1 campaign record added.',exact=True)).to_be_visible();expect(page.get_by_text('Forecast available after 50 creator outcomes (13 so far)',exact=True)).to_be_visible()
+ for width in [1440,390]:
+  page.set_viewport_size({'width':width,'height':1100});page.goto(BASE+'/?view=accuracy&brandId='+F['brand']['id'],wait_until='networkidle');expect(page.get_by_role('heading',name='Creator ROAS forecast checks',exact=True)).to_be_visible();assert not page.evaluate('document.documentElement.scrollWidth>innerWidth');page.screenshot(path=str(OUT/f'Accuracy-{width}.png'),full_page=True)
  assert actions==['quote','import'];assert not errors and not external,(errors,external)
  browser.close()
 ref=Image.open('design/reference/png/Creators.png').convert('RGB');app=Image.open(OUT/'Creators-1440.png').convert('RGB');canvas=Image.new('RGB',(app.width+ref.width,max(app.height,ref.height)+40),'#f7f8fa');canvas.paste(app,(0,40));canvas.paste(ref,(app.width,40));draw=ImageDraw.Draw(canvas);draw.text((16,12),'App: fictional creator performance fixtures',fill='#17223b');draw.text((app.width+16,12),'Approved Creators reference',fill='#17223b');canvas.save(OUT/'Creators-reference-comparison.png')

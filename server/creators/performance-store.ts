@@ -38,14 +38,15 @@ export async function refreshCreatorSales(client:Query,workspace:string,handles:
  dates AS (SELECT handle,lower(data->>'brandName') brand,(data->>'from')::timestamptz started FROM ads WHERE data->>'from' IS NOT NULL AND EXISTS(SELECT 1 FROM jsonb_array_elements(data->'credits') c WHERE c->>'kind' IN ('Partnership','Whitelisted','Co-author'))
  UNION ALL SELECT handle,lower(data->>'brand'),(data->>'from')::timestamptz FROM creator_campaign_outcomes WHERE workspace_id=$1 AND handle=ANY($2::text[])),
  ordered_dates AS (SELECT handle,brand,started,lag(started) OVER(PARTITION BY handle,brand ORDER BY started) previous FROM (SELECT DISTINCT handle,brand,started FROM dates) d),
- repeats AS (SELECT handle,brand,bool_or(previous IS NOT NULL AND started-previous>=interval '30 days') repeated FROM ordered_dates GROUP BY handle,brand)
+ repeats AS (SELECT handle,brand,bool_or(previous IS NOT NULL AND started-previous>=interval '30 days') repeated FROM ordered_dates GROUP BY handle,brand),
+ version_ads AS (SELECT handle,platform,native_id FROM ads UNION SELECT a.handle,i.platform,i.native_id FROM ads a JOIN web_creative_index i ON i.workspace_id=a.workspace_id AND i.brand_key=a.brand_key AND ((NULLIF(a.data->>'copyKey','') IS NOT NULL AND i.data->>'versionsCopyKey'=a.data->>'copyKey') OR (NULLIF(a.data->>'hashKey','') IS NOT NULL AND i.data->>'versionsHashKey'=a.data->>'hashKey')))
  SELECT r.handle,(SELECT count(*)::integer FROM ads a WHERE a.handle=r.handle) ads,
  (SELECT count(*)::integer FROM ads a WHERE a.handle=r.handle AND NOT COALESCE((data->>'workspaceBrand')::boolean,false)) competitor_ads,
  (SELECT count(*)::integer FROM repeats p WHERE p.handle=r.handle) brands,
  (SELECT count(*)::integer FROM repeats p WHERE p.handle=r.handle AND repeated) repeat_brands,
  (SELECT max((data->>'days')::float8) FROM ads a WHERE a.handle=r.handle) longest,
  (SELECT percentile_cont(.5) WITHIN GROUP(ORDER BY (data->>'workingScore')::float8) FROM ads a WHERE a.handle=r.handle AND data->>'workingScore' IS NOT NULL) working_median,
- (SELECT count(DISTINCT platform||':'||native_id)::integer FROM ads a WHERE a.handle=r.handle) versions,
+ (SELECT count(*)::integer FROM version_ads a WHERE a.handle=r.handle) versions,
  (SELECT jsonb_agg(jsonb_build_object('country',country,'reach',n)) FROM (SELECT c->>'country' country,sum((c->>'reach')::float8) n FROM ads a CROSS JOIN LATERAL jsonb_array_elements(COALESCE(NULLIF(data->'reach'->'locations'->'value','null'),'[]')) c WHERE a.handle=r.handle GROUP BY c->>'country') x) countries,
  (SELECT jsonb_agg(jsonb_build_object('country',country,'age',age,'gender',gender,'reach',n)) FROM (SELECT c->>'country' country,c->>'age' age,c->>'gender' gender,sum((c->>'reach')::float8) n FROM ads a CROSS JOIN LATERAL jsonb_array_elements(COALESCE(NULLIF(data->'reach'->'demographics'->'value','null'),'[]')) c WHERE a.handle=r.handle GROUP BY c->>'country',c->>'age',c->>'gender') x) demographics,
  (SELECT min(data->>'from') FROM ads a WHERE a.handle=r.handle) started,
