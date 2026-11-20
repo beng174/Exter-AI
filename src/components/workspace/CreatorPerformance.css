@@ -3,3 +3,4 @@
 .creator-research-card{grid-template-columns:minmax(0,1fr)}
 .creator-research-proof,.creator-performance-detail :is(details,.ui-data-table),.creator-sales :is(details,.ui-data-table){min-width:0;max-width:100%}
 .creator-performance-detail .ui-table-scroll,.creator-sales .ui-table-scroll{width:100%;max-width:100%;overflow:auto}
+.creator-research-card:has(.creator-performance-detail details[open]){grid-column:1/-1;grid-row:auto;grid-template-rows:auto}

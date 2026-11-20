@@ -51,6 +51,10 @@ with sync_playwright() as pw:
  page.get_by_text('How this signal is calculated',exact=True).click();expect(page.get_by_role('table',name='Sales Signal breakdown')).to_be_visible()
  page.get_by_text('Ads and campaign results',exact=True).click();expect(page.get_by_role('table',name='Ads featuring this creator')).to_be_visible();expect(page.get_by_role('table',name='Owned creator performance')).to_be_visible();expect(page.get_by_role('table',name='Creator campaign outcomes')).to_be_visible()
  page.get_by_text('Who these ads reached',exact=True).click();expect(page.get_by_role('table',name='Published reach by age and gender')).to_be_visible()
+ expect(page.get_by_role('table',name='Published reach by country',exact=True)).to_contain_text('8,000')
+ assert page.locator('.creator-research-card').first.evaluate("e=>e.getBoundingClientRect().width/e.parentElement.getBoundingClientRect().width>.95"),'Expanded research must use the full row.'
+ for caption in ['Sales Signal breakdown','Published reach by country','Owned creator performance']:
+  assert page.get_by_role('table',name=caption,exact=True).evaluate("e=>e.getBoundingClientRect().width<=e.parentElement.getBoundingClientRect().width+1"),caption
  for width in [1440,390]:
   page.set_viewport_size({'width':width,'height':1100});assert not page.evaluate('document.documentElement.scrollWidth>innerWidth'),page.evaluate("()=>[...document.querySelectorAll('main *')].filter(e=>e.getBoundingClientRect().right>innerWidth+1).slice(0,20).map(e=>({tag:e.tagName,cls:e.className,width:e.getBoundingClientRect().width,text:e.textContent.slice(0,90)}))");page.locator('.creator-research-card').first.scroll_into_view_if_needed();page.screenshot(path=str(OUT/f'Creator-detail-{width}.png'),full_page=True)
  page.get_by_text('Import campaign history',exact=True).click();page.get_by_label('Product or price tier',exact=True).fill('Starter kit')

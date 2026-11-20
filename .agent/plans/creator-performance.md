@@ -36,7 +36,8 @@ training, not a weaker replacement for the accuracy publication gates.
 
 ## Outcomes and retrospective
 Core implementation and focused calculation, API and database fixtures pass.
-Browser checks found and fixed a narrow-screen expanded-table overflow.
+Browser checks found and fixed expanded-table overflow. Open details span the
+full result row on desktop; narrower screens keep scoped table scrolling.
 1280/1440/1920/390px checks pass, without external requests or page errors.
 Accuracy and the expanded creator breakdown also pass at 1440/390px.
 The full 108-test database suite passed in CI, including existing large workspaces.
