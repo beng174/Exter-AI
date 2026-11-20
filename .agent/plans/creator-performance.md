@@ -8,10 +8,12 @@ accuracy gates; public ad reach never becomes sales or ROAS.
 
 ## Progress
 - [x] 2026-11-20 UTC: read product, accuracy, UI and creator discovery rules.
-- [ ] Write and commit the product contract before product code.
-- [ ] Implement bounded evidence linking, outcomes and shared signal calculations.
-- [ ] Add discovery controls, brief handoff, import and forecast/accuracy interfaces.
-- [ ] Validate fixtures, browser layouts, all four checks and database integration.
+- [x] 2026-11-20 UTC: write and commit the product contract before product code.
+- [x] 2026-11-20 UTC: implement bounded evidence linking, outcomes and shared signal calculations.
+- [x] 2026-11-20 UTC: add discovery controls, brief handoff, import and forecast/accuracy interfaces.
+- [x] 2026-11-20 UTC: validate focused fixtures, responsive browser layouts and database integration.
+- [x] 2026-11-20 UTC: all four local checks pass; 650 unit tests, build and secret scan.
+- CI results are tracked on the PR.
 - [ ] Open a PR against exter-test-drive and record rollout and limitations.
 
 ## Surprises and discoveries
@@ -29,7 +31,12 @@ are versioned and documented before implementation. Fifty creator outcomes permi
 training, not a weaker replacement for the accuracy publication gates.
 
 ## Outcomes and retrospective
-Pending implementation. Fixtures cannot establish live forecast or client gates.
+Core implementation and focused calculation, API and database fixtures pass.
+Browser checks found and fixed a narrow-screen expanded-table overflow.
+1280/1440/1920/390px checks pass, without external requests or page errors.
+The full 105-test database suite passed, including existing large workspaces.
+All four local checks pass. Focused reruns also cover owned sync, creator refresh,
+expiry and direct-ad identity. CI results are tracked on the PR. Fixtures cannot establish live gates.
 
 ## Context and orientation
 Creators uses server/creators/discovery-api.ts and CreatorDiscoveryPage.tsx.

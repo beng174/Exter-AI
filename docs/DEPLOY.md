@@ -1592,3 +1592,59 @@ application name, protecting index jobs and other operations.
 Deploy this follow-up to `exter-ai` after merging. It needs no migration, new secret,
 provider call or worker/scheduler change. Previously loaded results stay visible
 with the reason when a background refresh fails. Indexing still runs in the worker.
+
+## Creator Sales Signal and outcome forecasting (20 November 2026)
+
+Merge the creator-performance PR into `exter-test-drive`. Deploy **exter-ai**,
+then **exter-worker** and **exter-scheduler**, from that branch. Web startup applies
+the additive schema under the existing receipt. If a manual migration is needed,
+run `npm run db:migrate` in exter-ai's Render Shell and check for exit code 0 before
+restarting the worker and scheduler. No new secret, plan, provider, dependency or
+budget setting is required. Existing live switches remain unchanged.
+
+The existing background creative index adds direct creator links in its committed
+500-ad chunks. Its final creator phase refreshes at most 100 profile summaries per
+chunk, including saved profiles on deploy. Research pages read cached summaries;
+opening a creator reads at most 48 linked ads. No page requests a public scrape.
+Existing creator search still requires its cost quote and an explicit start.
+
+Partnership/co-author/whitelist identities need an actual handle or professional
+profile URL. Public copy needs an explicit credit; video handles need a recorded
+moment. Names or faces alone cannot link an ad. Missing source identity stays
+missing. Returned owned metadata can link an explicit partnership identity; where
+it is absent, confirm **saved owned ad IDs** in Creators. An archive ID is never an
+owned ID by assumption. No new unsupported Graph fields or provider calls were added.
+
+In Creators → Creator performance, download the CSV template, choose the account
+or Reported campaigns, currency, category and product/price tier, then upload up
+to 500 past campaigns (1 MB). Only the workspace's own brand is accepted. Imported
+observations are labelled separately from account reporting. IDs are checked in the
+selected account; purchases/views are never invented. Exact repeats are idempotent;
+changed rows need a new campaign identifier. Original imports are not kept as raw
+files. Existing owned days and public observations remain unchanged.
+
+Sales Signal weights are initial documented assumptions, not measured performance
+accuracy. Working Score remains unassessed until the real score exists. Country
+and age/gender figures describe published ad reach, not creator followers.
+
+Forecast training is an explicit bounded local calculation on at most 5,000
+campaigns, not a startup task or a paid model request. Fifty distinct creators in
+one reporting group need resolved outcomes **and signal snapshots recorded before
+the campaign**. Retrospective imports without earlier snapshots can inform research
+but cannot train a historical forecast. The newest fifth of creators is held out;
+the newest fifth of earlier creators calibrates the error range. Neither enters
+coefficient fitting. Versions include the frozen training-data/parameter hash.
+
+Use **Check saved outcomes** on the creator model, then Settings → Accuracy. The
+server calculates AUC/calibration from immutable owned per-ad outcomes, exact ad
+IDs and saved asset families. Missing or overlapping identities fail closed.
+Validation admits at most 20,000 per-ad results per reporting group; training
+selects only campaign features and totals, excluding those per-ad arrays.
+Imports cannot manufacture 3,000 verified holdout ads. Forecasts remain hidden
+until the existing AUC/calibration gates and the additional regression error/range
+checks pass. Fixtures never open a real gate. No forecasts enter client reports.
+
+Delete creator clears the new creator links, features, imported summaries and
+models using that creator. Public source history and owned reporting days remain
+intact. Imports and explicit creator-detail reads renew the research-use date;
+unsaved profile expiry follows the existing 90-day rule in bounded batches.

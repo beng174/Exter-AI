@@ -2,7 +2,7 @@ import type pg from "pg";
 import {OWNED_METRIC_RULES,type MetricName,type OwnedMetric} from "../../shared/owned-metrics.js";
 import type {BrowserCreative,CreativePerformance} from "../../shared/creative-browser.js";
 const field=(name:string)=>`(data->>'${name}')::double precision`;
-const measures=Object.entries(OWNED_METRIC_RULES).map(([name,rule])=>{
+export const OWNED_METRICS_SQL=Object.entries(OWNED_METRIC_RULES).map(([name,rule])=>{
  const eligible=[rule.numerator,rule.denominator,rule.minimum?.[0]].filter(Boolean).map(key=>`${field(key!)} IS NOT NULL`).join(' AND ');
  const used=`count(*) FILTER(WHERE ${eligible})`,denom=rule.denominator?`sum(${field(rule.denominator)}) FILTER(WHERE ${eligible})`:'1',sum=`sum(${field(rule.numerator)}) FILTER(WHERE ${eligible})`;
  const available=rule.reported?`count(*)=1 AND ${used}=1`:`${used}>0 AND ${denom}<>0${rule.minimum?` AND sum(${field(rule.minimum[0])}) FILTER(WHERE ${eligible})>=${rule.minimum[1]}`:''}`;
@@ -19,7 +19,7 @@ export async function ownedPagePerformance(pool:pg.Pool,workspace:string,rows:Br
  ), groups AS (
  SELECT platform,account,currency,attribution,conversion_event,ad_id,false AS benchmark,data,pulled_at FROM days WHERE ad_id=ANY($4::text[])
  UNION ALL SELECT platform,account,currency,attribution,conversion_event,NULL,true,data,pulled_at FROM days
- ) SELECT platform,account,currency,attribution,conversion_event,ad_id,benchmark,count(DISTINCT data->>'adId')::integer AS sample,max(pulled_at) AS checked,jsonb_build_object(${measures}) AS metrics
+ ) SELECT platform,account,currency,attribution,conversion_event,ad_id,benchmark,count(DISTINCT data->>'adId')::integer AS sample,max(pulled_at) AS checked,jsonb_build_object(${OWNED_METRICS_SQL}) AS metrics
  FROM groups GROUP BY platform,account,currency,attribution,conversion_event,ad_id,benchmark ORDER BY platform,account,currency,attribution,conversion_event,ad_id`,[workspace,from,to,rows.filter(r=>r.workspaceBrand).map(r=>r.nativeId)]);
  const key=(r:Record<string,any>)=>JSON.stringify([r.platform,r.account,r.currency,r.attribution,r.conversion_event]);
  const benchmarks=new Map(result.rows.filter(r=>r.benchmark).map(r=>[key(r),r]));

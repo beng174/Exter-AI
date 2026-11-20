@@ -1,3 +1,4 @@
+import {creatorForecastGate} from "../../shared/creator-forecast.js";
 import { CREATOR_RULE_VERSION } from "../../shared/creator-discovery.js";
 import { rescreenCreatorRules } from "../creators/discovery-store.js";
 import type { Express, Request, Response } from "express";
@@ -40,6 +41,7 @@ export function attachAccuracy(app:Express,db:DatabaseSync,options:AccuracyOptio
     const id=workspace(req.query.workspaceId),value=emptyAccuracy();
     const rows=latestRecords<AccuracyRow>(db,id,"measurement"),tests=latestRecords<RecommendationTest>(db,id,"test"),results=latestRecords<TestResult>(db,id,"result");
     value.models=modelValidations(db,id);
+    try{const creatorPool=pool();if(creatorPool){const checked=await creatorPool.query('SELECT v.data,m.data AS model FROM creator_forecast_validation v JOIN creator_forecast_models m ON m.workspace_id=v.workspace_id AND m.id=v.model_id WHERE v.workspace_id=$1 ORDER BY m.created_at DESC LIMIT 100',[id]);value.models.push(...checked.rows.map(r=>r.data.status==='Live'&&!creatorForecastGate(r.model,r.data)?{...r.data,status:'In validation',reasons:[...r.data.reasons,'Creator ROAS range checks have not passed.']}:r.data));}}catch{rows.push({layer:'Predictions',field:'Creator ROAS forecast',version:'Not checked',score:null,sampleSize:0,checkedAt:null,status:'In validation',detail:'Creator forecast checks could not be read. Retry on Creators.'});}
     for(const model of value.models)rows.push({layer:"Predictions",field:`${model.target} · ${model.cohort}`,version:model.modelVersion,score:model.auc,sampleSize:model.sampleSize,checkedAt:model.checkedAt,status:model.status,detail:model.reasons.join(" ")||"Time holdout and calibration gates passed."});
     const wins=recommendationWinRate(results);if(tests.length)rows.push({layer:"Recommendations",field:"Test win rate",version:"test-thresholds-v1",score:wins.rate,sampleSize:wins.resolved,checkedAt:results.map(r=>r.checkedAt).sort().at(-1)??null,status:wins.resolved?"In validation":"Not enough data",detail:`${wins.wins} wins from ${wins.resolved} resolved tests. ${wins.pending} pending. No causal claim.`});
     for(const field of [...LABELLING_FIELDS.map(f=>f.label),"Product category"]){if(!rows.some(r=>r.layer==="Tags"&&(r.field===field||r.field.startsWith(`${field} (`))))rows.push({layer:"Tags",field,version:"Not checked",score:null,sampleSize:0,checkedAt:null,status:"Not enough data",detail:["Person on camera","Call to action","Product category"].includes(field)?"Matching human labels are not available.":""});}

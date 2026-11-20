@@ -460,7 +460,8 @@ creators have resolved own-brand outcomes within one reporting cohort may Exter 
 a regularised log(1+ROAS) regression on the five Sales Signal inputs and missingness
 flags. Freeze features before campaign start, and outcomes before the holdout.
 Hold out the newest 20% of creators in time order; no creator/family crosses the
-split. Predictions use only training data. Save model version, coefficients,
+split. Reserve the newest fifth of the earlier creators for range calibration;
+fit coefficients on the remaining earlier creators only. Predictions use only training data. Save model version, coefficients,
 cohort, feature times, split dates and training IDs. Report held-out mean absolute
 error against a training-median baseline and an empirical 90% error range. Do not
 use training error as confidence or fit the final model on the holdout.

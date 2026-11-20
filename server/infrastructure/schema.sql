@@ -332,3 +332,35 @@ CREATE TABLE IF NOT EXISTS creative_index_jobs (
 );
 ALTER TABLE worker_job_failures DROP CONSTRAINT IF EXISTS worker_job_failures_job_type_check;
 ALTER TABLE worker_job_failures ADD CONSTRAINT worker_job_failures_job_type_check CHECK(job_type IN ('onboarding','collection','owned','media','creators','categories','kernel','index'));
+
+-- CP-01..06: minimal public attribution and scoped creator outcomes, never tokens.
+CREATE TABLE IF NOT EXISTS creator_ad_evidence (
+ workspace_id text NOT NULL,handle text NOT NULL,brand_key text NOT NULL,platform text NOT NULL,native_id text NOT NULL,
+ data jsonb NOT NULL,first_linked_at timestamptz NOT NULL DEFAULT now(),updated_at timestamptz NOT NULL DEFAULT now(),
+ PRIMARY KEY(workspace_id,handle,brand_key,platform,native_id)
+);
+CREATE TABLE IF NOT EXISTS creator_sales_current (
+ workspace_id text NOT NULL,handle text NOT NULL,signal jsonb NOT NULL,PRIMARY KEY(workspace_id,handle)
+);
+CREATE TABLE IF NOT EXISTS creator_sales_history (
+ workspace_id text NOT NULL,handle text NOT NULL,feature_hash text NOT NULL,features jsonb NOT NULL,
+ recorded_at timestamptz NOT NULL DEFAULT now(),category text NOT NULL DEFAULT '',PRIMARY KEY(workspace_id,handle,feature_hash)
+);
+CREATE INDEX IF NOT EXISTS creator_sales_history_time ON creator_sales_history(workspace_id,handle,recorded_at DESC);
+CREATE TABLE IF NOT EXISTS creator_campaign_outcomes (
+ workspace_id text NOT NULL,id text NOT NULL,handle text NOT NULL,cohort text NOT NULL,data jsonb NOT NULL,content_hash text NOT NULL,
+ created_at timestamptz NOT NULL DEFAULT now(),PRIMARY KEY(workspace_id,id)
+);
+CREATE INDEX IF NOT EXISTS creator_outcome_cohort ON creator_campaign_outcomes(workspace_id,cohort,handle);
+CREATE TABLE IF NOT EXISTS creator_forecast_models (
+ workspace_id text NOT NULL,id text NOT NULL,cohort text NOT NULL,data jsonb NOT NULL,created_at timestamptz NOT NULL DEFAULT now(),
+ PRIMARY KEY(workspace_id,id)
+);
+CREATE INDEX IF NOT EXISTS creator_forecast_latest ON creator_forecast_models(workspace_id,cohort,created_at DESC);
+CREATE INDEX IF NOT EXISTS web_creative_copy_key ON web_creative_index(workspace_id,brand_key,(data->>'versionsCopyKey'));
+CREATE INDEX IF NOT EXISTS web_creative_hash_key ON web_creative_index(workspace_id,brand_key,(data->>'versionsHashKey'));
+
+CREATE TABLE IF NOT EXISTS creator_forecast_validation (
+ workspace_id text NOT NULL,model_id text NOT NULL,data jsonb NOT NULL,
+ PRIMARY KEY(workspace_id,model_id),FOREIGN KEY(workspace_id,model_id) REFERENCES creator_forecast_models(workspace_id,id) ON DELETE CASCADE
+);

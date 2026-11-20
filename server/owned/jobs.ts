@@ -1,3 +1,4 @@
+import {recordOwnedCreatorIdentities} from "../creators/performance-store.js";
 import type {WorkerObserver} from "../infrastructure/worker-diagnostics.js";
 import {workerClaimGate} from "../infrastructure/worker-recovery.js";
 import { randomUUID } from "node:crypto";
@@ -73,6 +74,7 @@ export async function workOwnedOnce(pool:pg.Pool,options:OwnedWorkerOptions={}) 
         VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9)
         ON CONFLICT(owned_account_id,platform,ad_id,day,attribution,currency,conversion_event) DO UPDATE SET pulled_at=excluded.pulled_at,data=excluded.data
         WHERE owned_ad_days.pulled_at<excluded.pulled_at`,[account.id,row.platform,row.adId,row.day,row.attribution,row.currency,row.conversionEvent,row.pulledAt,JSON.stringify(row)]);
+      await recordOwnedCreatorIdentities(client,account.workspace_id,account.id,days);
       const latest=days.map(row=>row.day).sort().at(-1) || null;
       await client.query("UPDATE owned_accounts SET status='connected',last_successful_sync=GREATEST(last_successful_sync,$2::timestamptz),latest_data_date=GREATEST(latest_data_date,$3::date),last_error=NULL WHERE id=$1",[account.id,now.toISOString(),latest]);
       await client.query("UPDATE owned_sync_jobs SET status='complete',lease_owner=NULL,lease_until=NULL WHERE id=$1 AND lease_owner=$2",[job.id,owner]);
