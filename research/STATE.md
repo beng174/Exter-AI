@@ -1267,3 +1267,49 @@ existing production bundle-size warning remains. No validation gate is cleared.
 The final identity audit also scopes legacy logo/Page review and Meta setup costs
 and counts to Meta. All 25 focused TikTok/onboarding integration fixtures pass;
 TikTok business IDs cannot become Facebook Page identities or complete Meta setup.
+
+## 20 November 2026: creator performance intelligence (CP-01..06)
+
+PRODUCT-SPEC now defines Creator Sales Signal and ROAS forecasting. The spec and
+ExecPlan were committed before product implementation. New work links direct
+partnership/co-author/whitelist and credited handles during background indexing;
+calculates a five-part Estimated Sales Signal with missing-weight coverage; adds
+reviewed search filters, seed handles, a brief handoff, own-account identity/outcome
+confirmation, atomic campaign CSV import and explicit gated forecast training.
+
+No competitor ROAS is inferred. Ad audiences are published ad reach, not followers.
+Real Working Score is still unavailable, so that half of ad backing is unassessed.
+No Graph fields, provider prices, collection schedule, budgets or live switches
+change. No new provider request runs from a page or from model training.
+
+Training needs 50 distinct creators with outcomes in one reporting group and
+pre-campaign score snapshots. Forecast publication also needs the existing 3,000
+owned holdout-ad/AUC/calibration gates plus regression checks. Imported campaign
+figures alone cannot release those gates. Existing owned live gates and all creator
+client precision gates remain unchanged. Fixtures are not live verification.
+
+Focused calculation, API, deletion, import, owned metric and model tests pass.
+Full verification and responsive screenshots are recorded on the PR. Exact rollout
+is documented in docs/DEPLOY.md: deploy web, worker and scheduler; additive schema
+only, no new secrets or configuration changes.
+
+
+## 23 November 2026: PR 43 reconciliation with merged creator intelligence
+
+Merge target 6585cfe includes PR 42 alongside the background-index and preview
+recovery changes from PRs 39 to 41. Both sets of deployment and status notes stay
+in place. TikTok identity, collection, media and analysis wiring is preserved.
+Creator attribution runs in the existing committed index chunks, followed by its
+bounded creator-summary phase. Public requests only read the index or bounded
+fallback; none rebuild it.
+
+The shared public score keeps its calculation breakdown. Creator evidence stores
+its numeric value. Meta creator versions and imported ad matching stay scoped by
+platform, including matching Meta/TikTok IDs and copy. A populated PR 42 schema
+fixture upgrades twice without losing observations, creator records, paid costs,
+category labels or indexing checkpoints.
+
+Validation: npm run check, npm test (661 tests), npm run build and npm run
+secrets:check pass. All 123 disposable Postgres integration tests pass, including
+the 20,000-ad read/recovery and 50,000-ad memory cases. Final merge CI is recorded
+on PR 43. No live gate is cleared by this fixture verification.

@@ -393,6 +393,140 @@ Per competitor website (product feeds where public): product launches, removals,
 
 **Order:** 1 to 3 first (they use ads already collected), then 4, then 5 and 6. None of this starts until the core loop works on real data: Winners, creative breakdown, Patterns, briefs.
 
+## Creator Sales Signal and ROAS forecasting
+
+Owner-authorised extension, 20 November 2026. These items extend Creators without
+changing its strict individual-creator screening, data budgets or privacy rules.
+Sales Signal is an **Estimated research checklist**, never ROAS, verified sales,
+a conversion prediction or permission to weaken the existing Results gate.
+
+### CP-01 Creator ad evidence
+
+Link only directly supported creator identities: partnership/co-author or
+whitelisted creator handles/profile links, explicit ad-copy credits, and visible
+handles with recorded on-screen timestamps. A name, face, ordinary brand mention
+or a guessed handle is insufficient. Copy credits need wording such as “with”,
+“by”, “featuring” or a creator-credit label beside the handle. Keep the proof kind,
+short supporting quote/timestamp, source ad, brand and check date. Several proof
+kinds for one ad count as one ad; one creator can feature in many ads.
+
+Per creator show featured ads, brands, days running, exact creative/copy versions,
+published UK reach, real Working Score when available, and published reached
+age/gender/country groups. Never invent a Working Score. This is the audience of
+the linked ads, not a demographic inference about the creator or their followers.
+Per-ad reach can overlap; totals describe published ad reach, not unique people.
+Archive IDs never establish owned-account ad identity. Build links in bounded
+background index chunks, including existing ads on deploy, not raw scans on reads.
+
+### CP-02 Creator Sales Signal
+
+Version `creator-sales-v1` is a provisional deterministic checklist needing outcome
+validation. Its five maximum weights are: ad backing 35, repeat brand use 20,
+sponsored response 15, audience fit 20 and authenticity 10. Each part is normalised
+0–100. Overall score = sum(part value × available weight) / available weight,
+rounded to an integer. Missing parts drop out, never fail or earn free points.
+Coverage is available weight / 100; show Provisional below full coverage. High
+confidence requires >=80% coverage and >=10 distinct ads; Medium requires >=50%
+and >=3 ads; otherwise Low. These are evidence sufficiency labels, not probabilities.
+
+- Ad backing: mean of the median real Working Score and longevity, each half of
+  the 35 weight. Longevity = min(longest observed days / 90, 1) × 100. Omit either
+  missing half and reduce coverage. These are advertiser-backing signals only.
+- Repeat brand use: share of linked brands with at least two dated campaign
+  bursts, separated by 30 days, ×100. Require explicit partnership/whitelist proof
+  or reported campaigns. Ad copies/versions within a burst are not separate deals.
+  The interface calls this repeat brand use; it cannot prove payment or a contract.
+- Sponsored response: median post engagement / median organic engagement / 2,
+  capped at 1, ×100. Use dated likes+comments divided by the same checked follower
+  count. Need at least three disclosed paid posts and three organic posts within
+  the latest twelve. Gifted/unclear posts are excluded from the organic baseline.
+  A zero or absent organic baseline leaves this part unassessed.
+- Audience fit: equally weighted available subparts: published UK share of linked
+  ads' country reach; fraction of the brief's niche terms matched in saved public
+  text; overlap with requested reached ages/genders, when explicitly selected.
+  Do not use the creator's likely base as their audience's country. A UK-only
+  publication does not prove 100% of the whole audience is UK. Mark country reach
+  as a published sample. Missing subparts reduce the available 20 weight.
+- Authenticity: reuse the existing assessed comment/history risk check: 100 when
+  assessed with no flags, 0 with recorded flags, otherwise unassessed. This cannot
+  prove fake followers or fraud.
+
+Show earned/available weight, confidence, each formula and its source counts.
+Example: “3 competitor ads, longest 74 days, 9 versions”. All counts open those ads.
+Keep original observation dates and metrics. Saved segments and exports share the
+same Sales Signal filter. No Sales Signal can admit a rejected creator to Results.
+
+### CP-03 Discovery controls
+
+Add a plain-English brief helper that proposes supported filters and displays them
+before any paid search. Parse country, follower range/tier, selected content style,
+niche and minimum Sales Signal; unrecognised requests stay visible as not applied.
+It does not silently execute a search or use niche terms for account-name searches.
+“Find creators like these” accepts one to three valid handles, using the existing
+budgeted seed discovery. “Find creators for this brief” carries the selected stored
+opportunity's category, creator profile and format into an editable search brief.
+Keep the existing price quote and explicit Find creators step. Support sort/filter
+by Sales Signal; missing scores sort last. Screening rules always apply first.
+
+### CP-04 Own-account outcomes and history import
+
+Observed spend, ROAS, CPA, hook and hold rates use shared/owned-metrics.ts and its
+minimum samples, only for the connected workspace's owned ad IDs with explicit
+partnership/whitelist identity. Never match archive and owned IDs by numeric
+coincidence. Preserve account, currency, attribution, event, category, format and
+dates as separate cohorts. Missing identity can be confirmed against an owned ad
+in Creators; confirmation does not turn a public ad into an owned record.
+
+Import CSV columns: creator_handle, brand, platform, start_date, end_date, spend,
+revenue, roas, cpa, content_type. Optional campaign_id, purchases and ad_ids support
+stronger checks and deduplication. Select currency, category, account/reporting
+scope and product in the import form. Only the workspace's own brand is allowed;
+never import competitor outcomes. Non-negative finite values, valid inclusive
+dates, handles and formats are mandatory; empty optional metrics remain missing.
+If spend and revenue exist, ROAS must match revenue/spend within rounding tolerance.
+If purchases exist, CPA must match spend/purchases. Reject invalid rows atomically,
+report row numbers and retain prior imports. Duplicate campaigns are idempotent;
+conflicting revisions require a new campaign identifier. Label “Observed · imported”
+and distinguish it from synced account reporting. Imports never invent purchases,
+video views or impressions, and cannot establish an ad-level validation gate.
+Store the Sales Signal feature snapshot only when recorded before campaign start;
+late retrospective features cannot enter forecast training.
+
+### CP-05 ROAS forecast training and publication
+
+Training is explicit, bounded and off web startup. Only after at least 50 distinct
+creators have resolved own-brand outcomes within one reporting cohort may Exter fit
+a regularised log(1+ROAS) regression on the five Sales Signal inputs and missingness
+flags. Freeze features before campaign start, and outcomes before the holdout.
+Hold out the newest 20% of creators in time order; no creator/family crosses the
+split. Reserve the newest fifth of the earlier creators for range calibration;
+fit coefficients on the remaining earlier creators only. Predictions use only training data. Save model version, coefficients,
+cohort, feature times, split dates and training IDs. Report held-out mean absolute
+error against a training-median baseline and an empirical 90% error range. Do not
+use training error as confidence or fit the final model on the holdout.
+
+Fifty creators permit training, not publication. The existing AC-04 gates remain:
+3,000 independent resolved holdout ads, account/category/format separation, AUC
+>=0.70 for beating the account benchmark and passing calibration, from real owned
+outcomes. Imports without those linked verified ad outcomes cannot release that
+gate. A continuous forecast additionally needs held-out absolute error better than
+the median baseline and >=85% coverage of its stated 90% range. Show validation
+score, sample, version, range and confidence whenever a forecast is published.
+Fixtures never open a live gate. Keep unvalidated forecasts out of cards, exports
+and client reports. Below 50 show “Forecast available after 50 creator outcomes
+(X so far)”. Above 50 but before validation say “Forecast is in validation”.
+Expose model checks on Settings > Accuracy; never call a public Sales Signal ROAS.
+
+### CP-06 Privacy and safety
+
+Public professional profiles and explicitly published business contacts only.
+No personal contacts, follower lists or inferred sensitive traits. Public ad reach
+demographics describe published ad audiences only. Keep workspace access, deletion,
+suppression, retention and fixture/sample isolation unchanged. Delete creator also
+removes their new association/profile data and training artefacts containing it.
+No outreach, provider calls from reads, budget increases or official reach/date
+changes are authorised by this extension. Fixtures are not live verification.
+
 ## Platform screens
 
 Fourteen screens, one per job. The rule across all of them: every number and every finding opens the ads behind it.

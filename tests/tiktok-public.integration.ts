@@ -1,4 +1,5 @@
 // Disposable Postgres and fictional provider/media fixtures only.
+import pg from 'pg';import {readFile} from 'node:fs/promises';
 import test from 'node:test';import assert from 'node:assert/strict';import express from 'express';import {createServer} from 'node:http';import {randomUUID} from 'node:crypto';import type {AddressInfo} from 'node:net';
 import {creativeFixture} from './fixtures/creative-sql.js';
 import {TikTokCommercialConnector,TikTokCommercialError} from '../server/connectors/tiktok-commercial.js';
@@ -82,3 +83,44 @@ test('TK-01 TikTok identities never become Meta Page pictures or completed Meta 
  const identities=await resolvedBrandIdentities(db,brand.id,undefined,pool);assert.equal(identities.find(row=>row.id===brand.id)?.metaPageId,undefined);
  await enqueueOnboarding(pool,brand);const setup=await readOnboarding(pool,db,brand.id);assert(setup);assert.equal(setup.steps.find(s=>s.key==='pages')?.count,0);assert.deepEqual(setup.manualPages,[]);assert.deepEqual(setup.confirmedPages,[]);
  },0));
+
+test('TK-01/CP-01 merged background indexing keeps creator proof and TikTok analysis separate for identical ad IDs and copy',async()=>creativeFixture(async(pool,db,brand)=>{
+ const {browserCreative}=await import('./fixtures/creative-browser.js'),{creatorBrief,creatorProfile}=await import('./fixtures/creator-discovery.js'),{briefDigest,upsertDiscoveryProfile}=await import('../server/creators/discovery-store.js'),{recordCreatorAdEvidence,refreshCreatorSales,creatorEvidencePage}=await import('../server/creators/performance-store.js'),{workingScore}=await import('../shared/working-score.js');
+ await upsertDiscoveryProfile(pool,brand.id,creatorProfile(),creatorBrief,briefDigest(creatorBrief),true,'2026-12-20');
+ const copy='Made with @fixture_creator.',meta=browserCreative({adId:'legacy-meta',nativeId:'1001',brandId:brand.id,brandName:brand.name,platform:'Meta',copy,publicEvidence:true,owned:false,workspaceBrand:true});
+ await pool.query("INSERT INTO web_creative_index(workspace_id,brand_key,platform,native_id,source_type,source_version,data) VALUES($1,$1,'Meta','1001','legacy','fixture',$2)",[brand.id,JSON.stringify(meta)]);
+ await pool.query("INSERT INTO public_ads(platform,native_id,advertiser_id,start_time) VALUES('Meta','1001','12','2026-09-01')");
+ await pool.query("INSERT INTO ad_observations(platform,native_id,run_id,workspace_id,active_status,reach,raw_payload) VALUES('Meta','1001','official',$1,'active','{}',$2)",[brand.id,JSON.stringify({ad_creative_bodies:[copy],branded_content_partner:{username:'fixture_creator'},display_format:'VIDEO',total_reach_by_location:[{country:'GB',reach:1234}]})]);
+ await watch(pool);const f=fixture({more:false,title:copy});await drain(pool,await enqueueTikTok(pool,'tik',{now}),f.connector);
+ const gallery:any={selected:async(_workspace:string,ids:string[])=>ids.includes('tiktok:tik:1001')?[browserCreative({adId:'tiktok:tik:1001',nativeId:'1001',brandId:brand.id,platform:'TikTok',copy,hookType:'question',angle:'gifting',durationSeconds:12})]:[]};
+ await refreshCreativeIndex(pool,db,brand,[],gallery);
+ const rows=(await pool.query("SELECT platform,data FROM web_creative_index WHERE source_type='official' ORDER BY platform")).rows;assert.deepEqual(rows.map(r=>r.platform),['Meta','TikTok']);const tik=rows[1].data;assert.equal(tik.platform,'TikTok');assert.equal(tik.analysisAdId,'tiktok:tik:1001');assert.equal(tik.hookType,'question');assert.equal(tik.publicReach.locations.value[0].reach,18000);assert.deepEqual(f.counts(),{pages:1,detail:1,token:1});
+ const proof=(await pool.query('SELECT platform,data FROM creator_ad_evidence')).rows;assert.equal(proof.length,1);assert.equal(proof[0].platform,'Meta');assert.deepEqual(proof[0].data.credits.map((c:any)=>c.kind).sort(),['Copy credit','Partnership']);
+ let signal=(await pool.query('SELECT signal FROM creator_sales_current')).rows[0].signal;assert.equal(signal.stats.ads,1);assert.equal(signal.stats.countries[0].reach,1234);assert.equal(signal.stats.versions,1);
+ await pool.query("INSERT INTO web_creative_index(workspace_id,brand_key,platform,native_id,source_type,source_version,data) SELECT workspace_id,brand_key,platform,'1002',source_type,source_version,data FROM web_creative_index WHERE platform='TikTok' AND source_type='official'");
+ await refreshCreatorSales(pool,brand.id,['fixture_creator']);signal=(await pool.query('SELECT signal FROM creator_sales_current')).rows[0].signal;assert.equal(signal.stats.versions,1);assert.equal((await creatorEvidencePage(pool,brand.id,'fixture_creator'))[0].versions,1,'TikTok copies cannot inflate Meta creator versions.');
+ const score=workingScore({survival:80,scaling:60,velocity:90,organic:null},{days:74,active:true,history:21,sample:12})!;await recordCreatorAdEvidence(pool,brand.id,[{row:{...meta,workingScore:score}}]);await refreshCreatorSales(pool,brand.id,['fixture_creator']);assert.equal((await pool.query('SELECT signal FROM creator_sales_current')).rows[0].signal.stats.workingMedian,score.score,'Creator summaries keep a numeric score rather than a structured score object.');
+ },0));
+
+test('TK-01/CP-01 merged schema upgrades existing PR 42 rows twice without losing history, costs or checkpoints',async()=>{
+ assert(process.env.TEST_DATABASE_URL);const admin=new pg.Pool({connectionString:process.env.TEST_DATABASE_URL}),schema='merge43_'+randomUUID().replaceAll('-','');await admin.query('CREATE SCHEMA '+schema);const pool=new pg.Pool({connectionString:process.env.TEST_DATABASE_URL,options:`-c search_path=${schema},public`});
+ try{
+  const sql=await readFile(new URL('./fixtures/pr42-public-schema.sql',import.meta.url),'utf8');await migrate(pool,{readScripts:async()=>[{phase:'public_schema',sql}]});
+  await pool.query(`INSERT INTO watchlists(id,workspace_id,brand_key,page_ids) VALUES('old','workspace','workspace','["12"]');
+   INSERT INTO collection_runs(id,watchlist_id,config,status) VALUES('old-run','old','{"revision":1}','complete');
+   INSERT INTO public_ads(platform,native_id,advertiser_id,start_time) VALUES('Meta','1001','12','2026-09-01');
+   INSERT INTO ad_observations(platform,native_id,run_id,workspace_id,active_status,reach,raw_payload) VALUES('Meta','1001','old-run','workspace','active','{}','{"ad_creative_bodies":["Original copy"]}');
+   INSERT INTO cost_ledger(id,cost_type,provider,cost_gbp,initial_reserved_gbp,cost_basis,status) VALUES('paid-history','inference','fixture',0.25,1,'estimated','settled');
+   INSERT INTO creator_ad_evidence(workspace_id,handle,brand_key,platform,native_id,data) VALUES('workspace','fixture_creator','workspace','Meta','1001','{"sentinel":"creator history"}');
+   INSERT INTO creative_index_jobs(id,workspace_id,processed,checkpoint) VALUES('workspace','workspace',500,'{"phase":"official","key":["workspace","Meta","1001"]}');
+   INSERT INTO public_category_batches(id,workspace_id,items,status,model) VALUES('old-tags','workspace','[]','complete','fixture');
+   INSERT INTO public_ad_categories(workspace_id,brand_key,page_id,native_id,source_hash,prompt_version,model,categories,batch_id) VALUES('workspace','workspace','12','1001','copy-hash','fixture','fixture','["candles"]','old-tags');`);
+  const tables=['ad_observations','creator_ad_evidence','creative_index_jobs','cost_ledger','public_ad_categories'],before=new Map<string,any>();for(const table of tables)before.set(table,(await pool.query('SELECT * FROM '+table)).rows);
+  await migrate(pool);await migrate(pool);
+  for(const table of tables){const after=(await pool.query('SELECT * FROM '+table)).rows;if(table==='public_ad_categories')assert.deepEqual(after,before.get(table).map((row:any)=>({...row,platform:'Meta'})));else assert.deepEqual(after,before.get(table),table+' is retained.');}
+  assert.equal((await pool.query("SELECT platform FROM watchlists WHERE id='old'")).rows[0].platform,'Meta');
+  await pool.query("INSERT INTO watchlists(id,workspace_id,brand_key,platform,page_ids,business_name) VALUES('new-tiktok','workspace','workspace','TikTok','[\"12\"]','Fictional Candle House')");
+  await pool.query("INSERT INTO public_ad_categories SELECT workspace_id,brand_key,page_id,native_id,source_hash,prompt_version,model,categories,batch_id,created_at,'TikTok' FROM public_ad_categories WHERE platform='Meta'");assert.equal((await pool.query('SELECT count(*)::integer n FROM public_ad_categories')).rows[0].n,2);
+  for(const table of ['tiktok_analysis_jobs','creator_forecast_models','creator_forecast_validation'])assert((await pool.query('SELECT to_regclass($1) t',[table])).rows[0].t);
+ }finally{await pool.end();await admin.query('DROP SCHEMA '+schema+' CASCADE');await admin.end();}
+});

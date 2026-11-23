@@ -5,6 +5,7 @@ export const CREATOR_STYLES = ["UGC", "Talking to camera", "Tutorial", "Aestheti
 export type CreatorStyle = typeof CREATOR_STYLES[number];
 export type FollowerTier = "Nano" | "Micro" | "Mid" | "Macro";
 export interface CreatorBrief {
+  audienceTarget?:import("./creator-performance.js").CreatorAudienceTarget;
   category: string; keywords: string[]; hashtags: string[]; competitors: string[];
   country: string; minFollowers: number; maxFollowers: number; seeds: string[];
   exclusions: string[]; styles: CreatorStyle[]; target: number;
@@ -37,9 +38,9 @@ export interface CreatorEvaluation {
   excluded: string[]; review: string[]; fit: number | null; assessedPoints: number;
   provisional: boolean; parts: FitPart[]; goodFit: boolean; ruleVersion: string; screen: CreatorScreen;
 }
-export interface DiscoveryCreator { profile: DiscoveryProfile; evaluation: CreatorEvaluation; saved: boolean; briefVersion: string; nextRefreshAt: string }
+export interface DiscoveryCreator { salesSignal?:import("./creator-performance.js").CreatorSalesSignal; profile: DiscoveryProfile; evaluation: CreatorEvaluation; saved: boolean; briefVersion: string; nextRefreshAt: string }
 export interface CreatorFilters {
-  tier?: string; niche?: string; engagement?: string; uk?: string; style?: string;
+  minSales?:number; tier?: string; niche?: string; engagement?: string; uk?: string; style?: string;
   worked?: boolean; ads?: boolean; minFit?: number; saved?: boolean; review?: boolean;
 }
 export interface CreatorSegment { id: string; name: string; filters: CreatorFilters; count: number; createdAt: string }
@@ -168,6 +169,7 @@ export function evaluateCreator(profile: DiscoveryProfile, brief: CreatorBrief, 
 }
 export function matchesCreator(row: DiscoveryCreator, f: CreatorFilters, disposition: "Results" | "Needs review" = "Results", now = new Date()): boolean {
   const e = row.evaluation;
+  if(f.minSales!=null&&(row.salesSignal?.score==null||row.salesSignal.score<f.minSales))return false;
   return e.ruleVersion===CREATOR_RULE_VERSION && e.screen?.disposition===disposition && (disposition!=="Results" || e.screen.rules.length===9 && e.screen.rules.every(r=>r.state==="pass")) && !(disposition==="Results" && e.screen.activeUntil && Date.parse(e.screen.activeUntil)<now.getTime()) && !f.review && (!f.tier || e.tier === f.tier) && (!f.niche || e.niches.includes(f.niche)) && (!f.uk || e.uk.band === f.uk) && (!f.style || e.styles.includes(f.style as CreatorStyle)) && (!f.worked || e.workedWithCompetitors.length > 0) && (!f.ads || row.profile.appearsInAds.length > 0) && (!f.saved || row.saved) && (f.minFit == null || e.fit !== null && e.fit >= f.minFit) && (!f.engagement || e.engagement !== null && (f.engagement === "Under 1%" ? e.engagement < .01 : f.engagement === "1 to 3%" ? e.engagement >= .01 && e.engagement < .03 : e.engagement >= .03));
 }
 export function nextCreatorRefresh(at: string): string {
@@ -218,6 +220,6 @@ export function creatorPrecision(labels: CreatorLabel[], creators: (DiscoveryCre
 }
 export function creatorCsv(rows: DiscoveryCreator[]) {
   const cell = (v: unknown) => '"' + String(v ?? "Unverified").replace(/^[=+\-@\t\r]/, "'$&").replaceAll('"', '""') + '"';
-  const header = ["Handle", "Name", "Followers", "Media count", "Engagement percent", "Posts assessed", "Posts per week", "UK confidence", "Niche", "Style", "Fit", "Fit coverage", "Verification", "Last checked", "Business email"];
-  return [header, ...rows.filter(r=>matchesCreator(r,{})).map(r => [r.profile.handle, r.profile.name, r.profile.followers, r.profile.mediaCount, r.evaluation.engagement === null ? null : 100 * r.evaluation.engagement, r.evaluation.assessedPosts, r.evaluation.frequency, r.evaluation.uk.band, r.evaluation.niches.join("; "), r.evaluation.styles.join("; "), r.evaluation.fit, r.evaluation.assessedPoints, r.profile.verification, r.profile.checkedAt, r.profile.businessEmail])].map(r => r.map(cell).join(",")).join("\r\n");
+  const header = ["Handle", "Name", "Followers", "Media count", "Engagement percent", "Posts assessed", "Posts per week", "UK confidence", "Niche", "Style", "Fit", "Fit coverage", "Verification", "Last checked", "Business email", "Sales Signal (Estimated)", "Sales Signal coverage", "Sales Signal confidence"];
+  return [header, ...rows.filter(r=>matchesCreator(r,{})).map(r => [r.profile.handle, r.profile.name, r.profile.followers, r.profile.mediaCount, r.evaluation.engagement === null ? null : 100 * r.evaluation.engagement, r.evaluation.assessedPosts, r.evaluation.frequency, r.evaluation.uk.band, r.evaluation.niches.join("; "), r.evaluation.styles.join("; "), r.evaluation.fit, r.evaluation.assessedPoints, r.profile.verification, r.profile.checkedAt, r.profile.businessEmail,r.salesSignal?.score??null,r.salesSignal?.coverage??null,r.salesSignal?.confidence??null])].map(r => r.map(cell).join(",")).join("\r\n");
 }

@@ -1,5 +1,7 @@
 import {attachTikTok,attachTikTokStep,ensureWorkspaceTikTok} from "./tiktok/api.js";
 import {tiktokCommercialStatus} from "./connectors/tiktok-commercial.js";
+
+import {attachCreatorPerformance} from "./creators/performance-api.js";
 import {attachCreativeIndexStep} from "./infrastructure/creative-index-jobs.js";
 import {apiFailureLogging,apiErrorReason} from "./infrastructure/api-errors.js";
 import {attachOnboarding,attachOnboardingStep} from "./onboarding/api.js";
@@ -301,6 +303,7 @@ export function createApp(db: DatabaseSync = openDatabase()) {
   attachCreativeBrowser(app,db);
   attachCreatorResearch(app, db);
   attachCreatorDiscovery(app, db);
+  attachCreatorPerformance(app,db);
   attachDemoReadiness(app, db);
   attachBrain(app, db);
   attachBrandResearch(app, db);
