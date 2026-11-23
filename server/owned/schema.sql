@@ -28,3 +28,10 @@ CREATE TABLE IF NOT EXISTS owned_schedule_slots (
  account_id text NOT NULL REFERENCES owned_accounts(id), day date NOT NULL,
  job_id text NOT NULL REFERENCES owned_sync_jobs(id), PRIMARY KEY(account_id,day)
 );
+
+-- CP-04 explicit creator identity, scoped to real owned account IDs.
+CREATE TABLE IF NOT EXISTS creator_owned_links (
+ workspace_id text NOT NULL,handle text NOT NULL,owned_account_id text NOT NULL REFERENCES owned_accounts(id),ad_id text NOT NULL,
+ kind text NOT NULL CHECK(kind IN ('Partnership','Whitelisted')),category text NOT NULL,product text NOT NULL,format text NOT NULL,
+ confirmed_at timestamptz NOT NULL DEFAULT now(),PRIMARY KEY(workspace_id,handle,owned_account_id,ad_id)
+);

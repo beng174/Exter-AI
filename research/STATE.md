@@ -1234,3 +1234,28 @@ tracking is no longer described as proof that media was never requested.
 Fictional pipeline/browser fixtures retain and decode four real image files. Cards
 update without navigation after 30 seconds at 1440px and 390px. No provider calls.
 No deployment, coverage claim or live gate has been confirmed by these fixtures.
+
+## 20 November 2026: creator performance intelligence (CP-01..06)
+
+PRODUCT-SPEC now defines Creator Sales Signal and ROAS forecasting. The spec and
+ExecPlan were committed before product implementation. New work links direct
+partnership/co-author/whitelist and credited handles during background indexing;
+calculates a five-part Estimated Sales Signal with missing-weight coverage; adds
+reviewed search filters, seed handles, a brief handoff, own-account identity/outcome
+confirmation, atomic campaign CSV import and explicit gated forecast training.
+
+No competitor ROAS is inferred. Ad audiences are published ad reach, not followers.
+Real Working Score is still unavailable, so that half of ad backing is unassessed.
+No Graph fields, provider prices, collection schedule, budgets or live switches
+change. No new provider request runs from a page or from model training.
+
+Training needs 50 distinct creators with outcomes in one reporting group and
+pre-campaign score snapshots. Forecast publication also needs the existing 3,000
+owned holdout-ad/AUC/calibration gates plus regression checks. Imported campaign
+figures alone cannot release those gates. Existing owned live gates and all creator
+client precision gates remain unchanged. Fixtures are not live verification.
+
+Focused calculation, API, deletion, import, owned metric and model tests pass.
+Full verification and responsive screenshots are recorded on the PR. Exact rollout
+is documented in docs/DEPLOY.md: deploy web, worker and scheduler; additive schema
+only, no new secrets or configuration changes.

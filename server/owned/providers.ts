@@ -1,3 +1,4 @@
+import {creatorCredits} from "../../shared/creator-performance.js";
 import { providerJson } from "../connectors/http.js";
 import { reportDate, safeNumber, type ConnectorEnv, type FetchLike } from "../connectors/types.js";
 import type { OwnedDay } from "../../shared/owned-metrics.js";
@@ -101,6 +102,7 @@ export async function pullOwnedDays(account:OwnedAccount,from:string,to:string,o
       const assets=meta?[ad?.creative?.id,ad?.creative?.video_id,ad?.creative?.image_hash]:[ad?.video_id,...(Array.isArray(ad?.image_ids)?ad.image_ids:[])];
       const video=(key:string)=>meta?action(m[key],["video_view"]):numeric(m[key]);
       output.push({platform:account.platform,accountId:account.account_id,adId,day,currency,attribution:account.attribution,conversionEvent:account.conversion_event,pulledAt:now.toISOString(),
+        ...(meta?{creatorAttributions:creatorCredits({...ad,...ad?.creative}).filter(c=>['Partnership','Whitelisted','Co-author'].includes(c.kind)).map(c=>({handle:c.handle,kind:c.kind==='Whitelisted'?'Whitelisted' as const:'Partnership' as const}))}:{}),
         adName:name(meta?row.ad_name || ad?.name:ad?.ad_name),adSetName:name(meta?row.adset_name || ad?.adset?.name:ad?.adgroup_name || parents.get(String(ad?.adgroup_id))?.adgroup_name),campaignName:name(meta?row.campaign_name || ad?.campaign?.name:ad?.campaign_name || campaigns.get(String(ad?.campaign_id))?.campaign_name),assetIds:assets.filter((value):value is string=>typeof value==="string" && value.length<=200),
         spend:numeric(m.spend),impressions:numeric(m.impressions),linkClicks:numeric(meta?m.inline_link_clicks:m.clicks),
         earlyViews:meta?action(m.actions,["video_view"]):numeric(m.video_watched_2s),longerViews:meta?video("video_thruplay_watched_actions"):numeric(m.video_watched_6s),videoStarts:video("video_play_actions"),
