@@ -22,8 +22,8 @@ export function onlyCohort(row: BrowserCreative, cohortId?: string): CreativePer
 }
 export function cardMetrics(row: BrowserCreative, cohortId?: string) {
     if(row.presentation)return row.presentation.metrics;
-    const reach=displayedReach(row.publicReach),reachMetrics=reach?[{...reach,value:new Intl.NumberFormat("en-GB").format(reach.value),basis:"Observed" as const,reason:"Published lifetime reach at the saved check, not impressions or sales."}]:[];
-    if (!row.workspaceBrand)
+    const reach=displayedReach(row.publicReach),reachMetrics=reach?[{...reach,value:reach.display||new Intl.NumberFormat("en-GB").format(reach.value),basis:reach.basis||"Observed" as const,reason:"Published lifetime reach at the saved check, not impressions or sales."}]:[];
+    if (!row.owned || !row.workspaceBrand)
         return [...reachMetrics,{ label: "Days running", value: row.daysRunning, basis: "Observed" as const, reason: "A source delivery start and observed endpoint are missing." }];
     const cohort = onlyCohort(row,cohortId);
     return [...reachMetrics,...(["Spend", "ROAS", "Hook rate"] as const).map(label => ({ label, value: metricText(cohort?privateMetric(row,cohort.id,label):null, label, cohort?.currency), basis: "Observed" as const, missingLabel:row.performance.length===0?"Not synced" as const:"Unavailable" as const, reason: row.performance.length > 1 ? "Select one account, currency and attribution scope in Creative detail." : metricReason(cohort?.metrics[label]) }))];

@@ -1234,3 +1234,33 @@ tracking is no longer described as proof that media was never requested.
 Fictional pipeline/browser fixtures retain and decode four real image files. Cards
 update without navigation after 30 seconds at 1440px and 390px. No provider calls.
 No deployment, coverage claim or live gate has been confirmed by these fixtures.
+
+## 23 November 2026: TikTok public collection wiring (TK-01..07)
+
+The owner confirms Commercial Content API approval and client keys on web and
+worker. Product wiring now uses real-workspace advertiser discovery, domain-backed
+automatic identity confirmation, one-click review and manual overrides alongside
+Meta. Countries start with GB and IE and can include relevant supported EU markets.
+
+Daily collection uses the 03:00 London slot, a fixed 12-month initial window and
+committed search/page checkpoints. Confirmed business IDs filter name searches.
+Media is retained directly from API URLs through the web disk adapter; no paid
+scraper is involved. Automatic analysis reuses existing services and budgets.
+Meta/TikTok identities, media, categories and analyses remain platform-scoped.
+Research defaults to one platform; TikTok Working Score uses the existing formula
+and explains missing inputs. Source health shows per-brand counts, coverage,
+successful checks and safe provider refusals.
+
+Fixture validation covers advertiser matching, cursors, expiry recovery, DST,
+budgets, direct media, analysis handoff, change-only storage, platform separation
+and a GB-only ten-ad smoke cap. Browser checks cover six screens at 1280px,
+1440px, 1920px and 390px; review screenshots are under
+`docs/review/tiktok-commercial/`. These are fixtures, not live verification.
+
+**Live gate remains open:** no live TikTok calls or deployments occurred here.
+After deployment, run the explicit ION8 ten-ad smoke action documented in
+`docs/DEPLOY.md`. Existing own-account Phase 0 and Phase 1 gates stay open.
+
+Validation: all four checks pass, with 650 unit tests and 116 disposable Postgres
+integration tests. The 50,000-ad fixture peaks at 114,519,872 heap bytes. The
+existing production bundle-size warning remains. No validation gate is cleared.

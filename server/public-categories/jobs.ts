@@ -9,12 +9,12 @@ import type {BrowserCreative} from "../../shared/creative-browser.js";
 import {visitPublicCategoryInputs} from "../infrastructure/meta-evidence.js";
 import {reserveCost,settleGeminiCost,releaseGeminiCost} from "../infrastructure/budget.js";
 import {CATEGORY_MODEL,CATEGORY_VERSION,CATEGORY_BATCH_SIZE,categoryHash,categorySourceHash,categoryResult,categoryBatchInput,PublicCategoryProvider,CategoryError,type CategoryRequest} from "./provider.js";
-interface Item {brandKey:string;pageId:string;nativeId:string;sourceHash:string;key:string}
-const keyFor=(brand:string,page:string,native:string,hash:string)=>createHash('sha256').update(JSON.stringify([brand,page,native,hash])).digest('hex');
+interface Item {platform?:string;brandKey:string;pageId:string;nativeId:string;sourceHash:string;key:string}
+const keyFor=(brand:string,page:string,native:string,hash:string,platform="Meta")=>createHash('sha256').update(JSON.stringify([brand,page,native,hash,...(platform!=="Meta"?[platform]:[])])).digest('hex');
 export async function categoryVocabulary(pool:Pick<pg.Pool,"query">,workspace:string):Promise<string[]>{return ((await pool.query('SELECT categories FROM workspace_category_vocabularies WHERE workspace_id=$1',[workspace])).rows[0]?.categories||[]).slice().sort();}
 export async function countTaggedAds(pool:pg.Pool,workspace:string):Promise<number>{
- const result=await pool.query(`SELECT count(DISTINCT (c.brand_key,c.native_id))::integer AS count FROM public_ad_categories c
- JOIN watchlists w ON w.workspace_id=c.workspace_id AND w.brand_key=c.brand_key AND w.page_ids->>0=c.page_id
+ const result=await pool.query(`SELECT count(DISTINCT (c.brand_key,c.platform,c.native_id))::integer AS count FROM public_ad_categories c
+ JOIN watchlists w ON w.workspace_id=c.workspace_id AND w.brand_key=c.brand_key AND w.platform=c.platform AND w.page_ids @> to_jsonb(ARRAY[c.page_id])
  JOIN public_category_batches b ON b.id=c.batch_id LEFT JOIN workspace_category_vocabularies v ON v.workspace_id=c.workspace_id
  WHERE c.workspace_id=$1 AND w.enabled AND c.prompt_version=$2 AND b.vocabulary @> COALESCE(v.categories,'[]'::jsonb)
  AND COALESCE(v.categories,'[]'::jsonb) @> b.vocabulary AND jsonb_array_length(c.categories)>0`,[workspace,CATEGORY_VERSION]);
@@ -26,9 +26,9 @@ async function inputs(pool:pg.Pool,workspace:string,known=new Set<string>(),targ
  await visitPublicCategoryInputs(pool,workspace,row=>{
   if(!row.brand_key||!row.advertiser_id||!row.page_ids.includes(row.advertiser_id))return;
   const input=categoryText(row.raw_payload),sourceHash=categoryHash(input,vocabulary);
-  const key=keyFor(row.brand_key,row.advertiser_id,row.native_id,sourceHash);
+  const key=keyFor(row.brand_key,row.advertiser_id,row.native_id,sourceHash,row.platform);
   if(result.length>=CATEGORY_BATCH_SIZE||known.has(key)||targets&&!targets.has(key))return;
-  result.push({item:{brandKey:row.brand_key,pageId:row.advertiser_id,nativeId:row.native_id,sourceHash,key:keyFor(row.brand_key,row.advertiser_id,row.native_id,sourceHash)},input});
+  result.push({item:{...(row.platform==='TikTok'?{platform:'TikTok'}:{}),brandKey:row.brand_key,pageId:row.advertiser_id,nativeId:row.native_id,sourceHash,key:keyFor(row.brand_key,row.advertiser_id,row.native_id,sourceHash,row.platform)},input});
  },client);return result;
 }
 export const categoryConfigured=(env:Record<string,string|undefined>)=>Boolean(env.GEMINI_API_KEY?.trim()&&mediaGbpRate(env)!==null&&Number.isFinite(Number(env.GEMINI_REQUEST_RESERVE_GBP))&&Number(env.GEMINI_REQUEST_RESERVE_GBP)>0);
@@ -39,8 +39,8 @@ function quoteFor(rows:{item:Item;input:CategoryInput}[],env:Record<string,strin
  return {ads:rows.length,estimatedGbp,reserveGbp,hash:createHash('sha256').update(JSON.stringify([rows.map(row=>row.item.key),estimatedGbp,reserveGbp,CATEGORY_VERSION])).digest('hex')};
 }
 async function pendingKeys(client:pg.Pool|pg.PoolClient,workspace:string,now:Date){
- const existing=(await client.query('SELECT brand_key,page_id,native_id,source_hash FROM public_ad_categories WHERE workspace_id=$1 AND prompt_version=$2',[workspace,CATEGORY_VERSION])).rows;
- const known=new Set(existing.map(r=>keyFor(r.brand_key,r.page_id,r.native_id,r.source_hash)));
+ const existing=(await client.query('SELECT brand_key,page_id,native_id,source_hash,platform FROM public_ad_categories WHERE workspace_id=$1 AND prompt_version=$2',[workspace,CATEGORY_VERSION])).rows;
+ const known=new Set(existing.map(r=>keyFor(r.brand_key,r.page_id,r.native_id,r.source_hash,r.platform)));
  const attempted=(await client.query("SELECT items FROM public_category_batches WHERE workspace_id=$1 AND (status IN ('queued','starting','running','uncertain','paused') OR (COALESCE(finished_at,available_at,created_at) AT TIME ZONE 'Europe/London')::date=($2::timestamptz AT TIME ZONE 'Europe/London')::date)",[workspace,now])).rows.flatMap(r=>r.items as Item[]);
  for(const item of attempted)known.add(item.key);return known;
 }
@@ -82,7 +82,7 @@ export async function stepCategoryBatch(pool:pg.Pool,id:string,owner:string,opti
   const update=async(status:string,error:string|null=null)=>{const result=await client.query("UPDATE public_category_batches SET status=$3,error_kind=$4,available_at=now()+interval '1 minute',finished_at=CASE WHEN $3 IN ('complete','failed') THEN clock_timestamp() ELSE NULL END WHERE id=$1 AND lease_owner=$2 AND lease_until>now()",[id,owner,status,error]);if(status==='complete')await enqueueCreativeIndex(pool,run.workspace_id);return result;};
   if(run.status==='starting'&&!run.provider_name){await update('uncertain','uncertain');return true;}
   const provider=options.provider||new PublicCategoryProvider({env}),items=run.items as Item[];
-  const save=async(item:Item,categories:string[],model:string)=>client.query(`INSERT INTO public_ad_categories(workspace_id,brand_key,page_id,native_id,source_hash,prompt_version,model,categories,batch_id) SELECT $1,$2,$3,$4,$5,$6,$7,$8,$9 WHERE EXISTS(SELECT 1 FROM watchlists w WHERE w.workspace_id=$1 AND w.brand_key=$2 AND w.enabled AND w.page_ids->>0=$3) ON CONFLICT DO NOTHING`,[run.workspace_id,item.brandKey,item.pageId,item.nativeId,item.sourceHash,CATEGORY_VERSION,model,JSON.stringify(categories),id]);
+  const save=async(item:Item,categories:string[],model:string)=>client.query(`INSERT INTO public_ad_categories(workspace_id,brand_key,page_id,native_id,source_hash,prompt_version,model,categories,batch_id,platform) SELECT $1,$2,$3,$4,$5,$6,$7,$8,$9,$10 WHERE EXISTS(SELECT 1 FROM watchlists w WHERE w.workspace_id=$1 AND w.brand_key=$2 AND w.enabled AND w.platform=$10 AND w.page_ids @> to_jsonb(ARRAY[$3::text])) ON CONFLICT DO NOTHING`,[run.workspace_id,item.brandKey,item.pageId,item.nativeId,item.sourceHash,CATEGORY_VERSION,model,JSON.stringify(categories),id,item.platform||'Meta']);
   if(!run.provider_name){
    if(JSON.stringify(await categoryVocabulary(pool,run.workspace_id))!==JSON.stringify(run.vocabulary||[])){await update('complete','changed');return true;}
    const live=new Map((await inputs(pool,run.workspace_id,new Set(),new Set(items.map(item=>item.key)),run.vocabulary||[])).map(row=>[row.item.key,row.input]));
@@ -130,7 +130,7 @@ export async function workPublicCategoriesOnce(pool:pg.Pool,options:WorkerObserv
 }
 export async function mergeProductCategories(pool:Pick<pg.Pool,"query">,workspace:string,rows:BrowserCreative[]){
  const vocabulary=await categoryVocabulary(pool,workspace);
- const labels=await pool.query(`SELECT c.* FROM public_ad_categories c JOIN watchlists w ON w.workspace_id=c.workspace_id AND w.brand_key=c.brand_key AND w.page_ids->>0=c.page_id WHERE c.workspace_id=$1 AND c.prompt_version=$2 AND c.native_id=ANY($3::text[]) ORDER BY c.created_at DESC`,[workspace,CATEGORY_VERSION,rows.map(row=>row.nativeId)]);
- const byKey=new Map<string,any>();for(const label of labels.rows){const key=JSON.stringify([label.brand_key,label.native_id,label.source_hash]);if(!byKey.has(key))byKey.set(key,label);}
- return rows.map(row=>{const hash=categorySourceHash(row.categorySourceHash||categoryHash(creativeCategoryInput(row)),vocabulary),label=byKey.get(JSON.stringify([row.brandId,row.nativeId,hash]));return label?{...row,productCategories:label.categories,productCategoryModel:label.model==='unavailable'?undefined:label.model}:row;});
+ const labels=await pool.query(`SELECT c.* FROM public_ad_categories c JOIN watchlists w ON w.workspace_id=c.workspace_id AND w.brand_key=c.brand_key AND w.platform=c.platform AND w.page_ids @> to_jsonb(ARRAY[c.page_id]) WHERE c.workspace_id=$1 AND c.prompt_version=$2 AND c.native_id=ANY($3::text[]) ORDER BY c.created_at DESC`,[workspace,CATEGORY_VERSION,rows.map(row=>row.nativeId)]);
+ const byKey=new Map<string,any>();for(const label of labels.rows){const key=JSON.stringify([label.brand_key,label.native_id,label.source_hash,label.platform||'Meta']);if(!byKey.has(key))byKey.set(key,label);}
+ return rows.map(row=>{const hash=categorySourceHash(row.categorySourceHash||categoryHash(creativeCategoryInput(row)),vocabulary),label=byKey.get(JSON.stringify([row.brandId,row.nativeId,hash,row.platform==='TikTok'?'TikTok':'Meta']));return label?{...row,productCategories:label.categories,productCategoryModel:label.model==='unavailable'?undefined:label.model}:row;});
 }

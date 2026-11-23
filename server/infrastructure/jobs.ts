@@ -20,7 +20,7 @@ export async function enqueueCollection(pool: pg.Pool, watchlistId: string, day?
   try {
     await client.query("BEGIN");
     // Serialize scheduler/manual work for this watchlist, preserving the daily slot on restart.
-    const watchlist = await client.query("SELECT id,page_ids,search_terms,countries,purpose,brand_key,revision FROM watchlists WHERE id=$1 AND enabled FOR UPDATE", [watchlistId]);
+    const watchlist = await client.query("SELECT id,page_ids,search_terms,countries,purpose,brand_key,revision FROM watchlists WHERE id=$1 AND enabled AND platform='Meta' FOR UPDATE", [watchlistId]);
     if (!watchlist.rowCount) throw new Error("Watchlist is missing or disabled.");
     if (day) {
       const slot = await client.query("SELECT run_id FROM schedule_slots WHERE watchlist_id=$1 AND day=$2", [watchlistId,day]);
@@ -56,7 +56,7 @@ export async function enqueueCollection(pool: pg.Pool, watchlistId: string, day?
 }
 export async function claimJob(pool: pg.Pool, owner: string) {
   const result = await pool.query(`UPDATE collection_jobs SET status='running',lease_owner=$1,lease_until=now()+interval '2 minutes',attempts=attempts+1
-    WHERE id=(SELECT id FROM collection_jobs WHERE ${workerClaimGate('collection','collection_jobs.id')} AND status IN ('queued','running') AND available_at<=now()
+    WHERE id=(SELECT id FROM collection_jobs WHERE ${workerClaimGate('collection','collection_jobs.id')} AND EXISTS(SELECT 1 FROM collection_runs r WHERE r.id=collection_jobs.id AND r.source='meta') AND status IN ('queued','running') AND available_at<=now()
       AND (lease_until IS NULL OR lease_until<now()) ORDER BY available_at FOR UPDATE SKIP LOCKED LIMIT 1) RETURNING *`, [owner]);
   return result.rows[0] ?? null;
 }
@@ -169,6 +169,6 @@ export async function schedule(pool: pg.Pool, now = new Date(), env:Record<strin
   const day=metaScheduleDay(now);
   if(day){await scheduleAdMedia(pool,env,now);await schedulePublicCategories(pool,env);}
   if(!metaLibraryEnabled(env)||!day)return;
-  const watchlists = await pool.query("SELECT id FROM watchlists WHERE enabled AND ((brand_key IS NOT NULL AND jsonb_array_length(page_ids)>0) OR purpose='discovery') ORDER BY id");
+  const watchlists = await pool.query("SELECT id FROM watchlists WHERE platform='Meta' AND enabled AND ((brand_key IS NOT NULL AND jsonb_array_length(page_ids)>0) OR purpose='discovery') ORDER BY id");
   for (const row of watchlists.rows) await enqueueCollection(pool,row.id,day,now);
 }

@@ -1,3 +1,4 @@
+import {reachBasis} from "./tiktok-public.js";
 import type {BrowserCreative} from "./creative-browser.js";
 import {countryReach,countryName,publishedAdDetails} from "./meta-public.js";
 export interface PublicSignalTile {id:string;label:string;value:number|string;basis:"Observed"|"Estimated";text?:boolean;note?:string;tooltip?:string}
@@ -9,18 +10,19 @@ export function publicVersions(row:BrowserCreative,creatives:readonly BrowserCre
   if(row.owned&&row.workspaceBrand)return null;
   if(row.publicVersionCount!==undefined)return row.publicVersionCount;
   const copy=fullCopy(row),hash=sha(row);if(!copy&&!hash)return null;
-  const count=new Set([row,...creatives].filter(item=>(!item.owned||item.publicEvidence===true)&&item.brandId===row.brandId&&(Boolean(hash&&sha(item)===hash)||Boolean(copy&&fullCopy(item)===copy))).map(adIdentity)).size;
+  const count=new Set([row,...creatives].filter(item=>(!item.owned||item.publicEvidence===true)&&item.brandId===row.brandId&&(["Meta","Facebook","Instagram"].includes(item.platform)?"Meta":item.platform)===(["Meta","Facebook","Instagram"].includes(row.platform)?"Meta":row.platform)&&(Boolean(hash&&sha(item)===hash)||Boolean(copy&&fullCopy(item)===copy))).map(adIdentity)).size;
   return count||null;
 }
 export function publicSignalTiles(row:BrowserCreative,creatives:readonly BrowserCreative[]):PublicSignalTile[]{
   if(row.owned&&row.workspaceBrand)return [];
   const result:PublicSignalTile[]=[],reach=row.publicReach,uk=countryReach(reach),eu=reach?.eu.value??countryReach(reach,"EU"),days=typeof row.daysRunning==="number"&&Number.isFinite(row.daysRunning)&&row.daysRunning>=0?row.daysRunning:null;
-  if(uk!==null)result.push({id:"uk",label:"UK reach",value:uk,basis:"Observed"});
+  if(uk!==null)result.push({id:"uk",label:"UK reach",value:reach?.locations.value?.find(c=>c.country==='GB')?.display||uk,basis:reachBasis(reach) as "Observed"|"Estimated"});
   if(eu!==null)result.push({id:"eu",label:"EU reach",value:eu,basis:"Observed"});
   const countries=new Map<string,number>();for(const item of reach?.locations.value||[])if(!["GB","EU"].includes(item.country))countries.set(item.country,(countries.get(item.country)||0)+item.reach);
-  for(const [country,value] of countries)result.push({id:`country-${country}`,label:`${countryName(country)} reach`,value,basis:"Observed"});
+  for(const [country,value] of countries)result.push({id:`country-${country}`,label:`${countryName(country)} reach`,value,basis:reachBasis(reach,country) as "Observed"|"Estimated"});
   if(days!==null)result.push({id:"days",label:"Days running",value:days,basis:"Observed"});
-  const numerator=uk??eu,basis=uk!==null?"UK reach":"EU reach";
+  if(reach?.total?.value!=null)result.push({id:"total",label:"Published reach",value:reach.total.type==='estimated'?reach.total.display||reach.total.value:reach.total.value,basis:reach.total.type==='estimated'?"Estimated":"Observed"});
+  const numerator=uk??eu??reach?.total?.value??null,basis=uk!==null?"UK reach":eu!==null?"EU reach":"published reach";
   if(numerator!==null&&days!==null&&days>0)result.push({id:"daily",label:"Reach per day",value:format(numerator/days),basis:"Estimated",note:basis,tooltip:`${format(numerator)} ${basis} ÷ ${format(days)} days running = ${format(numerator/days)} reach per day. Average over the saved running period.`});
   const versions=publicVersions(row,creatives);if(versions!==null)result.push({id:"versions",label:"Versions",value:versions,basis:"Observed",tooltip:`${versions} saved public ${versions===1?"ad uses":"ads use"} this exact creative or full copy for this brand. Only matching content hashes or full wording are counted, not similar copy.`});
   const saved=row.publicDetails||publishedAdDetails({}),details={...saved,platforms:saved.platforms.length?saved.platforms:publishedAdDetails({publisher_platforms:row.placements}).platforms};

@@ -8,11 +8,13 @@ The owner reports keys on the web and worker. No live calls before deployment.
 ## Progress
 - [x] 2026-11-23 UTC: verify target branch and inspect source, jobs, media and design.
 - [x] 2026-11-23 UTC: verify official query, advertiser and detail contracts.
-- [ ] Build advertiser discovery and manual overrides with fixture tests.
-- [ ] Build resumable daily collection, media and analysis handoff.
-- [ ] Expose platform-separated research, reach, Working Score and source health.
-- [ ] Run all four checks, database fixtures and responsive browser verification.
-- [ ] Push one PR against exter-test-drive with rollout and smoke-test instructions.
+- [x] Build advertiser discovery and manual overrides with fixture tests.
+- [x] Build resumable daily collection, media and analysis handoff.
+- [x] Expose platform-separated research, reach, Working Score and source health.
+- [x] Run all four checks, database fixtures and responsive browser verification.
+- [x] Prepare one PR against exter-test-drive with rollout and smoke-test instructions.
+- [x] Prepare branch publication and CI handoff against the verified target.
+  CI status is reported on the pull request; live smoke remains a deployment gate.
 
 ## Surprises and discoveries
 The official query has no business-ID filter and returns at most ten ads. Search
@@ -31,8 +33,17 @@ runs/jobs and their failure supervisor, with one bounded step per claim. Schedul
 needs no provider secrets. Country defaults are GB and IE, editable for relevant EU
 markets; a refusal is shown, never silently changed into another country's data.
 
+2026-11-23: scope retained media, category labels and numeric IDs by platform. A
+second confirmed business ID must resolve its files as well as the first. Use
+Estimated for rounded source reach and calculated Working Scores. Complete paid
+analysis is reused only for matching inputs; uncertain starts remain blocked.
+
 ## Outcomes and retrospective
-Pending. Fixtures cannot confirm live approval, coverage or prediction accuracy.
+Implemented discovery, durable public collection, direct retained media, existing
+analysis handoff and platform-scoped research. Targeted source/media/SQL fixtures
+pass, including an explicit ten-ad smoke cap and changed-input analysis recovery.
+Full regression results and CI are recorded below before handoff. Fixtures cannot
+confirm live approval, coverage or prediction accuracy.
 
 ## Context and orientation
 server/connectors/tiktok-commercial.ts handles client credentials and ten-ad
@@ -69,3 +80,18 @@ Manual choices override automatic discovery. Reads never start providers.
 No new dependency, secret, provider price, Render plan or Meta switch. Use existing
 TikTok client keys, media broker credentials and inference/provider budget guards.
 Live ION8 verification waits for deployment and is not represented by fixtures.
+
+## Final validation (23 November 2026)
+
+- TypeScript and production build pass. The existing large-bundle warning remains.
+- All 650 unit tests pass with the installed media tools on PATH. One earlier
+  environment run lacked heif-convert; correcting PATH restored that fixture.
+- All 116 disposable Postgres integration tests pass, including 12 new TikTok
+  cases. The 50,000-ad fixture peaks at 114,519,872 heap bytes, below 200 MB.
+- Secrets scan passes over all staged text. No provider keys or URLs enter source
+  snapshots; fixture error strings use only explicit dummy credentials.
+- All 24 browser width/screen checks pass; screenshots compare six changed screens
+  with approved references and include two mobile views. A final navigation-link
+  assertion checks the exact TikTok analysis identity.
+- Latest target verified at 077ea4b. Live ION8 smoke, deployment and own-account
+  verification remain pending; no fixture clears those gates.

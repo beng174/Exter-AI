@@ -11,3 +11,7 @@
 .reference-ui [aria-label="Source health"]>.ui-data-table th:first-child { width:28%; }
 .reference-ui [aria-label="Source health"]>.ui-data-table th:nth-child(2) { width:15%; }
 .reference-ui [aria-label="Source health"]>.ui-data-table th:last-child { width:132px; }
+
+.ui-source-label-inline { display:inline-flex;align-items:center;gap:4px;vertical-align:middle; }
+.ui-source-label-inline strong { display:inline;font-weight:inherit; }
+.ui-source-label-inline .source-gives { display:none; }

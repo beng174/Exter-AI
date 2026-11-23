@@ -20,7 +20,7 @@ export function calculationChecks(at:string):AccuracyRow {
 export async function factChecks(pool:pg.Pool,workspace:string,at:string):Promise<AccuracyRow[]> {
   const result=await pool.query(`SELECT DISTINCT ON(o.native_id) o.native_id,o.active_status,o.reach,o.payload_hash,
     COALESCE(o.raw_payload,p.raw_payload) AS payload,a.start_time,a.stop_time,a.advertiser_id
-    FROM ad_observations o JOIN public_ads a USING(platform,native_id)
+    FROM ad_observations o JOIN public_ads a ON a.platform=o.platform AND a.native_id=o.native_id
     LEFT JOIN ad_observations p ON p.platform=o.platform AND p.native_id=o.native_id AND p.workspace_id=o.workspace_id AND p.run_id=o.raw_payload_run_id
     WHERE o.workspace_id=$1 AND o.platform='Meta' ORDER BY o.native_id,o.observed_at DESC,o.run_id DESC LIMIT 1000`,[workspace]);
   const pairs=new Map<string,{expected:unknown[];actual:unknown[]}>();

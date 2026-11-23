@@ -85,8 +85,10 @@ export function attachCreativeBrowser(app: Express, db: DatabaseSync, options: B
                 for(const target of [brand.id,...competitors.flatMap(c=>c.brandId?[c.brandId]:[])]){
                     const selected=creatives.filter(c=>c.brandId===target);
                     const rich=await gallery.selected(target,selected.map(c=>c.nativeId));const byId=new Map(rich.map(c=>[c.nativeId,c]));
-                    creatives=creatives.map(row=>{const r=row.brandId===target?byId.get(row.nativeId):null;return r?{...row,analysis:r.analysis,scenes:r.scenes||[],creatorEvidence:r.creatorEvidence,thumbnailUrl:r.thumbnailUrl,videoUrl:r.videoUrl,imageUrls:r.imageUrls,imageCount:r.imageCount,mediaAvailable:r.mediaAvailable,mediaStatus:r.mediaStatus,mediaSha256:r.mediaSha256}:row;});
+                    creatives=creatives.map(row=>{const r=row.brandId===target?byId.get(row.nativeId):null;return r&&r.platform===row.platform?{...row,analysis:r.analysis,scenes:r.scenes||[],creatorEvidence:r.creatorEvidence,thumbnailUrl:r.thumbnailUrl,videoUrl:r.videoUrl,imageUrls:r.imageUrls,imageCount:r.imageCount,mediaAvailable:r.mediaAvailable,mediaStatus:r.mediaStatus,mediaSha256:r.mediaSha256}:row;});
                 }
+                const tikRich=await gallery.selected(brand.id,creatives.filter(r=>r.platform==='TikTok'&&r.analysisAdId).map(r=>r.analysisAdId!));
+                creatives=creatives.map(row=>{const rich=row.platform==='TikTok'?tikRich.find(r=>r.adId===row.analysisAdId):null;return rich?{...row,analysis:rich.analysis,scenes:rich.scenes||[],creatorEvidence:rich.creatorEvidence}:row;});
                 try{creatives=mergeRetainedMedia(creatives,await checkedRetainedMedia(pool,await readRetainedMedia(pool,brand.id,creatives.map(c=>c.nativeId))),brand.id);mediaReadStatus="available";}catch{mediaReadStatus="unavailable";}
                 creatives=await mergePreviewState(pool,brand.id,creatives);
                 creatives=await mergeProductCategories(pool,brand.id,creatives);categoryReadStatus="available";

@@ -49,7 +49,7 @@ export function attachMetaPageCandidates(app:Express,db:DatabaseSync,getPool:()=
     if(!target){res.status(404).json({error:"Choose a brand from this real workspace's watchlist."});return;}
     if(!lookups.configured()){res.status(409).json({error:"Add META_ACCESS_TOKEN in Render to find Pages."});return;}
     try{
-      const saved=await getPool().query("SELECT page_ids FROM watchlists WHERE workspace_id=$1 AND brand_key=$2 AND purpose='brand'",[target.workspaceId,target.brandKey]);
+      const saved=await getPool().query("SELECT page_ids FROM watchlists WHERE workspace_id=$1 AND brand_key=$2 AND purpose='brand' AND platform='Meta'",[target.workspaceId,target.brandKey]);
       if(saved.rows.some(w=>w.page_ids.length)){res.status(409).json({error:"This brand already has a saved Page ID. Manual entry remains available."});return;}
       const value=await lookups.search(target,req.body?.more===true);
       if(value.retryAfterMs)res.setHeader("Retry-After",String(Math.ceil(value.retryAfterMs/1000)));

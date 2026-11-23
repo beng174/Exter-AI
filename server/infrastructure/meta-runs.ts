@@ -24,6 +24,6 @@ export async function readMetaWatchlists(pool:pg.Pool,workspaceId:string):Promis
     (SELECT count(*)::int FROM meta_collection_failures f WHERE f.run_id=r.id) AS failure_count,
     (SELECT jsonb_agg(f ORDER BY f.id DESC) FROM (SELECT id,attempted_at,kind,graph_code,graph_subcode,http_status,page_size,timed_out,error_user_title,error_user_msg FROM meta_collection_failures WHERE run_id=r.id ORDER BY id DESC LIMIT 20) f) AS failures
     FROM watchlists w LEFT JOIN LATERAL(SELECT id,status,records_new,records_updated,started_at,finished_at,stopped_at,errors,pages_fetched,query_index FROM collection_runs WHERE watchlist_id=w.id ORDER BY started_at DESC,id DESC LIMIT 1) r ON true
-    LEFT JOIN collection_jobs j ON j.id=r.id WHERE w.workspace_id=$1 ORDER BY w.id`,[workspaceId]);
+    LEFT JOIN collection_jobs j ON j.id=r.id WHERE w.workspace_id=$1 AND w.platform='Meta' ORDER BY w.id`,[workspaceId]);
   return result.rows.map(row=>({id:row.id,workspace_id:row.workspace_id,brand_key:row.brand_key,purpose:row.purpose,page_ids:row.page_ids,search_terms:row.search_terms,countries:row.countries,enabled:row.enabled,meta_page_size:metaPageSize(row.meta_page_size),latestRun:metaRunProjection(row)}));
 }

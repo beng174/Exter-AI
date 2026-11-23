@@ -16,12 +16,12 @@ export function sourceFormatSql(p:string){
 }
 // $1 workspace; $2 optional watchlist; $3 measurement time. Payloads stay in SQL.
 export const PUBLIC_ROWS_SQL=`WITH watches AS MATERIALIZED (
- SELECT * FROM watchlists WHERE workspace_id=$1 AND purpose='brand' AND brand_key IS NOT NULL AND jsonb_array_length(page_ids)=1 AND ($2::text IS NULL OR id=$2)
+ SELECT * FROM watchlists WHERE platform='Meta' AND workspace_id=$1 AND purpose='brand' AND brand_key IS NOT NULL AND jsonb_array_length(page_ids)=1 AND ($2::text IS NULL OR id=$2)
 ), latest_ids AS MATERIALIZED (
  SELECT DISTINCT ON(w.brand_key,o.platform,o.native_id) w.id AS watchlist_id,w.brand_key,w.page_ids->>0 AS page_id,o.platform,o.native_id,
  o.run_id
  FROM watches w JOIN collection_runs r ON r.watchlist_id=w.id AND r.config->>'revision'=w.revision::text
- JOIN ad_observations o ON o.run_id=r.id AND o.workspace_id=$1 JOIN public_ads a USING(platform,native_id)
+ JOIN ad_observations o ON o.run_id=r.id AND o.workspace_id=$1 JOIN public_ads a ON a.platform=o.platform AND a.native_id=o.native_id
  WHERE a.advertiser_id=w.page_ids->>0 ORDER BY w.brand_key,o.platform,o.native_id,o.observed_at DESC,o.run_id DESC
 ), latest AS MATERIALIZED (
  SELECT i.watchlist_id,i.brand_key,i.page_id,i.platform,i.native_id,
@@ -43,7 +43,7 @@ export const PUBLIC_ROWS_SQL=`WITH watches AS MATERIALIZED (
  bool_or(EXISTS(SELECT 1 FROM jsonb_array_elements(c.assets)a JOIN ad_media_file_checks f ON f.workspace_id=c.workspace_id AND f.artifact_id=a->'ref'->>'artifactId' WHERE a->>'role' IN ('image','poster') AND NOT f.available)) AS missing_file,
  bool_or(c.format='video' OR c.expected_videos>0) AS is_video,max(c.created_at) AS legacy_attempt,(array_agg(c.error_kind ORDER BY c.created_at DESC))[1] AS error,
  (array_agg(c.format ORDER BY c.created_at DESC) FILTER(WHERE c.format IS NOT NULL))[1] AS media_format
- FROM ad_media_creatives c JOIN watches w ON w.brand_key=c.brand_key AND w.page_ids->>0=c.page_id WHERE c.workspace_id=$1 GROUP BY c.brand_key,c.native_id
+ FROM ad_media_creatives c JOIN watches w ON w.brand_key=c.brand_key AND w.platform=c.platform AND w.page_ids->>0=c.page_id WHERE c.workspace_id=$1 GROUP BY c.brand_key,c.native_id
 ), requests AS MATERIALIZED (
  SELECT DISTINCT ON(r.brand_key,q.native_id) r.brand_key,q.native_id,q.requested_at,q.returned_at,q.matched_at,q.outcome,q.reprocess_version,r.lookup_mode,r.dataset_id,r.id AS source_run_id,
  bool_or(q.returned_at IS NOT NULL) OVER(PARTITION BY r.brand_key,q.native_id) AS ever_returned,bool_or(q.matched_at IS NOT NULL) OVER(PARTITION BY r.brand_key,q.native_id) AS ever_matched

@@ -15,7 +15,7 @@ export async function enqueueAdMedia(pool:pg.Pool,watchlistId:string,now=new Dat
   const lock=await pool.connect();
   try{
     await lock.query("BEGIN");await lock.query("SELECT pg_advisory_xact_lock(hashtext($1))",[`ad-media:${watchlistId}`]);
-    const w=(await lock.query("SELECT * FROM watchlists WHERE id=$1 AND enabled AND purpose='brand' AND brand_key IS NOT NULL AND jsonb_array_length(page_ids)=1 AND countries @> '[\"GB\"]'::jsonb",[watchlistId])).rows[0];
+    const w=(await lock.query("SELECT * FROM watchlists WHERE id=$1 AND platform='Meta' AND enabled AND purpose='brand' AND brand_key IS NOT NULL AND jsonb_array_length(page_ids)=1 AND countries @> '[\"GB\"]'::jsonb",[watchlistId])).rows[0];
     if(!w){await lock.query("ROLLBACK");return null;}
     await lock.query("UPDATE ad_media_runs SET status='failed',error_kind='priority',finished_at=clock_timestamp() WHERE watchlist_id=$1 AND preview_policy='legacy' AND status='queued' AND actor_run_id IS NULL AND reservation_id IS NULL AND requested_ids IS NULL AND (lease_until IS NULL OR lease_until<now())",[watchlistId]);
     if((await lock.query("SELECT id FROM ad_media_runs WHERE watchlist_id=$1 AND status=ANY($2::text[])",[watchlistId,ACTIVE])).rowCount){await lock.query("ROLLBACK");return null;}
@@ -58,11 +58,11 @@ export async function enqueueAdMedia(pool:pg.Pool,watchlistId:string,now=new Dat
 }
 export async function scheduleAdMedia(pool:pg.Pool,env:Record<string,string|undefined>=process.env,now=new Date()){
   if(!mediaEnabled(env))return;
-  await pool.query("UPDATE ad_media_runs SET status=CASE WHEN actor_run_id IS NULL THEN 'queued' ELSE 'running' END,error_kind=NULL,available_at=now() WHERE status='paused' AND error_kind IN ('budget','configuration','provider','disk') AND (reservation_id IS NULL OR actor_run_id IS NOT NULL) AND (available_at AT TIME ZONE 'Europe/London')::date<($1::timestamptz AT TIME ZONE 'Europe/London')::date",[now]);
-  const rows=await pool.query("SELECT id FROM watchlists WHERE enabled AND purpose='brand' AND brand_key IS NOT NULL ORDER BY id");
+  await pool.query("UPDATE ad_media_runs SET status=CASE WHEN actor_run_id IS NULL THEN 'queued' ELSE 'running' END,error_kind=NULL,available_at=now() WHERE platform='Meta' AND status='paused' AND error_kind IN ('budget','configuration','provider','disk') AND (reservation_id IS NULL OR actor_run_id IS NOT NULL) AND (available_at AT TIME ZONE 'Europe/London')::date<($1::timestamptz AT TIME ZONE 'Europe/London')::date",[now]);
+  const rows=await pool.query("SELECT id FROM watchlists WHERE platform='Meta' AND enabled AND purpose='brand' AND brand_key IS NOT NULL ORDER BY id");
   for(const w of rows.rows)await enqueueAdMedia(pool,w.id,now);
 }
-export async function claimAdMedia(pool:pg.Pool,owner:string){return(await pool.query(`UPDATE ad_media_runs SET lease_owner=$1,lease_until=now()+interval '6 minutes' WHERE id=(SELECT id FROM ad_media_runs WHERE ${workerClaimGate('media','ad_media_runs.id')} AND status IN ('queued','running','starting') AND available_at<=now() AND (lease_until IS NULL OR lease_until<now()) ORDER BY available_at FOR UPDATE SKIP LOCKED LIMIT 1) RETURNING *`,[owner])).rows[0]||null;}
+export async function claimAdMedia(pool:pg.Pool,owner:string){return(await pool.query(`UPDATE ad_media_runs SET lease_owner=$1,lease_until=now()+interval '6 minutes' WHERE id=(SELECT id FROM ad_media_runs WHERE ${workerClaimGate('media','ad_media_runs.id')} AND platform='Meta' AND status IN ('queued','running','starting') AND available_at<=now() AND (lease_until IS NULL OR lease_until<now()) ORDER BY available_at FOR UPDATE SKIP LOCKED LIMIT 1) RETURNING *`,[owner])).rows[0]||null;}
 
 /** A single fenced step runs on the disk-owning web service, not the diskless worker. */
 export async function stepAdMedia(pool:pg.Pool,id:string,owner:string,options:{now?:Date;env?:Record<string,string|undefined>;actor?:AdMediaActor;storage?:AdMediaStorage;existingIds?:Set<string>;existingVideoIds?:Set<string>;existingVideoCandidates?:Set<string>;onFailure?:(error:unknown)=>void}={}){
@@ -124,7 +124,7 @@ export async function stepAdMedia(pool:pg.Pool,id:string,owner:string,options:{n
       const media=actorMedia(items[0]);
       if(returnedId)await client.query("UPDATE ad_media_requests SET returned_at=COALESCE(returned_at,clock_timestamp()),outcome=$3,dataset_offset=$4 WHERE run_id=$1 AND native_id=$2",[id,returnedId,media&&media.pageId!==run.page_id?"wrong_page":"no_media",run.result_offset]);
       if(media&&media.pageId===run.page_id&&(run.phase==="page"||(run.requested_ids||run.target_ids).includes(media.adId))){
-        const official=await client.query(`SELECT 1 FROM ad_observations o JOIN public_ads a USING(platform,native_id) JOIN collection_runs r ON r.id=o.run_id WHERE o.workspace_id=$1 AND a.platform='Meta' AND a.native_id=$2 AND a.advertiser_id=$3 AND r.watchlist_id=$4 AND r.config->>'revision'=$5 LIMIT 1`,[run.workspace_id,media.adId,run.page_id,run.watchlist_id,String(run.revision)]);
+        const official=await client.query(`SELECT 1 FROM ad_observations o JOIN public_ads a ON a.platform=o.platform AND a.native_id=o.native_id JOIN collection_runs r ON r.id=o.run_id WHERE o.workspace_id=$1 AND a.platform='Meta' AND a.native_id=$2 AND a.advertiser_id=$3 AND r.watchlist_id=$4 AND r.config->>'revision'=$5 LIMIT 1`,[run.workspace_id,media.adId,run.page_id,run.watchlist_id,String(run.revision)]);
         if(official.rowCount){
           const prior=(await client.query("SELECT assets,error_kind FROM ad_media_creatives WHERE run_id=$1 AND native_id=$2",[id,media.adId])).rows[0];
           const eligible=run.download_videos;

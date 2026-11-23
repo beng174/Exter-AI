@@ -82,8 +82,8 @@ export function attachInfrastructure(app: Express, db: DatabaseSync, getPool:()=
       await client.query("BEGIN");
       await client.query("SELECT pg_advisory_xact_lock(hashtext($1))",[brand.id]);
       const key=purpose==="brand"?brandKey:null;
-      const existing=await client.query("SELECT * FROM watchlists WHERE id=$1 OR (workspace_id=$2 AND brand_key=$3 AND $4<>'' AND COALESCE(page_ids->>0,'')=$4) FOR UPDATE",[req.params.id,brand.id,key,pageIds[0]||'']);
-      if(existing.rows.some(w=>w.workspace_id!==brand.id)){await client.query("ROLLBACK");res.status(409).json({error:"This watchlist belongs to another workspace."});return;}
+      const existing=await client.query("SELECT * FROM watchlists WHERE id=$1 OR (platform='Meta' AND workspace_id=$2 AND brand_key=$3 AND $4<>'' AND COALESCE(page_ids->>0,'')=$4) FOR UPDATE",[req.params.id,brand.id,key,pageIds[0]||'']);
+      if(existing.rows.some(w=>w.workspace_id!==brand.id||w.platform&&w.platform!=='Meta')){await client.query("ROLLBACK");res.status(409).json({error:"This watchlist belongs to another workspace."});return;}
       if(existing.rows.length>1||existing.rows.some(w=>w.brand_key&&w.brand_key!==key||w.purpose!==purpose)){await client.query("ROLLBACK");res.status(409).json({error:"Choose the saved watchlist for this brand or category."});return;}
       const old=existing.rows[0],id=old?.id||String(req.params.id)||randomUUID(),enabled=purpose==="discovery"?searchTerms.length>0:pageIds.length>0;
       const changed=old&&(JSON.stringify(old.page_ids)!==JSON.stringify(pageIds)||JSON.stringify(old.search_terms)!==JSON.stringify(searchTerms)||JSON.stringify(old.countries)!==JSON.stringify(countries)||old.brand_key!==key||old.purpose!==purpose);
@@ -106,7 +106,7 @@ export function attachInfrastructure(app: Express, db: DatabaseSync, getPool:()=
       if(req.body.workspaceId!==undefined){
         const brand=typeof req.body.workspaceId==="string"?readBrand(db,req.body.workspaceId):null;
         if(!brand||brand.mode==="demo"){res.status(404).json({error:"Choose an existing real workspace."});return;}
-        const saved=await pool.query("SELECT id FROM watchlists WHERE id=$1 AND workspace_id=$2 AND purpose='brand'",[req.body.watchlistId,brand.id]);
+        const saved=await pool.query("SELECT id FROM watchlists WHERE platform='Meta' AND id=$1 AND workspace_id=$2 AND purpose='brand'",[req.body.watchlistId,brand.id]);
         if(!saved.rowCount){res.status(404).json({error:"The brand watchlist is not available in this workspace."});return;}
       }
       if((await budgetStatus(pool)).find(b=>b.cost_type==="data_providers")?.paused!==false){res.status(409).json({error:"Collection is paused by the data provider budget. Review Budgets and schedule before retrying."});return;}
@@ -117,9 +117,9 @@ export function attachInfrastructure(app: Express, db: DatabaseSync, getPool:()=
     if (typeof req.query.workspaceId !== "string" || !req.query.workspaceId) { res.status(400).json({ error: "Provide workspaceId." }); return; }
     try {
       const result = await getPool().query(`SELECT o.*,a.advertiser_id,a.start_time,a.stop_time,COALESCE(o.raw_payload,p.raw_payload) AS raw_payload
-        FROM ad_observations o JOIN public_ads a USING(platform,native_id)
+        FROM ad_observations o JOIN public_ads a ON a.platform=o.platform AND a.native_id=o.native_id
         LEFT JOIN ad_observations p ON p.platform=o.platform AND p.native_id=o.native_id AND p.run_id=o.raw_payload_run_id AND p.workspace_id=o.workspace_id
-        WHERE o.workspace_id=$1 ORDER BY o.observed_at DESC,o.run_id DESC LIMIT 100`, [req.query.workspaceId]);
+        WHERE o.platform='Meta' AND o.workspace_id=$1 ORDER BY o.observed_at DESC,o.run_id DESC LIMIT 100`, [req.query.workspaceId]);
       res.json({ coverage: metaStatus().coverage, observations: result.rows });
     } catch { res.status(503).json({ error: "Collection database unavailable." }); }
   });

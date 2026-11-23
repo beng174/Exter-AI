@@ -1,0 +1,128 @@
+{
+  "checks": [
+    {
+      "screen": "Creatives",
+      "width": 1280,
+      "noOverflow": true
+    },
+    {
+      "screen": "CreativeDetail",
+      "width": 1280,
+      "noOverflow": true
+    },
+    {
+      "screen": "Winners",
+      "width": 1280,
+      "noOverflow": true
+    },
+    {
+      "screen": "Patterns",
+      "width": 1280,
+      "noOverflow": true
+    },
+    {
+      "screen": "Competitors",
+      "width": 1280,
+      "noOverflow": true
+    },
+    {
+      "screen": "DataSources",
+      "width": 1280,
+      "noOverflow": true
+    },
+    {
+      "screen": "Creatives",
+      "width": 1440,
+      "noOverflow": true
+    },
+    {
+      "screen": "CreativeDetail",
+      "width": 1440,
+      "noOverflow": true
+    },
+    {
+      "screen": "Winners",
+      "width": 1440,
+      "noOverflow": true
+    },
+    {
+      "screen": "Patterns",
+      "width": 1440,
+      "noOverflow": true
+    },
+    {
+      "screen": "Competitors",
+      "width": 1440,
+      "noOverflow": true
+    },
+    {
+      "screen": "DataSources",
+      "width": 1440,
+      "noOverflow": true
+    },
+    {
+      "screen": "Creatives",
+      "width": 1920,
+      "noOverflow": true
+    },
+    {
+      "screen": "CreativeDetail",
+      "width": 1920,
+      "noOverflow": true
+    },
+    {
+      "screen": "Winners",
+      "width": 1920,
+      "noOverflow": true
+    },
+    {
+      "screen": "Patterns",
+      "width": 1920,
+      "noOverflow": true
+    },
+    {
+      "screen": "Competitors",
+      "width": 1920,
+      "noOverflow": true
+    },
+    {
+      "screen": "DataSources",
+      "width": 1920,
+      "noOverflow": true
+    },
+    {
+      "screen": "Creatives",
+      "width": 390,
+      "noOverflow": true
+    },
+    {
+      "screen": "CreativeDetail",
+      "width": 390,
+      "noOverflow": true
+    },
+    {
+      "screen": "Winners",
+      "width": 390,
+      "noOverflow": true
+    },
+    {
+      "screen": "Patterns",
+      "width": 390,
+      "noOverflow": true
+    },
+    {
+      "screen": "Competitors",
+      "width": 390,
+      "noOverflow": true
+    },
+    {
+      "screen": "DataSources",
+      "width": 390,
+      "noOverflow": true
+    }
+  ],
+  "pageErrors": [],
+  "externalRequests": [],
+  "providerCalls": 0,
+  "note": "Fixtures only. Live ION8 smoke test waits for deployment."
+}

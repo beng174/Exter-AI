@@ -14,7 +14,7 @@ import {enrichLikelihood} from "../accuracy/predictions.js";
 import {creativeTitle} from "../../shared/creative-presentation.js";
 import {fullCopy,sha} from "../../shared/public-signals.js";
 
-const fields=["ad_creative_bodies","ad_creative_link_titles","ad_creative_link_captions","ad_creative_link_urls","total_reach_by_location","eu_total_reach","age_country_gender_reach_breakdown","publisher_platforms","target_ages","target_gender","target_locations","languages"];
+const fields=["tiktok_reach","tiktok_status","tiktok_last_shown","ad_creative_bodies","ad_creative_link_titles","ad_creative_link_captions","ad_creative_link_urls","total_reach_by_location","eu_total_reach","age_country_gender_reach_breakdown","publisher_platforms","target_ages","target_gender","target_locations","languages"];
 export const compactPayloadSql=(p:string)=>`jsonb_build_object(${fields.map(key=>`'${key}',${p}->'${key}'`).join(",")})`;
 const json=(value:unknown)=>JSON.stringify(value);
 async function put(pool:pg.Pool,db:DatabaseSync,client:pg.PoolClient,workspace:string,rows:{row:BrowserCreative;source:string;version:string;watch?:string;revision?:number;page?:string}[]){
@@ -54,7 +54,7 @@ export async function indexCreativeChunk(pool:pg.Pool,db:DatabaseSync,brand:Crea
   if(checkpoint.phase==="legacy"){
    const targets=[brand.id,...competitors.flatMap(c=>c.brandId?[c.brandId]:[])],target=targets[checkpoint.target];
    if(target){
-    const ids=workspaceBrandIds(db,target),inputs=ids.length?db.prepare(`SELECT id FROM ads WHERE brand_id IN (${ids.map(()=>"?").join(",")}) AND source<>'sample' AND id>? ORDER BY id LIMIT 500`).all(...ids,checkpoint.after):[];
+    const ids=workspaceBrandIds(db,target),inputs=ids.length?db.prepare(`SELECT id FROM ads WHERE brand_id IN (${ids.map(()=>"?").join(",")}) AND source<>'sample' AND NOT(platform='TikTok' AND json_extract(data,'$.publicWatchlistBrandKey') IS NOT NULL) AND id>? ORDER BY id LIMIT 500`).all(...ids,checkpoint.after):[];
     if(inputs.length){
      const selected=await gallery.selected(target,inputs.map(r=>String(r.id)));
      const rows=selected.flatMap(creative=>{
@@ -73,8 +73,8 @@ export async function indexCreativeChunk(pool:pg.Pool,db:DatabaseSync,brand:Crea
    const targets=[brand.id,...competitors.map(c=>c.brandId||c.key)];
    const batch=(await client.query(`SELECT DISTINCT ON(w.brand_key,o.platform,o.native_id) o.native_id,o.platform,o.run_id,o.raw_payload_run_id,o.observed_at,o.last_confirmed_at,o.payload_hash,a.advertiser_id,a.first_seen_at,a.start_time,a.stop_time,w.id AS watchlist_id,w.revision,w.brand_key,w.page_ids
     FROM watchlists w JOIN collection_runs r ON r.watchlist_id=w.id AND r.config->>'revision'=w.revision::text
-    JOIN ad_observations o ON o.run_id=r.id AND o.workspace_id=w.workspace_id JOIN public_ads a USING(platform,native_id)
-    WHERE w.workspace_id=$1 AND w.purpose='brand' AND w.brand_key=ANY($2::text[]) AND w.page_ids @> to_jsonb(ARRAY[a.advertiser_id]) AND (w.brand_key,o.platform,o.native_id)>($3,$4,$5)
+    JOIN ad_observations o ON o.run_id=r.id AND o.workspace_id=w.workspace_id JOIN public_ads a ON a.platform=o.platform AND a.native_id=o.native_id
+    WHERE o.platform=w.platform AND w.workspace_id=$1 AND w.purpose='brand' AND w.brand_key=ANY($2::text[]) AND w.page_ids @> to_jsonb(ARRAY[a.advertiser_id]) AND (w.brand_key,o.platform,o.native_id)>($3,$4,$5)
     ORDER BY w.brand_key,o.platform,o.native_id,o.observed_at DESC,o.run_id DESC LIMIT 500`,[workspace,targets,...checkpoint.key])).rows;
    processed=batch.length;complete=!batch.length;
    if(batch.length){
@@ -90,12 +90,14 @@ export async function indexCreativeChunk(pool:pg.Pool,db:DatabaseSync,brand:Crea
     const payloads=new Map(enriched.map(r=>[JSON.stringify([r.brand_key,r.platform,r.native_id]),r]));
     const imports=(await client.query("SELECT brand_key,native_id,data FROM web_creative_index WHERE workspace_id=$1 AND source_type='legacy' AND platform IN ('Meta','Facebook','Instagram') AND native_id=ANY($2::text[])",[workspace,batch.map(r=>r.native_id)])).rows;
     const legacy=new Map(imports.map(r=>[JSON.stringify([r.brand_key,r.native_id]),r.data as BrowserCreative]));
+    const tikRich=await gallery.selected(workspace,batch.filter(r=>r.platform==='TikTok').map(r=>`tiktok:${r.watchlist_id}:${r.native_id}`));
     const rows=batch.flatMap(input=>{
      const payload=payloads.get(JSON.stringify([input.brand_key,input.platform,input.native_id]));
      if(!payload)throw new Error("An ad changed during indexing. This batch will retry.");
      const raw=payload.raw_payload||{};raw.source_format=payload.source_format;
      const saved=legacy.get(JSON.stringify([input.brand_key,input.native_id]));
-     const row=mergePublicEvidence(saved?[saved]:[],[{...input,raw_payload:raw} as PublicObservation],brand,competitors)[0];
+     let row=mergePublicEvidence(saved?[saved]:[],[{...input,raw_payload:raw} as PublicObservation],brand,competitors)[0];
+     if(row&&input.platform==='TikTok'){const rich=tikRich.find(r=>r.adId===`tiktok:${input.watchlist_id}:${input.native_id}`);if(rich){const ad=workspaceAd(db,workspace,rich.adId);row={...row,analysisAdId:rich.adId,analysis:rich.analysis,scenes:rich.scenes||[],score:ad?analysedCreatives(db,workspace,[ad]).map(scoreCreative)[0]||null:null,hookType:rich.hookType,angle:rich.angle,offerType:rich.offerType,ugc:rich.ugc,creativeFormat:rich.creativeFormat,mediaSha256:rich.mediaSha256,durationSeconds:rich.durationSeconds};}}
      return row?[{row,source:"official",version:epoch+':'+input.run_id+':'+input.payload_hash,watch:input.watchlist_id,revision:input.revision,page:input.advertiser_id}]:[];
     });
     await options.beforeWrite?.(client);await put(pool,db,client,workspace,rows);

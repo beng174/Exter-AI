@@ -50,7 +50,7 @@ export async function readMissingMedia(pool:pg.Pool,workspace:string,options:{br
 
  const metadata=page.length?await pool.query(`SELECT DISTINCT ON(w.brand_key,o.native_id) w.brand_key,o.native_id,a.start_time,
   left(COALESCE(o.raw_payload,p.raw_payload)->'ad_creative_bodies'->>0,500) AS copy
-  FROM ad_observations o JOIN public_ads a USING(platform,native_id) JOIN collection_runs r ON r.id=o.run_id JOIN watchlists w ON w.id=r.watchlist_id
+  FROM ad_observations o JOIN public_ads a ON a.platform=o.platform AND a.native_id=o.native_id JOIN collection_runs r ON r.id=o.run_id JOIN watchlists w ON w.id=r.watchlist_id
   LEFT JOIN ad_observations p ON p.workspace_id=o.workspace_id AND p.platform=o.platform AND p.native_id=o.native_id AND p.run_id=o.raw_payload_run_id
   WHERE o.workspace_id=$1 AND w.workspace_id=$1 AND r.config->>'revision'=w.revision::text AND a.advertiser_id=w.page_ids->>0 AND o.native_id=ANY($2::text[])
   ORDER BY w.brand_key,o.native_id,o.observed_at DESC,o.run_id DESC`,[workspace,page.map(row=>row.nativeId)]):{rows:[]};
