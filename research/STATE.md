@@ -1264,3 +1264,6 @@ After deployment, run the explicit ION8 ten-ad smoke action documented in
 Validation: all four checks pass, with 650 unit tests and 116 disposable Postgres
 integration tests. The 50,000-ad fixture peaks at 114,519,872 heap bytes. The
 existing production bundle-size warning remains. No validation gate is cleared.
+The final identity audit also scopes legacy logo/Page review and Meta setup costs
+and counts to Meta. All 25 focused TikTok/onboarding integration fixtures pass;
+TikTok business IDs cannot become Facebook Page identities or complete Meta setup.

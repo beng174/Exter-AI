@@ -95,3 +95,8 @@ Live ION8 verification waits for deployment and is not represented by fixtures.
   assertion checks the exact TikTok analysis identity.
 - Latest target verified at 077ea4b. Live ION8 smoke, deployment and own-account
   verification remain pending; no fixture clears those gates.
+
+Final namespace audit: scope the legacy logo, Meta Page review, paid-media controls
+and Meta setup counters to Meta. TikTok business IDs must never request a Facebook
+Page picture or complete a Meta Page step. All 25 focused TikTok/onboarding
+integration fixtures pass after these guards, including the new regression case.

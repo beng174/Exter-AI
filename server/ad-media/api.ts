@@ -113,7 +113,7 @@ export function attachAdMedia(app:Express,db:DatabaseSync,getPool=infrastructure
     if(!brand||brand.mode==="demo"){res.status(404).json({error:"Real workspace not found."});return;}
     if(!mediaEnabled()||!process.env.APIFY_TOKEN?.trim()||mediaGbpRate(process.env)===null){res.status(409).json({error:"Enable configured media collection in Render first."});return;}
     try{
-      const pool=getPool(),rows=await pool.query("SELECT id FROM watchlists WHERE workspace_id=$1 AND enabled AND purpose='brand' AND ($2::text IS NULL OR brand_key=$2) ORDER BY id",[brand.id,typeof req.body?.brandKey==='string'?req.body.brandKey:null]);
+      const pool=getPool(),rows=await pool.query("SELECT id FROM watchlists WHERE platform='Meta' AND workspace_id=$1 AND enabled AND purpose='brand' AND ($2::text IS NULL OR brand_key=$2) ORDER BY id",[brand.id,typeof req.body?.brandKey==='string'?req.body.brandKey:null]);
       // Explicit retries resume safe existing checkpoints. Uncertain paid starts stay blocked.
       const resumed=await pool.query("UPDATE ad_media_runs SET status=CASE WHEN actor_run_id IS NULL THEN 'queued' ELSE 'running' END,error_kind=NULL,available_at=now() WHERE workspace_id=$1 AND status='paused' AND (reservation_id IS NULL OR actor_run_id IS NOT NULL) AND (lease_until IS NULL OR lease_until<now()) RETURNING id",[brand.id]);
       await clearWorkerFailures(pool,"media",resumed.rows.map(row=>row.id));

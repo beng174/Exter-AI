@@ -12,12 +12,12 @@ import {CATEGORY_MODEL,CATEGORY_VERSION,CATEGORY_BATCH_SIZE,categoryHash,categor
 interface Item {platform?:string;brandKey:string;pageId:string;nativeId:string;sourceHash:string;key:string}
 const keyFor=(brand:string,page:string,native:string,hash:string,platform="Meta")=>createHash('sha256').update(JSON.stringify([brand,page,native,hash,...(platform!=="Meta"?[platform]:[])])).digest('hex');
 export async function categoryVocabulary(pool:Pick<pg.Pool,"query">,workspace:string):Promise<string[]>{return ((await pool.query('SELECT categories FROM workspace_category_vocabularies WHERE workspace_id=$1',[workspace])).rows[0]?.categories||[]).slice().sort();}
-export async function countTaggedAds(pool:pg.Pool,workspace:string):Promise<number>{
+export async function countTaggedAds(pool:pg.Pool,workspace:string,platform="Meta"):Promise<number>{
  const result=await pool.query(`SELECT count(DISTINCT (c.brand_key,c.platform,c.native_id))::integer AS count FROM public_ad_categories c
  JOIN watchlists w ON w.workspace_id=c.workspace_id AND w.brand_key=c.brand_key AND w.platform=c.platform AND w.page_ids @> to_jsonb(ARRAY[c.page_id])
  JOIN public_category_batches b ON b.id=c.batch_id LEFT JOIN workspace_category_vocabularies v ON v.workspace_id=c.workspace_id
- WHERE c.workspace_id=$1 AND w.enabled AND c.prompt_version=$2 AND b.vocabulary @> COALESCE(v.categories,'[]'::jsonb)
- AND COALESCE(v.categories,'[]'::jsonb) @> b.vocabulary AND jsonb_array_length(c.categories)>0`,[workspace,CATEGORY_VERSION]);
+ WHERE c.workspace_id=$1 AND c.platform=$3 AND w.enabled AND c.prompt_version=$2 AND b.vocabulary @> COALESCE(v.categories,'[]'::jsonb)
+ AND COALESCE(v.categories,'[]'::jsonb) @> b.vocabulary AND jsonb_array_length(c.categories)>0`,[workspace,CATEGORY_VERSION,platform]);
  return Number(result.rows[0]?.count||0);
 }
 async function inputs(pool:pg.Pool,workspace:string,known=new Set<string>(),targets?:Set<string>,vocabulary?:string[],client?:pg.PoolClient){
