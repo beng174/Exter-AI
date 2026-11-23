@@ -1,3 +1,6 @@
+import {attachTikTok,attachTikTokStep,ensureWorkspaceTikTok} from "./tiktok/api.js";
+import {tiktokCommercialStatus} from "./connectors/tiktok-commercial.js";
+
 import {attachCreatorPerformance} from "./creators/performance-api.js";
 import {attachCreativeIndexStep} from "./infrastructure/creative-index-jobs.js";
 import {apiFailureLogging,apiErrorReason} from "./infrastructure/api-errors.js";
@@ -259,6 +262,7 @@ export function createApp(db: DatabaseSync = openDatabase()) {
   attachKernelArtifactDownload(app, broker);
   attachCreativeIndexStep(app,db,infrastructureDatabase);
   attachMediaStep(app,db);
+  attachTikTokStep(app,db,infrastructureDatabase);
   attachCategoryStep(app,db);
   attachOnboardingStep(app,db);
   app.use(authenticate);
@@ -290,6 +294,8 @@ export function createApp(db: DatabaseSync = openDatabase()) {
   attachLabelling(app, db, video);
   attachAccuracy(app, db);
   attachGeminiSmoke(app, db, video);
+  attachTikTok(app,db,infrastructureDatabase);
+  if(process.env.DATABASE_URL&&tiktokCommercialStatus().configured)setImmediate(()=>{for(const row of db.prepare("SELECT id FROM brands LIMIT 1000").all())void ensureWorkspaceTikTok(infrastructureDatabase(),db,String(row.id),app.locals.demoCollection).catch(()=>{});});
   attachKernelJobs(app, broker, id => resolveDemoBrandId(db, id));
   attachBrandDemo(app, db);
   attachPatternLabelling(app, db);
@@ -362,6 +368,7 @@ export function createApp(db: DatabaseSync = openDatabase()) {
       brand.id,
       JSON.stringify(brand),
     );
+    if(process.env.DATABASE_URL&&tiktokCommercialStatus().configured)void ensureWorkspaceTikTok(infrastructureDatabase(),db,brand.id,app.locals.demoCollection).catch(()=>{});
     res.status(201).json(brand);
   });
   app.get("/api/dashboard", (req, res) => {

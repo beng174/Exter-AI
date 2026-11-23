@@ -1,3 +1,5 @@
+import {ensureWorkspaceTikTok} from "../tiktok/api.js";
+import {tiktokCommercialStatus} from "../connectors/tiktok-commercial.js";
 import {smallerMetaPage,metaPageSize,type MetaPageSize} from "../../shared/meta-collection.js";
 import {createHash} from "node:crypto";
 import type pg from "pg";
@@ -49,6 +51,7 @@ export async function stepOnboarding(pool:pg.Pool,db:DatabaseSync,id:string,owne
  try{if(!(await client.query('SELECT pg_try_advisory_lock(hashtext($1)) AS locked',[`onboarding-step:${id}`])).rows[0].locked)return false;
   run=(await client.query("SELECT * FROM brand_onboarding_runs WHERE id=$1 AND lease_owner=$2 AND lease_until>now() AND status IN ('queued','running','paused')",[id,owner])).rows[0];if(!run)return false;
   const brand=readBrand(db,run.workspace_id);if(!brand||brand.mode==='demo')return false;
+  if(tiktokCommercialStatus(env).configured)await ensureWorkspaceTikTok(pool,db,brand.id);
   const data=run.data as RunData,ai=options.ai||new OnboardingAI({env}),meta=options.meta||new OnboardingMeta(pool,{env}),now=options.now?.()||new Date();
   const update=async(phase=run.phase,status='running',delay=5000,error:string|null=null)=>client.query('UPDATE brand_onboarding_runs SET phase=$3,status=$4,data=$5,available_at=$6,error_kind=$7,updated_at=now(),finished_at=CASE WHEN $4 IN (\'complete\',\'needs_review\') THEN now() ELSE NULL END WHERE id=$1 AND lease_owner=$2 AND lease_until>now()',[id,owner,phase,status,JSON.stringify(data),new Date(now.getTime()+delay),error]);
   if(run.phase==='website'){
@@ -101,12 +104,12 @@ export async function stepOnboarding(pool:pg.Pool,db:DatabaseSync,id:string,owne
   }
   if(run.phase==='collection'){
    if(!metaLibraryEnabled(env)){await stepRecord(pool,id,'collection','paused');await update(undefined,'paused',60000,'switch');return true;}
-   const watchlists=(await pool.query("SELECT id,brand_key,page_ids FROM watchlists WHERE workspace_id=$1 AND purpose='brand' AND enabled",[brand.id])).rows;
+   const watchlists=(await pool.query("SELECT id,brand_key,page_ids FROM watchlists WHERE workspace_id=$1 AND platform='Meta' AND purpose='brand' AND enabled",[brand.id])).rows;
    data.collectionIds=[];for(const watch of watchlists){try{data.collectionIds.push(await enqueueCollection(pool,watch.id));}catch(error){if(!(error instanceof CollectionBusyError))throw error;const active=(await pool.query("SELECT id FROM collection_runs WHERE watchlist_id=$1 AND status IN ('queued','running') ORDER BY started_at DESC LIMIT 1",[watch.id])).rows[0];if(active)data.collectionIds.push(active.id);}}
    await stepRecord(pool,id,'collection','running',{count:0});await update('enrichment');return true;
   }
   if(run.phase==='enrichment'){
-   const watches=(await pool.query("SELECT id,brand_key,page_ids FROM watchlists WHERE workspace_id=$1 AND purpose='brand' AND enabled",[brand.id])).rows;
+   const watches=(await pool.query("SELECT id,brand_key,page_ids FROM watchlists WHERE workspace_id=$1 AND platform='Meta' AND purpose='brand' AND enabled",[brand.id])).rows;
    let latest=(await pool.query(`SELECT DISTINCT ON(w.id) w.id AS watchlist_id,r.id,r.status FROM watchlists w LEFT JOIN collection_runs r ON r.watchlist_id=w.id AND r.config->>'revision'=w.revision::text WHERE w.workspace_id=$1 AND w.purpose='brand' AND w.enabled ORDER BY w.id,r.started_at DESC,r.id DESC`,[brand.id])).rows;
    for(const watch of latest.filter(row=>!row.id))await enqueueCollection(pool,watch.watchlist_id);
    if(latest.some(row=>!row.id))latest=(await pool.query(`SELECT DISTINCT ON(w.id) w.id AS watchlist_id,r.id,r.status FROM watchlists w LEFT JOIN collection_runs r ON r.watchlist_id=w.id AND r.config->>'revision'=w.revision::text WHERE w.workspace_id=$1 AND w.purpose='brand' AND w.enabled ORDER BY w.id,r.started_at DESC,r.id DESC`,[brand.id])).rows;

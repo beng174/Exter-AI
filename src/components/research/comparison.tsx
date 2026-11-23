@@ -12,7 +12,7 @@ export function scopedResearch(data:ResearchData,filter:ComparisonFilter={},char
 }
 export function cohortSelection(data:Pick<ResearchData,"library"|"comparison">,group:Cohort,selection:EvidenceSelection={}):EvidenceSelection{
  const category=data.comparison?.filter.category||"mine";
- return {...selection,category:category==="mine"?data.comparison?.primary.join(",")||"none":category,adFormat:group.format};
+ return {...selection,platform:data.comparison?.filter.platform||data.library.sql?.scopePlatform||selection.platform,category:category==="mine"?data.comparison?.primary.join(",")||"none":category,adFormat:group.format};
 }
 export function forCohort(data:ResearchData,group:Cohort):ResearchData{return {...data,library:{...data.library,creatives:group.rows,sql:data.library.sql?{...data.library.sql,scopeFormat:group.format}:undefined},comparison:undefined};}
 export function scorecardCohorts(data:ResearchData,selection:EvidenceSelection={}){

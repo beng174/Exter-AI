@@ -1235,6 +1235,39 @@ Fictional pipeline/browser fixtures retain and decode four real image files. Car
 update without navigation after 30 seconds at 1440px and 390px. No provider calls.
 No deployment, coverage claim or live gate has been confirmed by these fixtures.
 
+## 23 November 2026: TikTok public collection wiring (TK-01..07)
+
+The owner confirms Commercial Content API approval and client keys on web and
+worker. Product wiring now uses real-workspace advertiser discovery, domain-backed
+automatic identity confirmation, one-click review and manual overrides alongside
+Meta. Countries start with GB and IE and can include relevant supported EU markets.
+
+Daily collection uses the 03:00 London slot, a fixed 12-month initial window and
+committed search/page checkpoints. Confirmed business IDs filter name searches.
+Media is retained directly from API URLs through the web disk adapter; no paid
+scraper is involved. Automatic analysis reuses existing services and budgets.
+Meta/TikTok identities, media, categories and analyses remain platform-scoped.
+Research defaults to one platform; TikTok Working Score uses the existing formula
+and explains missing inputs. Source health shows per-brand counts, coverage,
+successful checks and safe provider refusals.
+
+Fixture validation covers advertiser matching, cursors, expiry recovery, DST,
+budgets, direct media, analysis handoff, change-only storage, platform separation
+and a GB-only ten-ad smoke cap. Browser checks cover six screens at 1280px,
+1440px, 1920px and 390px; review screenshots are under
+`docs/review/tiktok-commercial/`. These are fixtures, not live verification.
+
+**Live gate remains open:** no live TikTok calls or deployments occurred here.
+After deployment, run the explicit ION8 ten-ad smoke action documented in
+`docs/DEPLOY.md`. Existing own-account Phase 0 and Phase 1 gates stay open.
+
+Validation: all four checks pass, with 650 unit tests and 116 disposable Postgres
+integration tests. The 50,000-ad fixture peaks at 114,519,872 heap bytes. The
+existing production bundle-size warning remains. No validation gate is cleared.
+The final identity audit also scopes legacy logo/Page review and Meta setup costs
+and counts to Meta. All 25 focused TikTok/onboarding integration fixtures pass;
+TikTok business IDs cannot become Facebook Page identities or complete Meta setup.
+
 ## 20 November 2026: creator performance intelligence (CP-01..06)
 
 PRODUCT-SPEC now defines Creator Sales Signal and ROAS forecasting. The spec and
@@ -1259,3 +1292,24 @@ Focused calculation, API, deletion, import, owned metric and model tests pass.
 Full verification and responsive screenshots are recorded on the PR. Exact rollout
 is documented in docs/DEPLOY.md: deploy web, worker and scheduler; additive schema
 only, no new secrets or configuration changes.
+
+
+## 23 November 2026: PR 43 reconciliation with merged creator intelligence
+
+Merge target 6585cfe includes PR 42 alongside the background-index and preview
+recovery changes from PRs 39 to 41. Both sets of deployment and status notes stay
+in place. TikTok identity, collection, media and analysis wiring is preserved.
+Creator attribution runs in the existing committed index chunks, followed by its
+bounded creator-summary phase. Public requests only read the index or bounded
+fallback; none rebuild it.
+
+The shared public score keeps its calculation breakdown. Creator evidence stores
+its numeric value. Meta creator versions and imported ad matching stay scoped by
+platform, including matching Meta/TikTok IDs and copy. A populated PR 42 schema
+fixture upgrades twice without losing observations, creator records, paid costs,
+category labels or indexing checkpoints.
+
+Validation: npm run check, npm test (661 tests), npm run build and npm run
+secrets:check pass. All 123 disposable Postgres integration tests pass, including
+the 20,000-ad read/recovery and 50,000-ad memory cases. Final merge CI is recorded
+on PR 43. No live gate is cleared by this fixture verification.

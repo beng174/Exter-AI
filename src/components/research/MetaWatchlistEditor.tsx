@@ -1,3 +1,4 @@
+import {TikTokWatchlists} from "./TikTokWatchlists";
 import {useEffect,useRef,useState,type FormEvent} from "react";
 import type {ResearchData} from "./useResearchData";
 import {MetaPageSuggestions,useMetaPageSuggestions} from "./MetaPageSuggestions";
@@ -7,7 +8,7 @@ import {MetaRunDetails,MetaRetryButton} from "./MetaRunStatus";
 import "./MetaWatchlistEditor.css";
 export function MetaWatchlistDialog({data,onSaved,onClose}:{data:ResearchData;onSaved:()=>void;onClose:()=>void}){
  const dialog=useRef<HTMLDialogElement>(null);useEffect(()=>{dialog.current?.showModal();},[]);
- return <dialog ref={dialog} className="meta-watchlist-dialog" aria-label="Edit watchlist" onClose={onClose}><header><h2>Edit watchlist</h2><button className="button secondary" onClick={()=>dialog.current?.close()}>Close</button></header><MetaWatchlistEditor data={data} onSaved={onSaved}/></dialog>;
+ return <dialog ref={dialog} className="meta-watchlist-dialog" aria-label="Edit watchlist" onClose={onClose}><header><h2>Edit watchlist</h2><button className="button secondary" onClick={()=>dialog.current?.close()}>Close</button></header><MetaWatchlistEditor data={data} onSaved={onSaved}/><TikTokWatchlists workspaceId={data.library.brand.id} sample={Boolean(data.library.presentation)} compact onSaved={onSaved}/></dialog>;
 }
 export function MetaWatchlistEditor({data,onSaved}:{data:ResearchData;onSaved:()=>void}){
  const lookup=useMetaPageSuggestions(data),baseTargets=[{key:data.library.brand.id,name:data.library.brand.name},...data.library.competitors.map(b=>({key:b.brandId||b.key,name:b.name}))];

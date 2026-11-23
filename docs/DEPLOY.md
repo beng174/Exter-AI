@@ -1611,6 +1611,77 @@ read settles. It does not start paid work from a page read. Unrequested ads show
 copy and their actual collection state rather than promising an active backfill.
 Fixture checks are not live verification of production coverage.
 
+## TikTok public ads (23 November 2026)
+
+Deploy this revision to **exter-ai**, **exter-worker** and **exter-scheduler**.
+For a manual rollout, deploy web first and wait for its startup migration and Live
+status, then deploy worker and scheduler from the same revision. If startup has
+not applied the additive schema, run `npm run db:migrate` in the new web release's
+Render Shell. No historical ads, observations, media or paid analyses are deleted.
+
+Keep `TIKTOK_CLIENT_KEY` and `TIKTOK_CLIENT_SECRET` in Render secrets on **web and
+worker**. The owner reports both are configured. The scheduler only enqueues jobs;
+it needs neither key. Keep the existing `EXTER_AD_MEDIA_BROKER_TOKEN` and
+`EXTER_AD_MEDIA_BROKER_ORIGIN` on web and worker. The worker claims durable steps;
+the authenticated web adapter uses the web disk, existing media store and existing
+video/image analysis services. TikTok files come directly from API CDN URLs,
+without a paid media scraper. No new secret, plan, price or budget setting is added.
+
+On deployment and after brand setup, advertiser discovery queues for real brands
+and configured competitors without a TikTok watchlist. A unique saved-website
+match can confirm automatically. Other suggestions appear under **Data sources >
+TikTok advertisers** and in **Competitors > Edit watchlist** as **Needs one click**.
+Confirm a suggestion or enter business IDs manually; manual choices take priority.
+GB and IE are the starting country list. Edit each advertiser to include the
+relevant supported EU countries. GB remains required. A country or permission
+refusal is displayed with the provider's sanitised reason; an EU-only fallback is
+never substituted silently.
+
+Confirmed advertisers start a fixed 12-month backfill, then use the existing
+03:00 Europe/London slot. Queries include active and inactive ads, at most ten per
+page. The API searches names rather than IDs; Exter accepts only confirmed business
+IDs. Each page and `search_id` checkpoint is committed, with repeated-page checks.
+Transient errors back off and pause after three attempts. Retry keeps its saved
+cursor; an explicitly retried expired search starts a new run and keeps earlier
+observations. Every API request, including token requests, shares a 20-second
+Postgres gate and the existing data-provider budget guard. Free API requests settle
+zero-charge ledger entries. Missing keys or a paused budget start no requests.
+
+Images and videos are downloaded immediately with bounded, allowlisted public
+fetches. Existing content-addressed storage deduplicates bytes; video posters and
+720p H.264 files follow the existing disk limit. Failed media is retried from fresh
+API details on the next collection. Coverage and controlled reasons appear per
+brand. Tokens and temporary media URLs are not stored in observations or logs.
+Changed source fields create observations; unchanged rows only advance confirmation.
+Retained creatives use the existing analysis prompts, fixed factors and AI budget
+guard. Unchanged inputs reuse completed work; uncertain starts pause for review.
+
+Research defaults to a single platform. Creatives can browse Meta, TikTok or All;
+comparison filters allow selecting either platform. Rounded published reach stays
+Estimated and retains its source display. Exact counts are Observed. Working Score
+uses the existing weights within brand, platform, category and format. Missing
+organic data and unlinked concept iterations are not invented; the calculation
+expander explains the available inputs and unfinished active durations.
+
+### Post-deploy ION8 smoke test
+
+This is a live check, deliberately excluded from CI and not run during development:
+
+1. Open the real **ION8** workspace after web, worker and scheduler are deployed.
+2. In **Data sources > TikTok advertisers**, confirm the domain-backed advertiser
+   or enter the correct business ID. Check GB is enabled.
+3. Click **Check 10 ION8 UK ads**. This separate smoke job is allowed only on Render,
+   requests GB only, stops at ten matching ads, and uses normal pacing and budgets.
+4. Watch the per-brand status, successful check, saved count and media coverage.
+   Open **Creatives**, choose **TikTok** and ION8, then open a saved ad to inspect
+   its retained video/image, published reach, source dates and analysis status.
+5. If refused, use the shown sanitised reason to correct approval or configuration
+   before retrying. Do not treat a configured credential or fixture as live access.
+
+Fixture screenshots and comparisons with Exter's references are in
+`docs/review/tiktok-commercial/`. They contain fictional brands and do not confirm
+live coverage, country access, analysis accuracy or prediction validation.
+
 ## Creator Sales Signal and outcome forecasting (20 November 2026)
 
 Merge the creator-performance PR into `exter-test-drive`. Deploy **exter-ai**,

@@ -12,10 +12,10 @@ export async function readOnboarding(pool:pg.Pool,db:DatabaseSync,workspace:stri
  const [steps,profile,watchlists,coverage,tagged,mediaCosts,tagCosts,choicesState]=await Promise.all([
   pool.query('SELECT s.*,l.cost_gbp::float8,l.initial_reserved_gbp::float8,l.status AS cost_status,l.cost_basis FROM brand_onboarding_steps s LEFT JOIN cost_ledger l ON l.id=s.reservation_id WHERE s.run_id=$1',[run.id]),
   pool.query('SELECT * FROM brand_onboarding_profiles WHERE workspace_id=$1',[workspace]),
-  pool.query("SELECT brand_key,page_ids FROM watchlists WHERE workspace_id=$1 AND enabled AND purpose='brand'",[workspace]),
+  pool.query("SELECT brand_key,page_ids FROM watchlists WHERE platform='Meta' AND workspace_id=$1 AND enabled AND purpose='brand'",[workspace]),
   readMediaCoverage(pool,workspace),
   countTaggedAds(pool,workspace),
-  pool.query(`SELECT sum((r.cap*.0005+.00005)*COALESCE(r.gbp_per_usd,$3::numeric))::float8 AS estimate,sum(l.initial_reserved_gbp) FILTER(WHERE l.status='reserved')::float8 AS reserved,sum(l.cost_gbp) FILTER(WHERE l.status='settled')::float8 AS actual,bool_or(l.status='reserved') AS pending FROM ad_media_runs r LEFT JOIN cost_ledger l ON l.id=r.reservation_id WHERE r.workspace_id=$1 AND r.started_at>=$2`,[workspace,run.created_at,mediaGbpRate(process.env)]),
+  pool.query(`SELECT sum((r.cap*.0005+.00005)*COALESCE(r.gbp_per_usd,$3::numeric))::float8 AS estimate,sum(l.initial_reserved_gbp) FILTER(WHERE l.status='reserved')::float8 AS reserved,sum(l.cost_gbp) FILTER(WHERE l.status='settled')::float8 AS actual,bool_or(l.status='reserved') AS pending FROM ad_media_runs r LEFT JOIN cost_ledger l ON l.id=r.reservation_id WHERE r.platform='Meta' AND r.workspace_id=$1 AND r.started_at>=$2`,[workspace,run.created_at,mediaGbpRate(process.env)]),
   pool.query(`SELECT sum(r.estimate_gbp)::float8 AS estimate,sum(l.initial_reserved_gbp) FILTER(WHERE l.status='reserved')::float8 AS reserved,sum(l.cost_gbp) FILTER(WHERE l.status='settled')::float8 AS actual,bool_or(l.status='reserved') AS pending FROM public_category_batches r LEFT JOIN cost_ledger l ON l.id=r.reservation_id WHERE r.workspace_id=$1 AND r.created_at>=$2`,[workspace,run.created_at]),
   pool.query('SELECT domain,action FROM brand_onboarding_choices WHERE workspace_id=$1',[workspace])
  ]);

@@ -8,7 +8,7 @@ type PreviewCreative=Pick<BrowserCreative,'brandName'|'platform'|'copy'|'sourceU
 export function AdPreview({row,compact=false,interactive=true,heading=false}:{row:PreviewCreative;compact?:boolean;interactive?:boolean;heading?:boolean}){
  const state=row.previewState,reason=MEDIA_REASON_LABELS[state?.reason as MediaMissingReason]||'Preview status is not available.';
  const waiting=state?.reason==='budget'?'When budget is available':state?.reason==='queued'?'Waiting for media collection.':state?.reason==='not_requested'?'Collect missing media in Data sources.':state?.reason?'Daily retries follow the media budget.':'See media status in Data sources.';
- const message=previewMessage(state)==='No preview from Meta'?'No preview from Meta':state?.reason==='not_requested'||!state?.reason?'Preview not collected':'Preview loading';
+ const message=previewMessage(state)==='No preview from Meta'?`No preview from ${row.platform==='TikTok'?'TikTok':'Meta'}`:state?.reason==='not_requested'||!state?.reason?'Preview not collected':'Preview loading';
  const title=creativeTitle({...row,title:'',nativeId:row.nativeId||'',adId:row.adId||''}),Copy=heading?'h3':'span',date=ukDate(row.deliveryStartAt);
  return <span role="group" aria-label={message} className={`ui-ad-preview ${compact?'ui-ad-preview-compact':''}`} title={`${reason} ${waiting}`}>
   {!compact&&<><BrandName name={row.brandName} size={20}>{row.brandName}</BrandName><span className="ui-ad-preview-platform">{sourceProviders(row.platform).map(provider=><img key={provider} src={`/providers/${provider}.svg`} alt=""/>)}{row.platform}{date&&` · since ${date}`}</span><Copy className="ui-ad-preview-copy">{title}</Copy></>}

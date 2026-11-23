@@ -15,12 +15,14 @@ export function mediaFormat(row:BrowserCreative):AdFormat|null{
  if(!row.mediaAvailable)return null;
  return ({video:"video",image:"static_image",carousel:"carousel"} as const)[row.mediaKind as "video"]||null;
 }
-export interface ComparisonFilter {category?:string;adFormat?:string}
+export interface ComparisonFilter {platform?:string;category?:string;adFormat?:string}
 export function comparableAds(rows:readonly BrowserCreative[],primary:readonly string[],filter:ComparisonFilter={},anchor?:BrowserCreative){
  const categories=filter.category&&filter.category!=="mine"&&filter.category!=="all"?filter.category.split(","):filter.category==="all"?null:primary;
  const format=anchor?mediaFormat(anchor):filter.adFormat&&filter.adFormat!=="same"?filter.adFormat:null;
+ const platform=anchor?.platform||filter.platform||[...new Set(rows.map(r=>r.platform))].sort((a,b)=>rows.filter(r=>r.platform===b&&r.workspaceBrand).length-rows.filter(r=>r.platform===a&&r.workspaceBrand).length)[0];
  if(anchor&&!format)return [];
  return rows.filter(row=>{
+  if(platform&&row.platform!==platform)return false;
   if(!(row.publicEvidence??(!row.owned&&row.sourceKind==="public")))return false;
   const known=mediaFormat(row);if(!known||format&&known!==format)return false;
   const tags=row.productCategories;if(!tags?.length)return false;

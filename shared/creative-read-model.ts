@@ -9,11 +9,12 @@ export interface SqlDimensionStats {format:string;brandId:string;kind:string;dim
 export interface SqlProductionStats {format:string;show:string;duration:number|null;durationKnown:number;talkingShare:number|null;talkingKnown:number}
 export interface SqlAudienceCell {key:string;brandId:string;brand:string;country:string;age:string;gender:string;reach:number;ads:number}
 export interface CreativeReadModel {
+ scopePlatform?:string;
  indexing?:{indexed:number;total:number;status:string;fallback?:boolean};
  detailOrder?:string[];
  detailSimilarTotal?:number;
  page:{offset:number;limit:number;total:number;totalAll:number;hasNext:boolean};
- coverage:{yours:number;ads:number;images:number;videos:number;tagged:number;formatKnown:number;owned:number;official:number};
+ coverage:{metaCaptures?:number;reachByPlatform?:Record<string,number>;yours:number;ads:number;images:number;videos:number;tagged:number;formatKnown:number;owned:number;official:number};
  ownedScopes?:import("./creative-browser.js").CreativePerformance[];
  window:ResearchWindow;cohorts:SqlCohort[];brands:SqlBrandStats[];scopeFormat?:string;
  dimensions?:SqlDimensionStats[];production?:SqlProductionStats[];audience?:SqlAudienceCell[];voices?:{format:string;brandId:string;claim:string|null;cta:string|null;offer:string|null}[];

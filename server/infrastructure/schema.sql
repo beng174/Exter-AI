@@ -19,6 +19,7 @@ CREATE TABLE IF NOT EXISTS watchlists (
  id text PRIMARY KEY, workspace_id text NOT NULL, page_ids jsonb NOT NULL DEFAULT '[]',
  search_terms jsonb NOT NULL DEFAULT '[]', countries jsonb NOT NULL DEFAULT '["GB"]', enabled boolean NOT NULL DEFAULT true
 );
+ALTER TABLE watchlists ADD COLUMN IF NOT EXISTS platform text NOT NULL DEFAULT 'Meta' CHECK(platform IN ('Meta','TikTok'));
 CREATE TABLE IF NOT EXISTS collection_runs (
  id text PRIMARY KEY, watchlist_id text NOT NULL REFERENCES watchlists, source text NOT NULL DEFAULT 'meta',
  started_at timestamptz NOT NULL DEFAULT now(), finished_at timestamptz, status text NOT NULL DEFAULT 'queued',
@@ -68,7 +69,7 @@ ALTER TABLE watchlists ADD COLUMN IF NOT EXISTS purpose text NOT NULL DEFAULT 'b
 ALTER TABLE watchlists ADD COLUMN IF NOT EXISTS revision integer NOT NULL DEFAULT 1;
 DROP INDEX IF EXISTS watchlists_workspace;
 -- The per-brand/Page index below permits multiple relevant Pages for one brand.
-CREATE UNIQUE INDEX IF NOT EXISTS watchlists_workspace_page ON watchlists(workspace_id,(page_ids->>0)) WHERE purpose='brand' AND enabled AND brand_key IS NOT NULL AND jsonb_array_length(page_ids)=1;
+CREATE UNIQUE INDEX IF NOT EXISTS watchlists_workspace_page ON watchlists(workspace_id,platform,(page_ids->>0)) WHERE purpose='brand' AND enabled AND brand_key IS NOT NULL AND jsonb_array_length(page_ids)=1;
 CREATE TABLE IF NOT EXISTS meta_request_gate(id integer PRIMARY KEY CHECK(id=1),next_request_at timestamptz NOT NULL DEFAULT now());
 INSERT INTO meta_request_gate(id) VALUES(1) ON CONFLICT DO NOTHING;
 
@@ -306,7 +307,7 @@ CREATE TABLE IF NOT EXISTS workspace_category_vocabularies (
 ALTER TABLE watchlists ADD COLUMN IF NOT EXISTS managed_by text NOT NULL DEFAULT 'manual';
 DROP INDEX IF EXISTS watchlists_workspace_brand;
 DROP INDEX IF EXISTS watchlists_workspace_brand_page;
-CREATE UNIQUE INDEX watchlists_workspace_brand_page ON watchlists(workspace_id,brand_key,(page_ids->>0)) WHERE brand_key IS NOT NULL AND jsonb_array_length(page_ids)>0;
+CREATE UNIQUE INDEX watchlists_workspace_brand_page ON watchlists(workspace_id,platform,brand_key,(page_ids->>0)) WHERE brand_key IS NOT NULL AND jsonb_array_length(page_ids)>0;
 
 ALTER TABLE public_category_batches ADD COLUMN IF NOT EXISTS vocabulary jsonb NOT NULL DEFAULT '[]';
 
@@ -332,6 +333,40 @@ CREATE TABLE IF NOT EXISTS creative_index_jobs (
 );
 ALTER TABLE worker_job_failures DROP CONSTRAINT IF EXISTS worker_job_failures_job_type_check;
 ALTER TABLE worker_job_failures ADD CONSTRAINT worker_job_failures_job_type_check CHECK(job_type IN ('onboarding','collection','owned','media','creators','categories','kernel','index'));
+
+-- TK-01..07: one public identity namespace per platform; original Meta rows remain.
+ALTER TABLE watchlists ADD COLUMN IF NOT EXISTS platform text NOT NULL DEFAULT 'Meta' CHECK(platform IN ('Meta','TikTok'));
+ALTER TABLE watchlists ADD COLUMN IF NOT EXISTS business_name text;
+ALTER TABLE watchlists ADD COLUMN IF NOT EXISTS discovery jsonb NOT NULL DEFAULT '{}';
+DROP INDEX IF EXISTS watchlists_workspace_brand_page;
+CREATE UNIQUE INDEX watchlists_workspace_brand_page ON watchlists(workspace_id,platform,brand_key,(page_ids->>0)) WHERE brand_key IS NOT NULL AND jsonb_array_length(page_ids)>0;
+DROP INDEX IF EXISTS watchlists_workspace_page;
+CREATE UNIQUE INDEX watchlists_workspace_page ON watchlists(workspace_id,platform,(page_ids->>0)) WHERE purpose='brand' AND enabled AND brand_key IS NOT NULL AND jsonb_array_length(page_ids)=1;
+CREATE TABLE IF NOT EXISTS tiktok_request_gate(id integer PRIMARY KEY CHECK(id=1),next_request_at timestamptz NOT NULL DEFAULT now());
+INSERT INTO tiktok_request_gate(id) VALUES(1) ON CONFLICT DO NOTHING;
+ALTER TABLE collection_runs ADD COLUMN IF NOT EXISTS detail_state jsonb NOT NULL DEFAULT '{}';
+ALTER TABLE ad_media_runs ADD COLUMN IF NOT EXISTS platform text NOT NULL DEFAULT 'Meta';
+ALTER TABLE ad_media_creatives ADD COLUMN IF NOT EXISTS platform text NOT NULL DEFAULT 'Meta';
+CREATE TABLE IF NOT EXISTS tiktok_analysis_jobs (
+ id text PRIMARY KEY, workspace_id text NOT NULL,brand_key text NOT NULL,native_id text NOT NULL,
+ watchlist_id text NOT NULL REFERENCES watchlists,revision integer NOT NULL,assets jsonb NOT NULL,format text NOT NULL,
+ status text NOT NULL DEFAULT 'queued',error text,analysis_id text,attempt_id text,updated_at timestamptz NOT NULL DEFAULT now(),
+ UNIQUE(workspace_id,brand_key,native_id,revision)
+);
+CREATE INDEX IF NOT EXISTS tiktok_analysis_waiting ON tiktok_analysis_jobs(workspace_id,status);
+
+ALTER TABLE public_ad_categories ADD COLUMN IF NOT EXISTS platform text NOT NULL DEFAULT 'Meta';
+
+DO $$ BEGIN
+ IF NOT EXISTS(SELECT 1 FROM pg_constraint WHERE conrelid='public_ad_categories'::regclass AND contype='p' AND pg_get_constraintdef(oid) LIKE '%platform%') THEN
+ ALTER TABLE public_ad_categories DROP CONSTRAINT public_ad_categories_pkey;
+ ALTER TABLE public_ad_categories ADD PRIMARY KEY(workspace_id,brand_key,page_id,native_id,source_hash,prompt_version,platform);
+ END IF;
+END $$;
+ALTER TABLE tiktok_analysis_jobs ADD COLUMN IF NOT EXISTS input_hash text NOT NULL DEFAULT '';
+ALTER TABLE tiktok_analysis_jobs ADD COLUMN IF NOT EXISTS attempt_hash text;
+
+CREATE UNIQUE INDEX IF NOT EXISTS tiktok_one_watchlist ON watchlists(workspace_id,brand_key) WHERE platform='TikTok';
 
 -- CP-01..06: minimal public attribution and scoped creator outcomes, never tokens.
 CREATE TABLE IF NOT EXISTS creator_ad_evidence (

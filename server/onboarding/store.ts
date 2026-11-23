@@ -37,9 +37,9 @@ export async function applyUnderstanding(pool:pg.Pool,db:DatabaseSync,workspace:
  return updated;
 }
 async function savePages(client:pg.PoolClient,workspace:string,key:string,pages:string[],force=false){
- const manual=(await client.query("SELECT id FROM watchlists WHERE workspace_id=$1 AND brand_key=$2 AND managed_by='manual' AND (jsonb_array_length(page_ids)>0 OR revision>1)",[workspace,key])).rows;
+ const manual=(await client.query("SELECT id FROM watchlists WHERE workspace_id=$1 AND platform='Meta' AND brand_key=$2 AND managed_by='manual' AND (jsonb_array_length(page_ids)>0 OR revision>1)",[workspace,key])).rows;
  if(manual.length&&!force)return false;
- for(const page of pages){const id=`auto:${randomUUID()}`;if(force){const enabled=await client.query("UPDATE watchlists SET enabled=true,revision=revision+CASE WHEN enabled THEN 0 ELSE 1 END,managed_by='manual' WHERE workspace_id=$1 AND brand_key=$2 AND page_ids->>0=$3 RETURNING id",[workspace,key,page]);if(enabled.rowCount)continue;}
+ for(const page of pages){const id=`auto:${randomUUID()}`;if(force){const enabled=await client.query("UPDATE watchlists SET enabled=true,revision=revision+CASE WHEN enabled THEN 0 ELSE 1 END,managed_by='manual' WHERE workspace_id=$1 AND platform='Meta' AND brand_key=$2 AND page_ids->>0=$3 RETURNING id",[workspace,key,page]);if(enabled.rowCount)continue;}
   await client.query(`INSERT INTO watchlists(id,workspace_id,brand_key,page_ids,countries,managed_by) VALUES($1,$2,$3,$4,'["GB"]',$5) ON CONFLICT DO NOTHING`,[id,workspace,key,JSON.stringify([page]),force?'manual':'onboarding']);}
  return true;
 }

@@ -21,7 +21,8 @@ export interface CreativePerformance {
 }
 import type { WorkspacePresentation, CreativePresentation } from "./workspace-presentation.js";
 export interface BrowserCreative extends DemoGalleryCreative {
-    workingScore?:number|null;
+    analysisAdId?:string;
+    workingScore?:import("./working-score.js").WorkingScore;
     publicVersionCount?:number|null;
     likelihood?:import("./likelihood.js").LikelihoodEstimate;
     previewState?:import("./ad-media.js").PreviewState;

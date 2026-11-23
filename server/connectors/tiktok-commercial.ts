@@ -8,8 +8,10 @@ const record = (value: unknown): Record<string, unknown> => value && typeof valu
 const credential = (value: string | undefined) => Boolean(value?.trim() && !/[\r\n]/.test(value));
 export function tiktokCommercialStatus(env: Record<string, string | undefined> = process.env) { const configured = credential(env.TIKTOK_CLIENT_KEY) && credential(env.TIKTOK_CLIENT_SECRET); return { platform: "TikTok", method: "Commercial Content API", status: configured ? "configured" : "not_connected", connected: false, configured, message: configured ? "TikTok credentials are configured; application approval and endpoint access are verified on an actual request." : "TikTok not connected. Configure TIKTOK_CLIENT_KEY and TIKTOK_CLIENT_SECRET in secure runtime settings.", coverage: "Commercial ad-library query, subject to approved research.adlib.basic access and supported countries. Not private advertiser performance reporting." }; }
 export class TikTokCommercialError extends Error {
-    constructor(public code: "not_connected" | "configuration" | "authentication" | "rate_limited" | "unavailable" | "schema", message: string, public httpStatus?: number) { super(message); }
+    constructor(public code: "not_connected" | "configuration" | "authentication" | "rate_limited" | "unavailable" | "schema", message: string, public httpStatus?: number, public providerCode?:string) { super(message); }
 }
+export const TIKTOK_DETAIL_FIELDS=TIKTOK_AD_FIELDS+",ad.title,ad.external_url,ad.call_to_action,ad.advertising_objective,advertiser.country_code,advertiser.profile_url,ad_group.targeting_info";
+export function safeTikTokMessage(value:unknown,secrets:string[]=[]){let text=typeof value==="string"?value:"";for(const secret of secrets.filter(Boolean))for(const v of [secret,encodeURIComponent(secret)])text=text.split(v).join("[redacted]");return text.replace(/https?:\/\/[^\s<>"']+/gi,"[link removed]").replace(/(?:Bearer|Basic)\s+\S+/gi,"[redacted]").replace(/(?:access_token|client_secret|client_key|token|password)\s*[:=]\s*[^\s,;]+/gi,"[redacted]").replace(/[<>\x00-\x1f]/g," ").slice(0,300).trim();}
 export interface TikTokCommercialQuery {
     searchTerm?: string;
     countries: string[];
@@ -36,6 +38,7 @@ export interface TikTokCommercialAd {
         value: number | null;
         display: string | null;
     };
+    title?:string; landingUrl?:string|null; publicData?:Record<string,unknown>;
     media: {
         videos: string[];
         images: string[];
@@ -46,7 +49,7 @@ function identifier(value: unknown): string | null { if (typeof value === "strin
     return String(value); return null; }
 function sourceDate(value: unknown): string | null { const text = String(value ?? "").replaceAll("-", ""); if (!/^\d{8}$/.test(text))
     return null; const iso = `${text.slice(0, 4)}-${text.slice(4, 6)}-${text.slice(6, 8)}`; const date = new Date(`${iso}T00:00:00Z`); return Number.isFinite(date.getTime()) && date.toISOString().slice(0, 10) === iso ? iso : null; }
-function mediaUrl(value: unknown, secrets: string[]): string | null { if (typeof value !== "string" || value.length > 10000 || secrets.some(secret => secret && value.includes(secret)))
+function mediaUrl(value: unknown, secrets: string[]): string | null { if (typeof value !== "string" || value.length > 10000 || secrets.some(secret => secret && (value.includes(secret)||value.includes(encodeURIComponent(secret)))))
     return null; try {
     const url = new URL(value);
     return url.protocol === "https:" && !url.username && !url.password && !url.port && !isIP(url.hostname) && !/(?:^|\.)(?:localhost|local|internal|lan)$/.test(url.hostname) ? url.href : null;
@@ -59,8 +62,11 @@ export function normaliseTikTokCommercialAd(value: unknown, secrets: string[] = 
     if (!id)
         throw new TikTokCommercialError("schema", "TikTok returned an unsupported ad identifier.");
     const raw = record(ad.reach).unique_users_seen ?? record(ad.reach).unique_user_seen, display = typeof raw === "string" && raw.length <= 40 ? raw : null, exact = typeof raw === "number" && Number.isSafeInteger(raw) && raw >= 0 ? raw : typeof raw === "string" && /^\d+$/.test(raw) && Number.isSafeInteger(Number(raw)) ? Number(raw) : null;
-    const text = (value: unknown) => typeof value === "string" && value.length <= 400 && !secrets.some(secret => secret && value.includes(secret)) ? value : null;
-    return { id, advertiserId: identifier(advertiser.business_id ?? advertiser.buisness_id), advertiserName: text(advertiser.business_name), firstShownDate: sourceDate(ad.first_shown_date), lastShownDate: sourceDate(ad.last_shown_date), active: typeof ad.status === "string" ? ad.status.toLowerCase() === "active" ? true : ad.status.toLowerCase() === "inactive" ? false : null : null, reach: { basis: exact !== null ? "observed" : display && /^\d+(?:\.\d+)?[KM+]$/i.test(display) ? "estimated" : "unavailable", value: exact, display: text(display) }, media: { videos: (Array.isArray(ad.videos) ? ad.videos : []).flatMap(value => { const url = mediaUrl(record(value).url, secrets); return url ? [url] : []; }), images: (Array.isArray(ad.image_urls) ? ad.image_urls : []).flatMap(value => { const url = mediaUrl(value, secrets); return url ? [url] : []; }) } };
+    const text = (value: unknown) => typeof value === "string" && value.length <= 400 && !secrets.some(secret => secret && (value.includes(secret)||value.includes(encodeURIComponent(secret)))) ? value : null;
+    const clean=(v:unknown)=>typeof v==="string"?safeTikTokMessage(v,secrets):null;
+    const title=typeof ad.title==="string"&&!secrets.some(s=>s&&(ad.title?.toString().includes(s)||ad.title?.toString().includes(encodeURIComponent(s))))?ad.title.replace(/[\x00-\x08]/g,"").slice(0,10000):"",landing=mediaUrl(ad.external_url,secrets),target=record(record(item.ad_group).targeting_info);
+    const publicData={reach:record(ad.reach),targeting:target,title,landingUrl:landing,cta:clean(ad.call_to_action),objective:clean(ad.advertising_objective),country:clean(advertiser.country_code)};
+    return {title,landingUrl:landing,publicData, id, advertiserId: identifier(advertiser.business_id ?? advertiser.buisness_id), advertiserName: text(advertiser.business_name), firstShownDate: sourceDate(ad.first_shown_date), lastShownDate: sourceDate(ad.last_shown_date), active: typeof ad.status === "string" ? ad.status.toLowerCase() === "active" ? true : ad.status.toLowerCase() === "inactive" ? false : null : null, reach: { basis: exact !== null ? "observed" : display && /^\d+(?:\.\d+)?[KM+]$/i.test(display) ? "estimated" : "unavailable", value: exact, display: text(display) }, media: { videos: (Array.isArray(ad.videos) ? ad.videos : []).flatMap(value => { const url = mediaUrl(record(value).url, secrets); return url ? [url] : []; }), images: (Array.isArray(ad.image_urls) ? ad.image_urls : []).flatMap(value => { const url = mediaUrl(value, secrets); return url ? [url] : []; }) } };
 }
 export class TikTokCommercialConnector {
     #accessToken: string | null = null;
@@ -69,33 +75,31 @@ export class TikTokCommercialConnector {
     #env: Record<string, string | undefined>;
     private readonly fetcher: typeof fetch;
     private readonly now: () => number;
+    private beforeRequest?:()=>Promise<void>;
     constructor(options: {
         env?: Record<string, string | undefined>;
         fetch?: typeof fetch;
         now?: () => number;
-    } = {}) { this.#env = options.env || process.env; this.fetcher = options.fetch || fetch; this.now = options.now || Date.now; }
+        beforeRequest?:()=>Promise<void>;
+    } = {}) { this.#env = options.env || process.env; this.fetcher = options.fetch || fetch; this.now = options.now || Date.now; this.beforeRequest=options.beforeRequest; }
     status() { return tiktokCommercialStatus(this.#env); }
     private async json(path: string, init: RequestInit, signal?: AbortSignal) {
-        let response: Response;
-        try {
-            response = await this.fetcher(new URL(path, API), { ...init, redirect: "error", signal: signal ? AbortSignal.any([signal, AbortSignal.timeout(30000)]) : AbortSignal.timeout(30000) });
+        await this.beforeRequest?.();
+        let response:Response;
+        try {response=await this.fetcher(new URL(path,API),{...init,redirect:"error",signal:signal?AbortSignal.any([signal,AbortSignal.timeout(90000)]):AbortSignal.timeout(90000)});}
+        catch {throw new TikTokCommercialError("unavailable","TikTok request timed out or could not connect.");}
+        let body:Record<string,unknown>;
+        try {body=record(parsePublicJson(await boundedPublicBody(response,path.startsWith("/v2/oauth/")?65536:2*1024*1024)));}
+        catch {throw new TikTokCommercialError("schema","TikTok returned an invalid or oversized JSON response.",response.status);}
+        const error=record(body.error),code=typeof error.code==="string"?error.code:typeof body.error==="string"?body.error:null;
+        if(!response.ok||code&&code!=="ok"){
+          const priorToken=this.#accessToken;
+          if(response.status===401||code==="access_token_invalid"||code==="access_token_expired"){this.#accessToken=null;this.#expiresAt=0;}
+          const secrets=[this.#env.TIKTOK_CLIENT_KEY||"",this.#env.TIKTOK_CLIENT_SECRET||"",priorToken||"",String(init.headers&&record(init.headers).Authorization||"").replace(/^Bearer /,"")];
+          const message=safeTikTokMessage(error.message??body.error_description,secrets)||`TikTok refused the request (HTTP ${response.status}).`;
+          throw new TikTokCommercialError(response.status===429||code==="rate_limit_exceeded"?"rate_limited":[401,403].includes(response.status)||/token|scope|permission|client/.test(code||"")?"authentication":response.status>=500?"unavailable":"configuration",message,response.status,code&&/^[a-z0-9_]{1,80}$/i.test(code)&&!secrets.includes(code)?code:undefined);
         }
-        catch {
-            throw new TikTokCommercialError("unavailable", "TikTok request could not complete; no raw provider error is exposed.");
-        }
-        if (!response.ok) {
-            if (response.status === 401) {
-                this.#accessToken = null;
-                this.#expiresAt = 0;
-            }
-            throw new TikTokCommercialError([401, 403].includes(response.status) ? "authentication" : response.status === 429 ? "rate_limited" : "unavailable", `TikTok request failed (HTTP ${response.status}); verify approval, credentials and rate limits.`, response.status);
-        }
-        try {
-            return record(parsePublicJson(await boundedPublicBody(response, path.startsWith("/v2/oauth/") ? 65536 : 2 * 1024 * 1024)));
-        }
-        catch {
-            throw new TikTokCommercialError("schema", "TikTok returned an invalid or oversized JSON response.");
-        }
+        return body;
     }
     private async token(signal?: AbortSignal): Promise<string> {
         if (!this.status().configured)
@@ -121,11 +125,22 @@ export class TikTokCommercialConnector {
                 this.#pendingToken = null;
         }
     }
+    async advertisers(searchTerm:string,signal?:AbortSignal){
+      if(!searchTerm.trim()||searchTerm.length>50)throw new TikTokCommercialError("configuration","Use an advertiser name of at most 50 characters.");
+      const token=await this.token(signal),body=await this.json("/v2/research/adlib/advertiser/query/?fields=business_id,business_name,country_code",{method:"POST",headers:{Authorization:`Bearer ${token}`,"Content-Type":"application/json"},body:JSON.stringify({search_term:searchTerm.trim(),max_count:50})},signal),rows=record(body.data).advertisers;
+      if(!Array.isArray(rows)||rows.length>50)throw new TikTokCommercialError("schema","TikTok returned an unsupported advertiser list.");
+      return rows.map(value=>{const r=record(value),id=identifier(r.business_id??r.buisness_id),name=safeTikTokMessage(r.business_name,[token,this.#env.TIKTOK_CLIENT_KEY!,this.#env.TIKTOK_CLIENT_SECRET!]);if(!id||!name)throw new TikTokCommercialError("schema","TikTok returned an unsupported advertiser identity.");return {id,name,country:typeof r.country_code==="string"&&/^[A-Z]{2}$/.test(r.country_code)?r.country_code:null};});
+    }
+    async detail(id:string,signal?:AbortSignal){
+      if(!/^\d{1,19}$/.test(id)||BigInt(id)>9223372036854775807n)throw new TikTokCommercialError("configuration","Use a valid TikTok ad ID.");
+      const token=await this.token(signal),body=await this.json(`/v2/research/adlib/ad/detail/?fields=${encodeURIComponent(TIKTOK_DETAIL_FIELDS)}`,{method:"POST",headers:{Authorization:`Bearer ${token}`,"Content-Type":"application/json"},body:`{"ad_id":${id}}`},signal),value=normaliseTikTokCommercialAd(body.data,[token,this.#env.TIKTOK_CLIENT_KEY!,this.#env.TIKTOK_CLIENT_SECRET!]);
+      if(value.id!==id)throw new TikTokCommercialError("schema","TikTok returned another ad's details.");return value;
+    }
     async page(query: TikTokCommercialQuery) {
         if (!this.status().configured)
             throw new TikTokCommercialError("not_connected", "TikTok not connected.");
         const from = sourceDate(query.publishedFrom), to = sourceDate(query.publishedTo), maxCount = query.maxCount ?? 10;
-        if (!from || !to || from > to || Date.parse(from) < this.now() - 366 * 86400000 || Date.parse(to) > this.now() + 86400000 || !Array.isArray(query.countries) || !query.countries.length || query.countries.length > 32 || query.countries.some(country => !COUNTRIES.has(country)) || query.searchTerm !== undefined && (typeof query.searchTerm !== "string" || !query.searchTerm.trim() || query.searchTerm.length > 50) || !Number.isSafeInteger(maxCount) || maxCount < 1 || maxCount > 10 || query.status !== undefined && !["ACTIVE", "INACTIVE"].includes(query.status))
+        if (!from || !to || from > to || (Date.parse(from) < this.now() - 366 * 86400000 && !query.cursor) || Date.parse(to) > this.now() + 86400000 || !Array.isArray(query.countries) || !query.countries.length || query.countries.length > 32 || query.countries.some(country => !COUNTRIES.has(country)) || query.searchTerm !== undefined && (typeof query.searchTerm !== "string" || !query.searchTerm.trim() || query.searchTerm.length > 50) || !Number.isSafeInteger(maxCount) || maxCount < 1 || maxCount > 10 || query.status !== undefined && !["ACTIVE", "INACTIVE"].includes(query.status))
             throw new TikTokCommercialError("configuration", "Provide a supported country, date range within one year, and a query of at most 50 characters.");
         const filters = { ad_published_date_range: { min: from.replaceAll("-", ""), max: to.replaceAll("-", "") }, country_code_list: [...new Set(query.countries)].sort(), ...(query.status ? { ad_status: query.status } : {}) }, input = { filters, ...(query.searchTerm ? { search_term: query.searchTerm.trim(), search_type: "exact_phrase" } : {}), max_count: maxCount };
         const queryHash = createHash("sha256").update(JSON.stringify(input)).digest("hex");
@@ -159,6 +174,6 @@ export class TikTokCommercialConnector {
                 throw new TikTokCommercialError("schema", "TikTok returned an unsupported search cursor.");
             cursor = { searchId: data.search_id, queryHash, pageFingerprint };
         }
-        return { ads, cursor, observedAt: new Date(this.now()).toISOString(), source: "TikTok Commercial Content API", limitations: ["Rounded reach strings are retained as reported displays; no exact count or invented range is inferred.", "Media transport URLs are ephemeral worker inputs and must not be logged or exported.", "Fixture-tested protocol handling does not establish approved live access."] };
+        return { ads, cursor, pageFingerprint, observedAt: new Date(this.now()).toISOString(), source: "TikTok Commercial Content API", limitations: ["Rounded reach strings are retained as reported displays; no exact count or invented range is inferred.", "Media transport URLs are ephemeral worker inputs and must not be logged or exported.", "Fixture-tested protocol handling does not establish approved live access."] };
     }
 }

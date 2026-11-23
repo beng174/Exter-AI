@@ -1,3 +1,4 @@
+import {workTikTokOnce,scheduleTikTok} from "../tiktok/jobs.js";
 import {workCreativeIndexOnce,enqueueAllCreativeIndexes} from "./creative-index-jobs.js";
 import {workOnboardingOnce} from "../onboarding/worker.js";
 import { workCreatorDiscoveryOnce } from "../creators/discovery-jobs.js";
@@ -17,7 +18,7 @@ try {
     onProgress: phase => console.log(`Database initialisation: ${phase}.`),
     onRetry: error => console.warn(`${migrationDiagnostic(error)} Retrying within the startup deadline.`),
   });
-  if (role === "scheduler") {await schedule(pool);await enqueueAllCreativeIndexes(pool);}
+  if (role === "scheduler") {await schedule(pool);await scheduleTikTok(pool);await enqueueAllCreativeIndexes(pool);}
   else if (role === "migrate") { /* schema is ready */ }
   else if (role === "worker") {
     const shutdown = new AbortController();
@@ -28,6 +29,7 @@ try {
       {type:"index",run:observer=>workCreativeIndexOnce(pool,observer)},
       {type:"onboarding",run:observer=>workOnboardingOnce(pool,observer)},
       {type:"collection",run:observer=>workOnce(pool,undefined,observer)},
+      {type:"collection",run:observer=>workTikTokOnce(pool,observer)},
       {type:"owned",run:observer=>workOwnedOnce(pool,observer)},
       {type:"media",run:observer=>workAdMediaOnce(pool,observer)},
       {type:"creators",run:observer=>workCreatorDiscoveryOnce(pool,{...observer,thumbnail:(workspace,profile)=>retainCreatorPreviews(pool,workspace,profile)})},

@@ -1,3 +1,4 @@
+import {TIKTOK_WORKING_CTES} from "../tiktok/working-sql.js";
 import {readConnection} from "./read-connection.js";
 import type pg from "pg";
 import type {BrowserCreative,CreativeBrowserResponse,BrowserFilters} from "../../shared/creative-browser.js";
@@ -11,19 +12,19 @@ import {ANGLE_VALUES,CLAIM_TYPE_VALUES,FORMAT_VALUES,HOOK_TYPE_VALUES,OFFER_TYPE
 /** Only SQL contains the full metadata relation. Node receives pages and small groups. */
 const ownedDefaults={adId:"",nativeId:"",brandId:"",brandName:"",title:"",copy:"",sourceUrl:null,mediaKind:"unknown",durationSeconds:null,thumbnailUrl:null,videoUrl:null,imageUrls:[],imageCount:0,mediaAvailable:false,mediaStatus:"not-stored",analysis:null,creativeFormat:null,hookType:null,angle:null,offerType:null,ugc:null,creatorEvidence:[],partnershipAttribution:null,deliveryStatus:"unknown",deliveryStartAt:null,deliveryStopAt:null,observedAt:null,firstObservedAt:null,daysRunning:null,daysRunningAsOf:null,daysRunningBasis:null,searchText:"",platform:"Meta",owned:true,workspaceBrand:true,sourceKind:"owned",publicEvidence:false,hasReporting:true,placements:[],score:null,performance:[],scenes:[]};
 export const INDEX_ROWS_SQL=`WITH state AS MATERIALIZED (
- SELECT c.brand_key,c.native_id,
+ SELECT c.brand_key,c.native_id,c.platform,
  bool_or(EXISTS(SELECT 1 FROM jsonb_array_elements(c.assets)a WHERE a->>'role' IN ('image','poster') AND NOT EXISTS(SELECT 1 FROM ad_media_file_checks f WHERE f.workspace_id=c.workspace_id AND f.artifact_id=a->'ref'->>'artifactId' AND NOT f.available))) AS image,
  bool_or(EXISTS(SELECT 1 FROM jsonb_array_elements(c.assets)a WHERE a->>'role'='video' AND NOT EXISTS(SELECT 1 FROM ad_media_file_checks f WHERE f.workspace_id=c.workspace_id AND f.artifact_id=a->'ref'->>'artifactId' AND NOT f.available))) AS video,
  (array_agg(c.format ORDER BY c.created_at DESC) FILTER(WHERE c.format IS NOT NULL))[1] AS media_format,NULL::numeric AS uk_reach
- FROM ad_media_creatives c JOIN watchlists w ON w.workspace_id=c.workspace_id AND w.brand_key=c.brand_key AND w.page_ids @> to_jsonb(ARRAY[c.page_id])
- WHERE c.workspace_id=$1 AND c.brand_key=ANY($4::text[]) GROUP BY c.brand_key,c.native_id
+ FROM ad_media_creatives c JOIN watchlists w ON w.workspace_id=c.workspace_id AND w.brand_key=c.brand_key AND w.platform=c.platform AND w.page_ids @> to_jsonb(ARRAY[c.page_id])
+ WHERE c.workspace_id=$1 AND c.brand_key=ANY($4::text[]) GROUP BY c.brand_key,c.native_id,c.platform
 ), owned_names AS MATERIALIZED (
  SELECT DISTINCT ON(d.platform,d.ad_id) d.platform,d.ad_id,d.pulled_at,d.data->>'adName' AS name,d.data->>'accountId' AS account
  FROM owned_ad_days d JOIN owned_accounts a ON a.id=d.owned_account_id WHERE a.workspace_id=$1 AND d.day BETWEEN $5::date AND $6::date ORDER BY d.platform,d.ad_id,d.pulled_at DESC
 ), valid_index AS MATERIALIZED (
  SELECT i.* FROM web_creative_index i WHERE i.workspace_id=$1 AND i.brand_key=ANY($4::text[]) AND (
  i.source_type='legacy'
- OR i.source_type='official' AND EXISTS(SELECT 1 FROM watchlists w WHERE w.id=i.watchlist_id AND w.workspace_id=$1 AND w.brand_key=i.brand_key AND w.revision=i.revision AND w.page_ids @> to_jsonb(ARRAY[i.page_id])))
+ OR i.source_type='official' AND EXISTS(SELECT 1 FROM watchlists w WHERE w.id=i.watchlist_id AND w.platform=i.platform AND w.workspace_id=$1 AND w.brand_key=i.brand_key AND w.revision=i.revision AND w.page_ids @> to_jsonb(ARRAY[i.page_id])))
 ), legacy_index AS MATERIALIZED (SELECT * FROM valid_index WHERE source_type='legacy'), chosen AS (
  SELECT DISTINCT ON(brand_key,platform,native_id) * FROM valid_index ORDER BY brand_key,platform,native_id,CASE WHEN source_type='official' THEN 0 ELSE 1 END
 ), merged AS (
@@ -50,20 +51,20 @@ export const INDEX_ROWS_SQL=`WITH state AS MATERIALIZED (
   COALESCE(s.video,false) OR COALESCE(l.data->>'videoUrl',CASE WHEN b.source_type='legacy' THEN b.data->>'videoUrl' END) IS NOT NULL AS video,
   COALESCE(s.uk_reach,(SELECT sum((entry->>'reach')::bigint) FROM jsonb_array_elements(COALESCE(NULLIF(b.data#>'{publicReach,locations,value}','null'),'[]'))entry WHERE entry->>'country'='GB')) AS uk_reach
  FROM chosen b LEFT JOIN legacy_index l ON b.source_type='official' AND l.brand_key=b.brand_key AND l.platform=b.platform AND l.native_id=b.native_id
- LEFT JOIN state s ON s.brand_key=b.brand_key AND s.native_id=b.native_id AND b.platform IN ('Meta','Facebook','Instagram')
+ LEFT JOIN state s ON s.brand_key=b.brand_key AND s.native_id=b.native_id AND s.platform=CASE WHEN b.platform IN ('Facebook','Instagram') THEN 'Meta' ELSE b.platform END
 ), objects AS (
  SELECT b.data||CASE WHEN n.ad_id IS NOT NULL THEN '{"owned":true,"sourceKind":"owned","hasReporting":true}'::jsonb ELSE '{}'::jsonb END AS data,b.brand_key,b.platform,b.native_id,b.source_type,b.image,b.video,b.uk_reach,b.has_analysis,b.claims,b.cta,b.talking,b.effective_format
  FROM merged b LEFT JOIN owned_names n ON b.brand_key=$1 AND n.platform=b.platform AND n.ad_id=b.native_id
  UNION ALL
  SELECT '${JSON.stringify(ownedDefaults)}'::jsonb||jsonb_build_object('adId',concat('owned:',$1,':',n.platform,':',n.account,':',n.ad_id),'nativeId',n.ad_id,'brandId',$1,'brandName',$7::text,'platform',n.platform,'title',COALESCE(n.name,concat('Ad ',n.ad_id)),'searchText',COALESCE(n.name,''),'observedAt',to_char(n.pulled_at AT TIME ZONE 'UTC','YYYY-MM-DD"T"HH24:MI:SS.MS"Z"'),'sourceUrl',CASE WHEN n.platform='Meta' AND n.ad_id~'^\\d+$' THEN concat('https://www.facebook.com/ads/library/?id=',n.ad_id) END),$1,n.platform,n.ad_id,'owned',false,false,NULL::numeric,false,'[]'::jsonb,NULL::text,NULL::boolean,NULL::text
  FROM owned_names n WHERE NOT EXISTS(SELECT 1 FROM merged b WHERE b.brand_key=$1 AND b.platform=n.platform AND b.native_id=n.ad_id)
-), indexed AS MATERIALIZED (
+), raw_indexed AS MATERIALIZED (
  SELECT *,data->>'adId' AS ad_id,data->>'brandName' AS brand_name,(data->>'workspaceBrand')::boolean AS own,
  (data->>'publicEvidence')::boolean AS public,(data->>'owned')::boolean AS owned,
  data->>'observedAt' AS observed,data->>'deliveryStartAt' AS started,data->>'deliveryStopAt' AS stopped,data->>'deliveryStatus' AS status,
  (data->>'daysRunning')::integer AS days,effective_format AS format,COALESCE(NULLIF(data->'productCategories','null'),'[]') AS categories
  FROM objects
-)`;
+), ${TIKTOK_WORKING_CTES}`;
 export interface PageQuery extends BrowserFilters {screen?:string;offset?:string;limit?:string;previews?:string;chartFormat?:string;window?:string;refs?:string}
 function sqlQuery(pool:Pick<pg.Pool,"query">,sql:string,values:unknown[]){const indexes=new Map<number,number>(),args:unknown[]=[];const text=sql.replace(/\$(\d+)\b/g,(_s,n)=>{const key=Number(n);if(!indexes.has(key)){indexes.set(key,indexes.size+1);args.push(values[key-1]);}return `$${indexes.get(key)}`;});return pool.query(text,args);}
 const knownValue=(v:string|undefined)=>v&&v!=="all"?v:null;
@@ -76,7 +77,7 @@ export async function readCreativePage(pool:pg.Pool,brand:Brand,competitors:Crea
  await client.query("SELECT set_config('application_name',$1,true)",[connection.tag]);
  options.signal?.throwIfAborted();
  if(query.window==='research'){
-  const latest=(await client.query(`SELECT max(i.data->>'observedAt') AS last FROM web_creative_index i WHERE i.workspace_id=$1 AND i.brand_key=ANY($2::text[]) AND COALESCE((i.data->>'publicEvidence')::boolean,false) AND (i.data->>'observedAt')::timestamptz<=$3::timestamptz AND (i.source_type='official' AND EXISTS(SELECT 1 FROM watchlists w WHERE w.id=i.watchlist_id AND w.revision=i.revision AND w.page_ids @> to_jsonb(ARRAY[i.page_id])) OR i.source_type='legacy')`,[brand.id,targets,now])).rows[0].last;
+  const latest=(await client.query(`SELECT max(i.data->>'observedAt') AS last FROM web_creative_index i WHERE i.workspace_id=$1 AND i.brand_key=ANY($2::text[]) AND COALESCE((i.data->>'publicEvidence')::boolean,false) AND (i.data->>'observedAt')::timestamptz<=$3::timestamptz AND (i.source_type='official' AND EXISTS(SELECT 1 FROM watchlists w WHERE w.id=i.watchlist_id AND w.platform=i.platform AND w.revision=i.revision AND w.page_ids @> to_jsonb(ARRAY[i.page_id])) OR i.source_type='legacy')`,[brand.id,targets,now])).rows[0].last;
   const reporting=researchWindow(latest?[{publicEvidence:true,observedAt:latest} as BrowserCreative]:[],query.from,query.to,now);if(reporting.from&&reporting.to){values[4]=reporting.from;values[5]=reporting.to;}
  }
  // Use complete hash joins for the metadata relation, then read its small
@@ -85,7 +86,7 @@ export async function readCreativePage(pool:pg.Pool,brand:Brand,competitors:Crea
  await sqlQuery(client,`CREATE TEMP TABLE web_page_rows ON COMMIT DROP AS ${INDEX_ROWS_SQL} SELECT * FROM indexed`,values);
  await client.query('ANALYZE web_page_rows');
  const base='WITH indexed AS (SELECT * FROM web_page_rows)';
- const readSummary=async()=>(await sqlQuery(client,`${base} SELECT count(*)::integer AS total,count(*) FILTER(WHERE own)::integer AS yours,count(*) FILTER(WHERE public)::integer AS ads,count(*) FILTER(WHERE public AND image)::integer AS images,count(*) FILTER(WHERE public AND video)::integer AS videos,
+ const readSummary=async()=>(await sqlQuery(client,`${base} SELECT (SELECT jsonb_object_agg(platform,n) FROM (SELECT platform,count(*) FILTER(WHERE public AND uk_reach IS NOT NULL)::integer n FROM indexed GROUP BY platform)c) AS reach_by_platform,count(*) FILTER(WHERE public AND platform IN ('Meta','Facebook','Instagram') AND source_type='legacy')::integer AS meta_captures,count(*)::integer AS total,count(*) FILTER(WHERE own)::integer AS yours,count(*) FILTER(WHERE public)::integer AS ads,count(*) FILTER(WHERE public AND image)::integer AS images,count(*) FILTER(WHERE public AND video)::integer AS videos,
  count(*) FILTER(WHERE public AND jsonb_array_length(categories)>0)::integer AS tagged,count(*) FILTER(WHERE public AND format IS NOT NULL)::integer AS "formatKnown",count(*) FILTER(WHERE own AND owned)::integer AS owned,count(*) FILTER(WHERE source_type='official')::integer AS official,
  min(data->>'firstObservedAt') AS first,max(observed) AS last,max(observed) FILTER(WHERE public AND observed::timestamptz<=$3::timestamptz) AS public_last FROM indexed`,values)).rows[0];
  let summary=await readSummary();
@@ -94,7 +95,10 @@ export async function readCreativePage(pool:pg.Pool,brand:Brand,competitors:Crea
  const category=knownValue(query.category)||(["overview","competitors","formats","patterns","winners","briefs"].includes(query.screen||"")?"mine":"all");
  const categories=category==="mine"?primary:category==="all"?null:category.split(",");
  const cat=categories?`categories ?| ${param(categories)}::text[]`:"true",format=knownValue(query.adFormat),fmt=format&&format!=="same"?`format=${param(format)}`:"true";
- const platform=knownValue(query.platform)?`platform=${param(query.platform)}`:"true";
+ const comparisonScreen=['overview','competitors','formats','patterns','winners','briefs','audience'].includes(query.screen||'');
+ const defaultPlatform=comparisonScreen&&!knownValue(query.platform)?(await sqlQuery(client,`${base} SELECT platform FROM indexed WHERE public GROUP BY platform ORDER BY count(*) FILTER(WHERE own) DESC,count(*) DESC,platform LIMIT 1`,values)).rows[0]?.platform:null;
+ const scopePlatform=knownValue(query.platform)||defaultPlatform;
+ const platform=scopePlatform?`platform=${param(scopePlatform)}`:"true";
  const scope=`(${platform}) AND public AND observed IS NOT NULL AND left(observed,10)<=${asOf} AND (${cat}) AND (${fmt}) AND jsonb_array_length(categories)>0 AND format IS NOT NULL`;
  const cohortSql=`${base}, comparable AS (SELECT * FROM indexed WHERE ${scope})`;
  const cohorts=(await sqlQuery(client,`${cohortSql} SELECT format,count(*) FILTER(WHERE own)::integer AS yours,count(*) FILTER(WHERE NOT own)::integer AS competitors FROM comparable GROUP BY format ORDER BY yours DESC,competitors DESC,array_position(ARRAY['video','static_image','carousel','catalogue'],format)`,values)).rows.map(r=>({...r,hidden:r.yours<10&&r.competitors<10}));
@@ -109,7 +113,7 @@ export async function readCreativePage(pool:pg.Pool,brand:Brand,competitors:Crea
  const optionsRow=(await sqlQuery(client,`${base} SELECT jsonb_build_object('brands',COALESCE(jsonb_agg(DISTINCT jsonb_build_object('value',brand_key,'label',brand_name)),'[]'),
  'platforms',COALESCE(jsonb_agg(DISTINCT platform),'[]'),'formats',COALESCE(jsonb_agg(DISTINCT data->>'creativeFormat') FILTER(WHERE data->>'creativeFormat' IS NOT NULL),'[]'),
  'hooks',COALESCE(jsonb_agg(DISTINCT data->>'hookType') FILTER(WHERE data->>'hookType' IS NOT NULL),'[]'),'angles',COALESCE(jsonb_agg(DISTINCT data->>'angle') FILTER(WHERE data->>'angle' IS NOT NULL),'[]'),'offers',COALESCE(jsonb_agg(DISTINCT data->>'offerType') FILTER(WHERE data->>'offerType' IS NOT NULL),'[]')) AS options FROM indexed`,values)).rows[0];
- const conditions:string[]=[];
+ const conditions:string[]=[];if(defaultPlatform)conditions.push(platform);
  if(["overview","winners"].includes(query.screen||""))conditions.push("public",`left(observed,10)<=${asOf}`);
  if(query.screen==="overview"||query.screen==="winners"&&!fallback){conditions.push(scope,`format=ANY(${param(cohorts.filter(c=>!c.hidden).map(c=>c.format))}::text[])`);}
  else if(!fallback){if(categories)conditions.push(cat);if(format&&format!=="same")conditions.push(fmt);}
@@ -133,25 +137,25 @@ export async function readCreativePage(pool:pg.Pool,brand:Brand,competitors:Crea
  if(query.reachCountry)conditions.push(query.reachCountry==="GB"?"uk_reach IS NOT NULL":`EXISTS(SELECT 1 FROM jsonb_array_elements(COALESCE(NULLIF(data#>'{publicReach,locations,value}','null'),'[]'))c WHERE c->>'country'=${param(query.reachCountry)})`);
  if(query.demographicCountry)conditions.push(`EXISTS(SELECT 1 FROM jsonb_array_elements(COALESCE(NULLIF(data#>'{publicReach,demographics,value}','null'),'[]'))c WHERE c->>'country'=${param(query.demographicCountry)}${query.reachAge?` AND c->>'age'=${param(query.reachAge)}`:''}${query.reachGender?` AND c->>'gender'=${param(query.reachGender)}`:''})`);
  if(query.cohort){const cohort=JSON.parse(query.cohort);if(!Array.isArray(cohort)||cohort.length!==5||!cohort.every(s=>typeof s==='string'))throw new Error('Choose a reporting scope.');conditions.push(`own AND EXISTS(SELECT 1 FROM owned_ad_days d JOIN owned_accounts a ON a.id=d.owned_account_id WHERE a.workspace_id=$1 AND d.platform=indexed.platform AND d.ad_id=indexed.native_id AND d.day BETWEEN $5::date AND $6::date AND jsonb_build_array(d.platform,d.data->>'accountId',d.currency,d.attribution,d.conversion_event)=${param(query.cohort)}::jsonb)`);}
- if(query.similarTo){const anchor=(await sqlQuery(client,`${base} SELECT * FROM indexed WHERE ad_id=${param(query.similarTo)} LIMIT 1`,values)).rows[0];if(anchor?.format&&anchor.categories.length)conditions.push(`NOT own AND NOT owned AND format=${param(anchor.format)} AND categories ?| ${param(anchor.categories)}::text[]`);else conditions.push('false');}
+ if(query.similarTo){const anchor=(await sqlQuery(client,`${base} SELECT * FROM indexed WHERE ad_id=${param(query.similarTo)} LIMIT 1`,values)).rows[0];if(anchor?.format&&anchor.categories.length)conditions.push(`NOT own AND NOT owned AND platform=${param(anchor.platform)} AND format=${param(anchor.format)} AND categories ?| ${param(anchor.categories)}::text[]`);else conditions.push('false');}
  const where=conditions.length?conditions.join(" AND "):"true",onlyPreviews=query.screen==="winners"&&query.previews!=="all";
  const limit=Math.min(100,Math.max(1,Number(query.limit)||50)),offset=Math.max(0,Number(query.offset)||0);
  if(!Number.isSafeInteger(limit)||!Number.isSafeInteger(offset)||offset>10000000)throw new Error("Choose a valid page.");
- const order=query.screen==='scores'?"data#>>'{score,analysedAt}' DESC NULLS LAST,ad_id":query.sort==="likelihood"?"(data#>>'{likelihood,probability}')::float8 DESC NULLS LAST,ad_id":query.sort==="title"?"lower(COALESCE(data->>'cardTitle',data->>'copy',data->>'title')) COLLATE \"C\",ad_id":query.take||query.sort==="days"||["overview","winners"].includes(query.screen||"")?"days DESC NULLS LAST,ad_id":"observed DESC NULLS LAST,ad_id";
+ const order=(query.sort==='working'||!query.sort&&query.screen==='winners'&&scopePlatform==='TikTok')?"(data#>>'{workingScore,score}')::float8 DESC NULLS LAST,days DESC NULLS LAST,ad_id":query.screen==='scores'?"data#>>'{score,analysedAt}' DESC NULLS LAST,ad_id":query.sort==="likelihood"?"(data#>>'{likelihood,probability}')::float8 DESC NULLS LAST,ad_id":query.sort==="title"?"lower(COALESCE(data->>'cardTitle',data->>'copy',data->>'title')) COLLATE \"C\",ad_id":query.take||query.sort==="days"||["overview","winners"].includes(query.screen||"")?"days DESC NULLS LAST,ad_id":"observed DESC NULLS LAST,ad_id";
  const take=Number(query.take);if(query.take&&(!Number.isInteger(take)||take<1||take>100))throw new Error('Choose a valid sample.');
  const measure=query.measure==='duration'?" AND data->>'mediaKind'='video' AND data->>'durationSeconds' IS NOT NULL":query.measure==='talkingKnown'?" AND talking IS NOT NULL":'';
  const pageSql=`${base}, candidates AS MATERIALIZED(SELECT *,row_number() OVER(PARTITION BY format ORDER BY ${order}) AS format_rank FROM indexed WHERE ${where} ORDER BY ${order}${query.take?` LIMIT ${take}`:''}), filtered AS (SELECT * FROM candidates WHERE ${onlyPreviews?"image":"true"}${query.screen==="overview"?" AND format_rank<=5":""}${measure})`;
  const page=(await sqlQuery(client,`${pageSql} SELECT (SELECT count(*)::integer FROM filtered) AS total,(SELECT count(*)::integer FROM candidates WHERE NOT image) AS missing,
  COALESCE((SELECT jsonb_agg(p.data ORDER BY p.ord) FROM (SELECT data,row_number() OVER(ORDER BY ${order}) AS ord FROM filtered ORDER BY ${order} LIMIT ${param(limit)} OFFSET ${param(offset)})p),'[]') AS rows`,values)).rows[0];
- const model:CreativeReadModel={page:{offset,limit,total:page.total,totalAll:summary.total,hasNext:offset+limit<page.total},coverage:{yours:summary.yours,ads:summary.ads,images:summary.images,videos:summary.videos,tagged:summary.tagged,formatKnown:summary.formatKnown,owned:summary.owned,official:summary.official},window,cohorts,brands:stats,options:optionsRow.options,fallback,previewMissing:page.missing};
+ const model:CreativeReadModel={scopePlatform:scopePlatform||undefined,page:{offset,limit,total:page.total,totalAll:summary.total,hasNext:offset+limit<page.total},coverage:{metaCaptures:summary.meta_captures,reachByPlatform:summary.reach_by_platform,yours:summary.yours,ads:summary.ads,images:summary.images,videos:summary.videos,tagged:summary.tagged,formatKnown:summary.formatKnown,owned:summary.owned,official:summary.official},window,cohorts,brands:stats,options:optionsRow.options,fallback,previewMissing:page.missing};
  if(query.screen==='detail'&&query.ad){
   const selected=(await sqlQuery(client,`${base} SELECT * FROM indexed WHERE ad_id=${param(query.ad)} OR native_id=${param(query.ad)} ORDER BY own DESC LIMIT 1`,values)).rows[0];
   if(selected){
    const copy=selected.data.versionsCopyKey||null,hash=selected.data.versionsHashKey||null;
-   selected.data.publicVersionCount=copy||hash?(await sqlQuery(client,`${base} SELECT count(DISTINCT (CASE WHEN platform IN ('Meta','Facebook','Instagram') THEN 'Meta' ELSE platform END,native_id))::integer AS n FROM indexed WHERE brand_key=${param(selected.brand_key)} AND (NOT owned OR public) AND (data->>'versionsCopyKey'=${param(copy)} OR data->>'versionsHashKey'=${param(hash)})`,values)).rows[0].n:null;
+   selected.data.publicVersionCount=copy||hash?(await sqlQuery(client,`${base} SELECT count(DISTINCT (CASE WHEN platform IN ('Meta','Facebook','Instagram') THEN 'Meta' ELSE platform END,native_id))::integer AS n FROM indexed WHERE platform=${param(selected.platform)} AND brand_key=${param(selected.brand_key)} AND (NOT owned OR public) AND (data->>'versionsCopyKey'=${param(copy)} OR data->>'versionsHashKey'=${param(hash)})`,values)).rows[0].n:null;
    const neighbours=(await sqlQuery(client,`${base}, ordered AS MATERIALIZED(SELECT *,row_number() OVER(ORDER BY ${order}) AS ord FROM indexed WHERE ${where}) SELECT data FROM ordered WHERE ord BETWEEN (SELECT ord-1 FROM ordered WHERE ad_id=${param(selected.ad_id)} LIMIT 1) AND (SELECT ord+1 FROM ordered WHERE ad_id=${param(selected.ad_id)} LIMIT 1) ORDER BY ord`,values)).rows.map(r=>r.data as BrowserCreative);
    const detailCategory=!query.category||query.category==='mine'?`categories ?| ${param(primary)}::text[]`:cat;
-   const similarResult=selected.format&&selected.categories.length?(await sqlQuery(client,`${base}, similar_ads AS MATERIALIZED(SELECT * FROM indexed WHERE public AND NOT own AND NOT owned AND brand_key<>${param(selected.brand_key)} AND format=${param(selected.format)} AND categories ?| ${param(selected.categories)}::text[] AND ${detailCategory}) SELECT (SELECT count(*)::integer FROM similar_ads) AS total,COALESCE((SELECT jsonb_agg(p.data) FROM (SELECT data FROM similar_ads ORDER BY (CASE WHEN data->>'angle'=${param(selected.data.angle||null)} THEN 2 ELSE 0 END+CASE WHEN data->>'offerType'=${param(selected.data.offerType||null)} THEN 1 ELSE 0 END) DESC,days DESC NULLS LAST,ad_id LIMIT 6)p),'[]') AS rows`,values)).rows[0]:{total:0,rows:[]};
+   const similarResult=selected.format&&selected.categories.length?(await sqlQuery(client,`${base}, similar_ads AS MATERIALIZED(SELECT * FROM indexed WHERE public AND NOT own AND NOT owned AND platform=${param(selected.platform)} AND brand_key<>${param(selected.brand_key)} AND format=${param(selected.format)} AND categories ?| ${param(selected.categories)}::text[] AND ${detailCategory}) SELECT (SELECT count(*)::integer FROM similar_ads) AS total,COALESCE((SELECT jsonb_agg(p.data) FROM (SELECT data FROM similar_ads ORDER BY (CASE WHEN data->>'angle'=${param(selected.data.angle||null)} THEN 2 ELSE 0 END+CASE WHEN data->>'offerType'=${param(selected.data.offerType||null)} THEN 1 ELSE 0 END) DESC,days DESC NULLS LAST,ad_id LIMIT 6)p),'[]') AS rows`,values)).rows[0]:{total:0,rows:[]};
    const similar:BrowserCreative[]=similarResult.rows;model.detailSimilarTotal=similarResult.total;
    model.detailOrder=neighbours.length?neighbours.map(r=>r.adId):[selected.ad_id];
    page.rows=[...new Map([...neighbours,...similar,selected.data].map((r:BrowserCreative)=>[r.adId,r])).values()];

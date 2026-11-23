@@ -24,7 +24,7 @@ function Evidence({items,workspaceId}:{items:DemoEvidence[];workspaceId:string})
 function Point({point,workspaceId}:{point:DemoPoint;workspaceId:string}) {return <><p><BrandText>{point.text}</BrandText></p><Evidence items={point.evidence} workspaceId={workspaceId}/></>;}
 export function BriefsPage({data,header}:ActionProps) {
   const [selected,setSelected]=useState("");const {base,drafts}=data,id=base.library.brand.id;
-  const filter={category:new URLSearchParams(typeof window==="undefined"?"":window.location.search).get("category")||"mine",adFormat:new URLSearchParams(typeof window==="undefined"?"":window.location.search).get("adFormat")||"same"};
+  const filter={platform:new URLSearchParams(typeof window==='undefined'?'':window.location.search).get('platform')||base.library.sql?.scopePlatform,category:new URLSearchParams(typeof window==="undefined"?"":window.location.search).get("category")||"mine",adFormat:new URLSearchParams(typeof window==="undefined"?"":window.location.search).get("adFormat")||"same"};
   const source=(drafts.value?.opportunities||[]).map(brief=>({...brief,evidence:comparisonEvidenceIds(brief).map(adId=>({adId}))}));
   const matched=comparableBriefs(source,base.library.creatives,base.library.brand.primaryCategories||[],filter,base.library.sql?.cohorts),opportunities=matched.map(item=>(drafts.value?.opportunities||[]).find(brief=>brief.id===item.brief.id)!),chosen=opportunities.find(item=>item.id===selected)||opportunities[0];
   const change=(patch:Record<string,string>)=>{const url=new URL(window.location.href);for(const [key,value]of Object.entries(patch))url.searchParams.set(key,value);window.history.pushState({},"",url);window.dispatchEvent(new Event(NAVIGATION_EVENT));};

@@ -111,7 +111,7 @@ export async function resolvedBrandIdentities(db:DatabaseSync,workspaceId?:strin
   const identities=brandIdentities(db,workspaceId,collection);
   if(!pool)return identities;
   try{
-    const rows=await pool.query("SELECT workspace_id,brand_key,page_ids FROM watchlists WHERE purpose='brand' AND brand_key IS NOT NULL AND enabled"+(workspaceId?" AND workspace_id=$1":""),workspaceId?[workspaceId]:[]);
+    const rows=await pool.query("SELECT workspace_id,brand_key,page_ids FROM watchlists WHERE platform='Meta' AND purpose='brand' AND brand_key IS NOT NULL AND enabled"+(workspaceId?" AND workspace_id=$1":""),workspaceId?[workspaceId]:[]);
     const assignments=new Map<string,Set<string>>();
     for(const w of rows.rows){const owner=canonicalWorkspaceBrands(db).find(b=>b.id===w.workspace_id&&b.mode!=="demo");if(!owner||w.page_ids.length!==1||!/^\d{1,30}$/.test(w.page_ids[0]))continue;
       const name=w.brand_key===owner.id?owner.name:configuredCreativeCompetitors(db,owner,collection).find(c=>(c.brandId||c.key)===w.brand_key)?.name;

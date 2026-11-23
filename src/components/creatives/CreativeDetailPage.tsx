@@ -3,6 +3,8 @@ import {LikelihoodSection} from "../ui/Likelihood";
 import {ComparisonFilters} from "../ui/ComparisonFilters";
 import {similarCompetitors,mediaFormat,formatName} from "../../../shared/public-comparisons";
 import {AdPreview} from "../ui/AdPreview";
+import {WorkingScoreBreakdown} from "../ui/WorkingScore";
+import {SourceLabel} from "../ui/SourceLabel";
 import {displayedReach} from "../../../shared/meta-public";
 import { CreativeScoreBreakdown } from "../ui/CreativeScoreBreakdown";
 import { CreativeDetailReadModel } from "./CreativeDetailReadModel";
@@ -44,7 +46,7 @@ function Detail({row,data,filtered,onOpen,onRefresh}:DetailProps&{row:BrowserCre
   const retentionMeta={...ownedMeta,sampleSize:cohort?.benchmarkSampleSize};
   const library=creativeUrl(window.location.href,data.brand.id);
   const original={href:row.sourceUrl||library,linkLabel:row.sourceUrl?"Open original ad":"Back to Creatives"};
-  const analyse={href:analysisUrl(row.brandId,row.nativeId,data.brand.id),linkLabel:"Run analysis"};
+  const analyse={href:row.platform==="TikTok"&&row.analysisAdId?analysisUrl(data.brand.id,row.analysisAdId,data.brand.id):analysisUrl(row.brandId,row.nativeId,data.brand.id),linkLabel:"Run analysis"};
   const connect={href:`/?view=data&brandId=${encodeURIComponent(data.brand.id)}`,linkLabel:"Connect account"};
   const dates={href:library,linkLabel:"Change dates"};
   const retry={action:{label:"Retry",onClick:onRefresh||(()=>window.location.reload())}};
@@ -74,10 +76,10 @@ function Detail({row,data,filtered,onOpen,onRefresh}:DetailProps&{row:BrowserCre
     {label:"CTA",field:fields.cta},{label:"Audio",field:videoFields?.audio_type,isEnum:true}
   ]:[];
   const claims=fields?.keyClaims.filter(claim=>hasValue(claim.value))||[];
-  const comparisonFilter={category:new URLSearchParams(window.location.search).get("category")||"mine",adFormat:"same"};
+  const comparisonFilter={platform:row.platform,category:new URLSearchParams(window.location.search).get("category")||"mine",adFormat:"same"};
   const changeComparison=(patch:Record<string,string>)=>{const url=new URL(window.location.href);for(const [key,value] of Object.entries(patch))url.searchParams.set(key,value);window.history.pushState({},"",url);window.dispatchEvent(new Event(NAVIGATION_EVENT));};
   const similar=similarCompetitors(row,data.creatives,comparisonFilter,data.brand.primaryCategories||[]);
-  const openMarket=()=>{const url=new URL(library,window.location.origin);["search","brand","platform","hook","offer","ugc","status","cohort","angle","format"].forEach(key=>url.searchParams.delete(key));url.searchParams.set("show","competitors");url.searchParams.set("category",comparisonFilter.category==="mine"?(data.brand.primaryCategories||[]).join(",")||"none":comparisonFilter.category);if(mediaFormat(row))url.searchParams.set("adFormat",mediaFormat(row)!);url.searchParams.set("similarTo",row.adId);window.history.pushState({},"",url);window.dispatchEvent(new Event(NAVIGATION_EVENT));};
+  const openMarket=()=>{const url=new URL(library,window.location.origin);["search","brand","platform","hook","offer","ugc","status","cohort","angle","format"].forEach(key=>url.searchParams.delete(key));url.searchParams.set("platform",row.platform);url.searchParams.set("show","competitors");url.searchParams.set("category",comparisonFilter.category==="mine"?(data.brand.primaryCategories||[]).join(",")||"none":comparisonFilter.category);if(mediaFormat(row))url.searchParams.set("adFormat",mediaFormat(row)!);url.searchParams.set("similarTo",row.adId);window.history.pushState({},"",url);window.dispatchEvent(new Event(NAVIGATION_EVENT));};
   const openBenchmark=()=>{if(!cohort)return;const url=new URL(library,window.location.origin);["brand","search","format","hook","angle","offer","ugc","status"].forEach(key=>url.searchParams.delete(key));url.searchParams.set("show","yours");url.searchParams.set("cohort",cohort.id);url.searchParams.set("from",cohort.from);url.searchParams.set("to",cohort.to);window.history.pushState({},"",url);window.dispatchEvent(new Event(NAVIGATION_EVENT));};
   const retentionNames:MetricName[]=["Retention 25%","Retention 50%","Retention 75%","Retention 95%","Retention 100%"];
   const hasRetention=Boolean(cohort&&retentionNames.some(name=>hasValue(cohort.metrics[name].value)||hasValue(cohort.benchmark[name].value)));
@@ -87,7 +89,7 @@ function Detail({row,data,filtered,onOpen,onRefresh}:DetailProps&{row:BrowserCre
   const marketGap:UnavailableProps|false=unknownMatch?{label:"",reason:"Category tagging and media collection are still pending."}:similar.length?false:data.sources.some(source=>source.status==="error")?{reason:"Saved competitor evidence could not be read.",...retry}:data.sources.some(source=>!["complete","succeeded","collected"].includes(source.status))?{reason:"Configured competitor ads are not fully collected.",...collection}:{label:"",reason:"No similar competitor ads in this saved sample.",href:`/?view=creatives&brandId=${encodeURIComponent(data.brand.id)}&show=competitors`,linkLabel:"Browse competitor ads"};
   const hasReadings=readings.some(item=>hasValue(item.field?.value))||claims.length>0;
   return <div className="creative-detail creative-browser">
-    <PageHeader title={creativeHeading(row)} decorateTitle={false} subtitle={<><BrandName name={row.brandName} size={32}/> · {plainEnum(row.platform)}{row.mediaKind!=="unknown"?` · ${plainEnum(row.mediaKind)}`:""}{row.deliveryStartAt?` · running since ${ukDate(row.deliveryStartAt)}`:""}{row.sourceUrl&&<> · <a href={row.sourceUrl} target="_blank" rel="noopener noreferrer">Open in {row.platform==="Meta"?"Meta Ad Library":"ad library"}</a></>}</>} eyebrow={<a href={library} onClick={event=>{if(!event.ctrlKey&&!event.metaKey&&!event.shiftKey&&!event.altKey){event.preventDefault();closeCreativeRoute(data.brand.id);}}}>Creatives</a>} actions={<>
+    <PageHeader title={creativeHeading(row)} decorateTitle={false} subtitle={<><BrandName name={row.brandName} size={32}/> · <SourceLabel name={plainEnum(row.platform)} detail="" inline/>{row.mediaKind!=="unknown"?` · ${plainEnum(row.mediaKind)}`:""}{row.deliveryStartAt?` · running since ${ukDate(row.deliveryStartAt)}`:""}{row.sourceUrl&&<> · <a href={row.sourceUrl} target="_blank" rel="noopener noreferrer">Open in {row.platform==="Meta"?"Meta Ad Library":"ad library"}</a></>}</>} eyebrow={<a href={library} onClick={event=>{if(!event.ctrlKey&&!event.metaKey&&!event.shiftKey&&!event.altKey){event.preventDefault();closeCreativeRoute(data.brand.id);}}}>Creatives</a>} actions={<>
       <button className="button secondary" aria-label="Previous creative" disabled={index<=0} onClick={()=>onOpen(filtered[index-1])}><ArrowLeft size={18}/></button>
       <button className="button secondary" aria-label="Next creative" disabled={index<0||index===filtered.length-1} onClick={()=>onOpen(filtered[index+1])}><ArrowRight size={18}/></button>
       <a className="button secondary" href="#creative-market">Compare with market</a><button className="button primary" disabled title="Adding saved creatives to briefs is not available yet.">Add to brief</button>
@@ -126,6 +128,7 @@ function Detail({row,data,filtered,onOpen,onRefresh}:DetailProps&{row:BrowserCre
 
         </SectionCard>
 
+        {row.platform==="TikTok"&&<SectionCard title="Working Score" help="Public advertiser backing · Estimated" empty={!row.workingScore&&{reason:"Working Score needs ten comparable ads and enough public signals."}}>{row.workingScore&&<WorkingScoreBreakdown score={row.workingScore}/>}</SectionCard>}
         <LikelihoodSection estimate={row.likelihood}/>
         <SectionCard title="Creative score" help="Best-practice checklist · Estimated, rules-based" meta={{...analysisMeta,lastChecked:row.score?.analysedAt||analysisMeta.lastChecked}} empty={!row.score&&scoreGap}>
           {row.score&&<CreativeScoreBreakdown score={row.score} workspaceId={data.brand.id} evidenceTarget={(row.videoUrl||row.imageUrls.length)&&!mediaError?"creative":"original"} onSeek={row.videoUrl&&!mediaError?seek:undefined} onSlide={row.mediaKind!=="video"?n=>{setSlide(n);document.getElementById("creative-media")?.scrollIntoView({behavior:"smooth"});}:undefined}/>}
