@@ -145,13 +145,52 @@ The Exter AI Library app went to Meta App Review on 2 Nov 2026 (most reviews fin
 4. **First week:** reach velocity, share of voice and spend ranges switch on; Working Score confidence rises from Medium to High.
 5. **Within 60 days:** replace the token with a Business Manager system-user token so collection never stops on expiry.
 
-**TikTok Commercial Content API (to apply for)**
+**TikTok Commercial Content API (approved, wiring in progress)**
 
 1. **Account:** create a TikTok for Developers account with the official Exter Media email.
 2. **Application:** apply on the [Commercial Content API page](https://developers.tiktok.com/products/commercial-content-api), describing Exter Media as an agency researching UK and EU ad transparency data. TikTok's page names "the public and researchers" and says nothing about commercial use, so ask TikTok in writing whether agency use is allowed.
 3. **Keys:** on approval, add the client key and secret to Render as `TIKTOK_CLIENT_KEY` and `TIKTOK_CLIENT_SECRET`.
 4. **Connector:** search each brand's name, keep ads whose business ID matches, fetch full details, and download video files at once (the links are signed and expire).
 5. **If TikTok says no to agency use:** keep TikTok out of client reports, ask what terms they would accept, and use third-party library readers only if TikTok's terms allow it.
+
+## TikTok public activation (23 Nov 2026)
+
+The owner confirms API approval and client credentials on exter-ai and exter-worker.
+This authorises TK-01..07 below; fixtures do not confirm live endpoint access.
+
+- **TK-01 Identity:** discover advertiser IDs and names, then compare landing-page
+  domains from ad details. Automatically confirm only an unambiguous domain-backed
+  match; otherwise show up to three choices and manual business-ID entry. Include
+  each configured competitor, preserve manual overrides and separate Meta identities.
+- **TK-02 Collection:** use durable jobs at 03:00 Europe/London, a fixed rolling
+  twelve-month window per run, all activity states and GB plus selected EU markets.
+  Resume search_id with exactly the original filters. Search the advertiser name
+  and retain only confirmed business IDs. Commit small steps, use shared pacing and
+  budget guards, and keep change-only history. Missing reach is never zero.
+- **TK-03 Media:** retain API images/videos immediately through the existing bounded
+  media store and authenticated web broker. No paid scraper. Generate posters,
+  respect disk limits, preserve files, and show per-brand coverage and failure reasons.
+- **TK-04 Research:** include TikTok in Creatives, detail, Winners, Patterns and
+  Competitors. Default comparisons stay within one platform, category and format;
+  explicit All browsing never creates a combined cross-platform performance score.
+  Working Score uses the existing four-signal formula and weights, dropping missing
+  organic/concept signals. Show confidence, sample and each assessed signal.
+- **TK-05 Analysis:** send retained TikTok creatives through the same video/image
+  analysis and fixed-factor profiling as Meta. Reuse analysis deduplication,
+  inference budgets and uncertain-start guards; do not replace the pipeline.
+- **TK-06 Health:** show credentials configured separately from successful access,
+  last successful request, ads/media per brand, run progress and safe source errors.
+  Strip credentials and URLs from provider errors; cap text at 300 characters.
+- **TK-07 Live gate:** CI uses fixtures only. After deployment, explicitly run a
+  ten-ad ION8 GB smoke collection, with normal matching, files and screen projection.
+  Do not claim live verification or start the smoke test before deployment.
+
+TikTok rounded reach remains a reported rounded value, labelled Estimated when
+used numerically. Exact published counts are Observed. Its first/last shown dates
+and status stay distinct; an active last-shown date is not a delivery stop.
+Official contracts: [query](https://developers.tiktok.com/doc/commercial-content-api-query-ads),
+[advertisers](https://developers.tiktok.com/doc/commercial-content-api-query-advertisers),
+[details](https://developers.tiktok.com/doc/commercial-content-api-get-ad-details).
 
 ## What Exter reads from every creative
 
