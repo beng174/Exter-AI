@@ -1313,3 +1313,19 @@ Validation: npm run check, npm test (661 tests), npm run build and npm run
 secrets:check pass. All 123 disposable Postgres integration tests pass, including
 the 20,000-ad read/recovery and 50,000-ad memory cases. Final merge CI is recorded
 on PR 43. No live gate is cleared by this fixture verification.
+
+## 24 November 2026: TikTok completed-date windows (TK-01, TK-02)
+
+The owner reports every source rejected today's max date, blocking both advertiser
+discovery and collection. New ad queries end yesterday UTC, with a calendar-year
+minimum inside the supported window. The client clamps today/future max values.
+If yesterday is still refused, automatic recovery uses two days back once that
+UTC day. The following day's rolling query includes previously omitted ads.
+
+Worker/scheduler recovery targets only this specific saved date rejection. Old
+runs, cursors, evidence, files and charges remain; replacements start fresh because
+search_id is bound to the original filters. Unrelated errors, watchlist changes,
+disabled collection, active leases, paid work and validation gates stay protected.
+No migration or new settings are required; deploy web, worker and scheduler.
+No live provider requests were used for verification. Check results are recorded
+in the PR and .agent/plans/tiktok-date-recovery.md.

@@ -1,3 +1,4 @@
+import {tikTokPublishedWindow} from "./tiktok-dates.js";
 import { createHash } from "node:crypto";
 import { isIP } from "node:net";
 import { boundedPublicBody, parsePublicJson } from "./public-json.js";
@@ -139,8 +140,8 @@ export class TikTokCommercialConnector {
     async page(query: TikTokCommercialQuery) {
         if (!this.status().configured)
             throw new TikTokCommercialError("not_connected", "TikTok not connected.");
-        const from = sourceDate(query.publishedFrom), to = sourceDate(query.publishedTo), maxCount = query.maxCount ?? 10;
-        if (!from || !to || from > to || (Date.parse(from) < this.now() - 366 * 86400000 && !query.cursor) || Date.parse(to) > this.now() + 86400000 || !Array.isArray(query.countries) || !query.countries.length || query.countries.length > 32 || query.countries.some(country => !COUNTRIES.has(country)) || query.searchTerm !== undefined && (typeof query.searchTerm !== "string" || !query.searchTerm.trim() || query.searchTerm.length > 50) || !Number.isSafeInteger(maxCount) || maxCount < 1 || maxCount > 10 || query.status !== undefined && !["ACTIVE", "INACTIVE"].includes(query.status))
+        const window=tikTokPublishedWindow(new Date(this.now())),from=sourceDate(query.publishedFrom),requestedTo=sourceDate(query.publishedTo),to=requestedTo&&requestedTo>window.to?window.to:requestedTo,maxCount=query.maxCount??10;
+        if (!from || !to || from > to || (from < window.from && !query.cursor) || !Array.isArray(query.countries) || !query.countries.length || query.countries.length > 32 || query.countries.some(country => !COUNTRIES.has(country)) || query.searchTerm !== undefined && (typeof query.searchTerm !== "string" || !query.searchTerm.trim() || query.searchTerm.length > 50) || !Number.isSafeInteger(maxCount) || maxCount < 1 || maxCount > 10 || query.status !== undefined && !["ACTIVE", "INACTIVE"].includes(query.status))
             throw new TikTokCommercialError("configuration", "Provide a supported country, date range within one year, and a query of at most 50 characters.");
         const filters = { ad_published_date_range: { min: from.replaceAll("-", ""), max: to.replaceAll("-", "") }, country_code_list: [...new Set(query.countries)].sort(), ...(query.status ? { ad_status: query.status } : {}) }, input = { filters, ...(query.searchTerm ? { search_term: query.searchTerm.trim(), search_type: "exact_phrase" } : {}), max_count: maxCount };
         const queryHash = createHash("sha256").update(JSON.stringify(input)).digest("hex");

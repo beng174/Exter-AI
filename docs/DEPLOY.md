@@ -1737,3 +1737,34 @@ Delete creator clears the new creator links, features, imported summaries and
 models using that creator. Public source history and owned reporting days remain
 intact. Imports and explicit creator-detail reads renew the research-use date;
 unsaved profile expiry follows the existing 90-day rule in bounded batches.
+
+## TikTok completed-date recovery (24 November 2026)
+
+Deploy the same revision to **exter-ai**, **exter-worker** and **exter-scheduler**,
+with web first for a manual rollout. No migration, new secret or setting is needed.
+The 03:00 Europe/London schedule, budgets, request pacing and media broker stay
+in force.
+
+New collection, backfill, smoke and advertiser-discovery ad queries end yesterday
+UTC. The calendar-year minimum is based on today's UTC date, so the max fallback
+does not push the minimum outside the supported window. The client also clamps
+any requested today/future max before dispatch. Saved valid ranges remain fixed
+for their `search_id`; changing a date never reuses its old cursor. Today's ads
+are included by the following day's rolling query.
+
+The worker automatically repairs paused/failed TikTok source jobs with the specific
+`ad_published_date_range.max` / before-today rejection. This includes unconfirmed
+advertiser discovery. The scheduler also checks for this recovery independently
+of the daily collection slot. No manual retry is required for that error.
+
+Recovery keeps the old run, cursor, observations, files and charges. It supersedes
+the rejected job and queues a fresh search with corrected dates. If yesterday is
+still rejected around a source date rollover, the next attempt ends two days back.
+A repeated rejection then stays paused for the rest of that UTC day; a later day
+can recover again. Auth, budget and unrelated worker failures, changed watchlist
+revisions, disabled collection and active leases remain protected. Paid-analysis
+jobs are never restarted by this recovery.
+
+After deployment, check Data sources > TikTok advertisers for queued/running
+replacements and the next successful check. Fixtures prove date and recovery
+behaviour, not production approval or successful live collection.
